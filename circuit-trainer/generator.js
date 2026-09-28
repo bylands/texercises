@@ -1,0 +1,678 @@
+// Random series-parallel resistor circuits with worked solutions.
+//
+// A circuit is a tree: leaves are resistors, inner nodes are series (S) or parallel (P)
+// combinations, and the root is connected to the battery. Values are exact fractions in
+// V, kΩ and mA (V = kΩ·mA); the battery voltage is chosen so that every current and
+// voltage is a multiple of 0.5. A rule-based solver (Ohm's law, series and parallel
+// rules) decides whether the unknowns can be found from the givens, and its derivation
+// becomes the worked solution.
+(function (root) {
+  'use strict';
+
+  const Circuit = root.Circuit || require('./circuit.js');
+  const M = String.raw;
+  const RS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20];
+  const MAX_WIDTH = 15; // diagram width in drawing units
+
+  const LEVELS = {
+    easy: { name: 'Easy', n: [2, 3], V: [4, 40], depth: 1, inverse: 0.4, hidden: [1, 1], hideV: 0, targets: [1, 2], steps: [1, 5] },
+    medium: { name: 'Medium', n: [3, 5], V: [6, 80], depth: 2, compact: true, inverse: 0.7, hidden: [1, 1], hideV: 0.3, targets: [2, 2], steps: [3, 9] },
+    hard: { name: 'Hard', n: [5, 7], V: [6, 120], depth: 3, compact: true, inverse: 1, hidden: [1, 2], hideV: 0.5, targets: [3, 3], steps: [7, 18] },
+  };
+
+  // ---------------------------------------------------------------- random numbers
+  function rng(seed) {
+    let a = seed >>> 0;
+    const next = () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const int = (lo, hi) => lo + Math.floor(next() * (hi - lo + 1));
+    return {
+      next, int,
+      pick: (arr) => arr[Math.floor(next() * arr.length)],
+      shuffle: (arr) => { for (let i = arr.length - 1; i > 0; i--) { const j = int(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; },
+    };
+  }
+
+  // ---------------------------------------------------------------- exact fractions
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const lcm = (a, b) => (a / gcd(a, b)) * b;
+  function F(n, d = 1) {
+    if (d < 0) { n = -n; d = -d; }
+    const g = gcd(n, d) || 1;
+    return { n: n / g, d: d / g };
+  }
+  const fadd = (a, b) => F(a.n * b.d + b.n * a.d, a.d * b.d);
+  const fsub = (a, b) => F(a.n * b.d - b.n * a.d, a.d * b.d);
+  const fmul = (a, b) => F(a.n * b.n, a.d * b.d);
+  const fdiv = (a, b) => F(a.n * b.d, a.d * b.n);
+  const fval = (f) => f.n / f.d;
+
+  function fmt(x) {
+    if (Math.abs(x - Math.round(x)) < 1e-9) return String(Math.round(x));
+    if (Math.abs(x) >= 1) return String(parseFloat(x.toFixed(2)));
+    return String(parseFloat(x.toPrecision(2)));
+  }
+
+  // Decimal if it terminates within two places, otherwise a fraction.
+  function ftex(f) {
+    if (f.d === 1 || (100 % f.d === 0)) return fmt(fval(f));
+    return M`\tfrac{${f.n}}{${f.d}}`;
+  }
+
+  // ---------------------------------------------------------------- circuit tree
+  function buildTree(n, parentT, r) {
+    if (n === 1) return { t: 'R' };
+    const t = parentT === 'S' ? 'P' : parentT === 'P' ? 'S' : r.pick(['S', 'P']);
+    const k = r.int(2, Math.min(n, 3));
+    const parts = new Array(k).fill(1);
+    for (let i = k; i < n; i++) parts[r.int(0, k - 1)]++;
+    return { t, kids: parts.map((m) => buildTree(m, t, r)) };
+  }
+
+  // Series elements can be reordered freely. For the whole circuit, put half of the plain
+  // resistors before the groups (drawn on the top wire) and half after (bottom wire).
+  function arrangeRoot(tree) {
+    if (tree.t !== 'S') return tree;
+    const leaves = tree.kids.filter((k) => k.t === 'R'), groups = tree.kids.filter((k) => k.t !== 'R');
+    if (!groups.length) return tree;
+    const nTop = Math.ceil(leaves.length / 2);
+    tree.kids = [...leaves.slice(0, nTop), ...groups, ...leaves.slice(nTop)];
+    return tree;
+  }
+
+  const depth = (node) => (node.t === 'R' ? 0 : 1 + Math.max(...node.kids.map(depth)));
+
+  function index(rootNode) {
+    const nodes = [], leaves = [];
+    (function walk(node, parent) {
+      node.id = nodes.length;
+      node.parent = parent;
+      nodes.push(node);
+      if (node.t === 'R') { leaves.push(node); node.idx = leaves.length; node.leaves = [node.idx]; return; }
+      node.kids.forEach((k) => walk(k, node));
+      node.leaves = node.kids.flatMap((k) => k.leaves);
+    })(rootNode, null);
+    return { nodes, leaves };
+  }
+
+  function resistance(node) {
+    if (node.t === 'R') return node.R;
+    const rs = node.kids.map(resistance);
+    node.R = node.t === 'S' ? rs.reduce(fadd) : fdiv(F(1), rs.reduce((s, x) => fadd(s, fdiv(F(1), x)), F(0)));
+    return node.R;
+  }
+
+  function flow(node, V, I) {
+    node.V = V; node.I = I;
+    if (node.t === 'S') node.kids.forEach((k) => flow(k, fmul(I, k.R), I));
+    if (node.t === 'P') node.kids.forEach((k) => flow(k, V, fdiv(V, k.R)));
+  }
+
+  // Choose resistor values and a battery voltage so that all voltages and currents are nice.
+  function assignValues(c, lv, r) {
+    for (const leaf of c.leaves) leaf.R = F(r.pick(RS));
+    resistance(c.root);
+    flow(c.root, F(1), fdiv(F(1), c.root.R));
+    let whole = 1, half = 1;
+    for (const node of c.nodes) {
+      for (const f of [node.V, node.I]) {
+        whole = lcm(whole, f.d);
+        half = lcm(half, f.d / gcd(f.d, 2));
+      }
+    }
+    const [lo, hi] = lv.V;
+    const options = (step) => { const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) out.push(v); return out; };
+    let choices = options(whole);
+    if (!choices.length) choices = options(half);
+    if (!choices.length) return false;
+    const V = F(r.pick(choices));
+    for (const node of c.nodes) { node.V = fmul(node.V, V); node.I = fmul(node.I, V); }
+    return c.nodes.every((node) => fval(node.I) >= 0.5 && fval(node.I) <= 100 && fval(node.V) >= 0.5);
+  }
+
+  // ---------------------------------------------------------------- symbolic solver
+  // Quantity keys: 'R3', 'I3', 'V3' for node id 3. Node 0 is the whole circuit (battery).
+  // Each relation is an equation between quantities; `out` lists the keys it may be solved
+  // for, `w` is the cost of using it in a solution (divider rules are cheapest, so they are
+  // preferred), and `holds(g)` checks the equation numerically (used by the tests).
+  const W = { eqI: 0.2, eqV: 0.2, vdiv: 1, idiv: 1, vratio: 1, iratio: 1, sumR: 1, invR: 1.2, sumV: 1.4, sumI: 1.4, ohm: 1.8 };
+  const near = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
+
+  function relations(c) {
+    const rels = [];
+    const add = (rel) => {
+      if (!(rel.rule in W)) throw new Error(`no cost for rule ${rel.rule}`);
+      rels.push({ out: rel.keys, ...rel, w: W[rel.rule] });
+    };
+    const R = (n) => 'R' + n.id, V = (n) => 'V' + n.id, I = (n) => 'I' + n.id;
+    for (const node of c.nodes) {
+      add({ kind: 'ohm', rule: 'ohm', node, keys: [V(node), I(node), R(node)], holds: (g) => near(g(V(node)), g(I(node)) * g(R(node))) });
+      if (node.t === 'R') continue;
+      const kids = node.kids, rs = kids.map(R);
+      const pairs = [];
+      kids.forEach((a, i) => kids.slice(i + 1).forEach((b) => pairs.push([a, b])));
+      if (node.t === 'S') {
+        for (const k of kids) {
+          add({ kind: 'eq', rule: 'eqI', q: 'I', parent: node, child: k, keys: [I(node), I(k)], holds: (g) => near(g(I(node)), g(I(k))) });
+          add({ kind: 'vdiv', rule: 'vdiv', parent: node, child: k, keys: [V(k), V(node), ...rs], out: [V(k), V(node)],
+            holds: (g) => near(g(V(k)), (g(R(k)) / rs.reduce((sum, r) => sum + g(r), 0)) * g(V(node))) });
+        }
+        for (const [a, b] of pairs) {
+          add({ kind: 'ratio', rule: 'vratio', q: 'V', parent: node, a, b, keys: [V(a), V(b), R(a), R(b)],
+            holds: (g) => near(g(V(a)) * g(R(b)), g(V(b)) * g(R(a))) });
+        }
+        add({ kind: 'sum', rule: 'sumR', q: 'R', parent: node, keys: [R(node), ...rs], holds: (g) => near(g(R(node)), rs.reduce((sum, r) => sum + g(r), 0)) });
+        add({ kind: 'sum', rule: 'sumV', q: 'V', parent: node, keys: [V(node), ...kids.map(V)], holds: (g) => near(g(V(node)), kids.reduce((sum, k) => sum + g(V(k)), 0)) });
+      } else {
+        const inv = (g) => rs.reduce((sum, r) => sum + 1 / g(r), 0);
+        for (const k of kids) {
+          add({ kind: 'eq', rule: 'eqV', q: 'V', parent: node, child: k, keys: [V(node), V(k)], holds: (g) => near(g(V(node)), g(V(k))) });
+          add({ kind: 'idiv', rule: 'idiv', parent: node, child: k, keys: [I(k), I(node), ...rs], out: [I(k), I(node)],
+            holds: (g) => near(g(I(k)), (1 / g(R(k)) / inv(g)) * g(I(node))) });
+        }
+        for (const [a, b] of pairs) {
+          add({ kind: 'ratio', rule: 'iratio', q: 'I', parent: node, a, b, keys: [I(a), I(b), R(a), R(b)],
+            holds: (g) => near(g(I(a)) * g(R(a)), g(I(b)) * g(R(b))) });
+        }
+        add({ kind: 'inv', rule: 'invR', q: 'R', parent: node, keys: [R(node), ...rs], holds: (g) => near(1 / g(R(node)), inv(g)) });
+        add({ kind: 'sum', rule: 'sumI', q: 'I', parent: node, keys: [I(node), ...kids.map(I)], holds: (g) => near(g(I(node)), kids.reduce((sum, k) => sum + g(I(k)), 0)) });
+      }
+    }
+    return rels;
+  }
+
+  // Cheapest derivation of every quantity that follows from `givens` (cost of a derivation =
+  // cost of its relation + costs of its inputs). Positive costs keep derivations acyclic.
+  function plan(rels, givens) {
+    const cost = new Map([...givens].map((k) => [k, 0]));
+    const best = new Map();
+    for (let changed = true; changed;) {
+      changed = false;
+      for (const rel of rels) {
+        for (const key of rel.out) {
+          if (givens.has(key)) continue;
+          const from = rel.keys.filter((k) => k !== key);
+          if (!from.every((k) => cost.has(k))) continue;
+          const c = rel.w + from.reduce((sum, k) => sum + cost.get(k), 0);
+          if (!cost.has(key) || c < cost.get(key) - 1e-9) {
+            cost.set(key, c);
+            best.set(key, { key, rel, from });
+            changed = true;
+          }
+        }
+      }
+    }
+    return { known: new Set(cost.keys()), best };
+  }
+
+  // The steps needed for the targets, goal by goal: each target is preceded by its prerequisites.
+  function neededSteps(best, targets) {
+    const out = [], seen = new Set();
+    const visit = (k) => {
+      const s = best.get(k);
+      if (!s || seen.has(k)) return;
+      seen.add(k);
+      s.from.forEach(visit);
+      out.push(s);
+    };
+    targets.forEach(visit);
+    return out;
+  }
+
+  // ---------------------------------------------------------------- problem selection
+  // A circuit is padded if part of it could be replaced by a single resistor without changing
+  // the exercise: a group in which nothing is measured or asked for, or several plain given
+  // resistors in the same group whose currents and voltages play no role.
+  function padded(c, givens, targets) {
+    const involved = (node) => (node.t === 'R'
+      ? targets.includes('R' + node.id) || ['I', 'V'].some((q) => givens.has(q + node.id) || targets.includes(q + node.id))
+      : node.kids.some(involved));
+    return c.nodes.some((node) => node.t !== 'R' && (
+      (node !== c.root && !involved(node)) ||
+      node.kids.filter((k) => k.t === 'R' && !involved(k)).length >= 2));
+  }
+
+
+  function chooseProblem(c, lv, r) {
+    const rels = relations(c);
+    const leafKeys = (q) => c.leaves.map((l) => q + l.id);
+    const inverse = r.next() < lv.inverse;
+    const nTargets = r.int(lv.targets[0], lv.targets[1]);
+    let givens = new Set([...leafKeys('R'), 'V0']);
+    const targets = [];
+
+    if (inverse) {
+      const hidden = r.shuffle(c.leaves.slice()).slice(0, r.int(lv.hidden[0], lv.hidden[1]));
+      for (const leaf of hidden) { givens.delete('R' + leaf.id); targets.push('R' + leaf.id); }
+      if (r.next() < lv.hideV) { givens.delete('V0'); targets.push('V0'); }
+    }
+    const extra = r.shuffle([...leafKeys('I'), ...leafKeys('V'), 'I0']);
+    while (targets.length < nTargets && extra.length) targets.push(extra.pop());
+    targets.splice(nTargets);
+    if (!targets.length) return null;
+    // List unknowns in reading order: battery first, then by resistor number (R before I before V).
+    const order = (k) => Number(k.slice(1)) * 3 + 'RIV'.indexOf(k[0]);
+    targets.sort((a, b) => order(a) - order(b));
+
+    const solvable = (g) => { const k = plan(rels, g).known; return targets.every((t) => k.has(t)); };
+    if (!solvable(givens)) {
+      const measured = r.shuffle([...leafKeys('I'), ...leafKeys('V'), 'I0'].filter((k) => !targets.includes(k)));
+      const added = [];
+      for (const m of measured) {
+        givens.add(m); added.push(m);
+        if (solvable(givens)) break;
+      }
+      if (!solvable(givens)) return null;
+      for (const m of r.shuffle(added)) {
+        givens.delete(m);
+        if (!solvable(givens)) givens.add(m);
+      }
+    }
+
+    if (lv.compact && padded(c, givens, targets)) return null;
+    const needed = neededSteps(plan(rels, givens).best, targets);
+    if (needed.length < lv.steps[0] || needed.length > lv.steps[1]) return null;
+    // A target that is just a given under another name (same current in series, ...) is too trivial.
+    for (const t of targets) {
+      let st = needed.find((x) => x.key === t);
+      while (st && st.rel.kind === 'eq') {
+        if (givens.has(st.from[0])) return null;
+        st = needed.find((x) => x.key === st.from[0]);
+      }
+    }
+    return { givens, targets, steps: needed };
+  }
+
+  // ---------------------------------------------------------------- naming and text
+  const UNIT_TEX = { V: M`\mathrm{V}`, I: M`\mathrm{mA}`, R: M`\mathrm{k\Omega}` };
+  const UNIT = { V: 'V', I: 'mA', R: 'kΩ' };
+
+  function namer(c, targets) {
+    const nodeOf = (key) => c.nodes[Number(key.slice(1))];
+    const valueOf = (key) => nodeOf(key)[key[0]];
+    const range = (node) => {
+      const [a, b] = [node.leaves[0], node.leaves[node.leaves.length - 1]];
+      return node.leaves.length <= 3 ? node.leaves.join('') : M`${a}\text{–}${b}`;
+    };
+    const sym = (key) => {
+      const q = key[0], node = nodeOf(key);
+      if (node === c.root) return q === 'R' ? M`R_\text{tot}` : q;
+      return `${q}_{${node.t === 'R' ? node.idx : range(node)}}`;
+    };
+    const qtex = (key) => `${ftex(valueOf(key))}\\,${UNIT_TEX[key[0]]}`;
+    const res = (key) => (targets.includes(key) ? `\\boxed{${qtex(key)}}` : qtex(key));
+    const who = (node) => {
+      if (node === c.root) return 'the battery';
+      if (node.t === 'R') return `$R_{${node.idx}}$`;
+      return `the ${node.t === 'S' ? 'series' : 'parallel'} combination $${sym('R' + node.id)}$`;
+    };
+    return { nodeOf, valueOf, sym, qtex, res, who };
+  }
+
+  const cap = (s) => s[0].toUpperCase() + s.slice(1);
+  const al = (...lines) => M`$$\begin{aligned}` + lines.join(M` \\ `) + M`\end{aligned}$$`;
+  const listing = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+
+  function structure(c, nm) {
+    const parts = [];
+    (function walk(node) {
+      if (node.t === 'R') return;
+      node.kids.forEach(walk);
+      const kids = listing(node.kids.map((k) => `$${nm.sym('R' + k.id)}$`));
+      const name = node === c.root ? `the whole circuit, $${nm.sym('R0')}$` : `$${nm.sym('R' + node.id)}$`;
+      parts.push(`${kids} are in ${node.t === 'S' ? 'series' : 'parallel'} (${name})`);
+    })(c.root);
+    return parts;
+  }
+
+  const RULE = {
+    ohm: "Ohm's law",
+    eqI: 'the series rule (same current)',
+    eqV: 'the parallel rule (same voltage)',
+    vdiv: 'the voltage divider rule',
+    idiv: 'the current divider rule',
+    vratio: 'the voltage divider rule (voltages in the ratio of the resistances)',
+    iratio: 'the current divider rule (currents in the inverse ratio of the resistances)',
+    sumR: 'adding the series resistances',
+    invR: 'combining the parallel resistances',
+    sumV: 'the voltage rule (voltages in series add up)',
+    sumI: 'the junction rule (currents in parallel add up)',
+  };
+  const SHORT = {
+    ohm: "Ohm's law", eqI: 'series', eqV: 'parallel', vdiv: 'voltage divider', idiv: 'current divider',
+    vratio: 'voltage divider', iratio: 'current divider', sumR: 'series resistances', invR: 'parallel resistances',
+    sumV: 'voltage rule', sumI: 'junction rule',
+  };
+  const ruleOf = (rel) => rel.rule;
+
+  // A solution step in parts: intro sentence, symbolic equation lhs = rhs, the same with numbers
+  // (num) and the result. Equality steps are a single sentence (inline).
+  function stepParts(step, nm) {
+    const { key, rel } = step;
+    const q = key[0], s = nm.sym, qt = nm.qtex;
+    const out = { lhs: s(key), res: nm.res(key) };
+    if (rel.kind === 'ohm') {
+      const n = rel.node, V = 'V' + n.id, I = 'I' + n.id, R = 'R' + n.id;
+      out.intro = n === nm.nodeOf('R0') ? "Ohm's law for the whole circuit:" : `Ohm's law for ${nm.who(n)}:`;
+      if (q === 'V') return { ...out, rhs: M`${s(I)}\,${s(R)}`, num: M`${qt(I)}\times${qt(R)}` };
+      if (q === 'I') return { ...out, rhs: M`\frac{${s(V)}}{${s(R)}}`, num: M`\frac{${qt(V)}}{${qt(R)}}` };
+      return { ...out, rhs: M`\frac{${s(V)}}{${s(I)}}`, num: M`\frac{${qt(V)}}{${qt(I)}}` };
+    }
+    if (rel.kind === 'eq') {
+      const other = step.from[0];
+      const what = rel.q === 'I' ? 'carry the same current (series connection)' : 'are at the same voltage (parallel connection)';
+      return { ...out, rhs: s(other), inline: `${cap(nm.who(rel.child))} and ${nm.who(rel.parent)} ${what}: $${s(key)} = ${s(other)} = ${nm.res(key)}$.` };
+    }
+    if (rel.kind === 'vdiv' || rel.kind === 'idiv') {
+      const volt = rel.kind === 'vdiv', q0 = volt ? 'V' : 'I';
+      const P = q0 + rel.parent.id, C = q0 + rel.child.id, Rc = 'R' + rel.child.id;
+      const rs = rel.parent.kids.map((k) => 'R' + k.id), others = rs.filter((r) => r !== Rc);
+      const names = listing(rs.map((r) => `$${s(r)}$`));
+      // factor f with C = f · P (and g = 1/f), written with symbols or with numbers
+      let f, g;
+      if (volt) {
+        f = (h) => M`\frac{${h(Rc)}}{${rs.map(h).join('+')}}`;
+        g = (h) => M`\frac{${rs.map(h).join('+')}}{${h(Rc)}}`;
+      } else if (rs.length === 2) {
+        f = (h) => M`\frac{${h(others[0])}}{${rs.map(h).join('+')}}`;
+        g = (h) => M`\frac{${rs.map(h).join('+')}}{${h(others[0])}}`;
+      } else {
+        const inv = (h) => M`\left(${rs.map((r) => M`\frac{1}{${h(r)}}`).join('+')}\right)`;
+        f = (h) => M`\frac{1}{${h(Rc)}}${inv(h)}^{-1}`;
+        g = (h) => M`${h(Rc)}${inv(h)}`;
+      }
+      const intro = volt
+        ? `Voltage divider rule: ${names} are in series, so $${s(P)}$ is split in the ratio of their resistances`
+        : `Current divider rule: $${s(P)}$ splits between ${names} in the inverse ratio of their resistances`;
+      if (key === C) return { ...out, intro: intro + ':', rhs: M`${f(s)}\,${s(P)}`, num: M`${f(qt)}\times ${qt(P)}`, split: true };
+      return { ...out, intro: `${intro}. Solved for $${s(P)}$:`, rhs: M`${g(s)}\,${s(C)}`, num: M`${g(qt)}\times ${qt(C)}`, split: true };
+    }
+    if (rel.kind === 'ratio') {
+      const { a, b } = rel, Ra = 'R' + a.id, Rb = 'R' + b.id;
+      const volt = rel.q === 'V';
+      const x = [rel.q + a.id, rel.q + b.id], y = volt ? [Ra, Rb] : [Rb, Ra];
+      out.intro = volt
+        ? `Voltage divider rule: $${s(Ra)}$ and $${s(Rb)}$ are in series, so their voltages are in the ratio of their resistances, $${s(x[0])} : ${s(x[1])} = ${s(Ra)} : ${s(Rb)}$. Hence`
+        : `Current divider rule: $${s(Ra)}$ and $${s(Rb)}$ are in parallel, so their currents are in the inverse ratio of their resistances, $${s(x[0])} : ${s(x[1])} = ${s(Rb)} : ${s(Ra)}$. Hence`;
+      // x0/x1 = y0/y1, solved for the unknown as num/den · mul
+      const [n, d, m] = key === x[0] ? [y[0], y[1], x[1]] : key === x[1] ? [y[1], y[0], x[0]]
+        : key === y[0] ? [x[0], x[1], y[1]] : [x[1], x[0], y[0]];
+      return { ...out, rhs: M`\frac{${s(n)}}{${s(d)}}\,${s(m)}`, num: M`\frac{${qt(n)}}{${qt(d)}}\times ${qt(m)}` };
+    }
+    const P = rel.q + rel.parent.id;
+    const kids = rel.parent.kids.map((k) => rel.q + k.id);
+    const names = listing(rel.parent.kids.map((k) => `$${s('R' + k.id)}$`));
+    if (rel.kind === 'inv') {
+      if (key === P) {
+        const f = (h) => M`\left(${kids.map((k) => M`\frac{1}{${h(k)}}`).join('+')}\right)^{-1}`;
+        return { ...out, intro: `${names} are in parallel:`, rhs: f(s), num: f(qt), split: true };
+      }
+      const others = kids.filter((k) => k !== key);
+      const f = (h) => M`\left(\frac{1}{${h(P)}} - ${others.map((k) => M`\frac{1}{${h(k)}}`).join(' - ')}\right)^{-1}`;
+      return { ...out, intro: `The parallel resistances combine to $${s(P)}$, so`, rhs: f(s), num: f(qt), split: true };
+    }
+    // sums: series R, series V, parallel I
+    out.intro = {
+      R: key === P ? `${names} are in series:` : `The series resistances add up to $${s(P)}$, so`,
+      V: key === P ? `The voltages across ${names} add up (series connection):` : `The voltages in series add up to $${s(P)}$, so`,
+      I: key === P ? `Junction rule: the currents through ${names} add up (parallel connection):` : `Junction rule: the branch currents add up to $${s(P)}$, so`,
+    }[rel.q];
+    const terms = key === P ? kids : [P, ...kids.filter((k) => k !== key)];
+    const op = key === P ? ' + ' : ' - ';
+    return { ...out, rhs: terms.map(s).join(op), num: terms.map(qt).join(op) };
+  }
+
+  function stepText(step, nm) {
+    const p = stepParts(step, nm);
+    if (p.inline) return p.inline;
+    return p.intro + (p.split
+      ? al(M`${p.lhs} &= ${p.rhs}`, M`&= ${p.num} = ${p.res}`)
+      : al(M`${p.lhs} &= ${p.rhs} = ${p.num} = ${p.res}`));
+  }
+
+  // Hints, from general to specific, all derived from the worked solution.
+  function makeHints(c, nm, prob, struct) {
+    const { steps, targets, givens } = prob;
+    const byKey = new Map(steps.map((st) => [st.key, st]));
+    // Follow "same current / same voltage" steps back to where a quantity really comes from.
+    const origin = (key) => {
+      let st = byKey.get(key);
+      while (st.rel.kind === 'eq' && byKey.has(st.from[0])) st = byKey.get(st.from[0]);
+      return st;
+    };
+    const $ = (k) => `$${nm.sym(k)}$`;
+    const formula = (st) => { const p = stepParts(st, nm); return `$\\displaystyle ${p.lhs} = ${p.rhs}$`; };
+    const list = (items) => `<ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul>`;
+    const hints = [`Break the circuit down: ${struct.join('; ')}.`];
+
+    const plan = targets.map((t) => {
+      const st = origin(t);
+      const via = byKey.get(t).rel.kind === 'eq' ? ` (it equals ${$(st.key)})` : '';
+      const all = st.from.every((k) => givens.has(k));
+      return `${$(t)}${via} follows from ${RULE[st.rel.rule]}, ${all ? 'directly from the given' : 'using'} ${listing(st.from.map($))}.`;
+    });
+    hints.push(`Plan for each unknown:${list(plan)}`);
+
+    const real = steps.filter((st) => st.rel.kind !== 'eq');
+    const first = real.slice(0, 3).map((st) => `${formula(st)} &nbsp;(${SHORT[st.rel.rule]})`);
+    hints.push(`First steps:${list(first)}`);
+
+    // Values of the intermediate quantities that the final steps rely on.
+    const inputs = new Set(targets.flatMap((t) => origin(t).from));
+    const key = real.filter((st) => !targets.includes(st.key) && !givens.has(st.key));
+    const chosen = [...key.filter((st) => inputs.has(st.key)), ...key.filter((st) => !inputs.has(st.key))].slice(0, 3)
+      .sort((a, b) => steps.indexOf(a) - steps.indexOf(b));
+    if (chosen.length) hints.push(`Check your intermediate results: ${listing(chosen.map((st) => `$${nm.sym(st.key)} = ${nm.qtex(st.key)}$`))}.`);
+    return hints;
+  }
+
+  function describeTarget(key, nm) {
+    const q = key[0], node = nm.nodeOf(key), s = nm.sym(key);
+    if (node === nm.nodeOf('R0')) return q === 'V' ? 'the battery voltage $V$' : 'the battery current $I$';
+    if (q === 'R') return `the resistance $${s}$`;
+    if (q === 'I') return `the current $${s}$ through $R_{${node.idx}}$`;
+    return `the voltage $${s}$ across $R_{${node.idx}}$`;
+  }
+
+  // ---------------------------------------------------------------- drawing
+  const UNITS = (label) => Circuit.textWidth(label) / Circuit.S;
+
+  function labels(c, nm, prob, node, sol) {
+    const lab = (key) => {
+      const v = `${fmt(fval(nm.valueOf(key)))} ${UNIT[key[0]]}`;
+      if (prob.givens.has(key)) return v;
+      if (prob.targets.includes(key) && !sol) return `$${nm.sym(key)}$`;
+      return sol ? v : null;
+    };
+    const rKey = 'R' + node.id;
+    const r = prob.targets.includes(rKey) && !sol ? `$${nm.sym(rKey)}$ = ?` : `$${nm.sym(rKey)}$ = ${fmt(fval(node.R))} kΩ`;
+    return { r, i: lab('I' + node.id), v: lab('V' + node.id) };
+  }
+
+  // Layout in the style of the textbook diagrams: parallel branches are vertical columns
+  // between a top and a bottom rail, series parts inside a branch are stacked vertically.
+  // Plain resistors before the first group run along the top wire, those after the last
+  // group along the bottom wire. Layout y grows downwards; current flows top → bottom in
+  // vertical blocks.
+  const LEAF_H = 2.3, COL_GAP = 0.25;
+
+  function labelWidths(node, c, nm, prob) {
+    const w = (k) => Math.max(...[false, true].map((sol) => { const l = labels(c, nm, prob, node, sol)[k]; return l ? UNITS(l) : 0; }));
+    return { r: w('r'), i: w('i'), v: w('v') };
+  }
+
+  // Horizontal resistor on the top or bottom wire.
+  function measureH(leaf, c, nm, prob) {
+    const lw = labelWidths(leaf, c, nm, prob);
+    // The current label sits beside the downstream lead and must clear the end of the voltage arc.
+    leaf.hw = Math.max(3, lw.r + 0.9, lw.v + 0.8, (0.53 + lw.i / 2) / 0.32);
+  }
+
+  // Vertical block: terminals at the top and bottom of its attach column, ax from its left edge.
+  // All vertical resistors get the same width so that columns of stacked groups line up.
+  function measureV(node, col) {
+    if (node.t === 'R') {
+      node.vl = { ax: col.left, w: col.left + col.right, h: LEAF_H };
+      return node.vl;
+    }
+    const kids = node.kids.map((k) => measureV(k, col));
+    if (node.t === 'S') {
+      const ax = Math.max(...kids.map((k) => k.ax));
+      node.vl = { ax, w: Math.max(...kids.map((k) => ax - k.ax + k.w)), h: kids.reduce((sum, k) => sum + k.h, 0) };
+    } else {
+      node.cols = [];
+      let x = 0;
+      for (const k of kids) { node.cols.push(x); x += k.w + COL_GAP; }
+      node.vl = { ax: kids[0].ax, w: x - COL_GAP, h: Math.max(...kids.map((k) => k.h)) };
+    }
+    return node.vl;
+  }
+
+  function layout(c, nm, prob) {
+    let top = [], bottom = [], middle;
+    if (c.root.t === 'P') {
+      middle = c.root;
+    } else {
+      const kids = c.root.kids;
+      const groups = kids.map((k, i) => (k.t === 'R' ? -1 : i)).filter((i) => i >= 0);
+      if (!groups.length) {
+        top = kids;
+      } else {
+        const a = groups[0], b = groups[groups.length - 1];
+        top = kids.slice(0, a);
+        bottom = kids.slice(b + 1);
+        middle = a === b ? kids[a] : { t: 'S', kids: kids.slice(a, b + 1) };
+      }
+    }
+    [...top, ...bottom].forEach((leaf) => measureH(leaf, c, nm, prob));
+    if (middle) {
+      const col = { left: 0, right: 0 };
+      (function widest(node) {
+        if (node.t !== 'R') return node.kids.forEach(widest);
+        const lw = labelWidths(node, c, nm, prob);
+        col.left = Math.max(col.left, 0.85 + lw.v);
+        col.right = Math.max(col.right, 0.4 + Math.max(lw.r, lw.i));
+      })(middle);
+      measureV(middle, col);
+    }
+    const topW = top.reduce((sum, l) => sum + l.hw, 0), bottomW = bottom.reduce((sum, l) => sum + l.hw, 0);
+    // Bottom-wire resistors start left of the column's labels, and leave room for the battery wire.
+    const place = (x0) => {
+      const col = x0 + topW + (middle ? 0.3 + middle.vl.ax : 0.6);
+      return { x0, col, bottomStart: middle ? col - middle.vl.ax - 0.2 : col };
+    };
+    let g = place(1.8);
+    if (g.bottomStart - bottomW < 1.2) g = place(1.8 + 1.2 - (g.bottomStart - bottomW));
+    const bottomY = Math.max(middle ? middle.vl.h : 0, 2.6, top.length && bottom.length ? 2.9 : 0);
+    // A parallel group on the right side reaches down to the bottom wire.
+    if (middle && middle.t === 'P') middle.vl.h = bottomY;
+    const width = g.col + (middle ? middle.vl.w - middle.vl.ax : 0);
+    return { top, bottom, middle, ...g, bottomY, width };
+  }
+
+  function drawV(s, node, x, y, lab) {
+    const g = node.vl;
+    if (node.t === 'R') {
+      const cx = x + g.ax, p = [cx, -y], q = [cx, -(y + g.h)];
+      const L = lab(node);
+      s.res(p, q, { l: L.r, ls: 'right' });
+      s.cur(p, q, L.i, 'right', 0.87);
+      s.vol(p, q, L.v, 'left');
+      return;
+    }
+    if (node.t === 'S') {
+      let cy = y;
+      for (const k of node.kids) { drawV(s, k, x + g.ax - k.vl.ax, cy, lab); cy += k.vl.h; }
+      return;
+    }
+    const colX = (i) => x + node.cols[i] + node.kids[i].vl.ax;
+    const last = node.kids.length - 1, bot = y + g.h;
+    s.wire([colX(0), -y], [colX(last), -y]).wire([colX(0), -bot], [colX(last), -bot]);
+    node.kids.forEach((k, i) => {
+      drawV(s, k, x + node.cols[i], y, lab);
+      if (k.vl.h < g.h) s.wire([colX(i), -(y + k.vl.h)], [colX(i), -bot]);
+    });
+  }
+
+  function draw(c, nm, prob, sol) {
+    const s = new Circuit.Sketch();
+    s.autoDots = true;
+    const L = c.layout;
+    const lab = (node) => labels(c, nm, prob, node, sol);
+    const bl = lab(c.root);
+    s.wire([0, 0], [L.x0, 0]).cur([0, 0], [L.x0, 0], bl.i, 'above');
+    let x = L.x0;
+    for (const leaf of L.top) {
+      const p = [x, 0], q = [x + leaf.hw, 0], t = lab(leaf);
+      s.res(p, q, { l: t.r }).cur(p, q, t.i, 'below', 1 - 0.45 / leaf.hw).vol(p, q, t.v, 'below', [0.28, 0.68]);
+      x += leaf.hw;
+    }
+    s.wire([x, 0], [L.col, 0]);
+    if (L.middle) {
+      drawV(s, L.middle, L.col - L.middle.vl.ax, 0, lab);
+      if (L.middle.vl.h < L.bottomY) s.wire([L.col, -L.middle.vl.h], [L.col, -L.bottomY]);
+    } else {
+      s.wire([L.col, 0], [L.col, -L.bottomY]);
+    }
+    s.wire([L.col, -L.bottomY], [L.bottomStart, -L.bottomY]);
+    x = L.bottomStart;
+    for (const leaf of L.bottom) {
+      const p = [x, -L.bottomY], q = [x - leaf.hw, -L.bottomY], t = lab(leaf);
+      s.res(p, q, { l: t.r, ls: 'below' }).cur(p, q, t.i, 'above', 1 - 0.45 / leaf.hw).vol(p, q, t.v, 'above', [0.28, 0.68]);
+      x -= leaf.hw;
+    }
+    s.wire([x, -L.bottomY], [0, -L.bottomY]);
+    s.bat([0, -L.bottomY], [0, 0]).vol([0, 0], [0, -L.bottomY], bl.v, 'left');
+    return s.toSVG();
+  }
+
+  // ---------------------------------------------------------------- exercise assembly
+  function build(level, seed) {
+    const lv = LEVELS[level];
+    const r = rng(seed);
+    for (let attempt = 0; attempt < 5000; attempt++) {
+      const n = r.int(lv.n[0], lv.n[1]);
+      const tree = arrangeRoot(buildTree(n, null, r));
+      if (depth(tree) < lv.depth) continue;
+      const c = { root: tree, ...index(tree) };
+      if (!assignValues(c, lv, r)) continue;
+      const prob = chooseProblem(c, lv, r);
+      if (!prob) continue;
+      const nm = namer(c, prob.targets);
+      c.layout = layout(c, nm, prob);
+      if (c.layout.width > MAX_WIDTH) continue;
+      return { c, prob, nm, lv };
+    }
+    throw new Error(`No ${level} exercise found for seed ${seed}`);
+  }
+
+  function generate(level, seed) {
+    const { c, prob, nm, lv } = build(level, seed);
+    const { targets, steps } = prob;
+    const struct = structure(c, nm);
+    const hints = makeHints(c, nm, prob, struct);
+    return {
+      id: `${level}-${seed}`,
+      level,
+      title: `${lv.name} · ${c.leaves.length} resistors`,
+      text: `Applying the rules for series and parallel circuits, find ${listing(targets.map((t) => describeTarget(t, nm)))} in the circuit below.`,
+      fields: targets.map((t) => ({ key: t, sym: nm.sym(t), unit: UNIT[t[0]], value: fval(nm.valueOf(t)) })),
+      tol: 0.01,
+      figure: (sol) => `<div class="fig">${draw(c, nm, prob, sol)}</div>`,
+      hints,
+      solution: [`Structure of the circuit: ${struct.join('; ')}.`, ...steps.map((st) => stepText(st, nm))],
+      results: targets.map((t) => `$${nm.sym(t)} = ${nm.qtex(t)}$`).join(', '),
+      // for tests
+      circuit: c, givens: prob.givens, targets, steps,
+    };
+  }
+
+  const api = { LEVELS, generate, padded, F, fval };
+  root.Generator = api;
+  if (typeof module !== 'undefined') module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);
