@@ -140,7 +140,9 @@
   // Each relation is an equation between quantities; `out` lists the keys it may be solved
   // for, `w` is the cost of using it in a solution (divider rules are cheapest, so they are
   // preferred), and `holds(g)` checks the equation numerically (used by the tests).
-  const W = { eqI: 0.2, eqV: 0.2, vdiv: 1, idiv: 1, vratio: 1, iratio: 1, sumR: 1, invR: 1.2, sumV: 1.4, sumI: 1.4, ohm: 1.8 };
+  // Divider rules only relate two resistors of the same group (V4/V5 = R4/R5, I4/I5 = R5/R4),
+  // never a part to the whole.
+  const W = { eqI: 0.2, eqV: 0.2, vratio: 1, iratio: 1, sumR: 1, invR: 1.2, sumV: 1.4, sumI: 1.4, ohm: 1.8 };
   const near = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
 
   function relations(c) {
@@ -159,8 +161,6 @@
       if (node.t === 'S') {
         for (const k of kids) {
           add({ kind: 'eq', rule: 'eqI', q: 'I', parent: node, child: k, keys: [I(node), I(k)], holds: (g) => near(g(I(node)), g(I(k))) });
-          add({ kind: 'vdiv', rule: 'vdiv', parent: node, child: k, keys: [V(k), V(node), ...rs], out: [V(k), V(node)],
-            holds: (g) => near(g(V(k)), (g(R(k)) / rs.reduce((sum, r) => sum + g(r), 0)) * g(V(node))) });
         }
         for (const [a, b] of pairs) {
           add({ kind: 'ratio', rule: 'vratio', q: 'V', parent: node, a, b, keys: [V(a), V(b), R(a), R(b)],
@@ -172,8 +172,6 @@
         const inv = (g) => rs.reduce((sum, r) => sum + 1 / g(r), 0);
         for (const k of kids) {
           add({ kind: 'eq', rule: 'eqV', q: 'V', parent: node, child: k, keys: [V(node), V(k)], holds: (g) => near(g(V(node)), g(V(k))) });
-          add({ kind: 'idiv', rule: 'idiv', parent: node, child: k, keys: [I(k), I(node), ...rs], out: [I(k), I(node)],
-            holds: (g) => near(g(I(k)), (1 / g(R(k)) / inv(g)) * g(I(node))) });
         }
         for (const [a, b] of pairs) {
           add({ kind: 'ratio', rule: 'iratio', q: 'I', parent: node, a, b, keys: [I(a), I(b), R(a), R(b)],
@@ -305,7 +303,7 @@
       return `${q}_{${node.t === 'R' ? node.idx : range(node)}}`;
     };
     const qtex = (key) => `${ftex(valueOf(key))}\\,${UNIT_TEX[key[0]]}`;
-    const res = (key) => (targets.includes(key) ? `\\boxed{${qtex(key)}}` : qtex(key));
+    const res = (key) => (targets.includes(key) ? `\\htmlClass{result}{${qtex(key)}}` : qtex(key));
     const who = (node) => {
       if (node === c.root) return 'the battery';
       if (node.t === 'R') return `$R_{${node.idx}}$`;
@@ -334,8 +332,6 @@
     ohm: "Ohm's law",
     eqI: 'the series rule (same current)',
     eqV: 'the parallel rule (same voltage)',
-    vdiv: 'the voltage divider rule',
-    idiv: 'the current divider rule',
     vratio: 'the voltage divider rule (voltages in the ratio of the resistances)',
     iratio: 'the current divider rule (currents in the inverse ratio of the resistances)',
     sumR: 'adding the series resistances',
@@ -344,7 +340,7 @@
     sumI: 'the junction rule (currents in parallel add up)',
   };
   const SHORT = {
-    ohm: "Ohm's law", eqI: 'series', eqV: 'parallel', vdiv: 'voltage divider', idiv: 'current divider',
+    ohm: "Ohm's law", eqI: 'series', eqV: 'parallel',
     vratio: 'voltage divider', iratio: 'current divider', sumR: 'series resistances', invR: 'parallel resistances',
     sumV: 'voltage rule', sumI: 'junction rule',
   };
@@ -368,37 +364,13 @@
       const what = rel.q === 'I' ? 'carry the same current (series connection)' : 'are at the same voltage (parallel connection)';
       return { ...out, rhs: s(other), inline: `${cap(nm.who(rel.child))} and ${nm.who(rel.parent)} ${what}: $${s(key)} = ${s(other)} = ${nm.res(key)}$.` };
     }
-    if (rel.kind === 'vdiv' || rel.kind === 'idiv') {
-      const volt = rel.kind === 'vdiv', q0 = volt ? 'V' : 'I';
-      const P = q0 + rel.parent.id, C = q0 + rel.child.id, Rc = 'R' + rel.child.id;
-      const rs = rel.parent.kids.map((k) => 'R' + k.id), others = rs.filter((r) => r !== Rc);
-      const names = listing(rs.map((r) => `$${s(r)}$`));
-      // factor f with C = f · P (and g = 1/f), written with symbols or with numbers
-      let f, g;
-      if (volt) {
-        f = (h) => M`\frac{${h(Rc)}}{${rs.map(h).join('+')}}`;
-        g = (h) => M`\frac{${rs.map(h).join('+')}}{${h(Rc)}}`;
-      } else if (rs.length === 2) {
-        f = (h) => M`\frac{${h(others[0])}}{${rs.map(h).join('+')}}`;
-        g = (h) => M`\frac{${rs.map(h).join('+')}}{${h(others[0])}}`;
-      } else {
-        const inv = (h) => M`\left(${rs.map((r) => M`\frac{1}{${h(r)}}`).join('+')}\right)`;
-        f = (h) => M`\frac{1}{${h(Rc)}}${inv(h)}^{-1}`;
-        g = (h) => M`${h(Rc)}${inv(h)}`;
-      }
-      const intro = volt
-        ? `Voltage divider rule: ${names} are in series, so $${s(P)}$ is split in the ratio of their resistances`
-        : `Current divider rule: $${s(P)}$ splits between ${names} in the inverse ratio of their resistances`;
-      if (key === C) return { ...out, intro: intro + ':', rhs: M`${f(s)}\,${s(P)}`, num: M`${f(qt)}\times ${qt(P)}`, split: true };
-      return { ...out, intro: `${intro}. Solved for $${s(P)}$:`, rhs: M`${g(s)}\,${s(C)}`, num: M`${g(qt)}\times ${qt(C)}`, split: true };
-    }
     if (rel.kind === 'ratio') {
       const { a, b } = rel, Ra = 'R' + a.id, Rb = 'R' + b.id;
       const volt = rel.q === 'V';
       const x = [rel.q + a.id, rel.q + b.id], y = volt ? [Ra, Rb] : [Rb, Ra];
       out.intro = volt
-        ? `Voltage divider rule: $${s(Ra)}$ and $${s(Rb)}$ are in series, so their voltages are in the ratio of their resistances, $${s(x[0])} : ${s(x[1])} = ${s(Ra)} : ${s(Rb)}$. Hence`
-        : `Current divider rule: $${s(Ra)}$ and $${s(Rb)}$ are in parallel, so their currents are in the inverse ratio of their resistances, $${s(x[0])} : ${s(x[1])} = ${s(Rb)} : ${s(Ra)}$. Hence`;
+        ? `Voltage divider rule: $${s(Ra)}$ and $${s(Rb)}$ are in series, so their voltages are in the ratio of their resistances, $${s(x[0])}/${s(x[1])} = ${s(Ra)}/${s(Rb)}$. Hence`
+        : `Current divider rule: $${s(Ra)}$ and $${s(Rb)}$ are in parallel, so their currents are in the inverse ratio of their resistances, $${s(x[0])}/${s(x[1])} = ${s(Rb)}/${s(Ra)}$. Hence`;
       // x0/x1 = y0/y1, solved for the unknown as num/den · mul
       const [n, d, m] = key === x[0] ? [y[0], y[1], x[1]] : key === x[1] ? [y[1], y[0], x[0]]
         : key === y[0] ? [x[0], x[1], y[1]] : [x[1], x[0], y[0]];

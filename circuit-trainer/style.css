@@ -161,3 +161,10 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   .field { grid-template-columns: max-content minmax(0, 1fr) 2.5em; }
   .field .fb { grid-column: 1 / -1; }
 }
+
+/* Results in the worked solution */
+.katex .result {
+  background: var(--ok-bg);
+  border-radius: 3px;
+  padding: 0.1em 0.25em;
+}

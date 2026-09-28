@@ -2,7 +2,7 @@
   'use strict';
 
   const { LEVELS, generate } = window.Generator;
-  const { Sketch, esc } = window.Circuit;
+  const { esc } = window.Circuit;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
@@ -28,39 +28,11 @@
       window.renderMathInElement(el, {
         delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }],
         throwOnError: false,
+        // \htmlClass marks the results (highlighted in style.css).
+        trust: (ctx) => ctx.command === '\\htmlClass',
+        strict: (code) => (code === 'htmlExtension' ? 'ignore' : 'warn'),
       });
     }
-  }
-
-  // ---------------------------------------------------------------- the original exercises A–L (reachable via #A-orig, #B-17, ...)
-  function fromTemplate(tpl, seed) {
-    const E = window.Exercises;
-    const v = seed === 'orig' ? tpl.compute(tpl.original) : E.generate(tpl, seed);
-    const h = E.helpers(tpl, v);
-    const val = (k) => `${E.fmt(v[k])} ${tpl.q[k].u}`;
-    const figure = (sol) => {
-      const s = new Sketch();
-      tpl.draw(s, {
-        sol, val,
-        lab(k) {
-          if (tpl.given.includes(k)) return val(k);
-          if (tpl.unknowns.includes(k)) return sol ? `$${tpl.q[k].sym}$ = ${val(k)}` : `$${tpl.q[k].sym}$`;
-          return sol ? val(k) : null;
-        },
-      });
-      return `<div class="fig">${s.toSVG()}</div>` + (tpl.extra ? `<div class="fig">${tpl.extra(v, sol)}</div>` : '');
-    };
-    return {
-      id: `${tpl.id}-${seed}`,
-      title: `${tpl.id} · ${tpl.title}`,
-      text: tpl.text || `Applying the rules for voltage and current dividers, ${tpl.prompt} in the circuit below.`,
-      fields: tpl.unknowns.map((k) => ({ key: k, sym: tpl.q[k].sym, unit: tpl.q[k].u, value: v[k] })),
-      tol: tpl.tol || 0.01,
-      figure,
-      hints: tpl.hints(v, h),
-      solution: tpl.solution(v, h),
-      results: tpl.unknowns.map((k) => `$${tpl.q[k].sym} = ${h.q(k)}$`).join(', '),
-    };
   }
 
   // Wide circuits scroll horizontally on small screens; say so, since the cut-off part is invisible.
@@ -207,12 +179,6 @@
     if (m) {
       document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;
       open(generate(m[1], Number(m[2])));
-      return true;
-    }
-    m = h.match(/^([A-L])-(\d+|orig)$/);
-    if (m && window.Exercises) {
-      const tpl = window.Exercises.TEMPLATES.find((t) => t.id === m[1]);
-      open(fromTemplate(tpl, m[2] === 'orig' ? 'orig' : Number(m[2])));
       return true;
     }
     return false;
