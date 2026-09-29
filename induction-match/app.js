@@ -216,7 +216,7 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  const canReveal = () => st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
+  const canReveal = () => st.solved || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
 
   function open(exercise) {
     ex = exercise;
