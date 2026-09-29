@@ -203,10 +203,12 @@
     return `Drag the dots at the breakpoints to set ${q} there (${at(ex.to, 0)} is given), and the diamond in the middle of a piece to bend it into a parabola. Each piece is judged by how much ${q} changes in it, so a mistake only counts once.${keys}`;
   }
 
+  const ruleText = () => (ex.dir === 'diff'
+    ? `${Q(ex.to)} is the slope of the ${Q(ex.from)}(<i>t</i>) graph: constant where ${Q(ex.from)} is straight, a sloped straight line where ${Q(ex.from)} is a parabola. ${Q(ex.from)} has no kinks, so ${Q(ex.to)} does not jump.`
+    : `The change of ${Q(ex.to)} is the area under the ${Q(ex.from)}(<i>t</i>) graph, and the slope of ${Q(ex.to)} is ${Q(ex.from)}: a straight line where ${Q(ex.from)} is constant, a parabola where it changes linearly. ${Q(ex.from)} does not jump, so ${Q(ex.to)} has no kinks.`);
+
   function solution() {
-    const rule = ex.dir === 'diff'
-      ? `${Q(ex.to)} is the slope of the ${Q(ex.from)}(<i>t</i>) graph: constant where ${Q(ex.from)} is straight, a sloped straight line where ${Q(ex.from)} is a parabola. ${Q(ex.from)} has no kinks, so ${Q(ex.to)} does not jump.`
-      : `The change of ${Q(ex.to)} is the area under the ${Q(ex.from)}(<i>t</i>) graph, and the slope of ${Q(ex.to)} is ${Q(ex.from)}: a straight line where ${Q(ex.from)} is constant, a parabola where it changes linearly. ${Q(ex.from)} does not jump, so ${Q(ex.to)} has no kinks.`;
+    const rule = ruleText();
     const rows = ex.pieces.map((p, i) => `<li>${(ex.dir === 'diff' ? describeDiff : describeInt)(p, i)}</li>`);
     return `<p>${rule} The correct graph is drawn as a dashed black line.</p><ul class="pieces">${rows.join('')}</ul>`;
   }
@@ -257,7 +259,7 @@
   // Redraw both graphs when the screen gets narrow or wide (the drawing is kept).
   const narrow = () => $('#given').clientWidth < NARROW;
   function relayout() {
-    if (!ex || (Plot.W < 640) === narrow()) return;
+    if (!ex || $('#task').hidden || (Plot.W < 640) === narrow()) return;
     Plot.setNarrow(narrow());
     $('#given').innerHTML = sourceGraph(ex);
     $('#draw').setAttribute('viewBox', `0 0 ${Plot.W} ${Plot.H}`);
@@ -351,9 +353,98 @@
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // ---------------------------------------------------------------- tutor
+  // Worked examples, one per task: the given graph and the answer graph piece by piece. The piece
+  // is highlighted in both graphs; derivative: the chord of the given graph (its mean slope)
+  // and, for a parabola, the tangents at its ends; integral: the area under the given graph.
+  const LESSONS = [
+    { name: 's → v', task: 'sv', seed: 17,
+      idea: 'The velocity is the slope of the position graph: read it piece by piece, from straight lines and from the tangents to the curves.' },
+    { name: 'v → a', task: 'va', seed: 3,
+      idea: 'The acceleration is the slope of the velocity graph. Where the velocity graph is curved, its slope changes, so the acceleration changes.' },
+    { name: 'v → s', task: 'vs', seed: 45,
+      idea: 'The change of position in a piece is the area between the velocity graph and the time axis; below the axis it counts negative.' },
+    { name: 'a → v', task: 'av', seed: 12,
+      idea: 'The change of velocity is the area under the acceleration graph, and the acceleration is the slope of the velocity graph.' },
+  ];
+  const bar = (q) => `${q}\u0304`; // q with a bar: the mean value
+
+  function lesson(def) {
+    const e = generate(def.task, def.seed);
+    const saved = ex; // the text helpers read the exercise from ex
+    ex = e;
+    try {
+      const { Tut } = Plot, f = e.from, g = e.to, ps = e.pieces, n = ps.length;
+      const qc = (q) => `<span class="qc-${q}">${NAME[q]} ${Q(q)}(<i>t</i>)</span>`;
+      const figs = (given, answer) => `<div class="tgraphs"><div><h3>Given: ${qc(f)}</h3><div class="plot">${given}</div></div>` +
+        `<div><h3>Answer: ${qc(g)}</h3><div class="plot">${answer}</div></div></div>`;
+      const marks = (i) => ps.map((p, k) => (k === i ? 'focus' : ''));
+      const num = (x) => (r2(x) > 0 ? '+' : '') + fmt(x);
+      const frames = [{
+        text: `<p class="step-rule">The task</p><p>${statement()}</p><p>${ruleText()} We go through the graph piece by piece.</p>`,
+        figure: figs(sourceGraph(e), Plot.answerGraph(e, { upto: 0 })),
+      }];
+      ps.forEach((p, i) => {
+        const tm = (p.t0 + p.t1) / 2;
+        let over, under = () => '', ans;
+        if (e.dir === 'diff') {
+          const m = (p.G1 - p.G0) / len(p);
+          over = (s) => Tut.chord(s, p.t0, p.G0, p.t1, p.G1) + Tut.dot(s, p.t0, p.G0) + Tut.dot(s, p.t1, p.G1) +
+            (sloped(p) ? Tut.tangent(s, p.t0, p.G0, p.g0) + Tut.tangent(s, p.t1, p.G1, p.g1) : '') +
+            Tut.tag(s, tm, (p.G0 + p.G1) / 2, `${sloped(p) ? bar(g) : g} = ${num(m)} ${UNIT[g]}`, m >= 0 ? 'left' : 'right');
+          ans = (s) => Tut.dot(s, p.t0, p.g0) + Tut.dot(s, p.t1, p.g1) +
+            (sloped(p) ? Tut.dot(s, tm, m, 'mean') + Tut.tag(s, tm, m, bar(g), p.g1 > p.g0 ? 'left' : 'right') : '') +
+            Tut.tag(s, p.t1, p.g1, num(p.g1), p.g1 >= p.g0 ? 'above' : 'below');
+        } else {
+          const dG = area(p);
+          under = (s) => Tut.area(s, p.t0, p.g0, p.t1, p.g1);
+          // the label just outside the shaded area: above it if the area counts positive, else below
+          over = (s) => Tut.tag(s, tm, dG >= 0 ? Math.max(p.g0, p.g1, 0) : Math.min(p.g0, p.g1, 0), `Δ${g} = ${num(dG)} ${UNIT[g]}`, dG >= 0 ? 'above' : 'below');
+          ans = (s) => Tut.dot(s, p.t0, p.G0) + Tut.dot(s, p.t1, p.G1) +
+            Tut.tangent(s, p.t0, p.G0, p.g0) + Tut.tangent(s, p.t1, p.G1, p.g1) +
+            Tut.tag(s, p.t1, p.G1, `${num(p.G1)} ${UNIT[g]}`, dG >= 0 ? 'above' : 'below');
+        }
+        const text = (e.dir === 'diff' ? describeDiff : describeInt)(p, i).replace(/^<b>[^<]*<\/b>: /, '');
+        frames.push({
+          text: `<p class="step-rule">Piece ${i + 1} of ${n} (${when(p)})</p><p>${text}</p>`,
+          figure: figs(sourceGraph(e, { marks: marks(i), under, overlay: over }), Plot.answerGraph(e, { upto: i + 1, marks: marks(i), overlay: ans })),
+        });
+      });
+      const check = e.dir === 'diff'
+        ? `Check: where ${Q(f)} has a horizontal tangent, ${Q(g)} = 0; where ${Q(f)} rises, ${Q(g)} &gt; 0; where it falls, ${Q(g)} &lt; 0.`
+        : `Check: where ${Q(f)} = 0, the ${Q(g)} graph is horizontal; where ${Q(f)} &gt; 0, ${Q(g)} rises; where ${Q(f)} &lt; 0, it falls.`;
+      frames.push({ text: `<p class="step-rule">The whole graph</p><p>${ruleText()}</p><p>${check}</p>`, figure: figs(sourceGraph(e), Plot.answerGraph(e)) });
+      return frames;
+    } finally {
+      ex = saved;
+    }
+  }
+
+  // Practice: random exercises; tutor: worked examples. Hints and solution belong to practice.
+  const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
+  let tutor = null;
+  function setMode(m) {
+    document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
+    store('mg-mode', m);
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
+    $('#tutor').hidden = m !== 'tutor';
+    if (m === 'tutor') { $('#hints').hidden = true; $('#solution').hidden = true; }
+  }
+  function practise() {
+    setMode('practice');
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; relayout(); } else fresh();
+  }
+
   function fromHash() {
-    const m = location.hash.slice(1).match(/^(sv|va|vs|av)-(\d+)$/);
+    let m = location.hash.slice(1).match(/^tutor-(\d+)$/);
+    if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
+      setMode('tutor');
+      if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
+      return true;
+    }
+    m = location.hash.slice(1).match(/^(sv|va|vs|av)-(\d+)$/);
     if (!m) return false;
+    setMode('practice');
     if (!ex || ex.id !== m[0]) open(generate(m[1], Number(m[2])));
     return true;
   }
@@ -373,8 +464,14 @@
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);
     window.addEventListener('resize', relayout);
+    tutor = window.createTutor(LESSONS.map((l) => ({ ...l, frames: () => lesson(l) })), { done: practise });
+    $('#modes').addEventListener('change', () => {
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else practise();
+    });
     showScore();
-    if (!fromHash()) fresh();
+    if (fromHash()) return;
+    // First visit: start with the first worked example.
+    if (stored('mg-mode', 'tutor') === 'tutor') { setMode('tutor'); tutor.open(0); } else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

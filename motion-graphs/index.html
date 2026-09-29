@@ -8,6 +8,7 @@
   <script defer src="generator.js"></script>
   <script defer src="plot.js"></script>
   <script defer src="editor.js"></script>
+  <script defer src="tutor.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -20,11 +21,30 @@
 
   <main class="wrap">
     <div class="toolbar">
-      <div id="tasks" class="levels" role="radiogroup" aria-label="Kind of exercise"></div>
-      <button id="new" type="button" class="primary">New exercise</button>
+      <div id="modes" class="levels" role="radiogroup" aria-label="Mode">
+        <label><input type="radio" name="mode" value="tutor" checked><span>Tutor</span></label>
+        <label><input type="radio" name="mode" value="practice"><span>Practice</span></label>
+      </div>
+      <div id="tasks" class="levels practice" role="radiogroup" aria-label="Kind of exercise" hidden></div>
+      <button id="new" type="button" class="primary practice" hidden>New exercise</button>
     </div>
 
-    <section class="card">
+    <section id="tutor" class="card">
+      <div id="examples" class="levels examples" role="radiogroup" aria-label="Example"></div>
+      <h2 id="t-title"></h2>
+      <p id="t-idea" class="note"></p>
+      <div id="t-figure"></div>
+      <div class="progress" aria-hidden="true"><div id="t-bar"></div></div>
+      <div id="t-text" class="tutor-text" aria-live="polite"></div>
+      <div class="actions tutor-nav">
+        <button type="button" id="t-prev" class="secondary">← Back</button>
+        <span id="t-count" class="note"></span>
+        <button type="button" id="t-next" class="primary">Next →</button>
+      </div>
+      <p class="note">Use the arrow keys ← → to step through. The piece a step is about is <span class="k-band">highlighted</span> in both graphs; dashed lines are chords (mean values), short lines tangents, and shaded areas count <span class="k-pos">positive</span> above and <span class="k-neg">negative</span> below the time axis.</p>
+    </section>
+
+    <section id="task" class="card practice" hidden>
       <h2 id="task-title"></h2>
       <p id="statement"></p>
 

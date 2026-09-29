@@ -29,13 +29,14 @@
   const gridStep = (axis) => (axis.hi - axis.lo > 40 ? 2 : 1);
 
   // Grid (1 s by gridStep), axes, labels, breakpoints and piece numbers;
-  // wrong pieces (marks[i] === 'bad') get a shaded band.
+  // wrong pieces (marks[i] === 'bad') get a shaded band, the piece a tutorial step is about
+  // (marks[i] === 'focus') a highlighted one.
   function frame(ex, axis, q, marks) {
     const s = scales(axis);
     const minor = gridStep(axis);
     let out = '';
     ex.pieces.forEach((p, i) => {
-      if (marks && marks[i] === 'bad') out += `<rect class="band" x="${s.x(p.t0)}" y="${TOP - 24}" width="${f1(s.x(p.t1) - s.x(p.t0))}" height="${f1(s.y(axis.lo) - TOP + 24)}"/>`;
+      if (marks && (marks[i] === 'bad' || marks[i] === 'focus')) out += `<rect class="band${marks[i] === 'focus' ? ' focus' : ''}" x="${s.x(p.t0)}" y="${TOP - 24}" width="${f1(s.x(p.t1) - s.x(p.t0))}" height="${f1(s.y(axis.lo) - TOP + 24)}"/>`;
     });
     for (let t = 1; t <= T; t++) out += `<line class="grid" x1="${s.x(t)}" y1="${s.y(axis.hi)}" x2="${s.x(t)}" y2="${s.y(axis.lo)}"/>`;
     for (let v = axis.lo; v <= axis.hi; v += minor) if (v !== 0) out += `<line class="grid${v % axis.label === 0 ? ' major' : ''}" x1="${s.x(0)}" y1="${s.y(v)}" x2="${s.x(T)}" y2="${s.y(v)}"/>`;
@@ -54,10 +55,11 @@
     return { s, svg: out };
   }
 
-  // Path of a graph.
-  function curve(ex, vals, s, extra) {
+  // Path of a graph (only its first `upto` pieces, if given).
+  function curve(ex, vals, s, extra, upto = Infinity) {
     let out = '';
     ex.pieces.forEach((p, i) => {
+      if (i >= upto) return;
       const v = vals[i];
       const cy = 2 * v.ym - (v.y0 + v.y1) / 2;
       out += `<path class="curve${extra}" d="M${s.x(p.t0)},${s.y(v.y0)} Q${s.x((p.t0 + p.t1) / 2)},${s.y(cy)} ${s.x(p.t1)},${s.y(v.y1)}"/>`;
@@ -140,11 +142,47 @@
 
   const svg = (body, label, attrs) => `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}"${attrs || ''}>${body}</svg>`;
 
-  function sourceGraph(ex) {
+  // The given graph. For the tutorial, opts.marks as in frame() and opts.overlay(s): marks
+  // drawn over the graph, given the scales.
+  function sourceGraph(ex, opts = {}) {
     const q = ex.from;
-    const { s, svg: grid } = frame(ex, ex.axes.source, q);
-    return svg(`<g class="qc-${q}">${grid}${curve(ex, ex.source, s, '')}</g>`, `Given graph of ${q} against time`);
+    const { s, svg: grid } = frame(ex, ex.axes.source, q, opts.marks);
+    const over = opts.overlay ? opts.overlay(s) : '';
+    return svg(`<g class="qc-${q}">${grid}${opts.under ? opts.under(s) : ''}${curve(ex, ex.source, s, '')}${over}</g>`, `Given graph of ${q} against time`);
   }
+
+  // The answer graph for the tutorial: its first opts.upto pieces, with opts.marks and
+  // opts.overlay as for sourceGraph.
+  function answerGraph(ex, opts = {}) {
+    const q = ex.to;
+    const { s, svg: grid } = frame(ex, ex.axes.target, q, opts.marks);
+    const start = ex.dir === 'int' ? `<circle class="fixed" cx="${s.x(0)}" cy="${s.y(ex.answer[0].y0)}" r="${R_HANDLE - 1}"/>` : '';
+    return svg(`<g class="qc-${q}">${grid}${curve(ex, ex.answer, s, ' drawn', opts.upto)}${start}${opts.overlay ? opts.overlay(s) : ''}</g>`, `Graph of ${q} against time`);
+  }
+
+  // ---------------------------------------------------------------- tutorial marks
+  // Given the scales s: a dashed line from (t0, y0) to (t1, y1); a short tangent through (t, y)
+  // with the slope k (in units of the graph); the area between a straight piece from (t0, g0)
+  // to (t1, g1) and the t axis, split by sign; a dot; a label with a halo.
+  const Tut = {
+    chord: (s, t0, y0, t1, y1) => `<line class="chord" x1="${s.x(t0)}" y1="${s.y(y0)}" x2="${s.x(t1)}" y2="${s.y(y1)}"/>`,
+    tangent(s, t, y, k, half = 30) {
+      const dx = s.x(1) - s.x(0), dy = s.y(k) - s.y(0), n = Math.hypot(dx, dy), ux = (dx / n) * half, uy = (dy / n) * half;
+      return `<line class="tangent" x1="${f1(s.x(t) - ux)}" y1="${f1(s.y(y) - uy)}" x2="${f1(s.x(t) + ux)}" y2="${f1(s.y(y) + uy)}"/>`;
+    },
+    area(s, t0, g0, t1, g1) {
+      const poly = (pts, cls) => `<polygon class="area ${cls}" points="${pts.map(([t, v]) => `${s.x(t)},${s.y(v)}`).join(' ')}"/>`;
+      if (g0 * g1 >= 0) return poly([[t0, 0], [t0, g0], [t1, g1], [t1, 0]], g0 + g1 >= 0 ? 'pos' : 'neg');
+      const tc = t0 + ((t1 - t0) * g0) / (g0 - g1); // where the piece crosses the axis
+      return poly([[t0, 0], [t0, g0], [tc, 0]], g0 > 0 ? 'pos' : 'neg') + poly([[tc, 0], [t1, g1], [t1, 0]], g1 > 0 ? 'pos' : 'neg');
+    },
+    dot: (s, t, y, cls = '') => `<circle class="tdot ${cls}" cx="${s.x(t)}" cy="${s.y(y)}" r="4"/>`,
+    tag: (s, t, y, text, place = 'above') => {
+      const dy = place === 'above' ? -10 : place === 'below' ? 18 : 4, anchor = place === 'right' ? 'start' : place === 'left' ? 'end' : 'middle';
+      const dx = place === 'right' ? 8 : place === 'left' ? -8 : 0;
+      return `<text class="val tag" x="${f1(s.x(t) + dx)}" y="${f1(s.y(y) + dy)}" text-anchor="${anchor}">${text}</text>`;
+    },
+  };
 
   // Handles of the drawing, in the order the arrow keys go through them.
   // Derivative: the breakpoints n0 … n5. Integral: the breakpoints n1 … n5 (n0 is given) and
@@ -190,7 +228,7 @@
     return `<g class="qc-${q}">${body}</g>`;
   }
 
-  const api = { get W() { return W; }, H, TOP, B, setNarrow, UNIT, scales, sourceGraph, targetGraph, handles, svg, num, svgPoint, hoverPoint, hoverMark };
+  const api = { get W() { return W; }, H, TOP, B, setNarrow, UNIT, scales, sourceGraph, targetGraph, answerGraph, Tut, handles, svg, num, svgPoint, hoverPoint, hoverMark };
   root.Plot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

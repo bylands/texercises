@@ -17,6 +17,9 @@
   --q-v: #1f5fc4;
   --q-a: #1b7f3b;
   --band: #fdf0c4;
+  --focus-band: rgba(43, 89, 195, 0.1);
+  --area-pos: rgba(43, 89, 195, 0.22);
+  --area-neg: rgba(194, 65, 12, 0.24);
   --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
   color-scheme: light;
 }
@@ -40,11 +43,15 @@
     --q-v: #79a8ff;
     --q-a: #5fd07e;
     --band: #3a3320;
+    --focus-band: rgba(122, 162, 255, 0.12);
+    --area-pos: rgba(122, 162, 255, 0.28);
+    --area-neg: rgba(251, 146, 60, 0.28);
     color-scheme: dark;
   }
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -149,4 +156,32 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 @media (max-width: 560px) {
   .card { padding: 14px; }
   .levels span { padding: 7px 10px; }
+}
+
+/* tutor mode */
+.examples { margin-bottom: 14px; flex-wrap: wrap; }
+.tgraphs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+.tgraphs h3 { margin: 4px 0 2px; font-size: 0.95rem; }
+.tutor-text { min-height: 8em; }
+.tutor-text p { margin: 8px 0; }
+.tutor-text .step-rule { color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
+.tutor-nav { align-items: center; justify-content: space-between; }
+.tutor-nav .note { margin: 0; }
+.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 8px 0 6px; }
+#t-bar { height: 100%; background: var(--accent); transition: width 0.2s; }
+svg .band.focus { fill: var(--focus-band); }
+.tgraphs svg .val { font-size: 19px; }
+.tgraphs svg .tick, .tgraphs svg .pnum { font-size: 15px; }
+svg .pnum.focus { fill: var(--ink); }
+svg .chord { stroke: var(--ink); stroke-width: 1.4; stroke-dasharray: 6 4; }
+svg .tangent { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+svg .area.pos { fill: var(--area-pos); }
+svg .area.neg { fill: var(--area-neg); }
+svg .tdot { fill: var(--qc); stroke: var(--card); stroke-width: 1.5; }
+svg .tdot.mean { fill: var(--card); stroke: var(--qc); stroke-width: 2; }
+.k-band { background: var(--focus-band); border-radius: 3px; padding: 0 3px; }
+.k-pos { background: var(--area-pos); border-radius: 3px; padding: 0 3px; }
+.k-neg { background: var(--area-neg); border-radius: 3px; padding: 0 3px; }
+@media (max-width: 760px) {
+  .tgraphs { grid-template-columns: minmax(0, 1fr); }
 }
