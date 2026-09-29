@@ -1,18 +1,23 @@
 // Random matching exercises: four graphs of the magnetic flux Φ(t) through a conducting loop
 // and, in shuffled order, the four graphs of the induced voltage V_ind(t) = −dΦ/dt.
 //
-// In each interval, Φ(t) is either a straight line or a parabola. An interval is described by
-// the slope of Φ at its start and end (d0, d1 in mWb/s; equal for a straight line), so
-// V_ind(t) runs linearly from −d0 to −d1: constant where Φ is straight, a sloping line where
-// Φ is curved. All four flux graphs share the same breakpoints, so they can only be told
-// apart by their slopes.
-//
-// The four flux graphs are chosen so that typical misconceptions lead to wrong pairs:
-// - copy (“higher flux, higher voltage”): P is made of straight pieces, and Q is built so that
-//   its voltage graph has exactly the shape of P,
-// - sign (Lenz's rule forgotten): the mirror image of P or Q,
-// - steepness or average slope: P or Q changed in one interval, either to a different
-//   steepness or, for a curved interval, to a straight line with the same average slope.
+// A graph is a list of pieces covering 0 … T. Each piece has a start and end time (t0, t1),
+// the flux p0 at t0 and a shape; with τ = t − t0 and L = t1 − t0:
+//   poly: straight or a parabola; the slope changes linearly from d0 to d1 (mWb/s)
+//   exp:  Φ = p0 + q·τ + r·(e^(−τ/tc) − 1); a·(1 − e^(−τ/tc)) is q = 0, r = −a
+//   sine: Φ = p0 + A·(sin(w·τ + ph) − sin(ph))
+// Exercise families:
+//   pieces: 3–4 straight or parabolic pieces with shared breakpoints,
+//   exp:    a field switched on or off (or both): exponential approach to a new value,
+//   sine:   a sinusoidal flux, possibly switched on after a while.
+// The four flux graphs of an exercise are chosen so that typical misconceptions lead to
+// wrong pairs:
+//   copy (“higher flux, higher voltage”): a voltage graph is built with exactly the shape of
+//     a flux graph it does not belong to,
+//   sign (Lenz's rule forgotten): the mirror image of a graph,
+//   steepness: a graph that changes faster or slower (a steeper piece, a shorter time
+//     constant, a larger amplitude), or, for straight and curved pieces, average slope: a
+//     curved piece replaced by a straight one with the same average slope.
 // diagnose() names the misconception behind a wrong pair.
 // Units: t in s, Φ in mWb, V in mV (1 mWb/s = 1 mV).
 (function (root) {
@@ -21,11 +26,17 @@
   const T = 8;                        // time axis: 0 … T s
   const PHI_MAX = 8;                  // flux axis: 0 … PHI_MAX mWb
   const V_MAX = 3;                    // voltage axis: −V_MAX … V_MAX mV
-  const SLOPES = [-2, -1, 0, 1, 2];   // mWb/s
-  const CURVED = 0.45;                // chance that an interval is curved (where that is visible)
-  const BEND = 4;                     // |d1 − d0| · length ≥ BEND: the curve deviates ≥ 0.5 mWb from a straight line
   const FLUX = ['A', 'B', 'C', 'D'];
   const VOLT = ['1', '2', '3', '4'];
+  const FAMILIES = { pieces: 'Straight and curved', exp: 'Exponential', sine: 'Sinusoidal' };
+
+  const SLOPES = [-2, -1, 0, 1, 2];   // mWb/s, straight and curved pieces
+  const CURVED = 0.45;                // chance that a piece is curved (where that is visible)
+  const BEND = 4;                     // |d1 − d0| · L ≥ BEND: the curve deviates ≥ 0.5 mWb from a straight line
+  const EXP = [[2, 1], [3, 1], [3, 1.5], [4, 1.5], [4, 2], [6, 2], [2, 2], [3, 2]]; // [change in mWb, time constant in s]
+  const TCS = [0.5, 1, 1.5, 2];       // time constants in s
+  const SINES = [[2, 8], [3, 8], [1, 4], [1.5, 4], [1, 8 / 3]]; // [amplitude in mWb, period in s]
+  const AMPS = [0.5, 1, 1.5, 2, 2.5, 3];
 
   // ---------------------------------------------------------------- random numbers
   function rng(seed) {
@@ -45,163 +56,219 @@
     };
   }
 
-  // ---------------------------------------------------------------- graphs
+  // ---------------------------------------------------------------- pieces and graphs
   const neg = (x) => (x === 0 ? 0 : -x); // no −0
-  const curved = (seg) => seg.d0 !== seg.d1;
-  const key = (segs) => segs.map((s) => `${s.d0}:${s.d1}`).join(',');
-  const mirror = (segs) => segs.map((s) => ({ d0: neg(s.d0), d1: neg(s.d1) }));
-  const straight = (d) => ({ d0: d, d1: d });
+  const SHAPE = {
+    poly: {
+      f: (p, x) => p.d0 * x + ((p.d1 - p.d0) / (2 * (p.t1 - p.t0))) * x * x,
+      df: (p, x) => p.d0 + ((p.d1 - p.d0) * x) / (p.t1 - p.t0),
+      mirror: (p) => ({ ...p, d0: neg(p.d0), d1: neg(p.d1) }),
+    },
+    exp: {
+      f: (p, x) => p.q * x + p.r * (Math.exp(-x / p.tc) - 1),
+      df: (p, x) => p.q - (p.r / p.tc) * Math.exp(-x / p.tc),
+      mirror: (p) => ({ ...p, q: neg(p.q), r: neg(p.r) }),
+    },
+    sine: {
+      f: (p, x) => p.A * (Math.sin(p.w * x + p.ph) - Math.sin(p.ph)),
+      df: (p, x) => p.A * p.w * Math.cos(p.w * x + p.ph),
+      mirror: (p) => ({ ...p, A: neg(p.A) }),
+    },
+  };
+  const straight = (t0, t1, d) => ({ type: 'poly', t0, t1, d0: d, d1: d });
+  const curved = (p) => !(p.type === 'poly' && p.d0 === p.d1);
 
-  // Interval lengths in whole seconds that add up to T.
-  function intervals(r) {
+  // Sets the flux p0 at the start of every piece, beginning with `start`.
+  function chain(pieces, start) {
+    let p0 = start;
+    return pieces.map((p) => {
+      const q = { ...p, p0 };
+      p0 += SHAPE[p.type].f(p, p.t1 - p.t0);
+      return q;
+    });
+  }
+  const graph = (pieces) => ({ pieces: chain(pieces, 0) });
+  const mirror = (g) => graph(g.pieces.map((p) => SHAPE[p.type].mirror(p)));
+
+  // The piece that holds time t (at a breakpoint, the one that starts there).
+  const pieceAt = (g, t) => g.pieces.find((p) => t < p.t1) || g.pieces[g.pieces.length - 1];
+  function flux(g, t) { const p = pieceAt(g, t); return p.p0 + SHAPE[p.type].f(p, t - p.t0); }
+  function volt(g, t) { const p = pieceAt(g, t); return neg(SHAPE[p.type].df(p, t - p.t0)); }
+
+  const SAMPLES = Array.from({ length: 401 }, (x, k) => (k * T) / 400);
+  const MIDS = Array.from({ length: 400 }, (x, k) => ((k + 0.5) * T) / 400);
+
+  function extent(g) {
+    const v = SAMPLES.map((t) => flux(g, t));
+    return [Math.min(...v), Math.max(...v)];
+  }
+  // Range of whole-number start values that keep the graph on the flux axis.
+  function starts(g) {
+    const [lo, hi] = extent(g);
+    return [Math.ceil(-lo - 1e-9), Math.floor(PHI_MAX - hi + 1e-9)];
+  }
+  const vmax = (g) => Math.max(...MIDS.map((t) => Math.abs(volt(g, t))));
+  const differ = (a, b) => Math.max(...MIDS.map((t) => Math.abs(volt(a, t) - volt(b, t)))) >= 0.4;
+
+  // A graph whose voltage is α·(Φ_g − c), so that its voltage graph has the shape of g's flux
+  // graph. Works for straight pieces, exp pieces with q = 0, and sine pieces centred on c.
+  function copy(g, alpha, c) {
+    const out = [];
+    for (const p of g.pieces) {
+      const L = p.t1 - p.t0, b = p.p0 - c; // Φ_g − c at the start of the piece
+      if (p.type === 'poly' && p.d0 === p.d1) {
+        out.push({ type: 'poly', t0: p.t0, t1: p.t1, d0: -alpha * b, d1: -alpha * (b + p.d0 * L) });
+      } else if (p.type === 'exp' && p.q === 0) {
+        out.push({ type: 'exp', t0: p.t0, t1: p.t1, q: -alpha * (b - p.r), r: alpha * p.r * p.tc, tc: p.tc });
+      } else if (p.type === 'sine' && Math.abs(b - p.A * Math.sin(p.ph)) < 1e-9) {
+        out.push({ type: 'sine', t0: p.t0, t1: p.t1, A: (alpha * p.A) / p.w, w: p.w, ph: p.ph + Math.PI / 2 });
+      } else {
+        return null;
+      }
+    }
+    return graph(out);
+  }
+
+  // ---------------------------------------------------------------- family: straight and curved pieces
+  // Breakpoints in whole seconds.
+  function breakpoints(r) {
     for (;;) {
       const n = r.int(3, 4);
       const ls = Array.from({ length: n }, () => (n === 4 ? r.int(1, 3) : r.int(2, 4)));
-      if (ls.reduce((sum, l) => sum + l, 0) === T) return ls;
+      if (ls.reduce((sum, l) => sum + l, 0) === T) return ls.reduce((t, l) => [...t, t[t.length - 1] + l], [0]);
     }
   }
 
-  // A straight or, where the bend would be visible, curved interval.
-  function segment(r, len) {
-    const d0 = r.pick(SLOPES);
-    const ends = SLOPES.filter((d) => Math.abs(d - d0) * len >= BEND);
-    return ends.length && r.next() < CURVED ? { d0, d1: r.pick(ends) } : straight(d0);
+  // Every breakpoint is visible (the slope does not just carry on changing at the same rate),
+  // curves bend visibly, slopes stay within ±2 mWb/s and the flux changes in two pieces or more.
+  function usablePieces(g) {
+    const ps = g.pieces, rate = (p) => (p.d1 - p.d0) / (p.t1 - p.t0);
+    if (ps.some((p, i) => i > 0 && p.d0 === ps[i - 1].d1 && rate(p) === rate(ps[i - 1]))) return false;
+    if (ps.some((p) => curved(p) && Math.abs(p.d1 - p.d0) * (p.t1 - p.t0) < BEND)) return false;
+    if (ps.some((p) => Math.abs(p.d0) > 2 || Math.abs(p.d1) > 2)) return false;
+    return ps.filter((p) => p.d0 !== 0 || p.d1 !== 0).length >= 2;
   }
 
-  // Flux at time τ into an interval of length len that starts at phi.
-  const at = (seg, len, phi, tau) => phi + seg.d0 * tau + ((seg.d1 - seg.d0) / (2 * len)) * tau * tau;
-
-  // Flux at the breakpoints, starting at `start`.
-  function values(segs, ls, start) {
-    const v = [start];
-    segs.forEach((s, i) => v.push(at(s, ls[i], v[i], ls[i])));
-    return v;
-  }
-
-  // Smallest and largest flux, including extremes inside curved intervals.
-  function extent(segs, ls, start) {
-    const v = values(segs, ls, start), all = v.slice();
-    segs.forEach((s, i) => {
-      if (curved(s) && s.d0 * s.d1 < 0) all.push(at(s, ls[i], v[i], (-s.d0 / (s.d1 - s.d0)) * ls[i]));
-    });
-    return [Math.min(...all), Math.max(...all)];
-  }
-
-  // Every breakpoint is visible (the slope of Φ does not just carry on changing at the same
-  // rate), curves bend visibly, the flux changes in at least two intervals, and it fits on the
-  // flux axis with a whole-number start value.
-  function usable(segs, ls) {
-    const rate = (i) => (segs[i].d1 - segs[i].d0) / ls[i];
-    if (segs.some((s, i) => i > 0 && s.d0 === segs[i - 1].d1 && rate(i) === rate(i - 1))) return false;
-    if (segs.some((s, i) => curved(s) && Math.abs(s.d1 - s.d0) * ls[i] < BEND)) return false;
-    if (segs.some((s) => Math.abs(s.d0) > 2 || Math.abs(s.d1) > 2)) return false;
-    if (segs.filter((s) => s.d0 !== 0 || s.d1 !== 0).length < 2) return false;
-    const [lo, hi] = extent(segs, ls, 0);
-    return Math.ceil(-lo) <= Math.floor(PHI_MAX - hi);
-  }
-
-  // P: straight pieces, flux range at most 4 mWb (so that its shape fits on the voltage axis).
-  // Q: its voltage at the breakpoints is P's flux shifted by c, so V_Q(t) has the shape of P(t).
-  function copyPair(r, ls) {
-    const p = ls.map((l) => straight(r.pick(SLOPES.filter((d) => Math.abs(d) * l <= 4))));
-    const v = values(p, ls, 0);
-    const lo = Math.min(...v), hi = Math.max(...v);
-    if (hi - lo > 4) return null;
-    const c = r.int(hi - 2, lo + 2);
-    const w = v.map((x) => x - c);
-    const q = ls.map((l, i) => ({ d0: neg(w[i]), d1: neg(w[i + 1]) }));
-    return [p, q];
-  }
-
-  // A graph that differs from `base` in one interval: a curved interval becomes a straight line
-  // with the same average slope (if that is a whole number), a sloped straight one gets a
-  // different steepness with the same sign.
-  function near(r, base) {
-    const avg = (s) => (s.d0 + s.d1) / 2;
-    const fits = (s) => (curved(s) ? Number.isInteger(avg(s)) : s.d0 !== 0);
-    const idx = base.map((s, i) => i).filter((i) => fits(base[i]));
+  // Differs from g in one piece: a curved piece becomes straight with the same average slope
+  // (if that is a whole number), a sloped straight one gets a different steepness (±1 ↔ ±2).
+  function nearPieces(r, g) {
+    const avg = (p) => (p.d0 + p.d1) / 2;
+    const idx = g.pieces.map((p, i) => i).filter((i) => (curved(g.pieces[i]) ? Number.isInteger(avg(g.pieces[i])) : g.pieces[i].d0 !== 0));
     if (!idx.length) return null;
-    const i = r.pick(idx), s = base[i], out = base.slice();
-    out[i] = straight(curved(s) ? avg(s) : Math.sign(s.d0) * (3 - Math.abs(s.d0))); // ±1 ↔ ±2
-    return out;
+    const i = r.pick(idx), p = g.pieces[i];
+    const pieces = g.pieces.slice();
+    pieces[i] = straight(p.t0, p.t1, curved(p) ? avg(p) : Math.sign(p.d0) * (3 - Math.abs(p.d0)));
+    return graph(pieces);
   }
 
-  function generate(seed) {
+  // P: straight pieces with a flux range of at most 4 mWb; Q: its voltage at the breakpoints is
+  // P's flux shifted by c, so the voltage graph of Q has the shape of P.
+  function piecesFamily(r) {
+    const ts = breakpoints(r);
+    const p = graph(ts.slice(0, -1).map((t0, i) => {
+      const t1 = ts[i + 1];
+      return straight(t0, t1, r.pick(SLOPES.filter((d) => Math.abs(d) * (t1 - t0) <= 4)));
+    }));
+    const [lo, hi] = extent(p);
+    if (hi - lo > 4) return null;
+    const q = copy(p, 1, r.int(Math.round(hi) - 2, Math.round(lo) + 2));
+    const set = [p, q, mirror(r.pick([p, q])), nearPieces(r, r.pick([p, q]))];
+    return set.every((g) => g && usablePieces(g)) ? set : null;
+  }
+
+  // ---------------------------------------------------------------- family: exponential
+  // Switched at ts towards a new value (and, for a pulse, back again at t2).
+  function expFamily(r) {
+    const pulse = r.next() < 0.4;
+    const ts = pulse ? 1 : r.pick([1, 2]);
+    const t2 = pulse ? ts + r.pick([3, 4]) : T;
+    const [a, tc] = r.pick(EXP);
+    const up = r.pick([1, -1]);
+    const build = (k) => {
+      const pieces = [straight(0, ts, 0), { type: 'exp', t0: ts, t1: t2, q: 0, r: -up * a, tc: k }];
+      if (pulse) pieces.push({ type: 'exp', t0: t2, t1: T, q: 0, r: up * a * (1 - Math.exp(-(t2 - ts) / k)), tc: k });
+      return graph(pieces);
+    };
+    const base = build(tc);
+    const others = TCS.filter((k) => k !== tc && a / k <= V_MAX - 0.3 && a / k >= 0.8);
+    if (!others.length) return null;
+    const copied = copy(base, r.pick([1, 1.5]) / a, 0);
+    return [base, copied, mirror(r.pick([base, copied])), build(r.pick(others))];
+  }
+
+  // ---------------------------------------------------------------- family: sinusoidal
+  function sineFamily(r) {
+    const [A, P] = r.pick(SINES), w = (2 * Math.PI) / P;
+    const ph = (r.int(0, 3) * Math.PI) / 2;
+    const on = r.next() < 0.35 ? 2 : 0;
+    const build = (amp) => graph([...(on ? [straight(0, on, 0)] : []), { type: 'sine', t0: on, t1: T, A: amp, w, ph }]);
+    const base = build(A);
+    const amps = AMPS.filter((x) => x !== A && x * w <= V_MAX - 0.3 && x * w >= 0.8);
+    // The copy has a round amplitude too: its voltage is α·(Φ − centre) with α = amplitude · w / A.
+    const copied = copy(base, (r.pick(amps.concat(A)) * w) / A, -A * Math.sin(ph));
+    return [base, copied, mirror(r.pick([base, copied])), build(r.pick(amps))];
+  }
+
+  const BUILD = { pieces: piecesFamily, exp: expFamily, sine: sineFamily };
+
+  // ---------------------------------------------------------------- exercise
+  function generate(family, seed) {
     const r = rng(seed);
     for (;;) {
-      const ls = intervals(r);
-      const pq = copyPair(r, ls);
-      if (!pq) continue;
-      const [p, q] = pq;
-      const m = mirror(r.pick(pq));
-      const n = near(r, r.pick(pq));
-      if (!n) continue;
-      const set = [p, q, m, n];
-      if (!set.every((s) => usable(s, ls))) continue;
-      if (new Set(set.map(key)).size < set.length) continue;
+      const set = BUILD[family](r);
+      if (!set || set.some((g) => !g)) continue;
+      if (!set.every((g) => starts(g)[0] <= starts(g)[1] && vmax(g) <= V_MAX - 0.2 && vmax(g) >= 0.4)) continue;
+      if (set.some((a, i) => set.slice(i + 1).some((b) => !differ(a, b)))) continue;
 
-      const flux = r.shuffle(set).map((segs, k) => {
-        const [lo, hi] = extent(segs, ls, 0);
-        const start = r.int(Math.ceil(-lo), Math.floor(PHI_MAX - hi));
-        return { id: FLUX[k], segs, values: values(segs, ls, start) };
+      const fluxes = r.shuffle(set).map((g, k) => {
+        const [lo, hi] = starts(g);
+        return { id: FLUX[k], pieces: chain(g.pieces, r.int(lo, hi)) };
       });
       // Voltage graphs in a different order (never the same position for every pair).
       let order;
       do order = r.shuffle([0, 1, 2, 3]); while (order.every((f, k) => f === k));
-      const volt = order.map((f, k) => ({ id: VOLT[k], segs: voltage(flux[f].segs), of: flux[f].id }));
-      const times = ls.reduce((t, l) => [...t, t[t.length - 1] + l], [0]);
+      const volts = order.map((f, k) => ({ id: VOLT[k], of: fluxes[f].id }));
       return {
-        id: String(seed),
-        times,
-        flux,
-        volt,
-        answer: Object.fromEntries(volt.map((u) => [u.of, u.id])),
+        id: `${family}-${seed}`,
+        family,
+        flux: fluxes,
+        volt: volts,
+        answer: Object.fromEntries(volts.map((u) => [u.of, u.id])),
       };
     }
   }
 
-  const voltage = (segs) => segs.map((s) => ({ v0: neg(s.d0), v1: neg(s.d1) }));
-
   // ---------------------------------------------------------------- misconceptions
-  function fluxAt(ex, f, t) {
-    const i = Math.max(0, Math.min(ex.times.findIndex((x) => x > t) - 1, f.segs.length - 1));
-    return at(f.segs[i], ex.times[i + 1] - ex.times[i], f.values[i], t - ex.times[i]);
-  }
-  function voltAt(ex, segs, t) {
-    const i = Math.max(0, Math.min(ex.times.findIndex((x) => x > t) - 1, segs.length - 1));
-    const s = segs[i];
-    return s.v0 + ((s.v1 - s.v0) * (t - ex.times[i])) / (ex.times[i + 1] - ex.times[i]);
-  }
-
-  // Does the voltage graph have the same shape as the flux graph (correlation close to 1)?
-  function sameShape(ex, f, segs) {
-    const ts = Array.from({ length: 161 }, (x, k) => (k * T) / 160);
-    const a = ts.map((t) => fluxAt(ex, f, t)), b = ts.map((t) => voltAt(ex, segs, t));
+  function correlation(a, b) {
     const mean = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
     const ma = mean(a), mb = mean(b);
     let sab = 0, saa = 0, sbb = 0;
     a.forEach((x, k) => { sab += (x - ma) * (b[k] - mb); saa += (x - ma) ** 2; sbb += (b[k] - mb) ** 2; });
-    return saa > 0 && sbb > 0 && sab / Math.sqrt(saa * sbb) > 0.97;
+    return saa > 0 && sbb > 0 ? sab / Math.sqrt(saa * sbb) : 0;
   }
 
   // Which misconception explains pairing flux graph fluxId with voltage graph voltId?
-  // 'right' | 'sign' | 'copy' | 'average' | 'steepness' | 'other'
+  // 'right' | 'sign' | 'average' | 'copy' | 'steepness' | 'other'
   function diagnose(ex, fluxId, voltId) {
-    const f = ex.flux.find((x) => x.id === fluxId), w = ex.volt.find((x) => x.id === voltId);
-    if (w.of === fluxId) return 'right';
-    const own = voltage(f.segs);
-    if (w.segs.every((s, i) => s.v0 === neg(own[i].v0) && s.v1 === neg(own[i].v1))) return 'sign';
-    if (sameShape(ex, f, w.segs)) return 'copy';
-    const avg = w.segs.every((s, i) => (s.v0 === own[i].v0 && s.v1 === own[i].v1) ||
-      (curved(f.segs[i]) && s.v0 === s.v1 && s.v0 === neg((f.segs[i].d0 + f.segs[i].d1) / 2)));
-    if (avg) return 'average';
+    const f = ex.flux.find((x) => x.id === fluxId), u = ex.volt.find((x) => x.id === voltId);
+    if (u.of === fluxId) return 'right';
+    const g = ex.flux.find((x) => x.id === u.of);
+    const close = (a, b) => Math.abs(a - b) < 1e-6;
+    if (MIDS.every((t) => close(volt(g, t), -volt(f, t)))) return 'sign';
+    // Every piece fits, except curved ones where the voltage is constant at the average slope.
+    const averaged = f.pieces.every((p) => {
+      const ts = MIDS.filter((t) => t >= p.t0 && t < p.t1);
+      const avg = -(flux(f, p.t1 - 1e-12) - p.p0) / (p.t1 - p.t0);
+      return ts.every((t) => close(volt(g, t), volt(f, t))) || (curved(p) && ts.every((t) => close(volt(g, t), avg)));
+    });
+    if (averaged) return 'average';
+    if (correlation(MIDS.map((t) => flux(f, t)), MIDS.map((t) => volt(g, t))) > 0.97) return 'copy';
     const sgn = (x) => (Math.abs(x) < 1e-9 ? 0 : Math.sign(x));
-    const ts = Array.from({ length: 81 }, (x, k) => (k * T) / 80 + 1e-6).filter((t) => t < T);
-    if (ts.every((t) => sgn(voltAt(ex, w.segs, t)) === sgn(voltAt(ex, own, t)))) return 'steepness';
+    if (MIDS.every((t) => sgn(volt(g, t)) === sgn(volt(f, t)))) return 'steepness';
     return 'other';
   }
 
-  const api = { T, PHI_MAX, V_MAX, FLUX, VOLT, generate, diagnose, extent, curved, BEND };
+  const api = { T, PHI_MAX, V_MAX, FLUX, VOLT, FAMILIES, BEND, generate, diagnose, correlation, flux, volt, curved, SHAPE };
   root.Induction = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

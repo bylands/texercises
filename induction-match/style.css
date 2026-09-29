@@ -59,7 +59,14 @@ h1 { font-size: 1.25rem; margin: 0; }
 .score { margin: 0; color: var(--muted); font-size: 0.9rem; }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 20px 0 14px; }
-button { font: inherit; color: inherit; }
+button, input { font: inherit; color: inherit; }
+.levels { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
+.levels label { position: relative; }
+.levels input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.levels span { display: block; padding: 7px 14px; border-left: 1px solid var(--line); }
+.levels label:first-child span { border-left: 0; }
+.levels input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.levels input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
 
 .card {
   background: var(--card);

@@ -1,12 +1,13 @@
-// SVG diagrams: flux Φ(t) made of straight and parabolic pieces, induced voltage V_ind(t) made
-// of straight pieces. For the solution, the slopes of Φ (mWb/s) and the voltages (mV) of every
-// interval are written in a row above the plot.
+// SVG diagrams of a flux graph Φ(t) and of its induced voltage V_ind(t) = −dΦ/dt, drawn by
+// sampling each piece. For the solution, the slope of Φ (mWb/s) or the voltage (mV) at the
+// start and end of every piece is written in a row above the plot (not for sine pieces).
 (function (root) {
   'use strict';
 
-  const { T, PHI_MAX, V_MAX } = root.Induction || require('./generator.js');
+  const { T, PHI_MAX, V_MAX, SHAPE, flux, volt } = root.Induction || require('./generator.js');
   const W = 280, H = 196, L = 34, R = 44, TOP = 44, B = 26;
   const num = (x) => (x > 0 ? '+' + x : x < 0 ? '−' + -x : '0');
+  const r1 = (x) => Math.round(x * 10) / 10;
   const f1 = (x) => Math.round(x * 10) / 10;
 
   function frame(yMin, yMax, yLabelStep, yLabel) {
@@ -27,42 +28,51 @@
   const svg = (body, label) =>
     `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}">${body}</svg>`;
 
-  // Solution labels: one per interval, in a row above the plot, with separators at the breakpoints.
-  function labels(g, times, texts) {
+  // Solution labels: one per piece, in a row above the plot, with separators at the breakpoints.
+  function labels(g, pieces, texts) {
     let s = '';
-    times.slice(1, -1).forEach((t) => { s += `<line class="jump" x1="${g.x(t)}" y1="${TOP - 17}" x2="${g.x(t)}" y2="${TOP - 3}"/>`; });
-    texts.forEach((text, i) => { s += `<text class="ann" x="${g.x((times[i] + times[i + 1]) / 2)}" y="${TOP - 6}" text-anchor="middle">${text}</text>`; });
+    pieces.slice(1).forEach((p) => { s += `<line class="jump" x1="${g.x(p.t0)}" y1="${TOP - 17}" x2="${g.x(p.t0)}" y2="${TOP - 3}"/>`; });
+    texts.forEach((text, i) => { s += `<text class="ann" x="${g.x((pieces[i].t0 + pieces[i].t1) / 2)}" y="${TOP - 6}" text-anchor="middle">${text}</text>`; });
     return s;
   }
   const range = (a, b) => (a === b ? num(a) : `${num(a)} → ${num(b)}`);
 
-  // A curved interval is a parabola: one quadratic Bézier segment whose control point is where
-  // the tangents at both ends meet (in the middle of the interval).
-  function fluxGraph(times, values, segs, annotate) {
-    const g = frame(0, PHI_MAX, 2, '<tspan class="it">Φ</tspan> in mWb');
-    let d = `M${g.x(times[0])},${g.y(values[0])}`;
-    segs.forEach((sg, i) => {
-      const t0 = times[i], t1 = times[i + 1], len = t1 - t0, p0 = values[i], p1 = values[i + 1];
-      d += sg.d0 === sg.d1
-        ? ` L${g.x(t1)},${g.y(p1)}`
-        : ` Q${g.x(t0 + len / 2)},${g.y(p0 + (sg.d0 * len) / 2)} ${g.x(t1)},${g.y(p1)}`;
-    });
-    const ann = annotate ? labels(g, times, segs.map((sg) => range(sg.d0, sg.d1))) : '';
-    return svg(g.s + `<path class="curve" d="${d}"/>` + ann, 'Graph of the magnetic flux against time');
+  // Slope of Φ at the start and end of a piece, rounded; sine pieces get no label.
+  function slopes(p, sign) {
+    if (p.type === 'sine') return '';
+    const df = (x) => r1(sign * SHAPE[p.type].df(p, x));
+    return range(df(0), df(p.t1 - p.t0));
   }
 
-  function voltGraph(times, segs, annotate) {
+  // Points along one piece: its ends for a straight line, otherwise about 25 per second.
+  function points(p, value, g) {
+    const n = p.type === 'poly' && p.d0 === p.d1 ? 1 : Math.ceil((p.t1 - p.t0) * 25);
+    return Array.from({ length: n + 1 }, (x, k) => {
+      const t = p.t0 + ((p.t1 - p.t0) * k) / n;
+      return `${g.x(t)},${g.y(value(Math.min(t, p.t1 - 1e-9)))}`;
+    });
+  }
+
+  function fluxGraph(fg, annotate) {
+    const g = frame(0, PHI_MAX, 2, '<tspan class="it">Φ</tspan> in mWb');
+    const pts = fg.pieces.flatMap((p, i) => points(p, (t) => flux(fg, t), g).slice(i ? 1 : 0));
+    const ann = annotate ? labels(g, fg.pieces, fg.pieces.map((p) => slopes(p, 1))) : '';
+    return svg(g.s + `<path class="curve" d="M${pts.join(' L')}"/>` + ann, 'Graph of the magnetic flux against time');
+  }
+
+  // The voltage jumps where the slope of Φ does; jumps are drawn as dotted lines.
+  function voltGraph(fg, annotate) {
     const g = frame(-V_MAX, V_MAX, 1, '<tspan class="it">V</tspan><tspan class="sub" dy="3">ind</tspan><tspan dy="-3"> in mV</tspan>');
-    let s = g.s;
-    segs.forEach((sg, i) => {
-      const prev = segs[i - 1];
-      if (prev && prev.v1 !== sg.v0) s += `<line class="jump" x1="${g.x(times[i])}" y1="${g.y(prev.v1)}" x2="${g.x(times[i])}" y2="${g.y(sg.v0)}"/>`;
+    let s = g.s, d = '';
+    fg.pieces.forEach((p, i) => {
+      if (i > 0) {
+        const before = volt(fg, p.t0 - 1e-9), after = volt(fg, p.t0);
+        if (Math.abs(before - after) > 1e-6) s += `<line class="jump" x1="${g.x(p.t0)}" y1="${g.y(before)}" x2="${g.x(p.t0)}" y2="${g.y(after)}"/>`;
+      }
+      d += `M${points(p, (t) => volt(fg, t), g).join(' L')} `;
     });
-    segs.forEach((sg, i) => {
-      const x0 = g.x(times[i]), x1 = g.x(times[i + 1]), y0 = g.y(sg.v0), y1 = g.y(sg.v1);
-      s += `<line class="curve" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"/>`;
-    });
-    if (annotate) s += labels(g, times, segs.map((sg) => range(sg.v0, sg.v1)));
+    s += `<path class="curve" d="${d.trim()}"/>`;
+    if (annotate) s += labels(g, fg.pieces, fg.pieces.map((p) => slopes(p, -1)));
     return svg(s, 'Graph of the induced voltage against time');
   }
 
