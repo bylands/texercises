@@ -11,6 +11,11 @@
   --bad: #b3261e;
   --bad-bg: #fbe9e7;
   --glow: #ffc21a;
+  --zone-light: rgba(43, 89, 195, 0.06);
+  --zone-light-line: rgba(43, 89, 195, 0.45);
+  --zone-strong: rgba(43, 89, 195, 0.16);
+  --zone-strong-line: rgba(43, 89, 195, 0.6);
+  --vnote: #1f5fd6;
   --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
   color-scheme: light;
 }
@@ -29,11 +34,17 @@
     --bad: #ff8a80;
     --bad-bg: #3d2322;
     --glow: #ffd23f;
+    --zone-light: rgba(122, 162, 255, 0.07);
+    --zone-light-line: rgba(122, 162, 255, 0.45);
+    --zone-strong: rgba(122, 162, 255, 0.2);
+    --zone-strong-line: rgba(122, 162, 255, 0.65);
+    --vnote: #74a7ff;
     color-scheme: dark;
   }
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -135,3 +146,23 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
   .card { padding: 14px; }
   .choices span { padding: 6px 9px; }
 }
+
+/* tutor mode */
+.examples { margin-bottom: 14px; flex-wrap: wrap; }
+.tutor-text { min-height: 8em; }
+.tutor-text p { margin: 8px 0; }
+.tutor-text ul { margin: 8px 0; padding-left: 1.2em; }
+.tutor-text .step-rule { color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
+.tutor-nav { align-items: center; justify-content: space-between; }
+.tutor-nav .note { margin: 0; }
+.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+#t-bar { height: 100%; background: var(--accent); transition: width 0.2s; }
+svg .zone { stroke-width: 1.2; }
+svg .zone.light { fill: var(--zone-light); stroke: var(--zone-light-line); stroke-dasharray: 4 3; }
+svg .zone.strong { fill: var(--zone-strong); stroke: var(--zone-strong-line); }
+svg .ring { fill: none; stroke: var(--accent); stroke-width: 2.4; }
+svg .cap { fill: var(--vnote); font: italic 600 14px var(--serif); }
+svg .note { fill: var(--ink); font: 600 14px system-ui, sans-serif; }
+svg .note.v { fill: var(--vnote); font: italic 600 14px var(--serif); }
+.k-strong { background: var(--zone-strong); border: 1px solid var(--zone-strong-line); border-radius: 3px; padding: 0 3px; }
+.k-light { background: var(--zone-light); border: 1px dashed var(--zone-light-line); border-radius: 3px; padding: 0 3px; }

@@ -202,49 +202,49 @@
     return out;
   }
 
+  // The exercise for the batteries packKey and a load (a tree as built by buildLoad; it gets
+  // arranged and numbered), or null if some bulb depends on the bulbs' characteristic.
+  function make(packKey, load, id, level) {
+    const pack = PACKS[packKey];
+    arrange(load);
+    number(load);
+    const E = emf(pack);
+    const V = voltages(load, E, true);
+    const answers = V.map((v) => answerFor(v.iv));
+    if (answers.includes(null)) return null;
+    const models = {
+      forward: voltages(load, emf(pack, true)).map((v) => answerFor(v.iv)),
+      fixedCurrent: fixedCurrents(load, E).map(answerFor),
+    };
+    const bulbs = V.map((v, i) => ({
+      name: `L${i + 1}`,
+      iv: v.iv,
+      steps: v.steps,
+      answer: answers[i],
+      shorted: answers[i] === 'off' && !isZero(E),
+      models: { forward: models.forward[i], fixedCurrent: models.fixedCurrent[i] },
+    }));
+    return { id, level, packKey, pack: clone(pack), load, bulbs, E, reversed: packKey.startsWith('R') };
+  }
+
   function generate(level, seed) {
     const lv = LEVELS[level];
     const r = rng(seed);
     // The batteries are chosen once, so that retries do not favour easily decided ones.
-    const packKey = r.pick(lv.packs), pack = PACKS[packKey];
+    const packKey = r.pick(lv.packs);
     for (;;) {
       const load = buildLoad(r.int(lv.bulbs[0], lv.bulbs[1]), null, r);
       if (r.next() < lv.shorts) addShort(load, r);
       if (shorted(load)) continue; // the batteries would be short-circuited
-      arrange(load);
-      number(load);
-      const E = emf(pack);
-      const V = voltages(load, E, true);
-      const answers = V.map((v) => answerFor(v.iv));
-      if (answers.includes(null)) continue; // depends on the bulbs' characteristic
-      const models = {
-        forward: voltages(load, emf(pack, true)).map((v) => answerFor(v.iv)),
-        fixedCurrent: fixedCurrents(load, E).map(answerFor),
-      };
-      const bulbs = V.map((v, i) => ({
-        name: `L${i + 1}`,
-        iv: v.iv,
-        steps: v.steps,
-        answer: answers[i],
-        shorted: answers[i] === 'off' && !isZero(E),
-        models: { forward: models.forward[i], fixedCurrent: models.fixedCurrent[i] },
-      }));
+      const ex = make(packKey, load, `${level}-${seed}`, level);
+      if (!ex) continue;
       // Beyond the easy level: not every bulb gets the same answer (unless no current flows),
       // and the fixed-current model predicts something wrong for at least one bulb.
-      if (level !== 'easy' && !isZero(E)) {
-        if (new Set(answers).size < 2) continue;
-        if (bulbs.every((b) => b.models.fixedCurrent === b.answer)) continue;
+      if (level !== 'easy' && !isZero(ex.E)) {
+        if (new Set(ex.bulbs.map((b) => b.answer)).size < 2) continue;
+        if (ex.bulbs.every((b) => b.models.fixedCurrent === b.answer)) continue;
       }
-      return {
-        id: `${level}-${seed}`,
-        level,
-        packKey,
-        pack: clone(pack),
-        load,
-        bulbs,
-        E,
-        reversed: packKey.startsWith('R'),
-      };
+      return ex;
     }
   }
 
@@ -269,7 +269,7 @@
       b.steps.every((s, k) => s.group === c.steps[k].group && canon(s.part) === canon(c.steps[k].part));
   }
 
-  const api = { LEVELS, ANSWERS, PS, generate, diagnose, sameSpot, bulbsIn, canon, compare, ftext, cmp, isExact, isZero, ONE };
+  const api = { LEVELS, ANSWERS, PS, generate, make, diagnose, sameSpot, bulbsIn, canon, compare, ftext, cmp, isExact, isZero, ONE };
   root.Bulbs = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css">
   <script defer src="generator.js"></script>
   <script defer src="draw.js"></script>
+  <script defer src="tutor.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -19,11 +20,30 @@
 
   <main class="wrap">
     <div class="toolbar">
-      <div id="levels" class="levels" role="radiogroup" aria-label="Difficulty"></div>
-      <button id="new" type="button" class="primary">New exercise</button>
+      <div id="modes" class="levels" role="radiogroup" aria-label="Mode">
+        <label><input type="radio" name="mode" value="tutor" checked><span>Tutor</span></label>
+        <label><input type="radio" name="mode" value="practice"><span>Practice</span></label>
+      </div>
+      <div id="levels" class="levels practice" role="radiogroup" aria-label="Difficulty" hidden></div>
+      <button id="new" type="button" class="primary practice" hidden>New exercise</button>
     </div>
 
-    <section class="card">
+    <section id="tutor" class="card">
+      <div id="examples" class="levels examples" role="radiogroup" aria-label="Example"></div>
+      <h2 id="t-title"></h2>
+      <p id="t-idea" class="note"></p>
+      <div id="t-figure"></div>
+      <div class="progress" aria-hidden="true"><div id="t-bar"></div></div>
+      <div id="t-text" class="tutor-text" aria-live="polite"></div>
+      <div class="actions tutor-nav">
+        <button type="button" id="t-prev">← Back</button>
+        <span id="t-count" class="note"></span>
+        <button type="button" id="t-next" class="primary">Next →</button>
+      </div>
+      <p class="note">Use the arrow keys ← → to step through. In the diagram, the part whose voltage is shared is <span class="k-light">shaded</span>, the parts that share it are <span class="k-strong">highlighted</span>, and every bulb shows its voltage once it is known.</p>
+    </section>
+
+    <section id="task" class="card practice" hidden>
       <h2>How bright are the bulbs?</h2>
       <p>All batteries are identical, and so are all bulbs. Compare each bulb with the reference circuit: one bulb connected to one battery. Is it brighter, equally bright, less bright, or off?</p>
 

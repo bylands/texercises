@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const { LEVELS, ANSWERS, generate, diagnose, sameSpot, bulbsIn, ftext, cmp, isExact, isZero, ONE } = window.Bulbs;
+  const { LEVELS, ANSWERS, generate, make, diagnose, sameSpot, bulbsIn, canon: canonOf, ftext, cmp, isExact, isZero, ONE } = window.Bulbs;
   const { circuit } = window.Draw;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
@@ -261,9 +261,129 @@
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // ---------------------------------------------------------------- tutor
+  // Worked examples: the batteries, then the circuit from the outside in (each group shares its
+  // voltage among its parts), then the brightness of every bulb.
+  const Lb = () => ({ t: 'L' }), Wire = () => ({ t: 'W' });
+  const Ser = (...kids) => ({ t: 'S', kids }), Par = (...kids) => ({ t: 'P', kids });
+  const LESSONS = [
+    { name: 'Series', pack: '1', load: () => Ser(Lb(), Lb()),
+      idea: 'Two identical bulbs in series on one battery share its voltage equally.' },
+    { name: 'Parallel', pack: '1', load: () => Par(Lb(), Lb()),
+      idea: 'Bulbs in parallel each get the full voltage of the battery, however many branches there are.' },
+    { name: 'Mixed', pack: 'S2', load: () => Ser(Lb(), Par(Lb(), Lb())),
+      idea: 'Two batteries in series double the voltage. A bulb in series with a parallel pair takes the larger share, because the pair lets more current through.' },
+    { name: 'Bridged', pack: '1', load: () => Ser(Lb(), Par(Lb(), Wire())),
+      idea: 'A wire across a bulb takes all the current: the bridged bulb goes off, and the rest of the circuit gets the whole voltage.' },
+    { name: 'Reversed', pack: 'R3', load: () => Par(Lb(), Ser(Lb(), Lb())),
+      idea: 'A battery connected the other way round cancels one of the others.' },
+  ];
+
+  // Voltage bounds as a note in the diagram (plain text).
+  const vs = (f) => (isZero(f) ? '0' : cmp(f, ONE) === 0 ? 'V₀' : `${ftext(f)} V₀`);
+  function noteOf(iv, E) {
+    if (isExact(iv)) return `V = ${vs(iv.lo)}`;
+    if (isZero(iv.lo)) return `V < ${vs(iv.hi)}`;
+    if (cmp(iv.hi, E) === 0) return `V > ${vs(iv.lo)}`;
+    return `${vs(iv.lo)} < V < ${vs(iv.hi)}`;
+  }
+  const zero = (iv) => isExact(iv) && isZero(iv.lo);
+  const SHORT = { brighter: 'brighter', equal: 'equal', dimmer: 'dimmer', off: 'off' }; // fits under a bulb
+  // Shown larger than in the exercises: the notes are small otherwise.
+  const larger = (svg, k) => svg.replace(/width="([\d.]+)" height="([\d.]+)"/, (m, w, h) => `width="${(w * k).toFixed(1)}" height="${(h * k).toFixed(1)}"`);
+
+  function lesson(def) {
+    const e = make(def.pack, def.load(), 'tutor', 'tutor');
+    const saved = ex; // the text helpers (bounds, gets) read the exercise from ex
+    ex = e;
+    try {
+      const frames = [], notes = new Map(); // bulb index → note shown from now on
+      const figure = (o = {}) => {
+        const look = (i) => ({ label: e.bulbs[i].name, glow: o.lit ? GLOW[e.bulbs[i].answer] : 0,
+          note: o.lit ? SHORT[e.bulbs[i].answer] : notes.get(i), hl: o.hl && o.hl.has(i), noteCls: o.lit ? '' : 'v' });
+        const reference = circuit({ t: 'L', i: 0 }, { t: 'B', dir: 1 },
+          () => ({ label: 'L₀', glow: o.lit ? GLOW.equal : 0, note: o.ref ? 'V = V₀' : '', noteCls: 'v' }), { zones: new Map() });
+        const task = larger(circuit(e.load, e.pack, look, { zones: o.zones || new Map(), captions: o.captions, bat: o.bat }), 1.3);
+        return `<div class="figs"><figure class="fig ref">${reference}<figcaption>Reference</figcaption></figure>` +
+          `<figure class="fig">${task}<figcaption>Circuit</figcaption></figure></div>`;
+      };
+      const frame = (title, text, o) => frames.push({ text: `<p class="step-rule">${title}</p>${text}`, figure: figure(o) });
+
+      frame('The task', `<p>All batteries are identical, and so are all bulbs. How bright is each bulb, compared with the reference bulb <i>L</i><sub>0</sub> on one battery?</p>` +
+        `<p>A bulb is the brighter, the more voltage it gets. So we find the voltage across every bulb and compare it with the voltage ${V0} of the reference bulb.</p>`);
+      frame('The batteries', `<p>${PACK_TEXT[e.packKey]} The reference bulb gets ${V0}.</p>`, { bat: 'strong', ref: true });
+
+      // Groups from the outside in; a group without voltage is not taken apart any further.
+      const queue = [e.load];
+      while (queue.length) {
+        const node = queue.shift();
+        const parts = node.kids.filter((k) => k.t !== 'W');
+        const zones = new Map([[node, 'light']]), captions = new Map(), hl = new Set();
+        // Identical parts (and no wire): one sentence for all of them.
+        const alike = parts.length === node.kids.length && parts.every((k) => canonOf(k) === canonOf(parts[0]));
+        const lines = alike ? [] : parts.map((k) => {
+          if (zero(k.iv)) {
+            const bs = bulbsIn(k);
+            bs.forEach((b) => notes.set(b.i, 'V = 0'));
+            return `${cap(and(bs.map((b) => it(`L${b.i + 1}`))))} ${bs.length > 1 ? 'are' : 'is'} bridged by a wire: the current takes the wire, so there is no voltage across ${bs.length > 1 ? 'them' : 'it'}.`;
+          }
+          const step = e.bulbs.flatMap((b) => b.steps).find((st) => st.part === k && st.group === node);
+          if (k.t === 'L') { hl.add(k.i); notes.set(k.i, noteOf(k.iv, e.E)); }
+          else { zones.set(k, 'strong'); captions.set(k, noteOf(k.iv, e.E)); queue.push(k); }
+          if (step.kind === 'series' && step.n === 1) return `Everything else in series with ${name(k)} is bridged, so ${name(k)} gets all of the voltage: ${gets(k.iv)}.`;
+          return `${cap(stepText(step))}. So ${name(k)} gets ${gets(k.iv)}.`;
+        });
+        if (alike) {
+          parts.forEach((k) => {
+            if (k.t === 'L') { hl.add(k.i); notes.set(k.i, noteOf(k.iv, e.E)); } else { zones.set(k, 'strong'); captions.set(k, noteOf(k.iv, e.E)); queue.push(k); }
+          });
+          lines.push(node.t === 'P'
+            ? `${cap(and(parts.map(name)))} are in parallel, so each of them gets the full voltage of ${node === e.load ? 'the batteries' : name(node)}: ${gets(node.iv)}.`
+            : `${cap(and(parts.map(name)))} are identical and in series, so they share the voltage equally (voltage divider): each gets 1/${parts.length} of it, ${gets(parts[0].iv)}.`);
+        }
+        parts.forEach((k) => { if (zero(k.iv) && k.t !== 'L') zones.set(k, 'strong'); if (zero(k.iv) && k.t === 'L') hl.add(k.i); });
+        const whole = node === e.load
+          ? `<p>The whole circuit gets ${volts(e.E)} from the batteries. It is made of ${and(parts.map(name))}, ${node.t === 'S' ? 'in series' : 'in parallel'}.</p>`
+          : `<p>${cap(name(node))} gets ${gets(node.iv)}. Inside it, ${and(parts.map(name))} are ${node.t === 'S' ? 'in series' : 'in parallel'}.</p>`;
+        frame(node === e.load ? 'The whole circuit' : `Inside ${name(node)}`, whole + lines.map((l) => `<p>${l}</p>`).join(''), { zones, captions, hl });
+      }
+
+      // “is less than V0” already compares with V0; otherwise say how the bounds compare.
+      const REL = { brighter: `, more than ${V0}`, equal: '', dimmer: `, less than ${V0}`, off: ', so no current flows' };
+      const direct = (iv) => !isExact(iv) && ((isZero(iv.lo) && cmp(iv.hi, ONE) === 0) || (cmp(iv.hi, e.E) === 0 && cmp(iv.lo, ONE) === 0));
+      const rows = e.bulbs.map((b) => `<li><i>V</i>(${it(b.name)}) ${bounds(b.iv)}${direct(b.iv) ? '' : REL[b.answer]}: <b>${WORDS[b.answer]}</b></li>`);
+      frame('Brightness', `<p>Compare every bulb's voltage with ${V0}:</p><ul>${rows.join('')}</ul>`, { lit: true });
+      return frames;
+    } finally {
+      ex = saved;
+    }
+  }
+
+  // Practice: random exercises; tutor: worked examples. Hints and solution belong to practice.
+  const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
+  let tutor = null;
+  function setMode(m) {
+    document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
+    store('bb-mode', m);
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
+    $('#tutor').hidden = m !== 'tutor';
+    if (m === 'tutor') { $('#hints').hidden = true; $('#solution').hidden = true; }
+  }
+  function practise() {
+    setMode('practice');
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
+  }
+
   function fromHash() {
-    const m = location.hash.slice(1).match(/^(easy|medium|hard)-(\d+)$/);
+    let m = location.hash.slice(1).match(/^tutor-(\d+)$/);
+    if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
+      setMode('tutor');
+      if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
+      return true;
+    }
+    m = location.hash.slice(1).match(/^(easy|medium|hard)-(\d+)$/);
     if (!m) return false;
+    setMode('practice');
     document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;
     if (!ex || ex.id !== `${m[1]}-${m[2]}`) open(generate(m[1], Number(m[2])));
     return true;
@@ -280,8 +400,14 @@
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);
+    tutor = window.createTutor(LESSONS.map((l) => ({ ...l, frames: () => lesson(l) })), { done: practise });
+    $('#modes').addEventListener('change', () => {
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else practise();
+    });
     showScore();
-    if (!fromHash()) fresh();
+    if (fromHash()) return;
+    // First visit: start with the first worked example.
+    if (stored('bb-mode', 'tutor') === 'tutor') { setMode('tutor'); tutor.open(0); } else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
