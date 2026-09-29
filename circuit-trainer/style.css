@@ -14,6 +14,11 @@
   --warn-bg: #fdf3dc;
   --bad: #b3261e;
   --bad-bg: #fbe9e7;
+  --zone-light: rgba(43, 89, 195, 0.06);
+  --zone-light-line: rgba(43, 89, 195, 0.45);
+  --zone-strong: rgba(43, 89, 195, 0.16);
+  --zone-strong-line: rgba(43, 89, 195, 0.6);
+  --mark: #ffe066;
   --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
   color-scheme: light;
 }
@@ -35,11 +40,17 @@
     --warn-bg: #3a3020;
     --bad: #ff8a80;
     --bad-bg: #3d2322;
+    --zone-light: rgba(122, 162, 255, 0.07);
+    --zone-light-line: rgba(122, 162, 255, 0.45);
+    --zone-strong: rgba(122, 162, 255, 0.2);
+    --zone-strong-line: rgba(122, 162, 255, 0.65);
+    --mark: #6b5600;
     color-scheme: dark;
   }
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -161,6 +172,26 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   .field { grid-template-columns: max-content minmax(0, 1fr) 2.5em; }
   .field .fb { grid-column: 1 / -1; }
 }
+
+/* tutor mode */
+.examples { margin-bottom: 14px; flex-wrap: wrap; }
+.tutor-text { min-height: 8.5em; }
+.tutor-text .step-rule { color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
+.tutor-nav { align-items: center; justify-content: space-between; }
+.tutor-nav .note { margin: 0; }
+.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+#t-bar { height: 100%; background: var(--accent); transition: width 0.2s; }
+svg .zone { stroke-width: 1.2; }
+svg .zone.light { fill: var(--zone-light); stroke: var(--zone-light-line); stroke-dasharray: 4 3; }
+svg .zone.strong { fill: var(--zone-strong); stroke: var(--zone-strong-line); }
+svg .c.hl { fill: var(--zone-strong); stroke: var(--accent); stroke-width: 2.4; }
+svg .cap { fill: var(--ink); font-size: 13px; }
+svg .use { font-weight: 700; }
+svg .new { font-weight: 700; }
+svg .mark { fill: var(--mark); }
+.k-strong { background: var(--zone-strong); border: 1px solid var(--zone-strong-line); border-radius: 3px; padding: 0 3px; }
+.k-light { background: var(--zone-light); border: 1px dashed var(--zone-light-line); border-radius: 3px; padding: 0 3px; }
+.k-new { background: var(--mark); border-radius: 3px; padding: 0 3px; font-weight: 600; }
 
 /* Results in the worked solution */
 .katex .result {

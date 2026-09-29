@@ -112,22 +112,27 @@
       this.els.push(`<polygon class="${cls}" points="${pts.map((q) => q.map((c) => c.toFixed(1)).join(',')).join(' ')}"/>`);
     }
 
-    // Text at point p (units), pushed away from p in direction n.
+    // Text at point p (units), pushed away from p in direction n. A label is a string, or
+    // { t: string, cls: extra classes } to highlight it; class "new" gets a marker background
+    // (<g class="marked">, fitted to the rendered text by fitText).
     _text(p, n, label, cls) {
       if (label == null) return;
+      let mark = false;
+      if (typeof label === 'object') { cls += ' ' + label.cls; mark = / new\b/.test(' ' + label.cls); label = label.t; }
       const [x, y] = this.P(p);
-      const w = textWidth(label);
-      let anchor = 'middle', dy = '0.35em', x0 = x - w / 2, y0 = y - FONT / 2;
+      const w = textWidth(label) * (mark ? 1.06 : 1); // "new" text is bold
+      let anchor = 'middle', dy = '0.35em', x0 = x - w / 2, y0 = y - FONT / 2, base = y + 0.35 * FONT;
       if (Math.abs(n[0]) > 0.5) {
         anchor = n[0] > 0 ? 'start' : 'end';
         x0 = n[0] > 0 ? x : x - w;
       } else if (n[1] > 0) {
-        dy = '0em'; y0 = y - FONT;
+        dy = '0em'; y0 = y - FONT; base = y;
       } else {
-        dy = '0.8em'; y0 = y;
+        dy = '0.8em'; y0 = y; base = y + 0.8 * FONT;
       }
       this._grow(x0, y0); this._grow(x0 + w, y0 + FONT * 1.2);
-      this.els.push(`<text class="${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" dy="${dy}" text-anchor="${anchor}">${richText(label)}</text>`);
+      const text = `<text class="${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" dy="${dy}" text-anchor="${anchor}">${richText(label)}</text>`;
+      this.els.push(mark ? `<g class="marked"><rect class="mark" x="${(x0 - 3).toFixed(1)}" y="${(base - 0.95 * FONT).toFixed(1)}" width="${(w + 6).toFixed(1)}" height="${(1.4 * FONT).toFixed(1)}" rx="3"/>${text}</g>` : text);
     }
 
     label(p, text, side = 'above', cls = 'lbl') {
@@ -136,6 +141,7 @@
     }
 
     wire(...pts) {
+      if (pts.every((p) => len(sub(p, pts[0])) < 1e-9)) return this; // zero length: would count as a junction
       for (let i = 1; i < pts.length; i++) this.segs.push([pts[i - 1], pts[i]]);
       this._path(pts, 'w');
       return this;
@@ -174,14 +180,15 @@
 
     _defaultSide(d) { return Math.abs(d[0]) >= Math.abs(d[1]) ? 'above' : 'right'; }
 
-    // Resistor (European box). o.l label, o.ls label side, o.i current label, o.is side, o.it position (0..1).
+    // Resistor (European box). o.l label, o.ls label side, o.i current label, o.is side, o.it position (0..1),
+    // o.hl highlights the box.
     res(p, q, o = {}) {
       const g = this._two(p, q, Math.min(0.9, len(sub(q, p)) * 0.5));
       const [x, y] = this.P(g.m);
       this.P(g.a); this.P(g.b);
       const ang = Math.atan2(-g.d[1], g.d[0]) * 180 / Math.PI;
       const w = len(sub(g.b, g.a)) * S, h = 0.3 * S;
-      this.els.push(`<rect class="c" x="${(-w / 2).toFixed(1)}" y="${(-h / 2).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(2)})"/>`);
+      this.els.push(`<rect class="c${o.hl ? ' hl' : ''}" x="${(-w / 2).toFixed(1)}" y="${(-h / 2).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(2)})"/>`);
       const n = normalTowards(g.d, o.ls || this._defaultSide(g.d));
       this._text(add(g.m, mul(n, 0.3)), n, o.l, 'lbl');
       if (o.i != null) this.cur(p, q, o.i, o.is || o.ls || this._defaultSide(g.d), o.it || 0.84);
@@ -243,10 +250,30 @@
       return this;
     }
 
-    toSVG(cls = 'circuit') {
+    // Shaded rectangle behind everything drawn, from corner a to corner b (units), with a
+    // caption above its left end: a list of labels, separated by commas (<g class="caption">,
+    // laid out again with the rendered text widths by fitText).
+    zone(a, b, cls, caption = []) {
+      const [x0, y0] = this.P([Math.min(a[0], b[0]), Math.max(a[1], b[1])]);
+      const [x1, y1] = this.P([Math.max(a[0], b[0]), Math.min(a[1], b[1])]);
+      this.els.unshift(`<rect class="zone ${cls}" x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" width="${(x1 - x0).toFixed(1)}" height="${(y1 - y0).toFixed(1)}" rx="8"/>`);
+      const parts = caption.flatMap((l, i) => (i ? [',\u00a0', l] : [l])); // (a plain trailing space is dropped)
+      const width = (l) => (textWidth(typeof l === 'object' ? l.t : l) + (typeof l === 'object' && / new\b/.test(' ' + l.cls) ? 8 : 0)) / S;
+      const left = Math.min(a[0], b[0]) + 0.1, y = Math.max(a[1], b[1]) + 0.24, start = this.els.length;
+      let x = left;
+      for (const l of parts) {
+        this._text([x + (typeof l === 'object' && / new\b/.test(' ' + l.cls) ? 4 / S : 0), y], [1, 0], l, 'cap');
+        x += width(l);
+      }
+      this.els.push(`<g class="caption" data-x="${(left * S).toFixed(1)}">${this.els.splice(start).join('')}</g>`);
+      return this;
+    }
+
+    // box: the drawing area in px (default: everything drawn).
+    toSVG(cls = 'circuit', box = null) {
       if (this.autoDots) this._junctions();
       const pad = 10;
-      const [x0, y0, x1, y1] = this.box;
+      const [x0, y0, x1, y1] = box || this.box;
       const w = x1 - x0 + 2 * pad, h = y1 - y0 + 2 * pad;
       // Shown 1.3× larger than drawn; on narrow screens it shrinks, but not below 75 % so the
       // labels stay legible (the page then lets the figure scroll horizontally).
@@ -255,7 +282,23 @@
     }
   }
 
-  const Circuit = { Sketch, richText, esc, textWidth, S };
+  // In the browser: lays out captions and fits the markers to the rendered text, since the
+  // drawing can only estimate text widths.
+  function fitText(svg) {
+    const textOf = (el) => (el.tagName === 'text' ? el : el.querySelector('text'));
+    for (const g of svg.querySelectorAll('g.caption')) {
+      const parts = [...g.children].map((el) => ({ el, text: textOf(el), pad: el.classList.contains('marked') ? 4 : 0 }));
+      const widths = parts.map((p) => p.text.getComputedTextLength() + 2 * p.pad);
+      let x = Number(g.dataset.x);
+      parts.forEach((p, i) => { p.text.setAttribute('x', (x + p.pad).toFixed(1)); x += widths[i]; });
+    }
+    for (const g of svg.querySelectorAll('g.marked')) {
+      const b = g.querySelector('text').getBBox(), r = g.querySelector('rect');
+      [['x', b.x - 3], ['y', b.y - 1], ['width', b.width + 6], ['height', b.height + 2]].forEach(([k, v]) => r.setAttribute(k, v.toFixed(1)));
+    }
+  }
+
+  const Circuit = { Sketch, richText, esc, textWidth, fitText, S };
   root.Circuit = Circuit;
   if (typeof module !== 'undefined') module.exports = Circuit;
 })(typeof window !== 'undefined' ? window : globalThis);

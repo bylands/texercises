@@ -3,10 +3,11 @@
 // - every current and voltage agrees with a nodal analysis of the drawn circuit,
 // - givens and answers are nice numbers,
 // - the worked solution reaches every unknown, using only givens and earlier steps,
-// - both diagrams render.
+// - both diagrams render,
+// - the tutorial has a frame for the task, each group, each step and the results.
 'use strict';
 
-const { LEVELS, generate, padded, fval } = require('../generator.js');
+const { LEVELS, generate, tutorial, padded, fval } = require('../generator.js');
 const { solve } = require('./mna.js');
 
 const SAMPLES = 400;
@@ -77,6 +78,13 @@ for (const level of Object.keys(LEVELS)) {
       if (/undefined|NaN|\[object/.test(t)) fail(`${tag}: bad text: ${t.slice(0, 120)}`);
     }
 
+    const tut = tutorial(level, seed);
+    const groups = c.nodes.filter((n) => n.t !== 'R').length;
+    if (tut.frames.length !== groups + ex.steps.length + 2) fail(`${tag}: ${tut.frames.length} tutorial frames`);
+    for (const f of tut.frames) {
+      if (!f.figure.includes('<svg') || /undefined|NaN|\[object/.test(f.figure + f.text)) fail(`${tag}: bad tutorial frame: ${f.text.slice(0, 120)}`);
+    }
+
     shapes.add(JSON.stringify(c.root, (k, v) => (['t', 'kids'].includes(k) || k === '' || /^\d+$/.test(k) ? v : undefined)));
     sizes[c.leaves.length] = (sizes[c.leaves.length] || 0) + 1;
     stepCounts.push(ex.steps.length);
@@ -87,6 +95,17 @@ for (const level of Object.keys(LEVELS)) {
     `solution steps ${Math.min(...stepCounts)}–${Math.max(...stepCounts)} (avg ${avg.toFixed(1)}), ${ms.toFixed(1)} ms/exercise`);
   const total = Object.values(rules).reduce((a, b) => a + b, 0);
   console.log('  rules used: ' + Object.entries(rules).sort((a, b) => b[1] - a[1]).map(([r, n]) => `${r} ${Math.round((100 * n) / total)}%`).join(', '));
+}
+
+// The tutor examples: their paths must work, and every step must hold numerically.
+for (const [i, e] of require('../tutor.js').EXAMPLES.entries()) {
+  const tag = `tutor example ${i + 1} (${e.name})`;
+  let tut;
+  try { tut = tutorial(e.level, e.seed, e.path); } catch (err) { fail(`${tag}: ${err.message}`); continue; }
+  const c = tut.circuit, g = (k) => fval(c.nodes[Number(k.slice(1))][k[0]]);
+  for (const st of tut.steps) if (!st.rel.holds(g)) fail(`${tag}: ${st.rel.rule} step for ${st.key} does not hold`);
+  for (const f of tut.frames) if (/undefined|NaN|\[object/.test(f.figure + f.text)) fail(`${tag}: bad frame: ${f.text.slice(0, 120)}`);
+  console.log(`${tag}: ${tut.frames.length} frames`);
 }
 
 if (failures) { console.error(`\n${failures} failure(s)`); process.exit(1); }

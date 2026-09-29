@@ -236,6 +236,9 @@
   }
 
 
+  // Quantities in reading order: battery first, then by resistor number (R before I before V).
+  const byReading = (a, b) => [a, b].map((k) => Number(k.slice(1)) * 3 + 'RIV'.indexOf(k[0])).reduce((x, y) => x - y);
+
   function chooseProblem(c, lv, r) {
     const rels = relations(c);
     const leafKeys = (q) => c.leaves.map((l) => q + l.id);
@@ -253,9 +256,7 @@
     while (targets.length < nTargets && extra.length) targets.push(extra.pop());
     targets.splice(nTargets);
     if (!targets.length) return null;
-    // List unknowns in reading order: battery first, then by resistor number (R before I before V).
-    const order = (k) => Number(k.slice(1)) * 3 + 'RIV'.indexOf(k[0]);
-    targets.sort((a, b) => order(a) - order(b));
+    targets.sort(byReading);
 
     const solvable = (g) => { const k = plan(rels, g).known; return targets.every((t) => k.has(t)); };
     if (!solvable(givens)) {
@@ -338,11 +339,12 @@
     invR: 'combining the parallel resistances',
     sumV: 'the voltage rule (voltages in series add up)',
     sumI: 'the junction rule (currents in parallel add up)',
+    vdiv: 'the voltage divider rule (share of the total voltage)',
   };
   const SHORT = {
     ohm: "Ohm's law", eqI: 'series', eqV: 'parallel',
     vratio: 'voltage divider', iratio: 'current divider', sumR: 'series resistances', invR: 'parallel resistances',
-    sumV: 'voltage rule', sumI: 'junction rule',
+    sumV: 'voltage rule', sumI: 'junction rule', vdiv: 'voltage divider',
   };
   const ruleOf = (rel) => rel.rule;
 
@@ -363,6 +365,11 @@
       const other = step.from[0];
       const what = rel.q === 'I' ? 'carry the same current (series connection)' : 'are at the same voltage (parallel connection)';
       return { ...out, rhs: s(other), inline: `${cap(nm.who(rel.child))} and ${nm.who(rel.parent)} ${what}: $${s(key)} = ${s(other)} = ${nm.res(key)}$.` };
+    }
+    if (rel.kind === 'vdiv') {
+      const Rk = 'R' + rel.child.id, Vp = 'V' + rel.parent.id, rs = rel.parent.kids.map((k) => 'R' + k.id);
+      out.intro = `Voltage divider rule: ${listing(rs.map((r) => `$${s(r)}$`))} are in series, so they share $${s(Vp)}$ in the ratio of their resistances:`;
+      return { ...out, rhs: M`\frac{${s(Rk)}}{${rs.map(s).join(' + ')}}\,${s(Vp)}`, num: M`\frac{${qt(Rk)}}{${rs.map(qt).join(' + ')}}\times ${qt(Vp)}`, split: true };
     }
     if (rel.kind === 'ratio') {
       const { a, b } = rel, Ra = 'R' + a.id, Rb = 'R' + b.id;
@@ -454,17 +461,18 @@
   // ---------------------------------------------------------------- drawing
   const UNITS = (label) => Circuit.textWidth(label) / Circuit.S;
 
-  function labels(c, nm, prob, node, sol) {
+  // Labels of a node. known(key) tells whether a value is shown; unknown targets show their symbol.
+  function labels(c, nm, prob, node, known) {
     const lab = (key) => {
-      const v = `${fmt(fval(nm.valueOf(key)))} ${UNIT[key[0]]}`;
-      if (prob.givens.has(key)) return v;
-      if (prob.targets.includes(key) && !sol) return `$${nm.sym(key)}$`;
-      return sol ? v : null;
+      if (known(key)) return `${fmt(fval(nm.valueOf(key)))} ${UNIT[key[0]]}`;
+      return prob.targets.includes(key) ? `$${nm.sym(key)}$` : null;
     };
     const rKey = 'R' + node.id;
-    const r = prob.targets.includes(rKey) && !sol ? `$${nm.sym(rKey)}$ = ?` : `$${nm.sym(rKey)}$ = ${fmt(fval(node.R))} kΩ`;
+    const r = known(rKey) ? `$${nm.sym(rKey)}$ = ${fmt(fval(node.R))} kΩ` : `$${nm.sym(rKey)}$ = ?`;
     return { r, i: lab('I' + node.id), v: lab('V' + node.id) };
   }
+  const givenOnly = (prob) => (key) => prob.givens.has(key);
+  const all = () => true;
 
   // Layout in the style of the textbook diagrams: parallel branches are vertical columns
   // between a top and a bottom rail, series parts inside a branch are stacked vertically.
@@ -474,7 +482,7 @@
   const LEAF_H = 2.3, COL_GAP = 0.25;
 
   function labelWidths(node, c, nm, prob) {
-    const w = (k) => Math.max(...[false, true].map((sol) => { const l = labels(c, nm, prob, node, sol)[k]; return l ? UNITS(l) : 0; }));
+    const w = (k) => Math.max(...[givenOnly(prob), all].map((known) => { const l = labels(c, nm, prob, node, known)[k]; return l ? UNITS(l) : 0; }));
     return { r: w('r'), i: w('i'), v: w('v') };
   }
 
@@ -549,10 +557,11 @@
 
   function drawV(s, node, x, y, lab) {
     const g = node.vl;
+    lab.at.set(node.id, [[x, -y], [x + g.w, -(y + g.h)]]);
     if (node.t === 'R') {
       const cx = x + g.ax, p = [cx, -y], q = [cx, -(y + g.h)];
       const L = lab(node);
-      s.res(p, q, { l: L.r, ls: 'right' });
+      s.res(p, q, { l: L.r, ls: 'right', hl: L.hl });
       s.cur(p, q, L.i, 'right', 0.87);
       s.vol(p, q, L.v, 'left');
       return;
@@ -571,17 +580,27 @@
     });
   }
 
-  function draw(c, nm, prob, sol) {
+  // The diagram as a Sketch. view.known(key): values shown. For the tutorial also
+  // view.mark: node id → 'strong' | 'light' (resistors highlighted, groups in a shaded zone) and
+  // view.focus: key → 'new' | 'use' (labels highlighted).
+  function draw(c, nm, prob, view) {
     const s = new Circuit.Sketch();
     s.autoDots = true;
-    const L = c.layout;
-    const lab = (node) => labels(c, nm, prob, node, sol);
+    const L = c.layout, mark = view.mark || new Map(), focus = view.focus || new Map();
+    const at = new Map(); // node id → corners of the area of its resistors and labels
+    const lab = (node, p, q) => {
+      if (p) at.set(node.id, [p, q]);
+      const t = labels(c, nm, prob, node, view.known);
+      const f = (q, l) => (l != null && focus.has(q + node.id) ? { t: l, cls: focus.get(q + node.id) } : l);
+      return { r: f('R', t.r), i: f('I', t.i), v: f('V', t.v), hl: mark.has(node.id) };
+    };
+    lab.at = at;
     const bl = lab(c.root);
     s.wire([0, 0], [L.x0, 0]).cur([0, 0], [L.x0, 0], bl.i, 'above');
     let x = L.x0;
     for (const leaf of L.top) {
-      const p = [x, 0], q = [x + leaf.hw, 0], t = lab(leaf);
-      s.res(p, q, { l: t.r }).cur(p, q, t.i, 'below', 1 - 0.45 / leaf.hw).vol(p, q, t.v, 'below', [0.28, 0.68]);
+      const p = [x, 0], q = [x + leaf.hw, 0], t = lab(leaf, [x, 0.5], [x + leaf.hw, -0.5]);
+      s.res(p, q, { l: t.r, hl: t.hl }).cur(p, q, t.i, 'below', 1 - 0.45 / leaf.hw).vol(p, q, t.v, 'below', [0.28, 0.68]);
       x += leaf.hw;
     }
     s.wire([x, 0], [L.col, 0]);
@@ -594,13 +613,39 @@
     s.wire([L.col, -L.bottomY], [L.bottomStart, -L.bottomY]);
     x = L.bottomStart;
     for (const leaf of L.bottom) {
-      const p = [x, -L.bottomY], q = [x - leaf.hw, -L.bottomY], t = lab(leaf);
-      s.res(p, q, { l: t.r, ls: 'below' }).cur(p, q, t.i, 'above', 1 - 0.45 / leaf.hw).vol(p, q, t.v, 'above', [0.28, 0.68]);
+      const p = [x, -L.bottomY], q = [x - leaf.hw, -L.bottomY], t = lab(leaf, [x, 0.5 - L.bottomY], [x - leaf.hw, -0.5 - L.bottomY]);
+      s.res(p, q, { l: t.r, ls: 'below', hl: t.hl }).cur(p, q, t.i, 'above', 1 - 0.45 / leaf.hw).vol(p, q, t.v, 'above', [0.28, 0.68]);
       x -= leaf.hw;
     }
     s.wire([x, -L.bottomY], [0, -L.bottomY]);
     s.bat([0, -L.bottomY], [0, 0]).vol([0, 0], [0, -L.bottomY], bl.v, 'left');
-    return s.toSVG();
+    zones(s, c, nm, view, at, [[0, 0], [L.width, -L.bottomY]]);
+    return s;
+  }
+
+  // Shaded zones around the marked groups and the groups whose quantities are in focus, each
+  // captioned with its resistance and the focused quantities. The zone of the whole circuit
+  // spans the corners in whole, battery included; its voltage and current are labelled there.
+  function zones(s, c, nm, view, at, whole) {
+    const mark = view.mark || new Map(), focus = view.focus || new Map();
+    const shown = new Map([...mark].filter(([id]) => c.nodes[id].t !== 'R'));
+    for (const k of focus.keys()) {
+      const n = nm.nodeOf(k);
+      if (n.t !== 'R' && (n !== c.root || k[0] === 'R') && !shown.has(n.id)) shown.set(n.id, 'light');
+    }
+    const sym = (k) => nm.sym(k).replace('_\\text{tot}', '_{tot}');
+    const caption = (n) => ['R' + n.id, ...(n === c.root ? [] : ['V' + n.id, 'I' + n.id].filter((k) => focus.has(k)))].map((k) => {
+      const v = nm.valueOf(k), num = v.d === 1 || 100 % v.d === 0 ? fmt(fval(v)) : `${v.n}/${v.d}`; // as in the text (ftex)
+      const t = view.known(k) ? `$${sym(k)}$ = ${num} ${UNIT[k[0]]}` : `$${sym(k)}$${focus.has(k) ? ' = ?' : ''}`;
+      return focus.has(k) ? { t, cls: focus.get(k) } : t;
+    });
+    // Smaller zones first: each zone goes behind everything drawn so far.
+    const nodes = [...shown.keys()].map((id) => c.nodes[id]).sort((a, b) => a.leaves.length - b.leaves.length);
+    for (const n of nodes) {
+      const pts = n.leaves.flatMap((idx) => at.get(c.leaves[idx - 1].id)).concat(at.get(n.id) || [], n === c.root ? whole : []);
+      const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]), m = 0.3 * depth(n) - 0.15; // nested zones: room for captions
+      s.zone([Math.min(...xs) - m, Math.min(...ys) - m], [Math.max(...xs) + m, Math.max(...ys) + m], shown.get(n.id), caption(n));
+    }
   }
 
   // ---------------------------------------------------------------- exercise assembly
@@ -623,6 +668,8 @@
     throw new Error(`No ${level} exercise found for seed ${seed}`);
   }
 
+  const taskText = (targets, nm) => `Applying the rules for series and parallel circuits, find ${listing(targets.map((t) => describeTarget(t, nm)))} in the circuit below.`;
+
   function generate(level, seed) {
     const { c, prob, nm, lv } = build(level, seed);
     const { targets, steps } = prob;
@@ -632,10 +679,10 @@
       id: `${level}-${seed}`,
       level,
       title: `${lv.name} · ${c.leaves.length} resistors`,
-      text: `Applying the rules for series and parallel circuits, find ${listing(targets.map((t) => describeTarget(t, nm)))} in the circuit below.`,
+      text: taskText(targets, nm),
       fields: targets.map((t) => ({ key: t, sym: nm.sym(t), unit: UNIT[t[0]], value: fval(nm.valueOf(t)) })),
       tol: 0.01,
-      figure: (sol) => `<div class="fig">${draw(c, nm, prob, sol)}</div>`,
+      figure: (sol) => `<div class="fig">${draw(c, nm, prob, { known: sol ? all : givenOnly(prob) }).toSVG()}</div>`,
       hints,
       solution: [`Structure of the circuit: ${struct.join('; ')}.`, ...steps.map((st) => stepText(st, nm))],
       results: targets.map((t) => `$${nm.sym(t)} = ${nm.qtex(t)}$`).join(', '),
@@ -644,7 +691,125 @@
     };
   }
 
-  const api = { LEVELS, generate, padded, F, fval };
+  // ---------------------------------------------------------------- tutorial
+  // A worked example as frames { text, figure }: the task, the structure of the circuit group
+  // by group (innermost first), each solution step, and the results. In each frame the
+  // diagram shows what is known so far and marks what the text talks about: the parts being
+  // combined are highlighted strongly, the group they belong to lightly; the value just found
+  // is highlighted (new) and the values it is found from are set in bold (use).
+  const TITLE = {
+    ohm: "Ohm's law", eqI: 'same current in series', eqV: 'same voltage in parallel', vratio: 'voltage divider rule',
+    vdiv: 'voltage divider rule', iratio: 'current divider rule', sumR: 'series resistances', invR: 'parallel resistances',
+    sumV: 'voltage rule', sumI: 'junction rule',
+  };
+
+  // Voltage divider rule between a part of a series group and the whole group,
+  // V_k = R_k / (R_a + R_b + …) · V. Only the tutorial uses it: exercises divide pairwise.
+  function dividers(c) {
+    const out = [];
+    for (const node of c.nodes.filter((n) => n.t === 'S')) {
+      const rs = node.kids.map((k) => 'R' + k.id), V = 'V' + node.id;
+      for (const k of node.kids) {
+        out.push({ kind: 'vdiv', rule: 'vdiv', parent: node, child: k, keys: ['V' + k.id, V, ...rs], out: ['V' + k.id],
+          holds: (g) => near(g('V' + k.id) * rs.reduce((sum, r) => sum + g(r), 0), g('R' + k.id) * g(V)) });
+      }
+    }
+    return out;
+  }
+
+  // Solution steps along a given path: a list of frames, each a list of "name:rule" (V1:vdiv,
+  // I:eqI, R23:invR, …; names as in the diagram without "_", {} or \text). Every step must
+  // follow from what is known by then, and the path must reach all unknowns.
+  function pathSteps(c, nm, prob, path, tag) {
+    const rels = [...relations(c), ...dividers(c)];
+    const byName = new Map();
+    for (const node of c.nodes) {
+      for (const q of 'RIV') byName.set(nm.sym(q + node.id).replace(/\\text\{([^}]*)\}/g, '$1').replace(/[_{}]/g, ''), q + node.id);
+    }
+    const known = new Set(prob.givens);
+    const out = path.map((items) => items.map((item) => {
+      const [name, rule] = item.split(':'), key = byName.get(name);
+      if (!key) throw new Error(`${tag}: no quantity ${name}`);
+      if (known.has(key)) throw new Error(`${tag}: ${name} is already known`);
+      const rel = rels.find((r) => r.rule === rule && r.out.includes(key) && r.keys.every((k) => k === key || known.has(k)));
+      if (!rel) throw new Error(`${tag}: ${name} does not follow by ${rule}`);
+      known.add(key);
+      return { key, rel, from: rel.keys.filter((k) => k !== key) };
+    }));
+    const missing = prob.targets.filter((t) => !known.has(t));
+    if (missing.length) throw new Error(`${tag}: the path does not reach ${missing.join(', ')}`);
+    return out;
+  }
+
+  const SERIES = '<b>In series</b> the same current flows through every part, and the voltages across the parts add up to the voltage across the whole.';
+  const PARALLEL = '<b>In parallel</b> every branch is at the same voltage, and the branch currents add up to the current into the whole.';
+
+  // path: the solution steps to show, grouped into frames (see pathSteps); by default the
+  // steps of the worked solution, one per frame.
+  function tutorial(level, seed, path) {
+    const { c, prob, nm } = build(level, seed);
+    const { givens, targets } = prob;
+    const groups = path ? pathSteps(c, nm, prob, path, `tutorial ${level}-${seed}`) : prob.steps.map((st) => [st]);
+    const $ = (k) => `$${nm.sym(k)}$`;
+    const frames = [];
+    const frame = (text, known, mark = new Map(), focus = new Map()) => {
+      const set = new Set(known);
+      frames.push({ text, sketch: draw(c, nm, prob, { known: (k) => set.has(k), mark, focus }) });
+    };
+
+    const given = [...givens].sort(byReading).map((k) => `$${nm.sym(k)} = ${nm.qtex(k)}$`);
+    frame(`<p>${taskText(targets, nm)}</p><p>Given: ${listing(given)}.</p>`, givens);
+
+    const explained = new Set();
+    (function walk(node) {
+      if (node.t === 'R') return;
+      node.kids.forEach(walk);
+      const mark = new Map([[node.id, 'light'], ...node.kids.map((k) => [k.id, 'strong'])]);
+      const kids = listing(node.kids.map((k) => $('R' + k.id)));
+      let t = `${kids} are connected in ${node.t === 'S' ? 'series' : 'parallel'}: `;
+      t += node === c.root ? `together they make up the whole circuit, with the total resistance ${$('R0')}.` : `together they act like a single resistor ${$('R' + node.id)}.`;
+      if (!explained.has(node.t)) t += ' ' + (node.t === 'S' ? SERIES : PARALLEL);
+      explained.add(node.t);
+      frame(`<p class="step-rule">Structure of the circuit</p><p>${t}</p>`, givens, mark);
+    })(c.root);
+
+    const known = new Set(givens);
+    groups.forEach((group, i) => {
+      const mark = new Map(), focus = new Map();
+      const put = (n, m) => { if (mark.get(n.id) !== 'strong') mark.set(n.id, m); };
+      for (const { key, rel, from } of group) {
+        known.add(key);
+        if (rel.kind === 'ohm') put(rel.node, 'strong');
+        else put(rel.parent, 'light');
+        if (rel.kind === 'eq') put(rel.child, 'strong');
+        if (rel.kind === 'ratio') [rel.a, rel.b].forEach((n) => put(n, 'strong'));
+        if (rel.kind === 'sum' || rel.kind === 'inv' || rel.kind === 'vdiv') rel.parent.kids.forEach((n) => put(n, 'strong'));
+        from.forEach((k) => { if (!focus.has(k)) focus.set(k, 'use'); });
+        focus.set(key, 'new');
+      }
+      const title = cap(listing([...new Set(group.map((st) => TITLE[st.rel.rule]))]));
+      const goal = group.some((st) => targets.includes(st.key)) ? ' · finds one of the unknowns' : '';
+      const text = group.map((st) => `<p>${stepText(st, nm)}</p>`).join('');
+      frame(`<p class="step-rule">Step ${i + 1} of ${groups.length}: ${title}${goal}</p>${text}`, known, mark, focus);
+    });
+
+    frame(`<p class="step-rule">Results</p><p>${listing(targets.map((t) => `$${nm.sym(t)} = ${nm.res(t)}$`))}</p>`,
+      known, new Map(), new Map(targets.map((t) => [t, 'new'])));
+
+    // One viewBox for all frames, so that the diagram does not jump while stepping through.
+    const box = frames.reduce((b, f) => {
+      const x = f.sketch.box;
+      return [Math.min(b[0], x[0]), Math.min(b[1], x[1]), Math.max(b[2], x[2]), Math.max(b[3], x[3])];
+    }, [Infinity, Infinity, -Infinity, -Infinity]);
+    return {
+      id: `${level}-${seed}`,
+      frames: frames.map((f) => ({ text: f.text, figure: `<div class="fig">${f.sketch.toSVG('circuit', box)}</div>` })),
+      // for tests
+      circuit: c, givens, targets, steps: groups.flat(),
+    };
+  }
+
+  const api = { LEVELS, generate, tutorial, padded, F, fval };
   root.Generator = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

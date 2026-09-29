@@ -63,6 +63,21 @@
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
   const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'medium';
+  const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
+  let tutor = null;
+
+  // Practice: random exercises; tutor: worked examples. Hints and solution belong to practice.
+  function setMode(m) {
+    document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
+    store('rc-mode', m);
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
+    $('#tutor').hidden = m !== 'tutor';
+    if (m === 'tutor') { $('#hints').hidden = true; $('#solution').hidden = true; }
+  }
+  function practise() {
+    setMode('practice');
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); render(); } else fresh();
+  }
 
   function open(exercise) {
     ex = exercise;
@@ -175,8 +190,15 @@
 
   function fromHash() {
     const h = location.hash.slice(1);
-    let m = h.match(/^(easy|medium|hard)-(\d+)$/);
+    let m = h.match(/^tutor-(\d+)$/);
+    if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
+      setMode('tutor');
+      if (tutor.current() !== Number(m[1]) - 1 || !$('#t-title').textContent) tutor.open(Number(m[1]) - 1);
+      return true;
+    }
+    m = h.match(/^(easy|medium|hard)-(\d+)$/);
     if (m) {
+      setMode('practice');
       document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;
       open(generate(m[1], Number(m[2])));
       return true;
@@ -196,8 +218,14 @@
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);
     window.addEventListener('resize', markScrollable);
+    tutor = window.createTutor({ math, after: markScrollable, done: practise });
+    $('#modes').addEventListener('change', () => {
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else practise();
+    });
     showScore();
-    if (!fromHash()) fresh();
+    if (fromHash()) return;
+    // First visit: start with the first worked example.
+    if (stored('rc-mode', 'tutor') === 'tutor') { setMode('tutor'); tutor.open(0); } else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
