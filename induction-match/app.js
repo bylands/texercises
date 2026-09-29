@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  const { T, FLUX, FAMILIES, SHAPE, generate, diagnose, correlation, volt, curved } = window.Induction;
-  const { fluxGraph, voltGraph, num } = window.Plot;
+  const { T, FLUX, FAMILIES, SHAPE, generate, diagnose, correlation, flux, volt, curved } = window.Induction;
+  const { fluxGraph, voltGraph, num, Tut, V_MAX, PHI_MAX } = window.Plot;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
   const PHI = '<i>Φ</i>', V = '<i>V</i><sub>ind</sub>';
@@ -306,9 +306,154 @@
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // ---------------------------------------------------------------- tutor
+  // Worked examples: four flux graphs turned into their voltage graphs piece by piece (the piece
+  // is highlighted in both graphs, with its slope drawn in), then a whole matching exercise.
+  const LESSONS = [
+    { name: 'Straight', family: 'pieces', seed: 25, graph: 'A',
+      idea: `Where the flux changes steadily, the induced voltage is constant: its size is the slope of the flux graph, and its sign is the opposite.` },
+    { name: 'Curved', family: 'pieces', seed: 8, graph: 'C',
+      idea: `Where the flux graph is curved, its slope changes steadily, so the induced voltage changes steadily too: a sloping straight line.` },
+    { name: 'Exponential', family: 'exp', seed: 2, graph: 'A',
+      idea: `When a field is switched on or off, the flux changes fastest at first: the voltage jumps, then decays.` },
+    { name: 'Sinusoidal', family: 'sine', seed: 1, graph: 'B',
+      idea: `The slope of a sine curve is a cosine curve: the voltage oscillates with the same period, shifted by a quarter period.` },
+    { name: 'Matching', family: 'pieces', seed: 6,
+      idea: `In the exercises, four flux graphs have to be matched with four voltage graphs, and some of the voltage graphs are traps.` },
+  ];
+
+  // Times in piece p where the flux has a peak or valley (V = 0) and where it is steepest (sine pieces).
+  function sineTimes(p) {
+    const out = { flat: [], steep: [] };
+    for (let k = -2; k < 20; k++) {
+      const flat = (Math.PI / 2 + k * Math.PI - p.ph) / p.w, steep = (k * Math.PI - p.ph) / p.w;
+      if (flat > 1e-9 && flat < p.t1 - p.t0 - 1e-9) out.flat.push(p.t0 + flat);
+      if (steep > -1e-9 && steep < p.t1 - p.t0 - 1e-9) out.steep.push(p.t0 + steep);
+    }
+    return out;
+  }
+
+  function graphLesson(def) {
+    const e = generate(def.family, def.seed), f = e.flux.find((x) => x.id === def.graph), ps = f.pieces;
+    const figs = (fl, vo) => `<div class="tgraphs"><div><h3 class="qc-flux">Magnetic flux ${PHI}</h3>${fl}</div><div><h3 class="qc-volt">Induced voltage ${V}</h3>${vo}</div></div>`;
+    const frames = [{
+      text: `<p class="step-rule">The task</p><p>The graph shows the magnetic flux ${PHI} through a conducting loop. What voltage is induced in the loop?</p>` +
+        `<p>${V} = −${DPHI}: the induced voltage is the slope of the flux graph, with the opposite sign (Lenz's rule). The value of ${PHI} itself does not matter. We go through the graph piece by piece.</p>`,
+      figure: figs(fluxGraph(f), voltGraph(f, false, { upto: 0 })),
+    }];
+    ps.forEach((p, i) => {
+      const L = p.t1 - p.t0, band = [p.t0, p.t1], y0 = p.p0, y1 = flux(f, p.t1 - 1e-9);
+      const v0 = volt(f, p.t0), v1 = volt(f, p.t1 - 1e-9);
+      let fo = () => '', vo = (g) => Tut.dot(g, p.t0, v0) + Tut.dot(g, p.t1, v1), extra = '';
+      if (p.type === 'poly' && !curved(p)) {
+        if (p.d0 !== 0) {
+          fo = (g) => Tut.triangle(g, p.t0, y0, p.t1, y1) + Tut.tag(g, (p.t0 + p.t1) / 2, y0, `Δt = ${fmt(L)} s`, y1 > y0 ? 'below' : 'above') +
+            Tut.tag(g, p.t1, (y0 + y1) / 2, `ΔΦ = ${num(r1(y1 - y0))} mWb`, 'right');
+          extra = ` Slope: ${PHI} changes by ${num(r1(y1 - y0))} mWb in ${fmt(L)} s, so ${DPHI} = ${num(r1(y1 - y0))} mWb / ${fmt(L)} s = ${num(r1(p.d0))} mWb/s.`;
+        }
+        vo = (g) => Tut.dot(g, p.t0, v0) + Tut.dot(g, p.t1, v1) + Tut.tag(g, (p.t0 + p.t1) / 2, v0, `${num(r1(v0))} mV`, v0 >= 0 ? 'above' : 'below');
+      } else if (p.type === 'poly' || p.type === 'exp') {
+        const s0 = SHAPE[p.type].df(p, 0), s1 = SHAPE[p.type].df(p, L);
+        fo = (g) => Tut.tangent(g, p.t0, y0, s0) + Tut.dot(g, p.t0, y0) + (p.type === 'poly' ? Tut.tangent(g, p.t1, y1, s1) + Tut.dot(g, p.t1, y1) : '');
+        vo = (g) => Tut.dot(g, p.t0, v0) + Tut.tag(g, p.t0, v0, `${num(r1(v0))} mV`, 'right') + (p.type === 'poly' ? Tut.dot(g, p.t1, v1) + Tut.tag(g, p.t1, v1, `${num(r1(v1))} mV`, 'left') : '');
+        extra = p.type === 'poly'
+          ? ` The tangents show the slope at the start (${num(r1(s0))} mWb/s) and at the end (${num(r1(s1))} mWb/s).`
+          : ` The tangent shows the slope right after the switch: ${num(r1(s0))} mWb/s.`;
+      } else {
+        const ts = sineTimes(p), yv = (t) => flux(f, t);
+        fo = (g) => ts.flat.map((t) => Tut.vline(g, t, 0, PHI_MAX) + Tut.dot(g, t, yv(t), 'flat')).join('') +
+          ts.steep.map((t) => Tut.tangent(g, t, yv(t), SHAPE.sine.df(p, t - p.t0))).join('');
+        vo = (g) => ts.flat.map((t) => Tut.vline(g, t, -V_MAX, V_MAX) + Tut.dot(g, t, 0, 'flat')).join('') +
+          ts.steep.map((t) => Tut.dot(g, t, volt(f, t))).join('');
+        extra = ` At the peaks and valleys of ${PHI} (dashed lines), the flux graph is horizontal, so ${V} = 0. Where ${PHI} crosses its middle line it is steepest (short lines), so |${V}| is largest there.`;
+      }
+      const text = describe(p).replace(/^[^:]*: /, '');
+      frames.push({
+        text: `<p class="step-rule">Piece ${i + 1} of ${ps.length} (${fmt(p.t0)}–${fmt(p.t1)} s)</p><p>${cap(text)}.${extra}</p>`,
+        figure: figs(fluxGraph(f, false, { band, overlay: fo }), voltGraph(f, false, { band, upto: i + 1, overlay: vo })),
+      });
+    });
+    frames.push({
+      text: `<p class="step-rule">The whole graph</p><p>${INTRO[def.family]}</p><p>${RULE[def.family]}</p>`,
+      figure: figs(fluxGraph(f), voltGraph(f)),
+    });
+    return frames;
+  }
+
+  // A whole exercise: the pairs one by one, with the traps next to each.
+  function matchingLesson(def) {
+    const e = generate(def.family, def.seed);
+    const saved = ex; // the helpers (graphOf, voltOf, diagnose, traps) read the exercise from ex
+    ex = e;
+    try {
+      const cards = (lit) => {
+        const cls = (side, id) => {
+          const fluxId = side === 'flux' ? id : e.volt.find((u) => u.id === id).of;
+          if (lit === 'all' || (lit && lit.f === fluxId && (side === 'flux' || lit.u === id))) return `gcard ${colour(fluxId)}`;
+          if (lit && lit.traps && side === 'volt' && lit.traps.includes(id)) return 'gcard trap';
+          return 'gcard';
+        };
+        const badge = (side, id) => {
+          if (side === 'volt' && lit && lit !== 'all' && lit.traps && lit.traps.includes(id)) return 'trap';
+          const partner = side === 'flux' ? voltOf(id) : e.volt.find((u) => u.id === id).of;
+          return lit === 'all' || (lit && (side === 'flux' ? lit.f === id : lit.u === id)) ? `↔ ${partner}` : '';
+        };
+        const card = (side, id, svg) => `<div class="${cls(side, id)}"><span class="gname">${id}</span><span class="badge">${badge(side, id)}</span>${svg}</div>`;
+        return `<h3 class="qc-flux">Magnetic flux</h3><div class="graphs">${e.flux.map((f) => card('flux', f.id, fluxGraph(f))).join('')}</div>` +
+          `<h3 class="qc-volt">Induced voltage</h3><div class="graphs">${e.volt.map((u) => card('volt', u.id, voltGraph(graphOf(u.of)))).join('')}</div>`;
+      };
+      const frames = [{
+        text: `<p class="step-rule">The task</p><p>Match each flux graph A–D with its voltage graph 1–4.</p>` +
+          `<p>Do not compare the shapes of the graphs: ${V} depends on how fast ${PHI} changes, not on how large it is. For each flux graph, find where it is constant (${V} = 0), rising (${V} &lt; 0) and falling (${V} &gt; 0), and where it is steepest.</p>`,
+        figure: cards(null),
+      }];
+      for (const f of e.flux) {
+        const u = voltOf(f.id);
+        const traps = e.volt.filter((w) => w.id !== u && ['sign', 'copy', 'average', 'steepness'].includes(diagnose(e, f.id, w.id)));
+        const warn = traps.map((w) => `<li>Not ${w.id}: ${WHY[diagnose(e, f.id, w.id)](f.id, w.id)}</li>`).join('');
+        frames.push({
+          text: `<p class="step-rule">Flux graph ${f.id}</p><p><b>${f.id} ↔ ${u}</b>: ${f.pieces.map(describe).join('; ')}.</p>` +
+            (warn ? `<p>Traps for ${f.id}:</p><ul>${warn}</ul>` : ''),
+          figure: cards({ f: f.id, u, traps: traps.map((w) => w.id) }),
+        });
+      }
+      frames.push({
+        text: `<p class="step-rule">All pairs</p><p>Traps in this exercise:</p><ul>${traps().map((t) => `<li>${t}</li>`).join('')}</ul>`,
+        figure: cards('all'),
+      });
+      return frames;
+    } finally {
+      ex = saved;
+    }
+  }
+
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // Practice: random exercises; tutor: worked examples. Hints and solution belong to practice.
+  const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
+  let tutor = null;
+  function setMode(m) {
+    document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
+    store('im-mode', m);
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
+    $('#tutor').hidden = m !== 'tutor';
+    if (m === 'tutor') { $('#hints').hidden = true; $('#solution').hidden = true; }
+  }
+  function practise() {
+    setMode('practice');
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
+  }
+
   function fromHash() {
+    let t = location.hash.slice(1).match(/^tutor-(\d+)$/);
+    if (t && Number(t[1]) >= 1 && Number(t[1]) <= tutor.count) {
+      setMode('tutor');
+      if (tutor.current() !== Number(t[1]) - 1 || !tutor.shown()) tutor.open(Number(t[1]) - 1);
+      return true;
+    }
     const m = location.hash.slice(1).match(/^(?:(pieces|exp|sine)-)?(\d+)$/);
     if (!m) return false;
+    setMode('practice');
     const id = `${m[1] || 'pieces'}-${m[2]}`;
     if (!ex || ex.id !== id) open(generate(m[1] || 'pieces', Number(m[2])));
     return true;
@@ -329,8 +474,14 @@
       if (el && !el.disabled) pick(el.dataset.side, el.dataset.id);
     });
     window.addEventListener('hashchange', fromHash);
+    tutor = window.createTutor(LESSONS.map((l) => ({ ...l, frames: () => (l.graph ? graphLesson(l) : matchingLesson(l)) })), { done: practise });
+    $('#modes').addEventListener('change', () => {
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else practise();
+    });
     showScore();
-    if (!fromHash()) fresh();
+    if (fromHash()) return;
+    // First visit: start with the first worked example.
+    if (stored('im-mode', 'tutor') === 'tutor') { setMode('tutor'); tutor.open(0); } else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
