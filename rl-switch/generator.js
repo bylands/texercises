@@ -22,13 +22,10 @@
 
   const Circuit = root.Circuit || require('./circuit.js');
   const M = String.raw;
-  const RS = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20]; // Ω
-  const LS = [0.2, 0.5, 1, 2, 5];                // H: irrelevant right after switching
-  const LEVELS = {
-    easy: { name: 'Easy', vl: false },
-    medium: { name: 'Medium', vl: true },
-    hard: { name: 'Hard', vl: true },
-  };
+  const RS = [10, 20, 30, 40, 50, 60, 80, 100, 120, 150, 200, 300, 400, 500]; // Ω
+  const LS = [0.1, 0.2, 0.5, 1, 2];              // H: irrelevant right after switching
+  const VS = [3, 4.5, 6, 9, 12, 15, 18, 24, 30, 36, 48]; // V
+  const LEVELS = { easy: { name: 'Easy' }, medium: { name: 'Medium' }, hard: { name: 'Hard' } };
 
   // ---------------------------------------------------------------- random numbers
   function rng(seed) {
@@ -56,7 +53,7 @@
     const g = gcd(n, d) || 1;
     return { n: n / g + 0, d: d / g };
   }
-  const ZERO = F(0), ONE = F(1);
+  const ZERO = F(0), ONE = F(1), MA = F(1000); // currents are shown in mA
   const fadd = (a, b) => F(a.n * b.d + b.n * a.d, a.d * b.d);
   const fsub = (a, b) => F(a.n * b.d - b.n * a.d, a.d * b.d);
   const fmul = (a, b) => F(a.n * b.n, a.d * b.d);
@@ -144,6 +141,7 @@
       Ib: (j) => (br[j].R ? `I_{${br[j].R}}` : `I_{${Lsub(br[j].L)}}`),
       IL: (j) => `I_{${Lsub(br[j].L)}}`,
       VL: (j) => `V_{${Lsub(br[j].L)}}`,
+      EMFsvg: (j) => (br[j].L ? `ℰ_{i,${br[j].L}}` : 'ℰ_{i}'),
       EMF: (j) => (br[j].L ? `\\mathcal{E}_{\\mathrm{i},${br[j].L}}` : '\\mathcal{E}_\\mathrm{i}'),
       IR1: () => `I_{${r1}}`,
       main: () => (r1 ? `I_{${r1}}` : 'I'),
@@ -153,30 +151,45 @@
   // ---------------------------------------------------------------- random circuits
   const branch = (r, R, L) => ({ R: R ? F(r.pick(RS)) : null, L, H: L ? r.pick(LS) : null, sw: false });
 
+  // Mostly, a current already flows through the inductors before t = 0: a switch in the main
+  // line is usually opened after a long time closed, and switches in a branch or across R1
+  // change a circuit that is already on. Closing the main switch from rest (all inductor
+  // currents zero) is the exception, with the share FROM_REST.
+  const FROM_REST = 0.1;
+  const mainBefore = (r) => (r.next() < FROM_REST ? 'open' : 'closed');
+
   function randomCircuit(level, r) {
     if (level === 'easy') {
-      const shape = r.pick(['loop', 'RL', 'RL', 'RRL', 'RRL', 'noR1']);
+      const before = mainBefore(r);
+      // a single RL loop cannot be opened: the inductor current would have no path
+      const shape = r.pick(before === 'open' ? ['loop', 'RL', 'RRL', 'noR1'] : ['RL', 'RRL', 'RRL', 'noR1']);
       const b = {
         loop: () => [branch(r, false, true)],
         RL: () => [branch(r, true, false), branch(r, false, true)],
         RRL: () => [branch(r, true, true), branch(r, true, false)],
         noR1: () => [branch(r, true, false), branch(r, true, true)],
       }[shape]();
-      return { r1: shape === 'noR1' ? null : F(r.pick(RS)), branches: r.shuffle(b), sw: { at: 'main', before: 'open' } };
+      return { r1: shape === 'noR1' ? null : F(r.pick(RS)), branches: r.shuffle(b), sw: { at: 'main', before } };
     }
     if (level === 'medium') {
       const b = r.shuffle([branch(r, r.next() < 0.6, true), branch(r, true, false)]);
-      return { r1: r.next() < 0.75 ? F(r.pick(RS)) : null, branches: b, sw: { at: 'main', before: r.pick(['open', 'closed']) } };
+      const c = { r1: r.next() < 0.75 ? F(r.pick(RS)) : null, branches: b, sw: { at: 'main', before: mainBefore(r) } };
+      if (r.next() < 0.3) { // a switch in the resistor branch, opened or closed
+        c.sw = { at: 'branch', j: b.findIndex((x) => !x.L), before: r.pick(['open', 'closed']) };
+        b[c.sw.j].sw = true;
+      }
+      return c;
     }
     const n = r.int(2, 3), nL = n === 3 && r.next() < 0.5 ? 2 : 1;
     const b = [];
     for (let j = 0; j < n; j++) b.push(j < nL ? branch(r, j > 0 || r.next() < 0.6, true) : branch(r, true, false));
     r.shuffle(b);
-    const c = { r1: r.next() < 0.85 ? F(r.pick(RS)) : null, branches: b, sw: { at: 'main', before: r.pick(['open', 'closed']) } };
+    const c = { r1: r.next() < 0.85 ? F(r.pick(RS)) : null, branches: b, sw: { at: 'main', before: mainBefore(r) } };
     const at = r.pick(['main', 'branch', 'branch', 'bridge', 'bridge']);
     const plain = b.map((x, j) => j).filter((j) => !b[j].L);
-    if (at === 'branch' && plain.length) { c.sw = { at, j: r.pick(plain), before: c.sw.before }; b[c.sw.j].sw = true; }
-    if (at === 'bridge' && c.r1) c.sw = { at, before: c.sw.before };
+    const before = r.pick(['open', 'closed']);
+    if (at === 'branch' && plain.length) { c.sw = { at, j: r.pick(plain), before }; b[c.sw.j].sw = true; }
+    if (at === 'bridge' && c.r1) c.sw = { at, before };
     return c;
   }
 
@@ -193,13 +206,14 @@
     return { s0, s1, s2, IL, first, then };
   }
 
-  // The quantities asked for, in reading order: currents through the resistors and through
-  // inductors without a resistor (signed along the arrows), then |V_L| if the level asks for it.
-  function targets(c, nm, st, vl) {
+  // The quantities asked for, in reading order: the currents right after switching through
+  // the resistors and through inductors without a resistor (in mA, signed along the arrows),
+  // then the size of the emf induced in each coil, |𝓔_i| = |V_L|.
+  function targets(c, nm, st) {
     const out = [];
-    if (c.r1) out.push({ key: 'IR1', sym: nm.IR1(), unit: 'A', value: st.s1.IR1 });
-    c.branches.forEach((b, j) => out.push({ key: `I${j}`, sym: nm.Ib(j), unit: 'A', value: st.s1.Ib[j], j }));
-    if (vl) c.branches.forEach((b, j) => { if (b.L) out.push({ key: `V${j}`, sym: `|${nm.VL(j)}|`, unit: 'V', value: fabs(st.s1.VL[j]), j, abs: true }); });
+    if (c.r1) out.push({ key: 'IR1', sym: nm.IR1(), unit: 'mA', value: fmul(st.s1.IR1, MA) });
+    c.branches.forEach((b, j) => out.push({ key: `I${j}`, sym: nm.Ib(j), unit: 'mA', value: fmul(st.s1.Ib[j], MA), j }));
+    c.branches.forEach((b, j) => { if (b.L) out.push({ key: `E${j}`, sym: `|${nm.EMF(j)}|`, unit: 'V', value: fabs(st.s1.VL[j]), j, abs: true }); });
     return out;
   }
 
@@ -209,32 +223,33 @@
     const zero = after(c, st.then, c.branches.map(() => ZERO));
     const pick = (s, t) => {
       if (!s) return null;
-      if (t.key === 'IR1') return s.IR1;
-      if (t.key[0] === 'I') return s.Ib[t.j];
-      return s.VL ? fabs(s.VL[t.j]) : ZERO; // an inductor acting like a wire has no voltage
+      if (t.key === 'IR1') return fmul(s.IR1, MA);
+      if (t.key[0] === 'I') return fmul(s.Ib[t.j], MA);
+      return s.VL ? fabs(s.VL[t.j]) : ZERO; // an inductor acting like a wire has no emf
     };
     return list.map((t) => ({ wire: pick(st.s2, t), zero: pick(zero, t), same: pick(st.s0, t) }));
   }
 
-  // Choose V so that every value is a multiple of 0.1 (all values are proportional to V).
+  // Choose V (from VS) so that every current is a whole number of mA and every voltage a
+  // multiple of 0.1 V; all values are proportional to V. Voltages given in tenths (4.5 V) count
+  // as 45 tenths.
   function withVoltage(c, r) {
     c.V = ONE;
     const st = solve(c);
     if (!st) return null;
-    const vals = [st.s0.I, st.s0.U, ...st.s0.Ib, st.s1.I, st.s1.U, ...st.s1.Ib, ...st.s1.VL.filter(Boolean), st.s2.I, ...st.s2.Ib];
-    let step = 1;
-    for (const v of vals) step = lcm(step, v.d / gcd(v.d, 10));
-    const choices = [];
-    for (let V = 4; V <= 60; V++) if (V % step === 0) choices.push(V);
+    const amps = [st.s0.I, ...st.s0.Ib, st.s1.I, ...st.s1.Ib, st.s2.I, ...st.s2.Ib];
+    const volts = [st.s0.U, st.s1.U, ...st.s1.VL.filter(Boolean)];
+    const ok = (V) => amps.every((a) => (a.n * V * 100) % a.d === 0) && volts.every((v) => (v.n * V) % v.d === 0);
+    const choices = VS.filter((V) => ok(Math.round(V * 10)));
     if (!choices.length) return null;
-    c.V = F(r.pick(choices));
+    c.V = F(Math.round(r.pick(choices) * 10), 10);
     return solve(c);
   }
 
   function usable(c, st, level) {
     const all = [...st.s1.Ib, st.s1.I, ...st.s0.Ib, st.s0.I].map(fval);
-    if (all.some((x) => Math.abs(x) > 10 || (x !== 0 && Math.abs(x) < 0.1 - 1e-9))) return false;
-    if (st.s1.VL.some((v) => v && Math.abs(fval(v)) > 150)) return false;
+    if (all.some((x) => Math.abs(x) > 1 || (x !== 0 && Math.abs(x) < 0.002 - 1e-12))) return false;
+    if (st.s1.VL.some((v) => v && Math.abs(fval(v)) > 200)) return false;
     if (level === 'easy') return true;
     // The inductor matters: right after switching, some current has changed (so “nothing
     // changes” is wrong) and some current is not yet at its final value (so “the inductor acts
@@ -249,14 +264,20 @@
     for (let attempt = 0; attempt < 5000; attempt++) {
       const c = randomCircuit(level, r);
       const st = withVoltage(c, r);
-      if (st && usable(c, st, level)) return { c, st };
+      if (!st || !usable(c, st, level)) continue;
+      // No inductor current before t = 0 by accident (e.g. an inductor bridged by another):
+      // only now and then. (Closing the main switch from rest was chosen on purpose.)
+      const fromRest = c.sw.at === 'main' && c.sw.before === 'open';
+      if (st.IL.every(isZero) && !fromRest && r.next() > FROM_REST) continue;
+      return { c, st };
     }
     throw new Error(`No ${level} exercise found for seed ${seed}`);
   }
 
   // ---------------------------------------------------------------- text
-  const UNIT_TEX = { A: M`\mathrm{A}`, V: M`\mathrm{V}`, O: M`\Omega` };
-  const q = (f, u) => `${ftex(f)}\\,${UNIT_TEX[u]}`;
+  // A value with its unit; currents (u = 'A', given in A) are shown in mA.
+  const UNIT_TEX = { A: M`\mathrm{mA}`, mA: M`\mathrm{mA}`, V: M`\mathrm{V}`, O: M`\Omega` };
+  const q = (f, u) => `${ftex(u === 'A' ? fmul(f, MA) : f)}\\,${UNIT_TEX[u]}`;
   const listing = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
   const al = (...lines) => M`$$\begin{aligned}` + lines.join(M` \\ `) + M`\end{aligned}$$`;
   const verb = (closed) => (closed ? 'closed' : 'opened');
@@ -269,12 +290,11 @@
 
   function taskText(c, nm, list) {
     const first = c.sw.before === 'closed';
-    const cur = list.filter((t) => t.unit === 'A').map((t) => `$${t.sym}$`);
-    const volt = list.filter((t) => t.unit === 'V').map((t) => `$${t.sym.replace(/\|/g, '')}$`);
+    const cur = list.filter((t) => t.unit === 'mA').map((t) => `$${t.sym}$`);
+    const emf = list.filter((t) => t.unit === 'V').map((t) => `$${t.sym.replace(/\|/g, '')}$`);
     return `The switch S ${where(c, nm)} has been ${first ? 'closed' : 'open'} for a long time. At $t = 0$ it is ${verb(!first)}. ` +
-      `Find the currents ${listing(cur)} immediately after the switch is ${verb(!first)}` +
-      (volt.length ? `, and the size of the voltage ${listing(volt)} across the inductor${volt.length > 1 ? 's' : ''}` : '') +
-      '. The arrows show the positive direction of the currents.';
+      `Find the currents ${listing(cur)} and the size of the emf ${listing(emf)} induced in the inductor${emf.length > 1 ? 's' : ''} immediately after the switch is ${verb(!first)}. ` +
+      'The arrows show the positive direction of the currents.';
   }
 
   // Before t = 0: the steady currents, in particular the inductor currents.
@@ -395,7 +415,6 @@
       out.push(`The voltage across ${series.length > 1 ? 'an inductor' : 'the inductor'} in series with a resistor is the voltage $${U}$ across the branch minus the voltage across the resistor:` +
         al(...series.map((j) => M`${nm.VL(j)} &= ${U} - ${nm.R(nm.br[j].R)}\,${nm.IL(j)} = ${q(s.U, 'V')} - ${q(c.branches[j].R, 'O')}\cdot ${q(st.IL[j], 'A')} = ${q(s.VL[j], 'V')}`)));
     }
-    out.push(`Its size: ${listing(Ls.map((j) => `$|${nm.VL(j)}| = ${q(fabs(s.VL[j]), 'V')}$`))}.`);
     // The emf and the rate of change: only here does the inductance matter.
     for (const j of Ls) {
       const H = c.branches[j].H, vl = fval(s.VL[j]), E = nm.EMF(j);
@@ -404,7 +423,7 @@
         : vl < 0 ? 'the current is falling in the direction of the arrow, and the emf acts along the arrow, against this fall (Lenz\'s rule)'
           : 'the current does not change at this moment';
       out.push(`The self-induced emf of $${nm.L(j)}$: ${how}. The inductance decides how fast the current changes; it does not change the values right after switching.` +
-        al(M`${E} &= -${nm.VL(j)} = ${q(fneg(s.VL[j]), 'V')}`,
+        al(M`${E} &= -${nm.VL(j)} = ${q(fneg(s.VL[j]), 'V')}, \quad |${E}| = ${q(fabs(s.VL[j]), 'V')}`,
           M`\frac{\Delta ${nm.IL(j)}}{\Delta t} &= \frac{${nm.VL(j)}}{${nm.L(j)}} = \frac{${q(s.VL[j], 'V')}}{${fmt(H)}\,\mathrm{H}} = ${fmt(vl / H)}\,\mathrm{A/s}`));
     }
     return out;
@@ -424,7 +443,7 @@
 
   // ---------------------------------------------------------------- drawing
   const UNIT = { A: 'A', V: 'V' };
-  const label = (f, u) => `${ftxt(f)} ${u}`;
+  const label = (f, u) => (u === 'A' ? `${ftxt(fmul(f, MA))} mA` : `${ftxt(f)} ${u}`); // currents given in A, shown in mA
 
   // Layout: battery on the left wire, the main line (switch, R1) along the top, branches as
   // columns between the top and the bottom rail. view: { closed (switch drawn closed),
@@ -443,28 +462,18 @@
     const H = Math.max(3.2, 0.9 + Math.max(...c.branches.map(elems)) * 1.3);
     const sw = (p, q2, extra) => s.sw(p, q2, { l: 'S', closed: view.closed, note: view.swNote, hl: hl.has('S'), ...extra });
 
+    // Main line: the switch on the top wire, R1 on the bottom wire (the current goes back to
+    // the battery through it, so its arrow points left), a bridge switch below R1.
+    const top = c.sw.at === 'main' ? 2.6 : 1, bottom = c.r1 ? (c.sw.at === 'bridge' ? 3.2 : 2.8) : 1;
+    const x = Math.max(top, bottom) + 0.3;
     s.dim = dim.has('main');
-    s.wire([0, 0], [1, 0]);
-    let x = 1;
-    if (c.sw.at === 'main') { sw([x, 0], [x + 1.4, 0]); x += 1.4; }
-    if (c.r1) {
-      const R1 = `$${nm.R(nm.r1)}$ = ${ftxt(c.r1)} Ω`;
-      if (c.sw.at === 'bridge') {
-        s.wire([x, 0], [x + 0.4, 0]);
-        s.dim = dim.has('main') || dim.has('R1');
-        s.res([x + 0.4, 0], [x + 2.6, 0], { l: R1, ls: 'below', hl: hl.has('R1'), i: cur('IR1'), is: 'above', it: 0.86 });
-        s.dim = dim.has('main');
-        s.wire([x + 0.4, 0], [x + 0.4, 1.2]).wire([x + 2.6, 1.2], [x + 2.6, 0]).wire([x + 2.6, 0], [x + 3, 0]);
-        sw([x + 0.4, 1.2], [x + 2.6, 1.2]);
-        x += 3;
-      } else {
-        s.res([x, 0], [x + 2.2, 0], { l: R1, hl: hl.has('R1'), i: cur('IR1'), is: 'below', it: 0.86 });
-        x += 2.2;
-      }
+    if (c.sw.at === 'main') {
+      s.wire([0, 0], [0.8, 0]).wire([2.2, 0], [x, 0]);
+      sw([0.8, 0], [2.2, 0]);
+    } else {
+      s.wire([0, 0], [x, 0]);
     }
-    x += 0.5;
     const cols = c.branches.map((b, j) => x + j * 2.9), last = cols[cols.length - 1];
-    s.wire([x - 0.5, 0], [x, 0]);
     s.dim = false;
     s.wire([x, 0], [last, 0]).wire([last, -H], [x, -H]);
     c.branches.forEach((b, j) => {
@@ -480,7 +489,20 @@
       });
     });
     s.dim = dim.has('main');
-    s.wire([x, -H], [0, -H]);
+    if (c.r1) {
+      const R1 = `$${nm.R(nm.r1)}$ = ${ftxt(c.r1)} Ω`, a = x - 0.3, b = a - 2.2, bridge = c.sw.at === 'bridge';
+      s.wire([x, -H], [a, -H]);
+      s.dim = dim.has('main') || dim.has('R1');
+      s.res([a, -H], [b, -H], { l: R1, ls: bridge ? 'above' : 'below', hl: hl.has('R1'), i: cur('IR1'), is: bridge ? 'below' : 'above', it: 0.86 });
+      s.dim = dim.has('main');
+      if (bridge) {
+        s.wire([a, -H], [a, -H - 1.2]).wire([b, -H - 1.2], [b, -H]);
+        sw([a, -H - 1.2], [b, -H - 1.2], { ls: 'below' });
+      }
+      s.wire([b, -H], [0, -H]);
+    } else {
+      s.wire([x, -H], [0, -H]);
+    }
     s.bat([0, -H], [0, 0], { l: `${ftxt(c.V)} V` });
     s.dim = false;
     return s;
@@ -499,10 +521,11 @@
 
   function exercise(c, st, level, id) {
     const nm = namer(c), list = targets(c, nm, st, LEVELS[level] ? LEVELS[level].vl : true);
-    const syms = (show) => Object.fromEntries(list.filter((t) => t.unit === 'A').map((t) => [t.key, show(t)]));
+    const syms = (show) => Object.fromEntries(list.filter((t) => t.unit === 'mA').map((t) => [t.key, show(t)]));
+    const emfNote = (j) => `$${nm.EMFsvg(j)}$ = ${label(fneg(st.s1.VL[j]), 'V')}`;
     const figure = (sol) => {
       const view = sol
-        ? { closed: st.then, dim: dead(c, st.then), cur: syms((t) => label(t.value, 'A')), notes: Object.fromEntries(c.branches.map((b, j) => [j, b.L ? `$${nm.VL(j)}$ = ${label(st.s1.VL[j], 'V')}` : null])) }
+        ? { closed: st.then, dim: dead(c, st.then), cur: syms((t) => label(t.value, 'mA')), notes: Object.fromEntries(c.branches.map((b, j) => [j, b.L ? emfNote(j) : null])) }
         : { closed: st.first, cur: syms((t) => `$${t.sym}$`), swNote: `${st.first ? 'opens' : 'closes'} at t = 0` };
       return `<div class="fig">${draw(c, nm, view).toSVG()}</div>`;
     };
@@ -564,14 +587,14 @@
     });
     frame('Right after switching', afterText(c, nm, st), {
       closed: st.then, cur: curs(st.s1), dim: dead(c, st.then), notes: kept,
-      focus: new Map([...list.filter((t) => t.unit === 'A' && !(t.j !== undefined && c.branches[t.j].L)).map((t) => [t.key, 'new']), ...Ls.map((j) => [`I${j}`, 'use'])]),
+      focus: new Map([...list.filter((t) => t.unit === 'mA' && !(t.j !== undefined && c.branches[t.j].L)).map((t) => [t.key, 'new']), ...Ls.map((j) => [`I${j}`, 'use'])]),
     });
-    frame('The voltage across the inductor', voltText(c, nm, st), {
+    frame('The induced emf', voltText(c, nm, st), {
       closed: st.then, cur: curs(st.s1), dim: dead(c, st.then), hl: hlL,
-      notes: Object.fromEntries(Ls.map((j) => [j, `$${nm.VL(j)}$ = ${label(st.s1.VL[j], 'V')}`])),
+      notes: Object.fromEntries(Ls.map((j) => [j, `$${nm.EMFsvg(j)}$ = ${label(fneg(st.s1.VL[j]), 'V')}`])),
     });
-    const row = (name, s) => `<tr><th>${name}</th>${list.filter((t) => t.unit === 'A').map((t) => `<td>${ftxt(t.key === 'IR1' ? s.IR1 : s.Ib[t.j])} A</td>`).join('')}</tr>`;
-    const table = `<table class="compare"><tr><th></th>${list.filter((t) => t.unit === 'A').map((t) => `<th>$${t.sym}$</th>`).join('')}</tr>` +
+    const row = (name, s) => `<tr><th>${name}</th>${list.filter((t) => t.unit === 'mA').map((t) => `<td>${label(t.key === 'IR1' ? s.IR1 : s.Ib[t.j], 'A')}</td>`).join('')}</tr>`;
+    const table = `<table class="compare"><tr><th></th>${list.filter((t) => t.unit === 'mA').map((t) => `<th>$${t.sym}$</th>`).join('')}</tr>` +
       row('before $t = 0$', st.s0) + row('right after', st.s1) + row('long after', st.s2) + '</table>';
     frame('Before, right after, long after', [
       `Only the inductor current${Ls.length > 1 ? 's are' : ' is'} the same just before and right after switching; the other currents jump. ` +

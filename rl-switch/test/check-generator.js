@@ -1,8 +1,10 @@
 // Verifies the switching RL generator: run with `node rl-switch/test/check-generator.js`.
 // For many seeds per level it checks, with a nodal analysis of the circuit, that
 // - before t = 0 (inductors as wires) the inductor currents are right,
-// - right after t = 0 (inductors as current sources) every current and inductor voltage is right,
-// - all answers are multiples of 0.1, and the texts and diagrams contain no undefined values.
+// - right after t = 0 (inductors as current sources) every current (in mA) and the size of every
+//   induced emf (= the voltage across the coil) is right,
+// - currents are whole mA and emfs multiples of 0.1 V, and the texts and diagrams contain no
+//   undefined values.
 // It also checks the tutorial examples.
 'use strict';
 
@@ -62,16 +64,17 @@ function check(ex, tag) {
   if (!close(U, fval(st.s1.U))) fail(`${tag}: U = ${U}, generator ${fval(st.s1.U)}`);
   for (const f of ex.fields) {
     let x;
-    if (f.key === 'IR1') x = s.i('Rmain');
+    if (f.key === 'IR1') x = 1000 * s.i('Rmain');
     else if (f.key[0] === 'I') {
       const j = Number(f.key.slice(1)), b = c.branches[j];
-      x = b.L ? fval(st.IL[j]) : config(c, st.then).active[j] ? s.i(`R${j}`) : 0;
+      x = 1000 * (b.L ? fval(st.IL[j]) : config(c, st.then).active[j] ? s.i(`R${j}`) : 0);
     } else {
       const j = Number(f.key.slice(1)), b = c.branches[j];
       x = Math.abs(U - (b.R ? fval(b.R) * fval(st.IL[j]) : 0));
     }
     if (!close(x, f.value)) fail(`${tag}: ${f.key} = ${f.value}, nodal analysis ${x}`);
-    if (!close(f.value * 10, Math.round(f.value * 10))) fail(`${tag}: ${f.key} = ${f.value} is not a multiple of 0.1`);
+    const step = f.unit === 'mA' ? 1 : 0.1;
+    if (!close(f.value / step, Math.round(f.value / step))) fail(`${tag}: ${f.key} = ${f.value} ${f.unit} is not a multiple of ${step}`);
   }
   for (const t of [ex.text, ...ex.hints, ...ex.solution, ex.results, ex.figure(false), ex.figure(true)]) {
     if (/undefined|NaN|\[object|null/.test(t)) fail(`${tag}: bad text: ${t.slice(0, 160)}`);
@@ -80,6 +83,7 @@ function check(ex, tag) {
 
 for (const level of Object.keys(LEVELS)) {
   const t0 = Date.now(), kinds = {};
+  let rest = 0;
   for (let seed = 1; seed <= SAMPLES; seed++) {
     const tag = `${level} seed ${seed}`;
     let ex;
@@ -87,8 +91,11 @@ for (const level of Object.keys(LEVELS)) {
     check(ex, tag);
     const c = ex.circuit, k = `${c.sw.at} ${c.sw.before === 'open' ? 'closing' : 'opening'}`;
     kinds[k] = (kinds[k] || 0) + 1;
+    if (ex.st.IL.every((x) => x.n === 0)) rest++;
   }
-  console.log(`${level}: ${((Date.now() - t0) / SAMPLES).toFixed(1)} ms/exercise, switch ${JSON.stringify(kinds)}`);
+  // Starting with no inductor current should be the exception.
+  if (rest > 0.25 * SAMPLES) fail(`${level}: ${rest} of ${SAMPLES} exercises start without inductor current`);
+  console.log(`${level}: ${((Date.now() - t0) / SAMPLES).toFixed(1)} ms/exercise, no inductor current before t = 0: ${Math.round((100 * rest) / SAMPLES)} %, switch ${JSON.stringify(kinds)}`);
 }
 
 for (const [i, e] of EXAMPLES.entries()) {
