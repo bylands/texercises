@@ -76,7 +76,7 @@
   }
   function practise() {
     setMode('practice');
-    if (ex) { history.replaceState(null, '', `#${ex.id}`); render(); } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
   }
 
   function open(exercise) {
