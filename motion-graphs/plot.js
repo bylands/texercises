@@ -25,11 +25,14 @@
     };
   }
 
-  // Grid (1 s by 1 unit, or 2 units on tall axes), axes, labels, breakpoints and piece numbers;
+  // Spacing of the horizontal grid lines: 1 unit, or 2 units on tall axes.
+  const gridStep = (axis) => (axis.hi - axis.lo > 40 ? 2 : 1);
+
+  // Grid (1 s by gridStep), axes, labels, breakpoints and piece numbers;
   // wrong pieces (marks[i] === 'bad') get a shaded band.
   function frame(ex, axis, q, marks) {
     const s = scales(axis);
-    const minor = axis.hi - axis.lo > 40 ? 2 : 1;
+    const minor = gridStep(axis);
     let out = '';
     ex.pieces.forEach((p, i) => {
       if (marks && marks[i] === 'bad') out += `<rect class="band" x="${s.x(p.t0)}" y="${TOP - 24}" width="${f1(s.x(p.t1) - s.x(p.t0))}" height="${f1(s.y(axis.lo) - TOP + 24)}"/>`;
@@ -62,6 +65,79 @@
     return out;
   }
 
+  // Pointer position of a mouse event in the coordinates of the <svg> element el.
+  function svgPoint(el, evt) {
+    const pt = el.createSVGPoint();
+    pt.x = evt.clientX;
+    pt.y = evt.clientY;
+    return pt.matrixTransform(el.getScreenCTM().inverse());
+  }
+
+  // The grid point nearest to (px, py), or null when the pointer is outside the plot area.
+  function gridPoint(axis, px, py) {
+    const s = scales(axis), step = gridStep(axis), m = 8;
+    if (px < s.x(0) - m || px > s.x(T) + m || py < s.y(axis.hi) - m || py > s.y(axis.lo) + m) return null;
+    const t = Math.min(T, Math.max(0, Math.round(((px - L) / (W - L - R)) * T)));
+    const v = Math.min(axis.hi, Math.max(axis.lo, axis.lo + Math.round((s.inv(py) - axis.lo) / step) * step)) + 0; // + 0: no −0
+    return { t, v, x: s.x(t), y: s.y(v) };
+  }
+
+  // Points where the graph vals crosses a grid line or the t axis (marked on: true).
+  // Each piece y(u) = (1−u)²·y0 + 2u(1−u)·c + u²·y1 with t = t0 + u·(t1 − t0), as drawn by curve().
+  function crossings(ex, axis, vals) {
+    const s = scales(axis), step = gridStep(axis), levels = [0], out = [];
+    for (let v = axis.lo; v <= axis.hi; v += step) if (v !== 0) levels.push(v);
+    ex.pieces.forEach((p, i) => {
+      const { y0, ym, y1 } = vals[i], c = 2 * ym - (y0 + y1) / 2, d = p.t1 - p.t0;
+      const at = (u) => (1 - u) * (1 - u) * y0 + 2 * u * (1 - u) * c + u * u * y1;
+      for (let t = Math.ceil(p.t0); t <= p.t1; t++) out.push({ t, v: at((t - p.t0) / d) });
+      const a = y0 - 2 * c + y1, b = 2 * (c - y0);
+      for (const v of levels) {
+        let us;
+        if (Math.abs(a) > 1e-9) {
+          const D = b * b - 4 * a * (y0 - v);
+          us = D < 0 ? [] : [(-b - Math.sqrt(D)) / (2 * a), (-b + Math.sqrt(D)) / (2 * a)];
+        } else {
+          us = Math.abs(b) > 1e-9 ? [(v - y0) / b] : []; // a flat piece on a grid line: its ends are grid points
+        }
+        for (const u of us) if (u > -1e-9 && u < 1 + 1e-9) out.push({ t: p.t0 + u * d, v });
+      }
+    });
+    return out.map((g) => ({ ...g, x: s.x(g.t), y: s.y(g.v), on: true }));
+  }
+
+  // The point to show under the pointer: the nearest grid point, or a crossing of one of the
+  // graphs in curves with the grid when that is nearer. null outside the plot area.
+  function hoverPoint(ex, axis, curves, px, py) {
+    const g = gridPoint(axis, px, py);
+    if (!g) return null;
+    let best = g, dist = Math.hypot(px - g.x, py - g.y);
+    for (const vals of curves) {
+      for (const c of crossings(ex, axis, vals)) {
+        const dc = Math.hypot(px - c.x, py - c.y);
+        if (dc <= dist) { best = c; dist = dc; } // on a tie, the point on the graph
+      }
+    }
+    return best;
+  }
+
+  // Marker of the point g under the pointer: dot (ring on a graph), guides to the axes and its
+  // coordinates, rounded to 0.01 with ≈ where that is not exact.
+  function hoverMark(axis, q, g) {
+    if (!g) return '';
+    const s = scales(axis), x0 = s.x(0), y0 = s.y(Math.max(axis.lo, Math.min(axis.hi, 0)));
+    const right = g.x < W - 150, above = g.y > TOP + 26;
+    const val = (x) => {
+      const r = Math.round(x * 100) / 100 + 0;
+      return `${Math.abs(r - x) > 1e-9 ? '≈' : '='} ${num(r)}`;
+    };
+    const dot = g.on ? `<circle class="gp on" cx="${g.x}" cy="${g.y}" r="4.5"/>` : `<circle class="gp" cx="${g.x}" cy="${g.y}" r="3.5"/>`;
+    return `<g class="hover"><line class="guide" x1="${x0}" y1="${g.y}" x2="${g.x}" y2="${g.y}"/>`
+      + `<line class="guide" x1="${g.x}" y1="${y0}" x2="${g.x}" y2="${g.y}"/>${dot}`
+      + `<text class="val" x="${f1(g.x + (right ? 10 : -10))}" y="${f1(g.y + (above ? -10 : 20))}" text-anchor="${right ? 'start' : 'end'}">`
+      + `<tspan class="it">t</tspan> ${val(g.t)} s, <tspan class="it">${q}</tspan> ${val(g.v)} ${UNIT[q]}</text></g>`;
+  }
+
   const svg = (body, label, attrs) => `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${label}"${attrs || ''}>${body}</svg>`;
 
   function sourceGraph(ex) {
@@ -91,13 +167,15 @@
   }
 
   // The drawing: opts.marks (per piece 'ok' | 'bad'), opts.solution (show the correct graph),
-  // opts.active (id of the selected or dragged handle), opts.locked (no handles).
+  // opts.active (id of the selected or dragged handle), opts.locked (no handles),
+  // opts.hover (grid point under the pointer).
   function targetGraph(ex, vals, opts) {
     const q = ex.to, o = opts || {};
     const { s, svg: grid } = frame(ex, ex.axes.target, q, o.marks);
     let body = grid;
     body += curve(ex, vals, s, ' drawn');
     if (o.solution) body += curve(ex, ex.answer, s, ' solution');
+    body += hoverMark(ex.axes.target, q, o.hover);
     if (ex.dir === 'int') body += `<circle class="fixed" cx="${s.x(0)}" cy="${s.y(vals[0].y0)}" r="${R_HANDLE - 1}"/>`;
     if (!o.locked) {
       const hs = handles(ex, vals);
@@ -112,7 +190,7 @@
     return `<g class="qc-${q}">${body}</g>`;
   }
 
-  const api = { get W() { return W; }, H, TOP, B, setNarrow, UNIT, scales, sourceGraph, targetGraph, handles, svg, num };
+  const api = { get W() { return W; }, H, TOP, B, setNarrow, UNIT, scales, sourceGraph, targetGraph, handles, svg, num, svgPoint, hoverPoint, hoverMark };
   root.Plot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

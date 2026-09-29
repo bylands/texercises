@@ -113,6 +113,10 @@ svg .handle { fill: var(--card); stroke: var(--qc); stroke-width: 2; }
 svg .handle.mid { fill: var(--qc); fill-opacity: 0.25; }
 svg .handle.active { fill: var(--qc); fill-opacity: 1; }
 svg .fixed { fill: var(--muted); stroke: var(--card); stroke-width: 2; }
+svg .hover { pointer-events: none; }
+svg .guide { stroke: var(--qc); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
+svg .gp { fill: var(--qc); }
+svg .gp.on { fill: var(--card); stroke: var(--qc); stroke-width: 2; }
 svg .val { fill: var(--ink); font-size: 13px; font-family: system-ui, sans-serif; font-weight: 600; paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
 
 /* actions and feedback */

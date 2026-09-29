@@ -264,6 +264,17 @@
     editor.show({});
   }
 
+  // Coordinates of the grid point or crossing under the mouse on the given graph.
+  function hoverGiven(evt) {
+    const el = $('#given svg');
+    if (!ex || !el) return;
+    const old = el.querySelector('.hover');
+    if (old) old.remove();
+    if (evt.type === 'pointerleave' || evt.pointerType === 'touch') return;
+    const pt = Plot.svgPoint(el, evt), axis = ex.axes.source;
+    el.firstElementChild.insertAdjacentHTML('beforeend', Plot.hoverMark(axis, ex.from, Plot.hoverPoint(ex, axis, [ex.source], pt.x, pt.y)));
+  }
+
   const task = () => (document.querySelector('input[name="task"]:checked') || {}).value || 'mixed';
   function fresh() {
     const k = task(), keys = Object.keys(TASKS);
@@ -354,6 +365,8 @@
       <label><input type="radio" name="task" value="${k}"${k === saved ? ' checked' : ''}><span>${name}</span></label>`).join('');
     $('#tasks').addEventListener('change', () => { store('mg-task', task()); fresh(); });
     $('#new').addEventListener('click', fresh);
+    $('#given').addEventListener('pointermove', hoverGiven);
+    $('#given').addEventListener('pointerleave', hoverGiven);
     $('#check').addEventListener('click', check);
     $('#hint').addEventListener('click', hint);
     $('#reset').addEventListener('click', () => editor.reset());

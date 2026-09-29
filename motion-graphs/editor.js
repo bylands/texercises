@@ -8,13 +8,13 @@
   'use strict';
 
   const { MID_STEP } = root.Motion;
-  const { scales, targetGraph, handles, UNIT, num } = root.Plot;
+  const { scales, targetGraph, handles, UNIT, num, svgPoint, hoverPoint } = root.Plot;
 
   function createEditor(el, ex, onEdit) {
     const axis = ex.axes.target, s = scales(axis), n = ex.pieces.length;
     const clamp = (v) => Math.min(axis.hi, Math.max(axis.lo, v));
     const snap = (v, step) => Math.round(v / step) * step + 0; // + 0: no −0
-    let st, drag = null, active = null, view = { marks: null, solution: false, locked: false };
+    let st, drag = null, active = null, hover = null, view = { marks: null, solution: false, locked: false };
 
     function reset() {
       st = { nodes: Array(n + 1).fill(ex.dir === 'diff' ? 0 : ex.pieces[0].G0), bends: Array(n).fill(0) };
@@ -41,7 +41,7 @@
 
     // ---------------------------------------------------------------- drawing
     function render() {
-      el.innerHTML = targetGraph(ex, values(), { ...view, active: view.locked ? null : active });
+      el.innerHTML = targetGraph(ex, values(), { ...view, active: view.locked ? null : active, hover });
       const h = active && valueOf(active);
       el.setAttribute('aria-valuetext', h ? `${ex.to} at ${h.t} s: ${num(Math.round(h.value * 100) / 100)} ${UNIT[ex.to]}` : '');
     }
@@ -52,11 +52,12 @@
     }
 
     // ---------------------------------------------------------------- pointer
-    function point(evt) {
-      const pt = el.createSVGPoint();
-      pt.x = evt.clientX;
-      pt.y = evt.clientY;
-      return pt.matrixTransform(el.getScreenCTM().inverse());
+    const point = (evt) => svgPoint(el, evt);
+    // Shows the point g under the mouse (null: none), redrawing only when it changes.
+    function setHover(g) {
+      if (hover === g || (hover && g && hover.t === g.t && hover.v === g.v)) return;
+      hover = g;
+      render();
     }
     // The handle under the pointer, or (derivative) the line of a piece.
     function find(pt) {
@@ -84,6 +85,7 @@
       el.focus({ preventScroll: true });
       el.setPointerCapture(evt.pointerId);
       const i = Number(id.slice(1));
+      hover = null;
       drag = { id, y: s.inv(pt.y), base: id[0] === 'p' ? { y0: st.nodes[i], y1: st.nodes[i + 1] } : null };
       active = id[0] === 'p' ? `n${i}` : id;
       el.classList.add('dragging');
@@ -93,7 +95,10 @@
     el.addEventListener('pointermove', (evt) => {
       const pt = point(evt);
       if (!drag) {
-        el.style.cursor = !view.locked && find(pt) ? 'grab' : '';
+        const id = !view.locked && find(pt);
+        el.style.cursor = id ? 'grab' : '';
+        const curves = view.solution ? [values(), ex.answer] : [values()];
+        setHover(id || evt.pointerType === 'touch' ? null : hoverPoint(ex, axis, curves, pt.x, pt.y));
         return;
       }
       const y = s.inv(pt.y);
@@ -116,6 +121,7 @@
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
+    el.addEventListener('pointerleave', () => { if (!drag) setHover(null); });
 
     // ---------------------------------------------------------------- keyboard
     el.addEventListener('focus', () => {
