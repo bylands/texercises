@@ -147,11 +147,13 @@
 
   // ---------------------------------------------------------------- rendering
   const ref = (glow) => circuit({ t: 'L', i: 0 }, { t: 'B', dir: 1 }, () => ({ label: 'L₀', glow }));
-  const task = (lit) => circuit(clone(ex.load), clone(ex.pack), (i) => ({ label: ex.bulbs[i].name, glow: lit ? GLOW[ex.bulbs[i].answer] : 0 }));
+  // `glows[i]` is the answer shown for bulb i (none: unlit).
+  const task = (glows) => circuit(clone(ex.load), clone(ex.pack), (i) => ({ label: ex.bulbs[i].name, glow: GLOW[glows[i]] || 0 }));
+  const drawAnswers = () => { $('#figure').innerHTML = task(answers()); };
 
   function render() {
-    $('#ref').innerHTML = ref(0);
-    $('#figure').innerHTML = task(false);
+    $('#ref').innerHTML = ref(GLOW.equal);
+    $('#figure').innerHTML = task([]);
     $('#fields').innerHTML = ex.bulbs.map((b) => `
       <div class="field" data-name="${b.name}">
         <span class="name">${b.name}</span>
@@ -254,7 +256,7 @@
     if (!canReveal()) return;
     st.revealed = true;
     $('#sol-figure').innerHTML = `<figure class="fig ref">${ref(GLOW.equal)}<figcaption>Reference</figcaption></figure>` +
-      `<figure class="fig">${task(true)}<figcaption>Your circuit</figcaption></figure>`;
+      `<figure class="fig">${task(ex.bulbs.map((b) => b.answer))}<figcaption>Your circuit</figcaption></figure>`;
     $('#sol-text').innerHTML = solution();
     $('#solution').hidden = false;
     updateButtons();
@@ -399,6 +401,7 @@
     $('#check').addEventListener('click', check);
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
+    $('#fields').addEventListener('change', drawAnswers);
     window.addEventListener('hashchange', fromHash);
     tutor = window.createTutor(LESSONS.map((l) => ({ ...l, frames: () => lesson(l) })), { done: practise });
     $('#modes').addEventListener('change', () => {
