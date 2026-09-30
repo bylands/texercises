@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teaching Physics</title>
+  <style>
+    :root {
+      --bg: #f6f5f1;
+      --card: #ffffff;
+      --ink: #1f2328;
+      --muted: #646b73;
+      --line: #d9d6ce;
+      --accent: #2b59c3;
+      --glow: #ffc21a;
+      --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
+      color-scheme: light;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #15171a;
+        --card: #1e2125;
+        --ink: #e6e3dc;
+        --muted: #9aa0a6;
+        --line: #3a3e44;
+        --accent: #7aa2ff;
+        --glow: #ffd23f;
+        color-scheme: dark;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    header.wrap {
+      padding-top: 48px;
+      padding-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-family: var(--serif);
+      font-size: 2.2rem;
+      font-weight: 600;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .apps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      padding-bottom: 48px;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      color: inherit;
+      text-decoration: none;
+      transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+
+    .app:hover,
+    .app:focus-visible {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+      outline: none;
+    }
+
+    .app svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      padding: 20px 24px 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .app .text {
+      padding: 14px 20px 18px;
+    }
+
+    .app h2 {
+      margin: 0 0 4px;
+      font-size: 1.15rem;
+      color: var(--accent);
+    }
+
+    .app p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    footer.wrap {
+      border-top: 1px solid var(--line);
+      padding-top: 16px;
+      padding-bottom: 32px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: inherit;
+      text-underline-offset: 2px;
+    }
+
+    footer a:hover {
+      color: var(--accent);
+    }
+
+    .wire { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .plate { stroke: var(--ink); stroke-linecap: round; }
+    .node { fill: var(--ink); }
+    .bulb { stroke: var(--ink); stroke-width: 2.5; fill: var(--card); }
+    .bulb.on { fill: var(--glow); }
+    .bulb.dim { fill: var(--glow); fill-opacity: 0.35; }
+    .halo { fill: var(--glow); }
+    .res { stroke: var(--ink); stroke-width: 2.5; fill: var(--card); }
+    .label { fill: var(--ink); font-family: var(--serif); font-style: italic; font-size: 16px; }
+    .label tspan { font-style: normal; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <header class="wrap">
+    <h1>Teaching Physics</h1>
+    <p>Interactive exercises for physics lessons.</p>
+  </header>
+
+  <main class="wrap apps">
+    <a class="app" href="/bulb-brightness/">
+      <svg viewBox="0 0 240 150" role="img" aria-label="Circuit with a battery, one bulb in series and two bulbs in parallel">
+        <circle class="halo" cx="90" cy="30" r="22" opacity="0.25"/>
+        <path class="wire" d="M30 68 V30 H78 M102 30 H210 V63 M210 87 V120 H30 V82 M150 30 V63 M150 87 V120"/>
+        <line class="plate" x1="16" y1="68" x2="44" y2="68" stroke-width="2.5"/>
+        <line class="plate" x1="23" y1="82" x2="37" y2="82" stroke-width="5"/>
+        <circle class="node" cx="150" cy="30" r="3.5"/>
+        <circle class="node" cx="150" cy="120" r="3.5"/>
+        <g class="bulb on">
+          <circle cx="90" cy="30" r="12"/>
+          <path d="M81.5 21.5 L98.5 38.5 M98.5 21.5 L81.5 38.5"/>
+        </g>
+        <g class="bulb dim">
+          <circle cx="150" cy="75" r="12"/>
+          <path d="M141.5 66.5 L158.5 83.5 M158.5 66.5 L141.5 83.5"/>
+        </g>
+        <g class="bulb dim">
+          <circle cx="210" cy="75" r="12"/>
+          <path d="M201.5 66.5 L218.5 83.5 M218.5 66.5 L201.5 83.5"/>
+        </g>
+      </svg>
+      <div class="text">
+        <h2>Bulb Brightness</h2>
+        <p>Predict which bulbs glow brighter in series and parallel circuits.</p>
+      </div>
+    </a>
+
+    <a class="app" href="/circuit-trainer/">
+      <svg viewBox="0 0 240 150" role="img" aria-label="Circuit with a battery, one resistor in series and two resistors in parallel">
+        <path class="wire" d="M30 68 V30 H72 M108 30 H210 V57 M210 93 V120 H30 V82 M150 30 V57 M150 93 V120"/>
+        <line class="plate" x1="16" y1="68" x2="44" y2="68" stroke-width="2.5"/>
+        <line class="plate" x1="23" y1="82" x2="37" y2="82" stroke-width="5"/>
+        <circle class="node" cx="150" cy="30" r="3.5"/>
+        <circle class="node" cx="150" cy="120" r="3.5"/>
+        <rect class="res" x="72" y="23" width="36" height="14" rx="1"/>
+        <rect class="res" x="143" y="57" width="14" height="36" rx="1"/>
+        <rect class="res" x="203" y="57" width="14" height="36" rx="1"/>
+        <text class="label" x="84" y="16">R<tspan dy="3">1</tspan></text>
+        <text class="label" x="163" y="80">R<tspan dy="3">2</tspan></text>
+        <text class="label" x="223" y="80">R<tspan dy="3">3</tspan></text>
+      </svg>
+      <div class="text">
+        <h2>Resistor Circuit Trainer</h2>
+        <p>Find equivalent resistances, currents and voltages step by step.</p>
+      </div>
+    </a>
+  </main>
+
+  <footer class="wrap">
+    © Samuel Byland · <a href="https://mng.ch">MNG Rämibühl</a> · 2026
+  </footer>
+</body>
+</html>
