@@ -140,6 +140,9 @@
     .res { stroke: var(--ink); stroke-width: 2.5; fill: var(--card); }
     .label { fill: var(--ink); font-family: var(--serif); font-style: italic; font-size: 16px; }
     .label tspan { font-style: normal; font-size: 11px; }
+    .axis { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .guide { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
+    .curve { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
   </style>
 </head>
 <body>
@@ -193,6 +196,22 @@
       <div class="text">
         <h2>Resistor Circuit Trainer</h2>
         <p>Find equivalent resistances, currents and voltages step by step.</p>
+      </div>
+    </a>
+
+    <a class="app" href="/impedance/">
+      <svg viewBox="0 0 240 150" role="img" aria-label="Impedance curve of a series RLC circuit with its minimum R at the resonance frequency">
+        <path class="guide" d="M30 105 H222 M110 105 V125"/>
+        <path class="axis" d="M30 132 V14 M25 20 L30 14 L35 20 M24 125 H226 M220 120 L226 125 L220 130"/>
+        <path class="curve" d="M60.5 24.4 L64.5 39.6 L68.5 52 L72.5 62.3 L76.5 71 L80.5 78.5 L84.5 85 L88.5 90.6 L92.5 95.3 L96.5 99.2 L100.5 102.1 L104.5 104 L108.5 104.9 L112.5 104.8 L116.5 103.8 L120.5 102.2 L124.5 100.2 L128.5 97.8 L132.5 95.2 L136.5 92.6 L140.5 89.8 L144.5 87.1 L148.5 84.3 L152.5 81.5 L156.5 78.7 L160.5 75.9 L164.5 73.2 L168.5 70.4 L172.5 67.7 L176.5 65 L180.5 62.3 L184.5 59.7 L188.5 57 L192.5 54.4 L196.5 51.8 L200.5 49.2 L204.5 46.6 L208.5 44 L212.5 41.5 L216.5 38.9 L222 35.5"/>
+        <text class="label" x="38" y="22">Z</text>
+        <text class="label" x="14" y="110">R</text>
+        <text class="label" x="216" y="144">ω</text>
+        <text class="label" x="104" y="144">ω<tspan dy="3">0</tspan></text>
+      </svg>
+      <div class="text">
+        <h2>Impedance Curves</h2>
+        <p>Read R, L and C off the impedance curve of RL, RC and RLC circuits.</p>
       </div>
     </a>
   </main>
