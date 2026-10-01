@@ -6,7 +6,8 @@
 // - a student who reads the graph with the probe (one reading per pixel, three significant
 //   digits) and follows the taught method finds R, L and C within the tolerance,
 // - the estimates of the worked solution are within the tolerance,
-// - correct answers are accepted and typical wrong ones get their diagnosis,
+// - every unknown has one right option and wrong ones that are far apart and explained, and the
+//   student's reading is nearest the right one,
 // - graph and schematic render in both axis modes; the tutor lessons are usable.
 'use strict';
 
@@ -56,7 +57,7 @@ function checkRender(tag, c, ax, an) {
 }
 
 for (const filter of Object.keys(I.FILTERS)) {
-  const t0 = Date.now(), kinds = {}, codes = {};
+  const t0 = Date.now(), kinds = {}, tags = {};
   let worst = 0;
   for (let seed = 1; seed <= SAMPLES; seed++) {
     const tag = `${filter}-${seed}`, ex = I.generate(filter, seed), { c, ax, an } = ex;
@@ -88,25 +89,23 @@ for (const filter of Object.keys(I.FILTERS)) {
       worst = Math.max(worst, e);
       if (e > I.TOL) fail(`${tag}: student finds ${f.key} = ${s[f.key]} for ${v} (${(100 * e).toFixed(1)} %)`);
       if (e2 > I.TOL) fail(`${tag}: solution estimates ${f.key} = ${an.est[f.key]} for ${v}`);
-      // diagnoses
-      const x = f.value;
-      if (I.diagnose(ex, f.key, x) !== 'ok') fail(`${tag}: correct ${f.key} rejected`);
-      if (I.diagnose(ex, f.key, x * 1.03) !== 'ok') fail(`${tag}: ${f.key} within tolerance rejected`);
-      for (const [y, code] of [[x * 2 * Math.PI, '2pi'], [x / (2 * Math.PI), '2pi'], [x * 1000, 'prefix'], [x / 1000, 'prefix'], [x * Math.SQRT2, 'sqrt2'], [x * 1.1, 'close'], [-x, 'sign'], [x * 3.3, 'wrong']]) {
-        if (f.key === 'C' && c.kind === 'RLC' && near(y, 1 / (wf * c.L) / f.scale, I.TOL)) continue; // that is the ω₀ mistake
-        const d = I.diagnose(ex, f.key, y);
-        if (d !== code && !(code === 'wrong' && d !== 'ok')) fail(`${tag}: ${f.key} = ${y} gives ${d}, not ${code}`);
-        codes[d] = (codes[d] || 0) + 1;
+      // options: the right value once, wrong ones far apart, the student's reading nearest the right one
+      const os = f.options, right = os.filter((o) => o.ok);
+      if (os.length !== I.OPTIONS) fail(`${tag}: ${os.length} options for ${f.key}`);
+      if (right.length !== 1 || right[0].value !== v) fail(`${tag}: right option for ${f.key}`);
+      for (let k = 1; k < os.length; k++) if (os[k].value < os[k - 1].value * I.GAP * (1 - 1e-9)) fail(`${tag}: ${f.key} options ${os[k - 1].label} and ${os[k].label} too close`);
+      for (const o of os) {
+        if (/NaN|undefined|Infinity/.test(o.label + (o.why || ''))) fail(`${tag}: option ${o.label}`);
+        if (!o.ok && !o.why) fail(`${tag}: no explanation for ${f.key} = ${o.label}`);
+        { const t = `${kind} ${f.key}: ${o.tag}`; tags[t] = (tags[t] || 0) + 1; }
       }
-      if (f.key === 'C' && c.kind === 'RLC') {
-        const y = 1 / (wf * c.L) / f.scale;
-        const d = I.diagnose(ex, 'C', y);
-        if (d !== 'omega0') fail(`${tag}: C = 1/(ω₀L) gives ${d}`);
-      }
+      const nearest = os.reduce((a, b) => (Math.abs(Math.log(b.value / s[f.key])) < Math.abs(Math.log(a.value / s[f.key])) ? b : a));
+      if (!nearest.ok) fail(`${tag}: reading ${f.key} = ${s[f.key]} is nearest to the wrong option ${nearest.label}`);
     }
     if (seed <= 200) checkRender(tag, c, ax, an);
   }
   console.log(`${filter}: ${SAMPLES} seeds, ${JSON.stringify(kinds)}, worst reading error ${(100 * worst).toFixed(1)} %, ${Date.now() - t0} ms`);
+  if (filter === 'mixed') console.log(`  options picked: ${JSON.stringify(tags)}`);
 }
 
 // tutor lessons

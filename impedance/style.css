@@ -10,8 +10,6 @@
   --vol: #c8322b;
   --ok: #1d7a3e;
   --ok-bg: #e6f4ea;
-  --warn: #8a5a00;
-  --warn-bg: #fdf3dc;
   --bad: #b3261e;
   --bad-bg: #fbe9e7;
   --zone-light: rgba(43, 89, 195, 0.06);
@@ -40,8 +38,6 @@
     --vol: #ff8a80;
     --ok: #7fd49a;
     --ok-bg: #1d3325;
-    --warn: #f2c46b;
-    --warn-bg: #3a3020;
     --bad: #ff8a80;
     --bad-bg: #3d2322;
     --zone-light: rgba(122, 162, 255, 0.07);
@@ -136,32 +132,32 @@ svg .pin-n { fill: var(--accent); font-size: 11px; font-weight: 700; font-family
 .k-tan { color: var(--tan); font-weight: 600; }
 .steps h4 { margin: 14px 0 2px; font-size: 1rem; }
 
-/* answer form */
-#fields { display: grid; gap: 10px; margin-bottom: 14px; }
-.field {
-  display: grid;
-  grid-template-columns: minmax(3.5em, max-content) minmax(0, 9em) 2.5em 1fr;
-  align-items: center;
-  gap: 8px;
-}
+/* answer form: one row of options per unknown */
+#fields { display: grid; gap: 12px; margin-bottom: 14px; }
+.field { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); align-items: center; gap: 6px 8px; }
 .field .sym { text-align: right; }
-.field input {
-  width: 100%;
-  padding: 7px 9px;
+.field .fb { grid-column: 2; font-size: 0.9rem; }
+.field .fb:empty { display: none; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.opts label { position: relative; }
+.opts input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.opts span {
+  display: block;
+  min-width: 6.5em;
+  padding: 6px 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--bg);
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-.field .unit { color: var(--muted); }
-.field .fb { font-size: 0.9rem; }
-.field.ok input { border-color: var(--ok); background: var(--ok-bg); }
+.opts label:hover span { border-color: var(--accent); }
+.opts input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.opts input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.field.ok input:checked + span { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
 .field.ok .fb { color: var(--ok); }
 .field.ok .fb::before { content: "✓ "; }
-.field.warn input { border-color: var(--warn); background: var(--warn-bg); }
-.field.warn .fb { color: var(--warn); }
-.field.bad input { border-color: var(--bad); background: var(--bad-bg); }
+.field.bad input:checked + span { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
 .field.bad .fb { color: var(--bad); }
 .field.bad .fb::before { content: "✗ "; }
 
@@ -201,8 +197,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 @media (max-width: 560px) {
   .card { padding: 14px; }
-  .field { grid-template-columns: max-content minmax(0, 1fr) 2.5em; }
-  .field .fb { grid-column: 1 / -1; }
+  .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .opts span { min-width: 0; padding-inline: 8px; }
 }
 
 /* tutor mode */

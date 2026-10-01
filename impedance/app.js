@@ -55,30 +55,6 @@
     return `Read from the graph: ${est}. The graph was drawn with ${exact}.`;
   }
 
-  // ---------------------------------------------------------------- input and feedback
-  function parse(s) {
-    s = s.trim().replace(/,/g, '.').replace(/−/g, '-').replace(/[^\d.)]+$/, '').trim();
-    const m = s.match(/^([-+]?\d*\.?\d+(?:e[-+]?\d+)?)$/i);
-    return m ? Number(m[1]) : NaN;
-  }
-
-  function judge(f, x) {
-    const code = I.diagnose(ex, f.key, x);
-    const msg = {
-      ok: 'Correct',
-      nan: 'Enter a number',
-      sign: 'Enter a positive value',
-      omega0: 'Use the square of ω₀: C = 1/(ω₀²L)',
-      '2pi': 'Off by a factor 2π: ω is the angular frequency in rad/s, not the frequency f in Hz',
-      prefix: `Off by a factor 1000: give ${f.sym} in ${f.unit}`,
-      sqrt2: 'Off by a factor √2 or 2: check where the √2 belongs',
-      close: 'Close: read the graph more precisely (use the probe and the tangent)',
-      wrong: 'Not correct',
-    }[code];
-    const cls = code === 'ok' ? 'ok' : code === 'close' || code === 'prefix' || code === 'nan' ? 'warn' : 'bad';
-    return { cls, msg };
-  }
-
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
   const filter = () => (document.querySelector('input[name="filter"]:checked') || {}).value || 'mixed';
@@ -112,15 +88,16 @@
   function render() {
     const c = ex.c, ks = I.UNKNOWNS[c.kind];
     $('#title').textContent = `${NAME[c.conn]} ${c.kind} circuit`;
-    $('#prompt').innerHTML = `The graph shows the impedance <i>Z</i> of the circuit against the angular frequency <i>ω</i>. Find ${and(ks.map((k) => `<i>${k}</i>`))} from the features of the graph.`;
+    $('#prompt').innerHTML = `The graph shows the impedance <i>Z</i> of the circuit against the angular frequency <i>ω</i>. Find ${and(ks.map((k) => `<i>${k}</i>`))} from the features of the graph and choose the matching values.`;
     $('#schematic').innerHTML = P.schematic(c);
     probe.reset();
     drawGraph();
     $('#fields').innerHTML = ex.fields.map((f) => `
       <div class="field" data-key="${f.key}">
-        <label for="in-${f.key}" class="sym"><i>${f.sym}</i>&nbsp;=</label>
-        <input id="in-${f.key}" type="text" inputmode="decimal" autocomplete="off" spellcheck="false">
-        <span class="unit">${f.unit}</span>
+        <span class="sym" id="sym-${f.key}"><i>${f.key}</i>&nbsp;=</span>
+        <div class="opts" role="radiogroup" aria-labelledby="sym-${f.key}">${f.options.map((o, i) => `
+          <label><input type="radio" name="opt-${f.key}" value="${i}"><span>${o.label}</span></label>`).join('')}
+        </div>
         <span class="fb" aria-live="polite"></span>
       </div>`).join('');
     $('#hint-list').innerHTML = '';
@@ -149,16 +126,16 @@
     let allOk = true, anyEmpty = false;
     for (const f of ex.fields) {
       const row = document.querySelector(`.field[data-key="${f.key}"]`);
-      const raw = row.querySelector('input').value;
-      if (!raw.trim()) anyEmpty = true;
-      const r = judge(f, parse(raw));
-      row.className = `field ${r.cls}`;
-      row.querySelector('.fb').textContent = r.msg;
-      if (r.cls !== 'ok') allOk = false;
+      const sel = row.querySelector('input:checked');
+      const o = sel && f.options[Number(sel.value)];
+      if (!o) anyEmpty = true;
+      row.className = `field${o ? (o.ok ? ' ok' : ' bad') : ''}`;
+      row.querySelector('.fb').innerHTML = o ? (o.ok ? 'Correct' : o.why) : '';
+      if (!o || !o.ok) allOk = false;
     }
     const status = $('#status');
     if (anyEmpty && !allOk) {
-      status.textContent = 'Fill in all fields, then check again.';
+      status.textContent = 'Choose a value for each quantity, then check again.';
       status.className = 'status';
       return;
     }
@@ -279,6 +256,12 @@
     });
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
+    // A new choice clears the feedback on the old one.
+    $('#fields').addEventListener('change', (evt) => {
+      const row = evt.target.closest('.field');
+      row.className = 'field';
+      row.querySelector('.fb').textContent = '';
+    });
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);

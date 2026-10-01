@@ -105,22 +105,22 @@
   // ---------------------------------------------------------------- numbers
   const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
   const sup = (n) => String(n).split('').map((ch) => SUP[ch]).join('');
-  // Three significant digits (trailing zeros kept), with a proper minus sign.
-  function digits(x) {
+  // n significant digits, three by default (trailing zeros kept), with a proper minus sign.
+  function digits(x, n = 3) {
     if (Math.abs(x) < 1e-12) return '0';
-    let s = Math.abs(x).toPrecision(3);
-    if (s.includes('e')) s = String(Number(Math.abs(x).toPrecision(3)));
+    let s = Math.abs(x).toPrecision(n);
+    if (s.includes('e')) s = String(Number(Math.abs(x).toPrecision(n)));
     return (x < 0 ? '−' : '') + s;
   }
   const UNITS = {
     ohm: { html: 'Ω', tex: '\\Omega', prefixes: [0, 3] },
-    H: { html: 'H', tex: '\\mathrm{H}', prefixes: [-3, 0] },
-    F: { html: 'F', tex: '\\mathrm{F}', prefixes: [-9, -6] },
+    H: { html: 'H', tex: '\\mathrm{H}', prefixes: [-6, -3, 0] },
+    F: { html: 'F', tex: '\\mathrm{F}', prefixes: [-9, -6, -3] },
     ohms: { html: 'Ω·s', tex: '\\Omega\\,\\mathrm{s}', prefixes: [-6, -3, 0] },
   };
   const PREFIX = { '-9': ['n', '\\mathrm{n}'], '-6': ['µ', '\\mu'], '-3': ['m', '\\mathrm{m}'], 0: ['', ''], 3: ['k', '\\mathrm{k}'] };
-  // A value with a unit: { html, tex }. Units: ohm, H, F, ohms (Ω·s) and w (rad/s).
-  function q(x, unit) {
+  // A value with a unit and n significant digits: { html, tex }. Units: ohm, H, F, ohms (Ω·s) and w (rad/s).
+  function q(x, unit, n = 3) {
     if (unit === 'w') {
       if (Math.abs(x) < 1e4) return { html: `${digits(x)} rad/s`, tex: `${digits(x).replace('−', '-')}\\,\\mathrm{rad/s}` };
       const e = 3 * Math.floor(Math.log10(Math.abs(x) * (1 + 1e-12)) / 3), d = digits(x / 10 ** e);
@@ -129,10 +129,10 @@
     const u = UNITS[unit], ps = u.prefixes;
     let p = ps[0];
     for (const k of ps) if (Math.abs(x) >= 10 ** k * (1 - 5e-4)) p = k;
-    const d = digits(x / 10 ** p), [ph, pt] = PREFIX[p];
+    const d = digits(x / 10 ** p, n), [ph, pt] = PREFIX[p];
     return { html: `${d} ${ph}${u.html}`, tex: `${d.replace('−', '-')}\\,${pt}${u.tex}` };
   }
-  const H = (x, unit) => q(x, unit).html;
+  const H = (x, unit, n) => q(x, unit, n).html;
   const T = (x, unit) => q(x, unit).tex;
 
   // ---------------------------------------------------------------- the method
@@ -254,17 +254,101 @@
     return s[`${c.conn} ${c.kind}`];
   }
 
-  // ---------------------------------------------------------------- exercises
-  // Answer fields: R in Ω, L in mH, C in µF.
-  const FIELD = {
-    R: { sym: 'R', unit: 'Ω', scale: 1 },
-    L: { sym: 'L', unit: 'mH', scale: 1e-3 },
-    C: { sym: 'C', unit: 'µF', scale: 1e-6 },
-  };
+  // ---------------------------------------------------------------- answer options
+  // Each unknown is chosen from OPTIONS values: the right one and wrong ones that follow from typical
+  // mistakes, each with the explanation shown when it is picked. Wrong values have two significant
+  // digits like the component values, and all options differ by at least the factor GAP, far more
+  // than a careful reading of the graph is off (TOL).
+  const OPTIONS = 4, GAP = 1.2;
+  const UNIT = { R: 'ohm', L: 'H', C: 'F' };
+  const SQ2 = Math.SQRT2, TWO_PI = 2 * Math.PI;
+
+  // Where a student might take the tangent before Z ≈ ωL holds: at the corner of an RL circuit, at
+  // half the resonance frequency of an RLC circuit (for series RLC on the falling branch).
+  const early = (c) => (c.kind === 'RLC' ? feature(c) / 2 : feature(c));
+  function earlyWhy(c) {
+    const at = `the tangent at ω = ${H(early(c), 'w')}`;
+    return c.kind === 'RLC' && c.conn === 'series' ? `${at}, on the falling branch where the capacitor dominates` : `${at}, where the curve is not straight yet`;
+  }
+
+  // Wrong values for unknown key, most telling first: [{ tag, value, why }].
+  function mistakes(c, ax, an, key) {
+    const { R, L, C } = c, wf = feature(c), wmax = ax.lin.wmax;
+    const series = c.conn === 'series', rlc = c.kind === 'RLC';
+    const from = `${key} comes from ${an.plan[key]}.`;
+    const out = [];
+    const add = (tag, value, why) => out.push({ tag, value, why });
+
+    if (key === 'R') {
+      if (rlc) {
+        add('reactance', wf * L, `That is the reactance ω₀L of the coil at resonance. There the ${series ? 'reactances' : 'currents'} of coil and capacitor cancel, so Z<sub>${series ? 'min' : 'max'}</sub> = R.`);
+        add('sqrt2', series ? SQ2 * R : R / SQ2, `Z = ${series ? '√2·R' : 'R/√2'} where the net reactance equals R, on either side of the resonance. ${from}`);
+      } else {
+        add('corner', series ? SQ2 * R : R / SQ2, `That is Z at the corner frequency, where the reactance equals R: Z = ${series ? '√2·R' : 'R/√2'}. ${from}`);
+      }
+      if (series && c.kind !== 'RC') add('end', Z(c, wmax), `That is Z at the right end of the graph, where the coil dominates. ${from}`);
+      if (!series && c.kind === 'RC') add('end', Z(c, wmax), `That is Z at the right end of the graph, where the capacitor already takes most of the current. ${from}`);
+      if (!series) add('half', 2 * R, c.kind === 'RLC'
+        ? 'At resonance coil and capacitor together carry no net current, so the resistor is on its own: Z<sub>max</sub> = R, not R/2.'
+        : `Nothing halves R here: where the graph ${c.kind === 'RL' ? 'levels off' : 'starts'}, the ${c.kind === 'RL' ? 'coil' : 'capacitor'} carries no current, so the resistor is on its own.`);
+      if (!rlc) add('side', series ? R / SQ2 : SQ2 * R, series
+        ? `In series Z = √(R² + X²) is never smaller than R. ${from}`
+        : `In parallel a second branch only lets more current through, so Z is never larger than R. ${from}`);
+    }
+
+    if (key === 'L') {
+      const where = rlc ? 'the resonance' : 'the corner';
+      add('secant', Z(c, wf) / wf, `That is Z/ω at ${where}, ω = ${H(wf, 'w')}: the slope of the line from the origin to the curve, not of the tangent. Z ≈ ωL only holds for ${series ? 'large' : 'small'} ω. ${from}`);
+      const wt = early(c);
+      add('tangent', Math.abs(dZ(c, wt)), `That is the steepness of ${earlyWhy(c)}. ${from}`);
+      if (series && c.kind === 'RL') add('chord', (Z(c, wmax) - R) / wmax, `That is the slope of the line from the start of the graph to its right end. The curve only becomes straight for large ω. ${from}`);
+      const no2pi = 'The 2π is not needed: ω is already the angular frequency in rad/s, so a slope of 1 Ω·s is 1 H.';
+      add('2pi', L / TWO_PI, no2pi);
+      add('2pi', L * TWO_PI, no2pi);
+      add('inverse', 1 / L, 'That is the inverse of the slope, Δω/ΔZ. The slope of the tangent is ΔZ/Δω, in Ω·s = H.');
+      add('prefix', L * 1000, 'Off by a factor 1000: a slope of 1 Ω·s is 1 H = 1000 mH.');
+      add('prefix', L / 1000, 'Off by a factor 1000: a slope of 1 Ω·s is 1 H = 1000 mH.');
+    }
+
+    if (key === 'C' && !rlc) {
+      add('corner-z', series ? C / SQ2 : SQ2 * C, `In C = 1/(ω<sub>c</sub>R) use the resistance R, not the impedance ${series ? '√2·R' : 'R/√2'} at the corner.`);
+      add('half', series ? Math.sqrt(3) * C : C / Math.sqrt(3), `That uses the frequency where Z = ${series ? '2R' : 'R/2'}. The corner frequency ω<sub>c</sub> is where Z = ${series ? '√2·R' : 'R/√2'}.`);
+      const no2pi = 'The 2π is not needed: ω<sub>c</sub> is already an angular frequency, and C = 1/(ω<sub>c</sub>R).';
+      add('2pi', C / TWO_PI, no2pi);
+      add('2pi', C * TWO_PI, no2pi);
+    }
+    if (key === 'C' && rlc) {
+      const wt = early(c), fromL = `L comes from ${an.plan.L}; then C = 1/(ω₀²L).`;
+      add('secant', 1 / (wf * R), `That uses L = Z/ω at the resonance instead of the slope of the tangent. ${fromL}`);
+      add('tangent', 1 / (wf * wf * Math.abs(dZ(c, wt))), `That uses L from the steepness of ${earlyWhy(c)}. ${fromL}`);
+      const no2pi = 'The 2π is not needed: ω₀ is already the angular frequency, so C = 1/(ω₀²L).';
+      add('2pi', C / (TWO_PI * TWO_PI), no2pi);
+      add('2pi', C * TWO_PI * TWO_PI, no2pi);
+      add('square', 1 / (wf * L), 'C = 1/(ω₀L) misses the square: ω₀ = 1/√(LC) gives C = 1/(ω₀²L).');
+    }
+    if (key === 'C') {
+      add('prefix', C * 1000, 'Off by a factor 1000: check the unit prefix (1 µF = 1000 nF).');
+      add('prefix', C / 1000, 'Off by a factor 1000: check the unit prefix (1 µF = 1000 nF).');
+    }
+    for (const k of [2, 0.5, 3, 1 / 3, 5, 0.2]) add('other', c[key] * k, `Not correct. ${from}`);
+    return out;
+  }
+
+  // The options for unknown key, in increasing order: [{ value, label, ok, tag, why }].
+  function choices(c, ax, an, key) {
+    const opts = [{ value: c[key], ok: true, tag: 'ok' }];
+    const apart = (x) => opts.every((o) => Math.abs(Math.log(x / o.value)) >= Math.log(GAP) * (1 - 1e-9));
+    for (const m of mistakes(c, ax, an, key)) {
+      if (opts.length === OPTIONS) break;
+      const x = Number(m.value.toPrecision(2));
+      if (Number.isFinite(x) && x > 0 && apart(x)) opts.push({ value: x, ok: false, tag: m.tag, why: m.why });
+    }
+    return opts.sort((a, b) => a.value - b.value).map((o) => ({ ...o, label: H(o.value, UNIT[key], 2) }));
+  }
 
   function exercise(c, id) {
     const ax = axesFor(c), an = analysis(c, ax);
-    const fields = UNKNOWNS[c.kind].map((k) => ({ key: k, ...FIELD[k], value: c[k] / FIELD[k].scale }));
+    const fields = UNKNOWNS[c.kind].map((k) => ({ key: k, options: choices(c, ax, an, k) }));
     return { id, c, ax, an, fields };
   }
 
@@ -284,25 +368,8 @@
     throw new Error(`no exercise for ${filter}-${seed}`);
   }
 
-  // What a wrong value x (in the field's unit) suggests.
-  // ok, sign, omega0 (C = 1/(ω₀L)), 2pi (ω and f mixed up), prefix (factor 1000), sqrt2, close, wrong.
-  function diagnose(ex, key, x) {
-    const f = ex.fields.find((g) => g.key === key), v = f.value;
-    const near = (a, b, tol) => Math.abs(a - b) <= tol * Math.abs(b);
-    if (Number.isNaN(x)) return 'nan';
-    if (near(x, v, TOL)) return 'ok';
-    if (x < 0) return 'sign';
-    const c = ex.c;
-    if (key === 'C' && c.kind === 'RLC' && near(x, 1 / (feature(c) * c.L) / f.scale, TOL)) return 'omega0';
-    for (const k of [2 * Math.PI, 1 / (2 * Math.PI), 4 * Math.PI * Math.PI, 1 / (4 * Math.PI * Math.PI)]) if (near(x, v * k, TOL)) return '2pi';
-    for (const k of [1e3, 1e-3, 1e6, 1e-6]) if (near(x, v * k, TOL)) return 'prefix';
-    for (const k of [Math.SQRT2, Math.SQRT1_2, 2, 0.5]) if (near(x, v * k, TOL)) return 'sqrt2';
-    if (near(x, v, 3 * TOL)) return 'close';
-    return 'wrong';
-  }
-
   const api = {
-    TOL, FILTERS, UNKNOWNS, FIELD, Z, dZ, feature, quality, axesFor, usable, analysis, shape, exercise, generate, diagnose,
+    TOL, GAP, OPTIONS, FILTERS, UNKNOWNS, Z, dZ, feature, quality, axesFor, usable, analysis, shape, mistakes, choices, exercise, generate,
     q, H, T, digits, sup, p3, niceUp,
   };
   root.Impedance = api;
