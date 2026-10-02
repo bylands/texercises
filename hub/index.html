@@ -142,6 +142,10 @@
     .label tspan { font-style: normal; font-size: 11px; }
     .axis { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
     .guide { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
+    .vel { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+    .velhead { fill: var(--accent); }
+    .force { fill: none; stroke: #d24a0f; stroke-width: 2.5; }
+    .forcehead { fill: #d24a0f; }
     .curve { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
   </style>
 </head>
@@ -212,6 +216,24 @@
       <div class="text">
         <h2>Impedance Curves</h2>
         <p>Read R, L and C off the impedance curve of RL, RC and RLC circuits.</p>
+      </div>
+    </a>
+
+    <a class="app" href="/force-concepts/">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A ball thrown at an angle; at the top of its path only its weight acts, while its velocity points forward">
+        <path class="guide" d="M24 128 Q120 -20 216 128"/>
+        <path class="axis" d="M10 128 H230"/>
+        <circle class="bulb" cx="120" cy="54" r="10"/>
+        <path class="vel" d="M132 54 H176"/>
+        <path class="velhead" d="M176 49 L186 54 L176 59 Z"/>
+        <path class="force" d="M120 66 V106"/>
+        <path class="forcehead" d="M115 104 L120 115 L125 104 Z"/>
+        <text class="label" x="190" y="48">v</text>
+        <text class="label" x="128" y="104">F<tspan dy="3">G</tspan></text>
+      </svg>
+      <div class="text">
+        <h2>Force Concepts</h2>
+        <p>Gravity, inertia, net force and interaction: spot the misconceptions behind tempting answers.</p>
       </div>
     </a>
   </main>
