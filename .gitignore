@@ -11,3 +11,6 @@ wheels/
 
 # macOS
 .DS_Store
+
+# Source worksheets (Pages/PDF), kept locally
+models/
