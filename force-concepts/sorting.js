@@ -1,0 +1,400 @@
+// Sorting and matching: rank the cable force of an elevator in four states of motion (and match
+// each with the direction of its net force), rank balls rolled off a table by flight time and
+// distance, match situations with free-body diagrams, and match forces with their third-law
+// partners.
+(function (root) {
+  'use strict';
+
+  const FC = root.FC || require('./core.js');
+  const D = root.Draw || require('./draw.js');
+  const { T, F, FL, num, qty, cap, o, rank, match, ranksOf, register } = FC;
+  const LETTERS = 'ABCDEF';
+  const G = 9.81;
+  const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+  // ================================================================ elevator: rank the cable force
+  const CASES = [[1, 1], [1, 0], [1, -1], [-1, 1], [-1, 0], [-1, -1], [0, 0]]; // [direction, speed change]
+
+  function rankElevator(r) {
+    // Four cases with at least one tie between different motions, where neither the direction of
+    // motion nor speeding up/slowing down alone gives the right order.
+    let cs;
+    for (let tries = 0; tries < 200; tries++) {
+      cs = r.shuffle(CASES).slice(0, 4);
+      const a = cs.map(([d, s]) => d * s), rk = ranksOf(a);
+      const tie = rk.some((x, i) => rk.indexOf(x) !== i);
+      if (new Set(a).size >= 2 && tie && !same(ranksOf(cs.map(([d]) => d)), rk) && !same(ranksOf(cs.map(([, s]) => s)), rk)) break;
+    }
+    const acc = cs.map(([d, s]) => d * s);
+    const moving = (d) => (d > 0 ? T('moving up', 'fährt hoch') : d < 0 ? T('moving down', 'fährt runter') : T('at rest', 'steht still'));
+    const change = (d, s) => (d === 0 ? '' : s > 0 ? T('speeding up', 'wird schneller') : s < 0 ? T('slowing down', 'wird langsamer') : T('constant speed', 'gleich schnell'));
+    const describe = ([d, s]) => (d === 0 ? moving(d) : `${moving(d)}, ${change(d, s)}`);
+    const accWord = (a) => (a > 0 ? T('up', 'nach oben') : a < 0 ? T('down', 'nach unten') : T('zero', 'null'));
+    const FT = F('T'), FG = F('G');
+
+    // ---------------------------------------------------------- figure: four panels A–D
+    function figure(o = {}) {
+      let g = '';
+      cs.forEach(([d, s], i) => {
+        const x0 = i * 110, cy = 92;
+        g += D.text(x0 + 10, 22, LETTERS[i], 'lbl', 'start');
+        g += D.ceiling(x0 + 22, x0 + 88, 30) + D.line(x0 + 26, 30, x0 + 26, 150, 'shaft') + D.line(x0 + 84, 30, x0 + 84, 150, 'shaft');
+        g += D.elevator(x0 + 36, cy - 18, 38, 36, 30);
+        if (d && !o.forces) g += D.arrow(x0 + 97, cy + 22 * d, x0 + 97, cy - 22 * d, 'v', 'v', { at: [x0 + 100, d > 0 ? cy - 28 : cy + 36], anchor: 'middle' });
+        if (o.acc) g += acc[i] ? D.arrow(x0 + 12, cy + 16 * acc[i], x0 + 12, cy - 16 * acc[i], 'a', '') : D.text(x0 + 12, cy + 4, 'a=0', 'lbl a small');
+        if (o.forces) {
+          const lt = 30 + 10 * acc[i];
+          g += D.arrow(x0 + 55, cy, x0 + 55, cy - lt, 'f', FL('T'), { at: [x0 + 62, cy - lt + 8], anchor: 'start' });
+          g += D.arrow(x0 + 55, cy, x0 + 55, cy + 30, 'f', FL('G'), { at: [x0 + 62, cy + 30], anchor: 'start' });
+        }
+        g += D.words(x0 + 55, 168, moving(d)) + D.words(x0 + 55, 182, change(d, s));
+      });
+      return D.svg(440, 190, g, T('Four elevator cabins A to D in different states of motion', 'Vier Liftkabinen A bis D in verschiedenen Bewegungszuständen'));
+    }
+
+    // ---------------------------------------------------------- questions
+    const items = cs.map((c, i) => ({
+      label: `<b>${LETTERS[i]}</b> ${describe(c)}`, name: LETTERS[i], value: acc[i],
+      alt: { velocity: c[0], speedup: c[1] },
+    }));
+    const rule = T(`The tension is ${FT} = <i>m</i>(<i>g</i> + <i>a</i>), with <i>a</i> counted upward: it depends on the acceleration, not on the velocity.`,
+      `Die Seilkraft ist ${FT} = <i>m</i>(<i>g</i> + <i>a</i>), mit <i>a</i> nach oben positiv: Sie hängt von der Beschleunigung ab, nicht von der Geschwindigkeit.`);
+    const sorting = rank('tension', T('Rank the cable force in the four cases, from the largest (1) to the smallest. Equal forces get the same rank.',
+      'Ordne die Seilkraft in den vier Fällen, von der grössten (1) zur kleinsten. Gleich grosse Kräfte bekommen denselben Rang.'), items, [
+      { key: 'velocity', code: 'active-force', why: T(`You ranked by the direction of motion: moving up → large force, moving down → small force. But moving up does not need a net force up. ${rule}`,
+        `Du hast nach der Bewegungsrichtung geordnet: nach oben → grosse Kraft, nach unten → kleine Kraft. Um nach oben zu fahren, braucht es aber keine resultierende Kraft nach oben. ${rule}`) },
+      { key: 'speedup', code: 'other', why: T(`You ranked by “speeding up” and “slowing down” alone. A cabin that speeds up while moving down accelerates downward: the cable pulls less. ${rule}`,
+        `Du hast nur nach „wird schneller“ und „wird langsamer“ geordnet. Eine Kabine, die nach unten schneller wird, beschleunigt nach unten: Das Seil zieht weniger. ${rule}`) },
+    ], T(`Right. ${rule}`, `Richtig. ${rule}`));
+    const choices = [
+      { id: 'up', label: T('up', 'nach oben'), name: T('up', 'nach oben') },
+      { id: 'zero', label: T('zero (no net force)', 'null (keine resultierende Kraft)'), name: T('zero', 'null') },
+      { id: 'down', label: T('down', 'nach unten'), name: T('down', 'nach unten') },
+    ];
+    const idOf = (a) => (a > 0 ? 'up' : a < 0 ? 'down' : 'zero');
+    const matching = match('net', T('Match each case with the direction of the net force on the cabin.', 'Ordne jedem Fall die Richtung der resultierenden Kraft auf die Kabine zu.'),
+      cs.map(([d, s], i) => {
+        const right = idOf(acc[i]), vel = idOf(d), wrong = {};
+        if (vel !== right) wrong[vel] = { code: 'active-force', why: T(`Case ${LETTERS[i]}: the net force does not point the way the cabin moves, but the way it accelerates: ${accWord(acc[i])}.`, `Fall ${LETTERS[i]}: Die resultierende Kraft zeigt nicht in Bewegungsrichtung, sondern in Richtung der Beschleunigung: ${accWord(acc[i])}.`) };
+        return {
+          label: `<b>${LETTERS[i]}</b> ${describe(cs[i])}`, name: LETTERS[i], answer: right, wrong,
+          other: T(`Case ${LETTERS[i]} (${describe(cs[i])}): the acceleration is ${accWord(acc[i])} — and the net force points like the acceleration.`, `Fall ${LETTERS[i]} (${describe(cs[i])}): Die Beschleunigung ist ${accWord(acc[i])} — und die resultierende Kraft zeigt wie die Beschleunigung.`),
+          why: T(`Case ${LETTERS[i]} (${describe(cs[i])}): the acceleration is ${accWord(acc[i])}, so the net force is ${accWord(acc[i])} too.`, `Fall ${LETTERS[i]} (${describe(cs[i])}): Die Beschleunigung ist ${accWord(acc[i])}, also auch die resultierende Kraft.`),
+        };
+      }), choices);
+
+    const accLines = cs.map(([d, s], i) => `${LETTERS[i]}: ${describe([d, s])} → <i>a</i> ${accWord(acc[i])}`).join('; ');
+    const steps = [
+      { title: T('Acceleration in each case', 'Beschleunigung in jedem Fall'), figure: figure({ acc: true }),
+        text: T(`Speeding up: the acceleration points along the velocity; slowing down: against it; constant speed or at rest: zero. ${accLines}.`,
+          `Wird schneller: Die Beschleunigung zeigt in Richtung der Geschwindigkeit; wird langsamer: entgegen; gleich schnell oder in Ruhe: null. ${accLines}.`) },
+      { title: T('Net force and cable force', 'Resultierende Kraft und Seilkraft'), figure: figure({ forces: true }),
+        text: T(`Second law: the net force ${FT} − ${FG} = <i>m·a</i> points like the acceleration. The weight ${FG} is the same in all cases. Acceleration up: ${FT} > ${FG}; zero: ${FT} = ${FG}; down: ${FT} < ${FG}.`,
+          `Zweites Newtonsches Gesetz: Die resultierende Kraft ${FT} − ${FG} = <i>m·a</i> zeigt wie die Beschleunigung. Die Gewichtskraft ${FG} ist in allen Fällen gleich. Beschleunigung nach oben: ${FT} > ${FG}; null: ${FT} = ${FG}; nach unten: ${FT} < ${FG}.`) },
+      { title: T('The ranking', 'Die Rangfolge'), figure: figure({ forces: true }),
+        text: T(`So the cable force ranks ${FC.rankText(items, acc)}. Cases with the same acceleration have the same cable force, however different their motion looks.`,
+          `Die Seilkraft ordnet sich also ${FC.rankText(items, acc)}. Fälle mit gleicher Beschleunigung haben dieselbe Seilkraft, auch wenn ihre Bewegung verschieden aussieht.`) },
+    ];
+
+    return {
+      title: T('Four elevator rides', 'Vier Liftfahrten'),
+      situation: T(`<p>The same elevator cabin is shown in four states of motion, A to D. Whenever it speeds up or slows down, it does so equally quickly. Air resistance and friction are negligible.</p>`,
+        `<p>Dieselbe Liftkabine ist in vier Bewegungszuständen A bis D gezeigt. Wenn sie schneller oder langsamer wird, dann jeweils gleich rasch. Luftwiderstand und Reibung sind vernachlässigbar.</p>`),
+      figure: figure(),
+      questions: [sorting, matching],
+      hints: [
+        T('For each case: which way does the acceleration point? Speeding up means along the velocity, slowing down against it.', 'Für jeden Fall: Wohin zeigt die Beschleunigung? Schneller werden heisst in Richtung der Geschwindigkeit, langsamer werden entgegen.'),
+        T(`Plan: acceleration → direction of the net force → compare ${FT} with the weight ${FG}, which is the same in all four cases.`, `Plan: Beschleunigung → Richtung der resultierenden Kraft → ${FT} mit der Gewichtskraft ${FG} vergleichen, die in allen vier Fällen gleich ist.`),
+        T(`${FT} − ${FG} = <i>m·a</i> (<i>a</i> counted upward), so ${FT} = <i>m</i>(<i>g</i> + <i>a</i>).`, `${FT} − ${FG} = <i>m·a</i> (<i>a</i> nach oben positiv), also ${FT} = <i>m</i>(<i>g</i> + <i>a</i>).`),
+        T(`Here: ${accLines}.`, `Hier: ${accLines}.`),
+      ],
+      steps,
+    };
+  }
+
+  // ================================================================ launch: rank flight time and distance
+  const MS = [0.5, 1, 2, 4], VS = [1, 1.5, 2, 3];
+
+  function rankLaunch(r, p) {
+    const h = p.h || r.pick([0.8, 1.25]);
+    let balls;
+    for (let tries = 0; tries < 200; tries++) {
+      const combos = MS.flatMap((m) => VS.map((v) => [m, v]));
+      balls = r.shuffle(combos).slice(0, 4);
+      const v = balls.map((b) => b[1]), rk = ranksOf(v);
+      if (!same(ranksOf(balls.map((b) => b[0])), rk) && !same(ranksOf(balls.map((b) => b[0] * b[1])), rk) && new Set(v).size >= 3) break;
+    }
+    const t = Math.sqrt((2 * h) / G);
+    const xmax = Math.max(...balls.map((b) => b[1])) * t;
+
+    // ---------------------------------------------------------- figure
+    function figure(o = {}) {
+      const yT = 70, yF = 210, x0 = 110;
+      let g = D.ground(0, 440, yF) + D.table(10, yT, 100, yF);
+      if (o.paths) {
+        balls.forEach(([m, v], i) => {
+          const reach = (300 * v * t) / xmax;
+          g += D.poly(Array.from({ length: 21 }, (z, j) => [x0 + reach * (j / 20), yT - 8 + (yF - yT) * (j / 20) ** 2]), 'trace strong');
+          g += D.dot(x0 + reach, yF, 3.5, 'pt') + D.text(x0 + reach, yF + 18, LETTERS[i], 'lbl small');
+        });
+        g += D.words(260, 30, T('same fall time for all four', 'gleiche Fallzeit für alle vier'));
+      } else {
+        g += D.ball(x0 - 8, yT - 8, 8, 'obj heavy') + D.arrow(x0 + 4, yT - 8, x0 + 46, yT - 8, 'v', 'v');
+        g += D.words(260, 120, T('balls A–D, one after the other', 'Kugeln A–D, eine nach der anderen'));
+      }
+      return D.svg(440, 232, g, T('Balls rolled off the edge of a table', 'Kugeln rollen über eine Tischkante'));
+    }
+
+    const items = (value, alt) => balls.map(([m, v], i) => ({
+      label: `<b>${LETTERS[i]}</b> <i>m</i> = ${qty(m, 'kg')}, <i>v</i> = ${qty(v, 'm/s')}`, name: LETTERS[i], value: value(m, v), alt: alt(m, v),
+    }));
+    const tAll = T(`Vertically all four balls start with no velocity, fall the same height and have the same acceleration <i>g</i>: each falls for <i>t</i> = √(2<i>h</i>/<i>g</i>) ≈ ${qty(t, 's')}.`,
+      `Vertikal starten alle vier Kugeln ohne Geschwindigkeit, fallen gleich hoch und haben dieselbe Beschleunigung <i>g</i>: Jede fällt <i>t</i> = √(2<i>h</i>/<i>g</i>) ≈ ${qty(t, 's')} lang.`);
+    const xRule = T(`Horizontally no force acts: each ball keeps its speed <i>v</i> and lands <i>x</i> = <i>v·t</i> from the table. The mass plays no role.`,
+      `Horizontal wirkt keine Kraft: Jede Kugel behält ihre Geschwindigkeit <i>v</i> und landet <i>x</i> = <i>v·t</i> vom Tisch entfernt. Die Masse spielt keine Rolle.`);
+    const time = rank('time', T('Rank the balls by how long they are in the air, from the longest (1) to the shortest. Equal times get the same rank.',
+      'Ordne die Kugeln nach ihrer Flugzeit, von der längsten (1) zur kürzesten. Gleiche Zeiten bekommen denselben Rang.'),
+    items(() => 1, (m, v) => ({ mass: -m, speed: v })), [
+      { key: 'mass', code: 'heavier-faster', why: T(`You ranked by mass, as if heavier balls fell faster. ${tAll}`, `Du hast nach der Masse geordnet, als ob schwerere Kugeln schneller fielen. ${tAll}`) },
+      { key: 'speed', code: 'other', why: T(`You ranked by speed, as if a faster ball stayed in the air longer. The horizontal speed does not change the vertical motion. ${tAll}`, `Du hast nach der Geschwindigkeit geordnet, als ob eine schnellere Kugel länger in der Luft bliebe. Die horizontale Geschwindigkeit ändert die vertikale Bewegung nicht. ${tAll}`) },
+    ], T(`Right: all are equal. ${tAll}`, `Richtig: alle gleich. ${tAll}`));
+    const dist = rank('distance', T('Rank the balls by how far from the table they land, from the farthest (1) to the closest.',
+      'Ordne die Kugeln danach, wie weit vom Tisch sie landen, von der weitesten (1) zur nächsten.'),
+    items((m, v) => v, (m, v) => ({ mass: m, momentum: m * v })), [
+      { key: 'mass', code: 'impetus', why: T(`You ranked by mass, as if heavier balls carried on farther. ${xRule}`, `Du hast nach der Masse geordnet, als ob schwerere Kugeln weiter flögen. ${xRule}`) },
+      { key: 'momentum', code: 'impetus', why: T(`You ranked by mass times speed, as if a ball with more “momentum” flew farther. ${xRule}`, `Du hast nach Masse mal Geschwindigkeit geordnet, als ob eine Kugel mit mehr „Schwung“ weiter flöge. ${xRule}`) },
+    ], T(`Right. ${xRule}`, `Richtig. ${xRule}`));
+
+    const order = FC.rankText(dist.items, dist.items.map((x) => x.value));
+    const steps = [
+      { title: T('Vertical motion', 'Vertikale Bewegung'), figure: figure({ paths: true }),
+        text: `${tAll} ${T('Mass and horizontal speed do not change that.', 'Masse und horizontale Geschwindigkeit ändern daran nichts.')}` },
+      { title: T('Horizontal motion', 'Horizontale Bewegung'), figure: figure({ paths: true }),
+        text: `${xRule} ${T(`So the distances rank ${order}.`, `Die Weiten ordnen sich also ${order}.`)}` },
+    ];
+    return {
+      title: T('Four balls off the table', 'Vier Kugeln vom Tisch'),
+      situation: T(`<p>Four balls A–D of the same size but different mass roll one after the other off the edge of the same ${qty(h, 'm', 3)} high table, with different speeds <i>v</i>. Air resistance is negligible.</p>`,
+        `<p>Vier gleich grosse, aber verschieden schwere Kugeln A–D rollen nacheinander mit verschiedenen Geschwindigkeiten <i>v</i> über die Kante desselben ${qty(h, 'm', 3)} hohen Tisches. Der Luftwiderstand ist vernachlässigbar.</p>`),
+      figure: figure(),
+      questions: [time, dist],
+      hints: [
+        T('After the edge, which forces act on each ball? Treat the vertical and the horizontal motion separately.', 'Welche Kräfte wirken nach der Kante auf jede Kugel? Behandle die vertikale und die horizontale Bewegung getrennt.'),
+        T('Plan: the fall time follows from the vertical motion alone; the distance from the horizontal speed and the fall time.', 'Plan: Die Fallzeit folgt allein aus der vertikalen Bewegung; die Weite aus der horizontalen Geschwindigkeit und der Fallzeit.'),
+        T('Vertically: <i>h</i> = ½<i>g</i><i>t</i>², the same for all. Horizontally: <i>x</i> = <i>v·t</i>.', 'Vertikal: <i>h</i> = ½<i>g</i><i>t</i>², für alle gleich. Horizontal: <i>x</i> = <i>v·t</i>.'),
+        T(`Here <i>t</i> ≈ ${qty(t, 's')} for every ball, so only <i>v</i> decides the distance.`, `Hier ist <i>t</i> ≈ ${qty(t, 's')} für jede Kugel, also entscheidet nur <i>v</i> über die Weite.`),
+      ],
+      steps,
+    };
+  }
+
+  // ================================================================ free-body diagrams
+  // Generic diagrams: weight down (G), an upward force (U), forward (Fw) and backward (Bk) forces;
+  // lengths show which is larger.
+  const DIAG = {
+    G: { arrows: { G: 40 }, en: 'only the weight', de: 'nur die Gewichtskraft' },
+    GN: { arrows: { G: 36, U: 36 }, en: 'the weight and an equally large upward force', de: 'die Gewichtskraft und eine gleich grosse Kraft nach oben' },
+    Ufwd_gt: { arrows: { G: 30, U: 30, Fw: 40, Bk: 22 }, en: 'weight and upward force equal; the forward force larger than the backward force', de: 'Gewichtskraft und Kraft nach oben gleich; Kraft nach vorn grösser als die nach hinten' },
+    Ufwd_eq: { arrows: { G: 30, U: 30, Fw: 30, Bk: 30 }, en: 'weight and upward force equal; forward and backward forces equal', de: 'Gewichtskraft und Kraft nach oben gleich; Kräfte nach vorn und nach hinten gleich' },
+    Ubk: { arrows: { G: 30, U: 30, Bk: 30 }, en: 'weight and upward force equal; only a backward force', de: 'Gewichtskraft und Kraft nach oben gleich; nur eine Kraft nach hinten' },
+    Ufwd: { arrows: { G: 30, U: 30, Fw: 30 }, en: 'weight and upward force equal; only a forward force', de: 'Gewichtskraft und Kraft nach oben gleich; nur eine Kraft nach vorn' },
+    up_lt: { arrows: { G: 40, U: 22 }, en: 'the weight and a smaller upward force', de: 'die Gewichtskraft und eine kleinere Kraft nach oben' },
+    up_gt: { arrows: { G: 28, U: 46 }, en: 'the weight and a larger upward force', de: 'die Gewichtskraft und eine grössere Kraft nach oben' },
+    Gfwd: { arrows: { G: 40, D: 34 }, en: 'the weight and a force along the motion', de: 'die Gewichtskraft und eine Kraft in Bewegungsrichtung' },
+  };
+  function diagram(key) {
+    const c = [65, 62], a = DIAG[key].arrows;
+    let g = D.rect(c[0] - 16, c[1] - 12, 32, 24, 'obj', 2);
+    if (a.G) g += D.arrow(c[0], c[1], c[0], c[1] + a.G, 'f', '');
+    if (a.U) g += D.arrow(c[0], c[1], c[0], c[1] - a.U, 'f', '');
+    if (a.Fw) g += D.arrow(c[0], c[1], c[0] + a.Fw + 8, c[1], 'f', '');
+    if (a.Bk) g += D.arrow(c[0], c[1], c[0] - a.Bk - 8, c[1], 'f', '');
+    if (a.D) g += D.arrow(c[0], c[1], c[0] + a.D * 0.8, c[1] - a.D * 0.8, 'f', '');
+    g += D.dot(c[0], c[1], 2.5, 'pt') + D.arrow(100, 116, 124, 116, 'm', '', { head: 6 });
+    return D.svg(130, 124, g, T(DIAG[key].en, DIAG[key].de));
+  }
+
+  // Situations: the right diagram and typical wrong ones. The arrow at the bottom right of each
+  // diagram shows “forward”, the direction of motion.
+  function situations() {
+    return {
+      thrown: { key: 'G', name: T('ball in flight', 'Ball im Flug'), text: T('A ball flies through the air after it has been thrown forward and up (air resistance negligible).', 'Ein Ball fliegt nach dem Wurf schräg nach vorn oben durch die Luft (Luftwiderstand vernachlässigbar).'),
+        why: T('Nothing touches the ball any more: only its weight acts.', 'Nichts berührt den Ball mehr: Nur die Gewichtskraft wirkt.'),
+        wrong: { Gfwd: { code: 'impetus', why: T('There is no “force of the throw” after release: the ball moves on because of its velocity.', 'Nach dem Loslassen gibt es keine „Wurfkraft“: Der Ball bewegt sich wegen seiner Geschwindigkeit weiter.') },
+          GN: { code: 'other', why: T('Nothing pushes the ball up: it is in the air, nothing supports it.', 'Nichts drückt den Ball nach oben: Er ist in der Luft, nichts stützt ihn.') } } },
+      book: { key: 'GN', name: T('book on a table', 'Buch auf dem Tisch'), text: T('A book lies at rest on a table.', 'Ein Buch liegt ruhig auf einem Tisch.'),
+        why: T('The Earth pulls the book down, the table pushes it up just as hard: it stays at rest.', 'Die Erde zieht das Buch nach unten, der Tisch drückt es gleich stark nach oben: Es bleibt in Ruhe.'),
+        wrong: { G: { code: 'obstacle', why: T('The table does push up on the book; with only the weight acting, the book would fall.', 'Der Tisch drückt das Buch sehr wohl nach oben; wirkte nur die Gewichtskraft, würde das Buch fallen.') } } },
+      pushConst: { key: 'Ufwd_eq', name: T('crate pushed steadily', 'Kiste gleichmässig geschoben'), text: T('A crate is pushed across a rough floor at constant speed.', 'Eine Kiste wird mit konstanter Geschwindigkeit über einen rauen Boden geschoben.'),
+        why: T('Constant speed: the net force is zero, so the push is as large as the friction.', 'Konstante Geschwindigkeit: Die resultierende Kraft ist null, also ist die Druckkraft so gross wie die Reibung.'),
+        wrong: { Ufwd_gt: { code: 'active-force', why: T('Moving at constant speed does not need a net force forward: push and friction are equal.', 'Für eine konstante Geschwindigkeit braucht es keine resultierende Kraft nach vorn: Druckkraft und Reibung sind gleich.') },
+          Ufwd: { code: 'other', why: T('On a rough floor friction acts backward.', 'Auf einem rauen Boden wirkt die Reibung nach hinten.') } } },
+      slide: { key: 'Ubk', name: T('crate sliding to a stop', 'Kiste gleitet aus'), text: T('After a push, a crate slides on across a rough floor and slows down.', 'Nach einem Stoss gleitet eine Kiste über einen rauen Boden weiter und wird langsamer.'),
+        why: T('Nothing pushes any more; only friction acts along the floor, backward — that is why the crate slows down.', 'Nichts schiebt mehr; entlang des Bodens wirkt nur die Reibung, nach hinten — deshalb wird die Kiste langsamer.'),
+        wrong: { Ufwd_gt: { code: 'impetus', why: T('The push has ended: no forward force is stored in the crate.', 'Der Stoss ist vorbei: In der Kiste ist keine Kraft nach vorn gespeichert.') },
+          Ufwd_eq: { code: 'impetus', why: T('There is no forward force any more, so nothing balances the friction: the crate slows down.', 'Es gibt keine Kraft nach vorn mehr, also hält nichts der Reibung das Gleichgewicht: Die Kiste wird langsamer.') } } },
+      puck: { key: 'GN', name: T('puck on smooth ice', 'Puck auf glattem Eis'), text: T('A puck slides across smooth ice at constant speed (friction negligible).', 'Ein Puck gleitet mit konstanter Geschwindigkeit über glattes Eis (Reibung vernachlässigbar).'),
+        why: T('Only the weight and the push of the ice act, and they cancel: the puck keeps its velocity.', 'Es wirken nur die Gewichtskraft und die Normalkraft des Eises, und sie heben sich auf: Der Puck behält seine Geschwindigkeit.'),
+        wrong: { Ufwd: { code: 'active-force', why: T('No forward force is needed to keep sliding at constant speed.', 'Um mit konstanter Geschwindigkeit weiterzugleiten, braucht es keine Kraft nach vorn.') },
+          Ubk: { code: 'other', why: T('On smooth ice there is no friction, so no backward force: that is why the puck does not slow down.', 'Auf glattem Eis gibt es keine Reibung, also keine Kraft nach hinten: Deshalb wird der Puck nicht langsamer.') } } },
+      skyConst: { key: 'GN', name: T('skydiver at constant speed', 'Fallschirmspringer, gleich schnell'), text: T('A skydiver falls at constant speed.', 'Ein Fallschirmspringer fällt mit konstanter Geschwindigkeit.'),
+        why: T('Constant speed: the air resistance up is as large as the weight.', 'Konstante Geschwindigkeit: Der Luftwiderstand nach oben ist so gross wie die Gewichtskraft.'),
+        wrong: { up_lt: { code: 'active-force', why: T('Falling at constant speed does not need a net force down: drag and weight are equal.', 'Um mit konstanter Geschwindigkeit zu fallen, braucht es keine resultierende Kraft nach unten: Luftwiderstand und Gewichtskraft sind gleich.') },
+          G: { code: 'other', why: T('A falling skydiver feels a strong air resistance upward.', 'Auf einen fallenden Fallschirmspringer wirkt ein starker Luftwiderstand nach oben.') } } },
+      liftUp: { key: 'up_gt', name: T('elevator starting up', 'Lift fährt an'), text: T('An elevator cabin starts moving up and gets faster.', 'Eine Liftkabine fährt nach oben an und wird schneller.'),
+        why: T('It speeds up upward: the net force points up, so the cable pulls harder than the weight.', 'Sie wird nach oben schneller: Die resultierende Kraft zeigt nach oben, also zieht das Seil stärker, als die Gewichtskraft beträgt.'),
+        wrong: { GN: { code: 'other', why: T('With equal forces the cabin could not speed up.', 'Mit gleich grossen Kräften könnte die Kabine nicht schneller werden.') } } },
+      lamp: { key: 'GN', name: T('hanging lamp', 'hängende Lampe'), text: T('A lamp hangs at rest from a cord.', 'Eine Lampe hängt ruhig an einem Kabel.'),
+        why: T('The cord pulls up as hard as the Earth pulls down.', 'Das Kabel zieht so stark nach oben, wie die Erde nach unten zieht.'),
+        wrong: { G: { code: 'obstacle', why: T('The cord does pull: otherwise the lamp would fall.', 'Das Kabel zieht sehr wohl: Sonst würde die Lampe fallen.') } } },
+      parachute: { key: 'up_gt', name: T('parachute just opened', 'Fallschirm eben geöffnet'), text: T('A skydiver has just opened the parachute and is slowing down while falling.', 'Ein Fallschirmspringer hat eben den Fallschirm geöffnet und wird beim Fallen langsamer.'),
+        why: T('Slowing down while falling means an acceleration upward: the drag is larger than the weight.', 'Beim Fallen langsamer werden heisst Beschleunigung nach oben: Der Luftwiderstand ist grösser als die Gewichtskraft.'),
+        wrong: { up_lt: { code: 'active-force', why: T('Falling does not need a net force down: the skydiver slows down, so the net force points up.', 'Fallen braucht keine resultierende Kraft nach unten: Der Fallschirmspringer wird langsamer, also zeigt die resultierende Kraft nach oben.') } } },
+    };
+  }
+  const SIT_POOLS = {
+    force: ['thrown', 'book', 'pushConst', 'slide', 'puck', 'skyConst', 'liftUp', 'lamp', 'parachute'],
+    inertia: ['thrown', 'book', 'pushConst', 'slide', 'puck', 'skyConst'],
+  };
+
+  function matchDiagrams(r, p) {
+    const S = situations();
+    let picks;
+    for (let tries = 0; tries < 200; tries++) {
+      picks = r.shuffle(SIT_POOLS[p.pool || 'force']).slice(0, 4);
+      if (new Set(picks.map((k) => S[k].key)).size >= 3) break;
+    }
+    const rightKeys = [...new Set(picks.map((k) => S[k].key))];
+    const extra = r.shuffle([...new Set(picks.flatMap((k) => Object.keys(S[k].wrong)))].filter((k) => !rightKeys.includes(k))).slice(0, 5 - rightKeys.length);
+    const keys = r.shuffle([...rightKeys, ...extra]);
+    const choices = keys.map((k, i) => ({ id: k, label: diagram(k), name: LETTERS[i] }));
+    const items = picks.map((k) => {
+      const s = S[k], wrong = {};
+      for (const [dk, w] of Object.entries(s.wrong)) if (keys.includes(dk)) wrong[dk] = w;
+      return { label: s.text, name: s.name, answer: s.key, why: `${T(DIAG[s.key].en, DIAG[s.key].de)}: ${s.why}`, wrong,
+        other: T(`This diagram does not fit. ${s.why}`, `Dieses Diagramm passt nicht. ${s.why}`) };
+    });
+
+    const listed = (fn) => picks.map((k) => `<li><b>${S[k].name}</b>: ${fn(S[k])}</li>`).join('');
+    const rightFigs = picks.map((k) => diagram(S[k].key)).join('');
+    const steps = [
+      { title: T('Which forces?', 'Welche Kräfte?'), figure: rightFigs,
+        text: T(`For each body: the Earth pulls it down (weight); anything that touches it can push or pull (support, rope, floor, air). <ul>${listed((s) => s.why)}</ul>`,
+          `Für jeden Körper: Die Erde zieht ihn nach unten (Gewichtskraft); alles, was ihn berührt, kann drücken oder ziehen (Unterlage, Seil, Boden, Luft). <ul>${listed((s) => s.why)}</ul>`) },
+      { title: T('How large?', 'Wie gross?'), figure: rightFigs,
+        text: T('The motion tells the net force: constant velocity or rest → the forces balance; speeding up or slowing down → the net force points along the acceleration. The diagrams in order: ' + picks.map((k) => `${S[k].name} → ${choices[keys.indexOf(S[k].key)].name}`).join('; ') + '.',
+          'Die Bewegung verrät die resultierende Kraft: konstante Geschwindigkeit oder Ruhe → die Kräfte heben sich auf; schneller oder langsamer werden → die resultierende Kraft zeigt in Richtung der Beschleunigung. Die Diagramme der Reihe nach: ' + picks.map((k) => `${S[k].name} → ${choices[keys.indexOf(S[k].key)].name}`).join('; ') + '.') },
+    ];
+
+    return {
+      title: T('Free-body diagrams', 'Kräftediagramme'),
+      situation: T('<p>Each diagram A–E shows the forces on a body, drawn from its centre; longer arrows mean larger forces. The small arrow at the bottom right shows the direction of motion (“forward”).</p>',
+        '<p>Jedes Diagramm A–E zeigt die Kräfte auf einen Körper, vom Mittelpunkt aus gezeichnet; längere Pfeile bedeuten grössere Kräfte. Der kleine Pfeil unten rechts zeigt die Bewegungsrichtung („vorn“).</p>').replace('A–E', `A–${LETTERS[keys.length - 1]}`),
+      figure: keys.map((k, i) => `<figure class="fig">${diagram(k)}<figcaption>${LETTERS[i]}</figcaption></figure>`).join(''),
+      questions: [Object.assign(match('diagrams', T('Match each situation with its free-body diagram. A diagram may fit more than one situation, or none.', 'Ordne jeder Situation ihr Kräftediagramm zu. Ein Diagramm kann zu mehreren Situationen passen oder zu keiner.'), items, choices, true), { shown: true })], // the diagrams are the exercise's picture
+      hints: [
+        T('For each situation: what pulls on the body from a distance, and what touches it?', 'Für jede Situation: Was zieht aus der Ferne am Körper, und was berührt ihn?'),
+        T('Plan: first list the forces, then decide from the motion whether they balance or which one is larger.', 'Plan: Zähle zuerst die Kräfte auf und entscheide dann anhand der Bewegung, ob sie sich aufheben oder welche grösser ist.'),
+        T('First law: rest or constant velocity ↔ net force zero. Second law: speeding up or slowing down ↔ net force along the acceleration.', 'Erstes Gesetz: Ruhe oder konstante Geschwindigkeit ↔ resultierende Kraft null. Zweites Gesetz: schneller oder langsamer werden ↔ resultierende Kraft in Richtung der Beschleunigung.'),
+        `<ul>${listed((s) => s.why)}</ul>`,
+      ],
+      steps,
+    };
+  }
+
+  // ================================================================ third-law partners
+  function scenes() {
+    return {
+      book: {
+        title: T('Book on a table', 'Buch auf dem Tisch'),
+        text: T('A book lies at rest on a table. Four forces are numbered in the picture.', 'Ein Buch liegt ruhig auf einem Tisch. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The Earth pulls the book down.', 'Die Erde zieht das Buch nach unten.'), T('The table pushes the book up.', 'Der Tisch drückt das Buch nach oben.'),
+          T('The book pushes the table down.', 'Das Buch drückt den Tisch nach unten.'), T('The book pulls the Earth up.', 'Das Buch zieht die Erde nach oben.')],
+        pairs: [[0, 3], [1, 2]], balance: [0, 1],
+        draw: () => D.ground(20, 340, 200) + D.table(110, 120, 140, 200) + D.rect(150, 104, 60, 16, 'obj', 2) +
+          D.arrow(172, 112, 172, 160, 'f', '') + D.arrow(188, 120, 188, 72, 'f', '') + D.arrow(230, 122, 230, 162, 'f', '', { cls: 'pair' }) + D.arrow(60, 200, 60, 152, 'f', '', { cls: 'pair' }) +
+          D.text(164, 160, '1', 'lbl f', 'end') + D.text(196, 76, '2', 'lbl f', 'start') + D.text(238, 160, '3', 'lbl f', 'start') + D.text(68, 156, '4', 'lbl f', 'start') + D.words(68, 216, T('(on the Earth)', '(auf die Erde)'), 'start'),
+      },
+      lamp: {
+        title: T('Hanging lamp', 'Hängende Lampe'),
+        text: T('A lamp hangs at rest from a cord. Four forces are numbered in the picture.', 'Eine Lampe hängt ruhig an einem Kabel. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The Earth pulls the lamp down.', 'Die Erde zieht die Lampe nach unten.'), T('The cord pulls the lamp up.', 'Das Kabel zieht die Lampe nach oben.'),
+          T('The lamp pulls the cord down.', 'Die Lampe zieht das Kabel nach unten.'), T('The lamp pulls the Earth up.', 'Die Lampe zieht die Erde nach oben.')],
+        pairs: [[0, 3], [1, 2]], balance: [0, 1],
+        draw: () => D.ceiling(110, 250, 18) + D.line(180, 18, 180, 104, 'cable') + `<polygon class="obj" points="164,104 196,104 214,140 146,140"/>` + D.ground(20, 340, 210) +
+          D.arrow(172, 122, 172, 170, 'f', '') + D.arrow(188, 106, 188, 60, 'f', '') + D.arrow(200, 60, 200, 96, 'f', '', { cls: 'pair' }) + D.arrow(60, 210, 60, 162, 'f', '', { cls: 'pair' }) +
+          D.text(164, 170, '1', 'lbl f', 'end') + D.text(180, 62, '2', 'lbl f', 'end') + D.text(208, 80, '3', 'lbl f', 'start') + D.text(68, 166, '4', 'lbl f', 'start') + D.words(68, 226, T('(on the Earth)', '(auf die Erde)'), 'start'),
+      },
+      wall: {
+        title: T('Pushing a wall', 'Gegen eine Wand drücken'),
+        text: T('A person stands still and pushes against a wall with both hands. Four forces are numbered in the picture.', 'Eine Person steht still und drückt mit beiden Händen gegen eine Wand. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The person pushes the wall to the right.', 'Die Person drückt die Wand nach rechts.'), T('The wall pushes the person to the left.', 'Die Wand drückt die Person nach links.'),
+          T('The floor pushes the person’s feet to the right (friction).', 'Der Boden drückt die Füsse der Person nach rechts (Reibung).'), T('The person’s feet push the floor to the left.', 'Die Füsse der Person drücken den Boden nach links.')],
+        pairs: [[0, 1], [2, 3]], balance: [1, 2],
+        draw: () => D.ground(20, 340, 190) + D.rect(250, 40, 20, 150, 'solid', 0) + `<g transform="rotate(14 190 190)">${D.person(190, 190, 120, 1, 'push')}</g>` +
+          D.arrow(252, 100, 296, 100, 'f', '', { cls: 'pair' }) + D.arrow(244, 112, 200, 112, 'f', '') + D.arrow(170, 182, 214, 182, 'f', '') + D.arrow(176, 198, 132, 198, 'f', '', { cls: 'pair' }) +
+          D.text(300, 96, '1', 'lbl f', 'start') + D.text(196, 108, '2', 'lbl f', 'end') + D.text(218, 178, '3', 'lbl f', 'start') + D.text(128, 202, '4', 'lbl f', 'end'),
+      },
+      car: {
+        title: T('A car speeding up', 'Ein Auto beschleunigt'),
+        text: T('A car speeds up on a level road. Four forces are numbered in the picture.', 'Ein Auto beschleunigt auf einer ebenen Strasse. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The road pushes the car’s tyres forward.', 'Die Strasse drückt die Reifen des Autos nach vorn.'), T('The tyres push the road backward.', 'Die Reifen drücken die Strasse nach hinten.'),
+          T('The air pushes the car backward (air resistance).', 'Die Luft drückt das Auto nach hinten (Luftwiderstand).'), T('The car pushes the air forward.', 'Das Auto drückt die Luft nach vorn.')],
+        pairs: [[0, 1], [2, 3]], balance: [0, 2],
+        draw: () => D.line(0, 170, 360, 170, 'gline') + D.car(110, 170, 140) +
+          D.arrow(146, 168, 190, 168, 'f', '') + D.arrow(146, 178, 102, 178, 'f', '', { cls: 'pair' }) + D.arrow(250, 130, 214, 130, 'f', '') + D.arrow(256, 116, 300, 116, 'f', '', { cls: 'pair' }) +
+          D.text(194, 166, '1', 'lbl f', 'start') + D.text(98, 182, '2', 'lbl f', 'end') + D.text(210, 126, '3', 'lbl f', 'end') + D.text(304, 120, '4', 'lbl f', 'start') + D.arrow(30, 40, 80, 40, 'm', '', { head: 7 }) + D.words(88, 44, T('speeding up', 'wird schneller'), 'start'),
+      },
+    };
+  }
+
+  function matchPartners(r, p) {
+    const key = p.scene || r.pick(['book', 'lamp', 'wall', 'car']);
+    const sc = scenes()[key];
+    const partner = (i) => { const pr = sc.pairs.find((x) => x.includes(i)); return pr[0] === i ? pr[1] : pr[0]; };
+    const num = (i) => String(i + 1);
+    const choices = sc.forces.map((f, i) => ({ id: num(i), label: `<b>${i + 1}</b> ${f}`, name: num(i) }));
+    const swap = T('Third-law partners belong to the same interaction: the same two bodies, swapped.', 'Kraft und Gegenkraft gehören zur selben Wechselwirkung: dieselben zwei Körper, vertauscht.');
+    const items = sc.forces.map((f, i) => {
+      const wrong = {};
+      if (sc.balance.includes(i)) {
+        const other = sc.balance[0] === i ? sc.balance[1] : sc.balance[0];
+        wrong[num(other)] = { code: 'pair-confusion', why: T(`Forces ${i + 1} and ${other + 1} both act on the same body. ${key === 'car' ? 'They may even balance' : 'They balance'}, but they are not a third-law pair. ${swap}`,
+          `Die Kräfte ${i + 1} und ${other + 1} wirken beide auf denselben Körper. ${key === 'car' ? 'Sie können sich sogar aufheben' : 'Sie heben sich auf'}, sind aber kein Kraft-Gegenkraft-Paar. ${swap}`) };
+      }
+      wrong[num(i)] = { code: 'other', why: T('A force is not its own partner: the partner acts on the other body.', 'Eine Kraft ist nicht ihre eigene Gegenkraft: Die Gegenkraft wirkt auf den anderen Körper.') };
+      return { label: `<b>${i + 1}</b> ${f}`, name: num(i), answer: num(partner(i)), wrong,
+        other: T(`That is not its partner. ${swap}`, `Das ist nicht ihre Gegenkraft. ${swap}`),
+        why: T(`${i + 1} ↔ ${partner(i) + 1}: ${swap}`, `${i + 1} ↔ ${partner(i) + 1}: ${swap}`) };
+    });
+    const figure = (o = {}) => D.svg(360, 232, sc.draw(o), sc.title);
+    const pairsText = sc.pairs.map(([a, b]) => `${a + 1} ↔ ${b + 1}`).join(T(' and ', ' und '));
+    const q = match('partners', T('Match each force with its third-law partner (the force with which the other body pushes or pulls back).', 'Ordne jeder Kraft ihre Gegenkraft zu (die Kraft, mit der der andere Körper zurückdrückt oder zurückzieht).'), items, choices);
+    q.same = true; // the choices are the items themselves
+    return {
+      title: sc.title,
+      situation: `<p>${sc.text}</p>`,
+      figure: figure(),
+      questions: [q],
+      hints: [
+        T('For each force, name the two bodies: who exerts it, and on whom?', 'Nenne für jede Kraft die beiden Körper: Wer übt sie aus, und auf wen?'),
+        T('Plan: the partner of “A acts on B” is “B acts on A” — find the force with the two bodies swapped.', 'Plan: Die Gegenkraft zu „A wirkt auf B“ ist „B wirkt auf A“ — suche die Kraft mit den vertauschten Körpern.'),
+        T('Third law: partners are equally large, opposite, of the same kind, and act on different bodies. Two forces on the same body are never partners.', 'Drittes Gesetz: Kraft und Gegenkraft sind gleich gross, entgegengesetzt, von derselben Art und wirken auf verschiedene Körper. Zwei Kräfte auf denselben Körper sind nie ein Paar.'),
+        T(`Here force ${sc.balance[0] + 1} and force ${sc.balance[1] + 1} act on the same body — so they cannot be partners.`, `Hier wirken Kraft ${sc.balance[0] + 1} und Kraft ${sc.balance[1] + 1} auf denselben Körper — also können sie kein Paar sein.`),
+      ],
+      steps: [
+        { title: T('Interactions', 'Wechselwirkungen'), figure: figure(),
+          text: T(`Each force belongs to an interaction between two bodies. Swapping the bodies gives the partner: ${pairsText}.`, `Jede Kraft gehört zu einer Wechselwirkung zwischen zwei Körpern. Vertauscht man die Körper, erhält man die Gegenkraft: ${pairsText}.`) },
+        { title: T('Balanced is not a pair', 'Gleichgewicht ist kein Paar'), figure: figure(),
+          text: T(`Forces ${sc.balance[0] + 1} and ${sc.balance[1] + 1} both act on the same body. ${key === 'car' ? 'At constant speed they would balance' : 'They balance, because the body is at rest'} — but they belong to different interactions, so they are not partners.`,
+            `Die Kräfte ${sc.balance[0] + 1} und ${sc.balance[1] + 1} wirken beide auf denselben Körper. ${key === 'car' ? 'Bei konstanter Geschwindigkeit würden sie sich aufheben' : 'Sie heben sich auf, weil der Körper in Ruhe ist'} — aber sie gehören zu verschiedenen Wechselwirkungen, also sind sie kein Paar.`) },
+      ],
+    };
+  }
+
+  register('force', 'rank-elevator', rankElevator, {}, 'sort');
+  register('gravity', 'rank-launch', rankLaunch, {}, 'sort');
+  register('force', 'match-diagrams', matchDiagrams, {}, 'sort');
+  register('inertia', 'match-diagrams', matchDiagrams, { pool: 'inertia' }, 'sort');
+  register('interact', 'match-partners', matchPartners, {}, 'sort');
+})(typeof window !== 'undefined' ? window : globalThis);
