@@ -13,6 +13,7 @@
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', reset: 'Reset',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       profile: 'Your typical slips',
+      profileEmpty: 'Nothing recorded yet. Wrong answers that stem from a misconception, and exercise types you find hard, will show up here.',
       profileNote: 'How often each misconception was behind one of your wrong answers. The exercises are written in the spirit of the Force Concept Inventory; they are not its items.',
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
@@ -31,6 +32,7 @@
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', reset: 'Zurücksetzen',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       profile: 'Deine typischen Fehler',
+      profileEmpty: 'Noch nichts erfasst. Falsche Antworten, hinter denen eine Fehlvorstellung steckt, und Aufgabentypen, die dir schwerfallen, erscheinen hier.',
       profileNote: 'Wie oft jede Fehlvorstellung hinter einer deiner falschen Antworten steckte. Die Aufgaben sind im Sinne des Force Concept Inventory geschrieben; sie stammen nicht daraus.',
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
@@ -47,6 +49,7 @@
   const ui = () => UI[FC.getLang()];
 
   let ex = null, st = null, tutor = null;
+  let profileOpen = false; // the “typical slips” card, opened with its button
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -66,7 +69,14 @@
     const rows = Object.entries(tally).filter(([c]) => FC.MIS[c]).sort((a, b) => b[1] - a[1]);
     // the types that come up more often, because they were hard
     const hard = Object.entries(stored('fc-types', {})).filter(([g, x]) => x.s >= 0.4 && FC.TYPE_NAMES[g]).sort((a, b) => b[1].s - a[1].s);
-    $('#profile').hidden = (!rows.length && !hard.length) || $('#task').hidden;
+    const slips = rows.reduce((n, [, k]) => n + k, 0);
+    $('#profile').hidden = !profileOpen || $('#task').hidden;
+    $('#profile-empty').hidden = rows.length > 0 || hard.length > 0;
+    $('#profile-btn-label').textContent = ui().profile;
+    $('#profile-btn').setAttribute('aria-expanded', String(profileOpen));
+    $('#profile-btn').classList.toggle('open', profileOpen);
+    $('#profile-badge').textContent = slips;
+    $('#profile-badge').hidden = !slips;
     $('#profile-list').innerHTML = rows.map(([c, k]) =>
       `<li><span class="count">${k}×</span> <b>${FC.mis(c).name}</b>: ${FC.mis(c).text}</li>`).join('');
     $('#profile-mis').hidden = !rows.length;
@@ -342,9 +352,15 @@
     $('#answers').addEventListener('submit', check);
     // A new answer clears the marks on that part of the question.
     $('#fields').addEventListener('change', (evt) => Q.clearAt(evt.target));
+    Q.attach($('#fields'));
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     $('#reset-profile').addEventListener('click', () => { store('fc-mis', {}); store('fc-types', {}); showProfile(); });
+    $('#profile-btn').addEventListener('click', () => {
+      profileOpen = !profileOpen;
+      showProfile();
+      if (profileOpen) $('#profile').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
     window.addEventListener('hashchange', fromHash);
 
     tutor = window.createTutor(lessons(), { done: practise, t: () => ui().tutorBtns });

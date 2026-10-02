@@ -214,6 +214,17 @@
     return D.svg(130, 124, g, T(DIAG[key].en, DIAG[key].de));
   }
 
+  // How to read the diagrams.
+  function legend() {
+    const c = [230, 58];
+    let g = D.rect(c[0] - 16, c[1] - 12, 32, 24, 'obj', 2);
+    g += D.arrow(c[0], c[1], c[0], c[1] + 40, 'f', '') + D.arrow(c[0], c[1], c[0], c[1] - 40, 'f', '') + D.arrow(c[0], c[1], c[0] + 52, c[1], 'f', '') + D.arrow(c[0], c[1], c[0] - 52, c[1], 'f', '');
+    g += D.words(c[0] + 8, c[1] + 44, T('weight', 'Gewichtskraft'), 'start') + D.words(c[0] + 8, c[1] - 34, T('upward force', 'Kraft nach oben'), 'start');
+    g += D.words(c[0] + 58, c[1] + 4, T('forward force', 'Kraft nach vorn'), 'start') + D.words(c[0] - 58, c[1] + 4, T('backward force', 'Kraft nach hinten'), 'end');
+    g += D.arrow(12, 108, 52, 108, 'm', '', { head: 6 }) + D.words(58, 112, T('direction of motion', 'Bewegungsrichtung'), 'start');
+    return D.svg(400, 118, g, T('How to read the diagrams', 'So sind die Diagramme zu lesen'));
+  }
+
   // Situations: the right diagram and typical wrong ones. The arrow at the bottom right of each
   // diagram shows “forward”, the direction of motion.
   function situations() {
@@ -271,7 +282,7 @@
     const items = picks.map((k) => {
       const s = S[k], wrong = {};
       for (const [dk, w] of Object.entries(s.wrong)) if (keys.includes(dk)) wrong[dk] = w;
-      return { label: s.text, name: s.name, answer: s.key, why: `${T(DIAG[s.key].en, DIAG[s.key].de)}: ${s.why}`, wrong,
+      return { label: s.text, name: s.name, answer: s.key, why: `${cap(T(DIAG[s.key].en, DIAG[s.key].de))}: ${s.why}`, wrong,
         other: T(`This diagram does not fit. ${s.why}`, `Dieses Diagramm passt nicht. ${s.why}`) };
     });
 
@@ -288,10 +299,10 @@
 
     return {
       title: T('Free-body diagrams', 'Kräftediagramme'),
-      situation: T('<p>Each diagram A–E shows the forces on a body, drawn from its centre; longer arrows mean larger forces. The small arrow at the bottom right shows the direction of motion (“forward”).</p>',
-        '<p>Jedes Diagramm A–E zeigt die Kräfte auf einen Körper, vom Mittelpunkt aus gezeichnet; längere Pfeile bedeuten grössere Kräfte. Der kleine Pfeil unten rechts zeigt die Bewegungsrichtung („vorn“).</p>').replace('A–E', `A–${LETTERS[keys.length - 1]}`),
-      figure: keys.map((k, i) => `<figure class="fig">${diagram(k)}<figcaption>${LETTERS[i]}</figcaption></figure>`).join(''),
-      questions: [Object.assign(match('diagrams', T('Match each situation with its free-body diagram. A diagram may fit more than one situation, or none.', 'Ordne jeder Situation ihr Kräftediagramm zu. Ein Diagramm kann zu mehreren Situationen passen oder zu keiner.'), items, choices, true), { shown: true })], // the diagrams are the exercise's picture
+      situation: T('<p>Each diagram A–E below shows the forces on a body, drawn from its centre; longer arrows mean larger forces. The small arrow at the bottom right shows the direction of motion (“forward”).</p>',
+        '<p>Jedes Diagramm A–E unten zeigt die Kräfte auf einen Körper, vom Mittelpunkt aus gezeichnet; längere Pfeile bedeuten grössere Kräfte. Der kleine Pfeil unten rechts zeigt die Bewegungsrichtung („vorn“).</p>').replace('A–E', `A–${LETTERS[keys.length - 1]}`),
+      figure: legend(),
+      questions: [match('diagrams', T('Match each situation with its free-body diagram. A diagram may fit more than one situation, or none.', 'Ordne jeder Situation ihr Kräftediagramm zu. Ein Diagramm kann zu mehreren Situationen passen oder zu keiner.'), items, choices, true)],
       hints: [
         T('For each situation: what pulls on the body from a distance, and what touches it?', 'Für jede Situation: Was zieht aus der Ferne am Körper, und was berührt ihn?'),
         T('Plan: first list the forces, then decide from the motion whether they balance or which one is larger.', 'Plan: Zähle zuerst die Kräfte auf und entscheide dann anhand der Bewegung, ob sie sich aufheben oder welche grösser ist.'),

@@ -41,7 +41,8 @@
       </div>
       <div id="topics" class="levels practice" role="radiogroup" data-i18n-label="topic" aria-label="Topic" hidden></div>
       <div id="formats" class="levels practice" role="radiogroup" data-i18n-label="format" aria-label="Format" hidden></div>
-      <button id="new" type="button" class="primary practice" data-i18n="new" hidden>New exercise</button>
+      <button id="new" type="button" class="new-btn practice" data-i18n="new" hidden>New exercise</button>
+      <button id="profile-btn" type="button" class="practice" aria-expanded="false" aria-controls="profile" hidden><span id="profile-btn-label">Your typical slips</span><span id="profile-badge" class="badge" hidden></span></button>
     </div>
 
     <section id="tutor" class="card">
@@ -89,6 +90,7 @@
 
     <section id="profile" class="card practice" hidden>
       <h3 data-i18n="profile">Your typical slips</h3>
+      <p id="profile-empty" class="note" data-i18n="profileEmpty" hidden>Nothing recorded yet. Wrong answers that stem from a misconception, and exercise types you find hard, will show up here.</p>
       <div id="profile-mis">
       <p class="note" data-i18n="profileNote">How often each misconception was behind one of your wrong answers. The exercises are written in the spirit of the Force Concept Inventory; they are not its items.</p>
       <ul id="profile-list"></ul>
