@@ -10,11 +10,11 @@
     en: {
       title: 'Force Concepts', mode: 'Mode', topic: 'Topic', format: 'Format', example: 'Example', tutor: 'Tutor', practice: 'Practice', new: 'New exercise',
       tutorNote: 'Use the arrow keys ← → to step through. Arrows in the pictures: <span class="k-f">forces</span>, <span class="k-v">velocities</span>, <span class="k-a">accelerations</span> and the <span class="k-net">net force</span>.',
-      check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', reset: 'Reset',
+      check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', reset: 'Reset', close: 'Close',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
-      profile: 'Your typical slips',
+      profile: 'Your typical slips', correct: 'Correct:',
       profileEmpty: 'Nothing recorded yet. Wrong answers that stem from a misconception, and exercise types you find hard, will show up here.',
-      profileNote: 'How often each misconception was behind one of your wrong answers. The exercises are written in the spirit of the Force Concept Inventory; they are not its items.',
+      profileNote: 'How often each misconception was behind one of your wrong answers, and what is correct instead. The exercises are written in the spirit of the Force Concept Inventory; they are not its items.',
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
       choose: 'Answer every question (every statement, item and reason), then check again.',
@@ -29,11 +29,11 @@
     de: {
       title: 'Kraftkonzepte', mode: 'Modus', topic: 'Thema', format: 'Format', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', new: 'Neue Aufgabe',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Pfeile in den Bildern: <span class="k-f">Kräfte</span>, <span class="k-v">Geschwindigkeiten</span>, <span class="k-a">Beschleunigungen</span> und die <span class="k-net">resultierende Kraft</span>.',
-      check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', reset: 'Zurücksetzen',
+      check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', reset: 'Zurücksetzen', close: 'Schliessen',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
-      profile: 'Deine typischen Fehler',
+      profile: 'Deine typischen Fehler', correct: 'Richtig:',
       profileEmpty: 'Noch nichts erfasst. Falsche Antworten, hinter denen eine Fehlvorstellung steckt, und Aufgabentypen, die dir schwerfallen, erscheinen hier.',
-      profileNote: 'Wie oft jede Fehlvorstellung hinter einer deiner falschen Antworten steckte. Die Aufgaben sind im Sinne des Force Concept Inventory geschrieben; sie stammen nicht daraus.',
+      profileNote: 'Wie oft jede Fehlvorstellung hinter einer deiner falschen Antworten steckte, und was stattdessen richtig ist. Die Aufgaben sind im Sinne des Force Concept Inventory geschrieben; sie stammen nicht daraus.',
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
       choose: 'Beantworte jede Frage (jede Aussage, jedes Element und die Begründung) und prüfe dann nochmals.',
@@ -49,7 +49,6 @@
   const ui = () => UI[FC.getLang()];
 
   let ex = null, st = null, tutor = null;
-  let profileOpen = false; // the “typical slips” card, opened with its button
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -70,15 +69,12 @@
     // the types that come up more often, because they were hard
     const hard = Object.entries(stored('fc-types', {})).filter(([g, x]) => x.s >= 0.4 && FC.TYPE_NAMES[g]).sort((a, b) => b[1].s - a[1].s);
     const slips = rows.reduce((n, [, k]) => n + k, 0);
-    $('#profile').hidden = !profileOpen || $('#task').hidden;
     $('#profile-empty').hidden = rows.length > 0 || hard.length > 0;
     $('#profile-btn-label').textContent = ui().profile;
-    $('#profile-btn').setAttribute('aria-expanded', String(profileOpen));
-    $('#profile-btn').classList.toggle('open', profileOpen);
     $('#profile-badge').textContent = slips;
     $('#profile-badge').hidden = !slips;
     $('#profile-list').innerHTML = rows.map(([c, k]) =>
-      `<li><span class="count">${k}×</span> <b>${FC.mis(c).name}</b>: ${FC.mis(c).text}</li>`).join('');
+      `<li><span class="count">${k}×</span> <b>${FC.mis(c).name}</b>: ${FC.mis(c).text}<span class="fix"><b>${ui().correct}</b> ${FC.mis(c).fix}</span></li>`).join('');
     $('#profile-mis').hidden = !rows.length;
     $('#profile-types').hidden = !hard.length;
     $('#profile-types-list').innerHTML = hard.map(([g, x]) => `<li><b>${FC.typeName(g)}</b> <span class="count">${ui().often(FC.weightOf(stored('fc-types', {}), g))}</span></li>`).join('');
@@ -312,6 +308,7 @@
     document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
     if (m === 'tutor') { $('#hints').hidden = true; $('#solution').hidden = true; }
+    if (m !== 'practice' && $('#profile').open) $('#profile').close();
     showProfile();
   }
   function practise() {
@@ -356,10 +353,14 @@
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     $('#reset-profile').addEventListener('click', () => { store('fc-mis', {}); store('fc-types', {}); showProfile(); });
-    $('#profile-btn').addEventListener('click', () => {
-      profileOpen = !profileOpen;
-      showProfile();
-      if (profileOpen) $('#profile').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // The “typical slips” overlay: closes with ×, Escape or a click on the backdrop.
+    const profile = $('#profile');
+    $('#profile-btn').addEventListener('click', () => { showProfile(); profile.showModal(); });
+    $('#close-profile').addEventListener('click', () => profile.close());
+    profile.addEventListener('click', (evt) => {
+      if (evt.target !== profile) return;
+      const r = profile.getBoundingClientRect();
+      if (evt.clientX < r.left || evt.clientX > r.right || evt.clientY < r.top || evt.clientY > r.bottom) profile.close();
     });
     window.addEventListener('hashchange', fromHash);
 

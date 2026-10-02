@@ -291,7 +291,6 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 button.new-btn { background: var(--new); border-color: var(--new); color: var(--new-ink); font-weight: 600; }
 button.new-btn:hover:not(:disabled) { border-color: var(--ink); }
 #profile-btn { display: inline-flex; align-items: center; gap: 6px; }
-#profile-btn.open { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .badge { display: inline-grid; place-items: center; min-width: 1.5em; height: 1.5em; padding: 0 5px; border-radius: 999px; background: var(--bad); color: var(--card); font-size: 0.78rem; font-weight: 700; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 
@@ -308,11 +307,28 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .short { list-style: none; margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); font-weight: 600; }
 .short li { margin: 4px 0; }
 
+/* the “typical slips” overlay */
+#profile {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  margin: auto;
+  color: var(--ink);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+#profile::backdrop { background: rgba(15, 17, 20, 0.45); }
+.dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.dialog-head h3 { margin-top: 4px; }
+button.close { padding: 0 9px; font-size: 1.3rem; line-height: 1.4; color: var(--muted); }
+button.close:hover:not(:disabled) { color: var(--ink); }
 #profile-list, #profile-types-list { margin: 10px 0 12px; padding-left: 1.2em; }
 #profile h4 { margin: 14px 0 0; font-size: 0.95rem; }
 #profile-types-list .count { min-width: 0; margin-left: 6px; font-size: 0.9rem; }
 #profile-list li, #profile-types-list li { margin: 4px 0; }
 #profile-list .count { display: inline-block; min-width: 2.2em; font-variant-numeric: tabular-nums; color: var(--muted); }
+#profile-list li { margin: 10px 0; }
+#profile-list .fix { display: block; margin: 2px 0 0 2.2em; }
+#profile-list .fix b { color: var(--ok); }
 
 /* tutor mode */
 .examples { margin-bottom: 14px; }

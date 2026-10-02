@@ -42,7 +42,7 @@
       <div id="topics" class="levels practice" role="radiogroup" data-i18n-label="topic" aria-label="Topic" hidden></div>
       <div id="formats" class="levels practice" role="radiogroup" data-i18n-label="format" aria-label="Format" hidden></div>
       <button id="new" type="button" class="new-btn practice" data-i18n="new" hidden>New exercise</button>
-      <button id="profile-btn" type="button" class="practice" aria-expanded="false" aria-controls="profile" hidden><span id="profile-btn-label">Your typical slips</span><span id="profile-badge" class="badge" hidden></span></button>
+      <button id="profile-btn" type="button" class="practice" aria-haspopup="dialog" aria-controls="profile" hidden><span id="profile-btn-label">Your typical slips</span><span id="profile-badge" class="badge" hidden></span></button>
     </div>
 
     <section id="tutor" class="card">
@@ -87,21 +87,24 @@
       <div id="sol-steps" class="steps"></div>
       <ul id="sol-short" class="short"></ul>
     </section>
+  </main>
 
-    <section id="profile" class="card practice" hidden>
-      <h3 data-i18n="profile">Your typical slips</h3>
-      <p id="profile-empty" class="note" data-i18n="profileEmpty" hidden>Nothing recorded yet. Wrong answers that stem from a misconception, and exercise types you find hard, will show up here.</p>
-      <div id="profile-mis">
+  <dialog id="profile" class="card" aria-labelledby="profile-title">
+    <div class="dialog-head">
+      <h3 id="profile-title" data-i18n="profile">Your typical slips</h3>
+      <button type="button" id="close-profile" class="close" data-i18n-label="close" aria-label="Close">×</button>
+    </div>
+    <p id="profile-empty" class="note" data-i18n="profileEmpty" hidden>Nothing recorded yet. Wrong answers that stem from a misconception, and exercise types you find hard, will show up here.</p>
+    <div id="profile-mis">
       <p class="note" data-i18n="profileNote">How often each misconception was behind one of your wrong answers. The exercises are written in the spirit of the Force Concept Inventory; they are not its items.</p>
       <ul id="profile-list"></ul>
-      </div>
-      <div id="profile-types" hidden>
-        <h4 data-i18n="profileTypes">Coming up more often</h4>
-        <p class="note" data-i18n="profileTypesNote">Exercise types you found hard come up more often in practice, until you solve them easily.</p>
-        <ul id="profile-types-list"></ul>
-      </div>
-      <div class="actions"><button type="button" id="reset-profile" data-i18n="reset">Reset</button></div>
-    </section>
-  </main>
+    </div>
+    <div id="profile-types" hidden>
+      <h4 data-i18n="profileTypes">Coming up more often</h4>
+      <p class="note" data-i18n="profileTypesNote">Exercise types you found hard come up more often in practice, until you solve them easily.</p>
+      <ul id="profile-types-list"></ul>
+    </div>
+    <div class="actions"><button type="button" id="reset-profile" data-i18n="reset">Reset</button></div>
+  </dialog>
 </body>
 </html>

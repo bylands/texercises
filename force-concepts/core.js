@@ -35,61 +35,62 @@
   };
   const topicName = (k) => TOPICS[k][lang];
 
+  // Each misconception: its name, what it claims, and the correct concept.
   const MIS = {
     impetus: {
-      en: ['Impetus', 'The push or throw is stored in the body, keeps it going and slowly wears off.'],
-      de: ['Impetus', 'Der Stoss oder Wurf wird im Körper gespeichert, hält ihn in Bewegung und lässt langsam nach.'],
+      en: ['Impetus', 'The push or throw is stored in the body, keeps it going and slowly wears off.', 'No push is stored in a body. Once the push ends, the body keeps its velocity by itself (inertia); it only slows down because other forces, such as friction or air resistance, act on it.'],
+      de: ['Impetus', 'Der Stoss oder Wurf wird im Körper gespeichert, hält ihn in Bewegung und lässt langsam nach.', 'Ein Stoss wird nicht im Körper gespeichert. Ist der Stoss vorbei, behält der Körper seine Geschwindigkeit von selbst (Trägheit); er wird nur langsamer, weil andere Kräfte wie Reibung oder Luftwiderstand auf ihn wirken.'],
     },
     'active-force': {
-      en: ['Motion needs a force', 'A body only moves, or keeps its speed, as long as a force pushes it along; the speed follows the force.'],
-      de: ['Bewegung braucht Kraft', 'Ein Körper bewegt sich nur so lange (oder behält seine Geschwindigkeit nur so lange), wie eine Kraft ihn antreibt; die Geschwindigkeit folgt der Kraft.'],
+      en: ['Motion needs a force', 'A body only moves, or keeps its speed, as long as a force pushes it along; the speed follows the force.', 'Motion at constant velocity needs no force: if the net force is zero, a body keeps its speed and direction. A net force changes the velocity; it determines the acceleration, not the velocity.'],
+      de: ['Bewegung braucht Kraft', 'Ein Körper bewegt sich nur so lange (oder behält seine Geschwindigkeit nur so lange), wie eine Kraft ihn antreibt; die Geschwindigkeit folgt der Kraft.', 'Bewegung mit konstanter Geschwindigkeit braucht keine Kraft: Ist die resultierende Kraft null, behält ein Körper Tempo und Richtung bei. Eine resultierende Kraft ändert die Geschwindigkeit; sie bestimmt die Beschleunigung, nicht die Geschwindigkeit.'],
     },
     'last-force': {
-      en: ['The last force decides', 'After a push, a body moves in the direction of the last push and forgets its earlier motion.'],
-      de: ['Die letzte Kraft entscheidet', 'Nach einem Stoss bewegt sich ein Körper in Richtung des letzten Stosses und vergisst seine frühere Bewegung.'],
+      en: ['The last force decides', 'After a push, a body moves in the direction of the last push and forgets its earlier motion.', 'A push changes the velocity, it does not replace it: the new velocity is the old one plus the change caused by the push, which points along the force.'],
+      de: ['Die letzte Kraft entscheidet', 'Nach einem Stoss bewegt sich ein Körper in Richtung des letzten Stosses und vergisst seine frühere Bewegung.', 'Ein Stoss ändert die Geschwindigkeit, er ersetzt sie nicht: Die neue Geschwindigkeit ist die alte plus die Änderung durch den Stoss, die in Richtung der Kraft zeigt.'],
     },
     'largest-force': {
-      en: ['The largest force wins', 'When several forces act, the body moves along the largest one; the others do not count.'],
-      de: ['Die grösste Kraft gewinnt', 'Wirken mehrere Kräfte, bewegt sich der Körper in Richtung der grössten; die anderen zählen nicht.'],
+      en: ['The largest force wins', 'When several forces act, the body moves along the largest one; the others do not count.', 'All forces count: they add as vectors to the net force, and the acceleration points along the net force.'],
+      de: ['Die grösste Kraft gewinnt', 'Wirken mehrere Kräfte, bewegt sich der Körper in Richtung der grössten; die anderen zählen nicht.', 'Alle Kräfte zählen: Sie addieren sich als Vektoren zur resultierenden Kraft, und die Beschleunigung zeigt in Richtung der resultierenden Kraft.'],
     },
     'circular-impetus': {
-      en: ['Circular impetus', 'A body that has been moving in a circle keeps curving for a while after it is released.'],
-      de: ['Kreis-Impetus', 'Ein Körper, der sich im Kreis bewegt hat, fliegt nach dem Loslassen noch eine Weile im Bogen weiter.'],
+      en: ['Circular impetus', 'A body that has been moving in a circle keeps curving for a while after it is released.', 'Once released, no force pulls the body towards the centre any more, so it moves on in a straight line along the tangent (only gravity may still bend its path downward).'],
+      de: ['Kreis-Impetus', 'Ein Körper, der sich im Kreis bewegt hat, fliegt nach dem Loslassen noch eine Weile im Bogen weiter.', 'Nach dem Loslassen zieht keine Kraft den Körper mehr zum Zentrum, also fliegt er geradlinig entlang der Tangente weiter (nur die Schwerkraft kann seine Bahn noch nach unten krümmen).'],
     },
     centrifugal: {
-      en: ['Centrifugal push', 'A body moving in a circle is pushed outward and flies outward when it is released.'],
-      de: ['Fliehkraft nach aussen', 'Ein Körper auf einer Kreisbahn wird nach aussen gedrückt und fliegt beim Loslassen nach aussen weg.'],
+      en: ['Centrifugal push', 'A body moving in a circle is pushed outward and flies outward when it is released.', 'On a circle, the net force points inward, towards the centre; no force pushes outward. When released, the body moves on along the tangent, not outward.'],
+      de: ['Fliehkraft nach aussen', 'Ein Körper auf einer Kreisbahn wird nach aussen gedrückt und fliegt beim Loslassen nach aussen weg.', 'Auf einer Kreisbahn zeigt die resultierende Kraft nach innen, zum Zentrum; keine Kraft drückt nach aussen. Beim Loslassen fliegt der Körper entlang der Tangente weiter, nicht nach aussen.'],
     },
     'heavier-faster': {
-      en: ['Heavier falls faster', 'Heavier bodies fall faster, because gravity pulls harder on them.'],
-      de: ['Schwerer fällt schneller', 'Schwerere Körper fallen schneller, weil die Schwerkraft stärker an ihnen zieht.'],
+      en: ['Heavier falls faster', 'Heavier bodies fall faster, because gravity pulls harder on them.', 'Gravity does pull harder on a heavier body, but the body is also harder to accelerate, in the same proportion. Without air resistance, all bodies fall with the same acceleration g.'],
+      de: ['Schwerer fällt schneller', 'Schwerere Körper fallen schneller, weil die Schwerkraft stärker an ihnen zieht.', 'Die Schwerkraft zieht zwar stärker an einem schwereren Körper, aber er ist im gleichen Verhältnis auch schwerer zu beschleunigen. Ohne Luftwiderstand fallen alle Körper mit derselben Beschleunigung g.'],
     },
     'rest-no-force': {
-      en: ['At rest, no force', 'A body that is at rest, even for a moment, has no force acting on it or no acceleration.'],
-      de: ['In Ruhe, keine Kraft', 'Auf einen Körper, der (auch nur kurz) ruht, wirkt keine Kraft, oder er hat keine Beschleunigung.'],
+      en: ['At rest, no force', 'A body that is at rest, even for a moment, has no force acting on it or no acceleration.', 'Being at rest says nothing about the forces. A body at rest can have several forces acting on it that balance. At a turning point, such as the top of a throw, the velocity is zero for an instant, but gravity still acts and the acceleration is g.'],
+      de: ['In Ruhe, keine Kraft', 'Auf einen Körper, der (auch nur kurz) ruht, wirkt keine Kraft, oder er hat keine Beschleunigung.', 'Ruhe sagt nichts über die Kräfte aus. Auf einen ruhenden Körper können mehrere Kräfte wirken, die sich aufheben. In einem Umkehrpunkt, etwa im höchsten Punkt eines Wurfs, ist die Geschwindigkeit kurz null, aber die Schwerkraft wirkt weiter und die Beschleunigung ist g.'],
     },
     'mass-wins': {
-      en: ['The larger mass pushes harder', 'In an interaction, the heavier body exerts the larger force.'],
-      de: ['Die grössere Masse drückt stärker', 'Bei einer Wechselwirkung übt der schwerere Körper die grössere Kraft aus.'],
+      en: ['The larger mass pushes harder', 'In an interaction, the heavier body exerts the larger force.', 'Two interacting bodies always exert forces of the same size on each other, in opposite directions, whatever their masses (Newton’s third law). The lighter body just accelerates more.'],
+      de: ['Die grössere Masse drückt stärker', 'Bei einer Wechselwirkung übt der schwerere Körper die grössere Kraft aus.', 'Zwei Körper in Wechselwirkung üben immer gleich grosse, entgegengesetzte Kräfte aufeinander aus, egal wie gross ihre Massen sind (drittes Newtonsches Gesetz). Der leichtere Körper wird nur stärker beschleunigt.'],
     },
     'active-wins': {
-      en: ['The active one pushes harder', 'In an interaction, the body that is faster or does the pushing exerts the larger force.'],
-      de: ['Wer aktiv ist, drückt stärker', 'Bei einer Wechselwirkung übt der Körper, der schneller ist oder stösst, die grössere Kraft aus.'],
+      en: ['The active one pushes harder', 'In an interaction, the body that is faster or does the pushing exerts the larger force.', 'Two interacting bodies always exert forces of the same size on each other, in opposite directions, no matter which one moves faster or does the pushing (Newton’s third law).'],
+      de: ['Wer aktiv ist, drückt stärker', 'Bei einer Wechselwirkung übt der Körper, der schneller ist oder stösst, die grössere Kraft aus.', 'Zwei Körper in Wechselwirkung üben immer gleich grosse, entgegengesetzte Kräfte aufeinander aus, egal welcher schneller ist oder stösst (drittes Newtonsches Gesetz).'],
     },
     obstacle: {
-      en: ['Obstacles exert no force', 'Tables, ropes, walls or parked cars only block the way; they do not push or pull.'],
-      de: ['Hindernisse üben keine Kraft aus', 'Tische, Seile, Wände oder parkierte Autos sind nur im Weg; sie drücken oder ziehen nicht.'],
+      en: ['Obstacles exert no force', 'Tables, ropes, walls or parked cars only block the way; they do not push or pull.', 'Tables, ropes, walls and parked cars deform slightly and push or pull back: a table exerts an upward normal force, a rope a tension force, a wall a force on whatever presses against it.'],
+      de: ['Hindernisse üben keine Kraft aus', 'Tische, Seile, Wände oder parkierte Autos sind nur im Weg; sie drücken oder ziehen nicht.', 'Tische, Seile, Wände und parkierte Autos verformen sich ein wenig und drücken oder ziehen zurück: Ein Tisch übt eine Normalkraft nach oben aus, ein Seil eine Zugkraft, eine Wand eine Kraft auf alles, was gegen sie drückt.'],
     },
     'pair-confusion': {
-      en: ['Balance mistaken for interaction', 'Two forces that balance on one body are taken for an action–reaction pair.'],
-      de: ['Gleichgewicht mit Wechselwirkung verwechselt', 'Zwei Kräfte, die sich an einem Körper aufheben, werden für ein Kraft-Gegenkraft-Paar gehalten.'],
+      en: ['Balance mistaken for interaction', 'Two forces that balance on one body are taken for an action–reaction pair.', 'The two forces of an action–reaction pair act on two different bodies and are of the same kind. Two forces that balance act on the same body and are often of different kinds, such as weight and normal force.'],
+      de: ['Gleichgewicht mit Wechselwirkung verwechselt', 'Zwei Kräfte, die sich an einem Körper aufheben, werden für ein Kraft-Gegenkraft-Paar gehalten.', 'Die beiden Kräfte eines Kraft-Gegenkraft-Paars wirken auf zwei verschiedene Körper und sind von derselben Art. Zwei Kräfte, die sich aufheben, wirken auf denselben Körper und sind oft von verschiedener Art, etwa Gewichtskraft und Normalkraft.'],
     },
     'vector-add': {
-      en: ['Directions ignored', 'Velocities or forces are added as plain numbers, ignoring their directions.'],
-      de: ['Richtungen vergessen', 'Geschwindigkeiten oder Kräfte werden wie Zahlen addiert, ohne ihre Richtungen zu beachten.'],
+      en: ['Directions ignored', 'Velocities or forces are added as plain numbers, ignoring their directions.', 'Velocities and forces have directions and add as vectors: in opposite directions they subtract, and at an angle the arrows are added head to tail.'],
+      de: ['Richtungen vergessen', 'Geschwindigkeiten oder Kräfte werden wie Zahlen addiert, ohne ihre Richtungen zu beachten.', 'Geschwindigkeiten und Kräfte haben Richtungen und addieren sich als Vektoren: In entgegengesetzter Richtung subtrahieren sie sich, und bei einem Winkel hängt man die Pfeile aneinander.'],
     },
   };
-  const mis = (code) => (MIS[code] ? { name: MIS[code][lang][0], text: MIS[code][lang][1] } : null);
+  const mis = (code) => (MIS[code] ? { name: MIS[code][lang][0], text: MIS[code][lang][1], fix: MIS[code][lang][2] } : null);
 
   // ---------------------------------------------------------------- random numbers
   function rng(seed) {
