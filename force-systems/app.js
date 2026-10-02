@@ -12,7 +12,7 @@
   };
   const UI = {
     en: {
-      title: 'Force Systems', mode: 'Mode', topic: 'Topic', example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
+      title: 'Force Systems', mode: 'Mode', difficulty: 'Difficulty', example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
       tutorNote: `Use the arrow keys ← → to step through. The forces a step is about are highlighted. Colours: ${LEGEND.en}.`,
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
@@ -25,7 +25,7 @@
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
     de: {
-      title: 'Kräftesysteme', mode: 'Modus', topic: 'Thema', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
+      title: 'Kräftesysteme', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
       tutorNote: `Mit den Pfeiltasten ← → blätterst du weiter. Die Kräfte, um die es in einem Schritt geht, sind hervorgehoben. Farben: ${LEGEND.de}.`,
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
@@ -234,9 +234,10 @@
     document.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = ui()[el.dataset.i18nHtml]; });
     document.querySelectorAll('[data-i18n-label]').forEach((el) => { el.setAttribute('aria-label', ui()[el.dataset.i18nLabel]); });
     document.querySelector(`input[name="lang"][value="${lang}"]`).checked = true;
-    const cur = $('#levels').childElementCount ? level() : stored('fs-level', 'one');
-    $('#levels').innerHTML = Object.entries(LEVELS).map(([k, name]) => `
-      <label><input type="radio" name="level" value="${k}"${k === cur ? ' checked' : ''}><span>${name()}</span></label>`).join('');
+    let cur = $('#levels').childElementCount ? level() : stored('fs-level', 'easy');
+    if (!LEVELS[cur]) cur = 'easy'; // a level of an earlier version
+    $('#levels').innerHTML = Object.entries(LEVELS).map(([k, lv]) => `
+      <label><input type="radio" name="level" value="${k}"${k === cur ? ' checked' : ''}><span>${lv.name()}</span></label>`).join('');
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
@@ -295,7 +296,7 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
-    m = h.match(/^(mixed|one|two|slope)-(\d+)$/);
+    m = h.match(/^(easy|medium|hard|mixed)-(\d+)$/);
     if (m) {
       setMode('practice');
       document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;

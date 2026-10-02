@@ -10,13 +10,14 @@
   const FS = root.FS, { SCENARIOS } = root.Scenarios;
   const { L, tex, tq, rng } = FS;
 
+  // Practice levels by difficulty (see the scenarios): easy ★–★★, medium ★★★, hard ★★★★–★★★★★.
   const LEVELS = {
-    mixed: () => L('Mixed', 'Gemischt'),
-    one: () => L('One box', 'Eine Kiste'),
-    two: () => L('Two boxes', 'Zwei Kisten'),
-    slope: () => L('Pulleys and slopes', 'Rollen und Hänge'),
+    easy: { name: () => L('Easy', 'Einfach'), from: 1, to: 2 },
+    medium: { name: () => L('Medium', 'Mittel'), from: 3, to: 3 },
+    hard: { name: () => L('Hard', 'Schwierig'), from: 4, to: 5 },
+    mixed: { name: () => L('Mixed', 'Gemischt'), from: 1, to: 5 },
   };
-  const pool = (level) => SCENARIOS.filter((s) => level === 'mixed' || s.level === level);
+  const pool = (level) => SCENARIOS.filter((s) => s.difficulty >= LEVELS[level].from && s.difficulty <= LEVELS[level].to);
   const byId = (id) => SCENARIOS.find((s) => s.id === id);
 
   // What a wrong value suggests: the answer under a typical wrong idea (scenarios may say it better).

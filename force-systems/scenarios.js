@@ -1,5 +1,6 @@
 // The situations of the worksheet “Übungen Kräftesysteme”: one box at rest or pulled across the
-// floor, two boxes pushed or joined by a rope, pulleys and slopes. A scenario:
+// floor, two boxes pushed or joined by a rope, pulleys and slopes. A scenario has an id, a
+// difficulty from 1 to 5 (for practice levels and the arcade), and:
 //   make(r, o)         random parameters (null if they do not fit); with o.nice, angles are
 //                      the 3-4-5 angle, so that no calculator is needed
 //   solve(p, o)        the wanted quantities; o switches on a typical wrong idea (see WHY in
@@ -50,7 +51,7 @@
   function floorBox(m, mu, w = 500, h = 300) {
     const sc = new Scene(w, h, L('A box on the floor', 'Eine Kiste auf dem Boden'));
     const y0 = h - 76, [bw, bh] = dims(m), x0 = (w - bw) / 2;
-    sc.line(40, y0, w - 40, y0, 'ground');
+    sc.surface([40, y0], [w - 40, y0]);
     const at = sc.box([x0, y0], [1, 0], [0, -1], bw, bh, kg(m));
     if (mu != null) sc.text(48, y0 + 22, `${svgSym('mu')} = ${num(mu)}`, 'lbl small', 'start');
     const c = at(bw / 2, bh / 2);
@@ -65,7 +66,7 @@
   const sized = (sc, mags) => { sc.forces.forEach((s) => { if (mags[s.id] != null) s.mag = mags[s.id]; }); return sc; };
 
   const restUp = {
-    id: 'rest-up', level: 'one',
+    id: 'rest-up', difficulty: 1,
     make(r) {
       const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8]), dir = pick(r, ['up', 'down']);
       const list = [2, 3, 4, 5, 6, 8, 10, 12, 15, 18, 20, 25, 30, 40, 50].filter((F) => F >= 0.1 * m * G && F <= (dir === 'up' ? 0.85 : 1.2) * m * G);
@@ -120,7 +121,7 @@
   };
 
   const restAngle = {
-    id: 'rest-angle', level: 'one',
+    id: 'rest-angle', difficulty: 2,
     make(r, o = {}) {
       const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5]), ref = pick(r, ['v', 'h']), alpha = o.nice ? A345 : pick(r, [20, 25, 30, 35, 40, 45, 50, 60]);
       const F = pick(r, o.nice ? [5, 10, 15, 20, 25, 30, 40] : [4, 5, 6, 8, 10, 12, 14, 15, 16, 18, 20, 25, 30, 40]);
@@ -185,7 +186,7 @@
   };
 
   const pullFriction = {
-    id: 'pull-friction', level: 'one',
+    id: 'pull-friction', difficulty: 2,
     make(r) {
       const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8]), mu = pick(r, [0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6]);
       if (r() < 0.5) return { m, mu, given: 'a', a: pick(r, [0.5, 1, 1.5, 2, 2.5, 3, 4]) };
@@ -251,7 +252,7 @@
     const w = 720, h = 330, sc = new Scene(w, h, L('Two boxes on the floor', 'Zwei Kisten auf dem Boden'));
     const y0 = h - 80, [w1, h1] = dims(p.m1, [p.m1, p.m2]), [w2, h2] = dims(p.m2, [p.m1, p.m2]);
     const x1 = (w - w1 - gap - w2) / 2, x2 = x1 + w1 + gap;
-    sc.line(30, y0, w - 30, y0, 'ground');
+    sc.surface([30, y0], [w - 30, y0]);
     const at1 = sc.box([x1, y0], [1, 0], [0, -1], w1, h1, kg(p.m1));
     const at2 = sc.box([x2, y0], [1, 0], [0, -1], w2, h2, kg(p.m2));
     const c1 = at1(w1 / 2, h1 / 2), c2 = at2(w2 / 2, h2 / 2);
@@ -266,7 +267,7 @@
   }
 
   const pushPair = {
-    id: 'push-pair', level: 'two',
+    id: 'push-pair', difficulty: 3,
     make(r) {
       const m1 = pick(r, [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 1.5, 2, 3, 4]);
       const mu = r() < 0.5 ? 0 : pick(r, [0.1, 0.2, 0.3]);
@@ -335,7 +336,7 @@
   };
 
   const ropePair = {
-    id: 'rope-pair', level: 'two',
+    id: 'rope-pair', difficulty: 3,
     make(r) {
       const m1 = pick(r, [2, 3, 4, 5, 6]), m2 = pick(r, [1, 2, 3, 4]);
       const mu1 = pick(r, [0.1, 0.2, 0.3, 0.4, 0.5]), mu2 = r() < 0.6 ? 0 : pick(r, [0.1, 0.2, 0.3]);
@@ -404,7 +405,7 @@
 
   // ---------------------------------------------------------------- pulleys
   const atwood = {
-    id: 'atwood', level: 'slope',
+    id: 'atwood', difficulty: 3,
     make(r) {
       const m1 = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6]), m2 = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6]);
       return m1 === m2 ? null : { m1, m2 };
@@ -428,8 +429,8 @@
       const sc = new Scene(440, 400, L('Two boxes over a pulley', 'Zwei Kisten über eine Rolle'));
       // the lighter box hangs higher; the pulley is just wide enough for the heavier box's rope to pass it
       const [wl, hl] = dims(Math.min(p.m1, p.m2), [p.m1, p.m2]), r = Math.max(28, wl / 4 + 8), cx = 220, cy = 24 + r;
-      sc.line(cx - r - 40, 14, cx + r + 40, 14, 'ground'); sc.line(cx, 14, cx, cy, 'w');
-      sc.circle(cx, cy, r); sc.circle(cx, cy, 3, 'dot');
+      sc.surface([cx - r - 40, 14], [cx + r + 40, 14], -1); sc.line(cx, 14, cx, cy, 'w');
+      sc.pulley(cx, cy, r);
       const heavyLeft = p.m1 > p.m2;
       const box = (i, m, x, ytop) => {
         const [bw, bh] = dims(m, [p.m1, p.m2]), at = sc.box([x - bw / 2, ytop + bh], [1, 0], [0, -1], bw, bh, kg(m));
@@ -473,7 +474,7 @@
   };
 
   const tablePulley = {
-    id: 'table-pulley', level: 'slope',
+    id: 'table-pulley', difficulty: 4,
     make(r) {
       const m1 = pick(r, [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 1.5, 2, 3, 4, 5]), mu = pick(r, [0.1, 0.2, 0.3, 0.4, 0.5]);
       return m2 * G > mu * m1 * G + 0.3 * (m1 + m2) ? { m1, m2, mu } : null;
@@ -497,8 +498,8 @@
       const sc = new Scene(480, 420, L('A box on a table, pulled by a hanging box', 'Eine Kiste auf einem Tisch, von einer hängenden Kiste gezogen'));
       const y0 = 200, xe = 350, r = 16, [w1, h1] = dims(p.m1, [p.m1, p.m2]), x1 = 100;
       const yr = y0 - h1 / 2, cx = xe + 4, cy = yr + r;
-      sc.line(20, y0, xe, y0, 'ground'); sc.line(xe, y0, xe, y0 + 60, 'w');
-      sc.line(xe - 6, y0, cx, cy, 'w'); sc.circle(cx, cy, r); sc.circle(cx, cy, 2.5, 'dot');
+      sc.surface([20, y0], [xe, y0]); sc.surface([xe, y0], [xe, y0 + 60], 1, 'w');
+      sc.line(xe - 6, y0, cx, cy, 'w'); sc.pulley(cx, cy, r);
       const at1 = sc.box([x1, y0], [1, 0], [0, -1], w1, h1, kg(p.m1));
       sc.text(28, y0 + 42, `${svgSym('mu')} = ${num(p.mu, 2)}`, 'lbl small', 'start');
       sc.line(x1 + w1, yr, cx, yr, 'w rope');
@@ -552,7 +553,7 @@
     const u = [Math.cos(a), -Math.sin(a)], n = [-Math.sin(a), -Math.cos(a)];
     const top = [o[0] + len * u[0], o[1] + len * u[1]];
     sc.poly([o, top, [top[0], o[1]]], 'slope');
-    sc.line(o[0] - 20, o[1], groundEnd || top[0] + 20, o[1], 'ground');
+    sc.surface([o[0] - 20, o[1]], [groundEnd || top[0] + 20, o[1]]);
     sc.angle(o, 40, 0, p.alpha, angleLabel(p), 16);
     return { sc, u, n, top };
   }
@@ -575,7 +576,7 @@
   const slopeMake = (r, o = {}) => ({ alpha: o.nice ? A345 : pick(r, [15, 20, 25, 30, 35, 40, 45]), mu: pick(r, o.nice ? [0.1, 0.2, 0.25, 0.5] : [0.1, 0.2, 0.3, 0.4, 0.5]) });
 
   const inclinePull = {
-    id: 'incline-pull', level: 'slope',
+    id: 'incline-pull', difficulty: 4,
     make(r, o = {}) {
       const { alpha, mu } = slopeMake(r, o);
       return { m: pick(r, [1, 2, 3, 4, 5, 6, 8]), alpha, mu, a: r() < 0.2 ? 0 : pick(r, [0.5, 1, 1.5, 2, 3]) };
@@ -639,7 +640,7 @@
   };
 
   const inclinePulley = {
-    id: 'incline-pulley', level: 'slope',
+    id: 'incline-pulley', difficulty: 5,
     make(r, o = {}) {
       const { alpha, mu } = slopeMake(r, o), m1 = pick(r, [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 2, 3, 4, 5, 6, 8]);
       const a = rad(alpha), drive = m2 * G - m1 * G * (Math.sin(a) + mu * Math.cos(a));
@@ -676,7 +677,7 @@
       // the pulley sticks out past the top, so that the box hangs clear of the slope
       const d = b.bh / 2, out = Math.max(0, (w2 / 2 - r + 8 - (d - r) * n[0]) / u[0]);
       const C = [top[0] + (d - r) * n[0] + out * u[0], top[1] + (d - r) * n[1] + out * u[1]];
-      sc.line(top[0], top[1], C[0], C[1], 'w'); sc.circle(C[0], C[1], r); sc.circle(C[0], C[1], 2.5, 'dot');
+      sc.line(top[0], top[1], C[0], C[1], 'w'); sc.pulley(C[0], C[1], r);
       const att = b.at(b.bw, d), tan = [C[0] + r * n[0], C[1] + r * n[1]];
       sc.line(att[0], att[1], tan[0], tan[1], 'w rope');
       const x2 = C[0] + r, ytop = C[1] + 0.5 * (o[1] - C[1]);

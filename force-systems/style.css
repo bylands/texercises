@@ -20,7 +20,8 @@
   --f-s: #1d7a3e;
   --f-k: #8a3ab9;
   --f-acc: #55606b;
-  --slope: #f1efe9;
+  --slope: #ece9e1;
+  --box: #e8edf3;
   --mark: #ffe066;
   --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
   color-scheme: light;
@@ -49,7 +50,8 @@
     --f-s: #7fd49a;
     --f-k: #d29bff;
     --f-acc: #aab2ba;
-    --slope: #2c3035;
+    --slope: #2a2d31;
+    --box: #2d3540;
     --mark: #6b5600;
     color-scheme: dark;
   }
@@ -101,36 +103,43 @@ input, button { font: inherit; color: inherit; }
 .fig.scrolls::after { content: "↔"; position: sticky; left: 0; display: block; margin-top: 4px; font-size: 0.8rem; color: var(--muted); }
 
 /* drawings */
+/* drawings, in the manner of mechanics textbooks: fine outlines, tinted bodies, hatched surfaces,
+   slim notched arrowheads, and labels with a halo of the background so that lines never cut them */
 svg text { font-family: var(--serif); font-size: 15px; }
-svg .w { stroke: var(--ink); stroke-width: 1.6; fill: none; stroke-linecap: round; }
-svg .w.thin { stroke-width: 1; }
-svg .w.dash { stroke-dasharray: 4 4; stroke-width: 1; }
-svg .w.rope { stroke-width: 1.4; }
-svg .ground { stroke: var(--ink); stroke-width: 3; }
-svg .body { fill: var(--card); stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
-svg .slope { fill: var(--slope); stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
-svg .pulley { fill: var(--card); stroke: var(--ink); stroke-width: 1.6; }
+svg .w { stroke: var(--ink); stroke-width: 1.3; fill: none; stroke-linecap: round; }
+svg .w.thin { stroke-width: 0.9; }
+svg .w.dash { stroke: var(--muted); stroke-dasharray: 4 3; stroke-width: 0.9; }
+svg .w.rope { stroke-width: 1.2; }
+svg .ground { stroke: var(--ink); stroke-width: 1.5; stroke-linecap: butt; }
+svg .hatch { fill: none; stroke: var(--ink); stroke-width: 0.8; stroke-opacity: 0.55; }
+svg .body { fill: var(--box); stroke: var(--ink); stroke-width: 1.3; stroke-linejoin: round; }
+svg .slope { fill: var(--slope); stroke: var(--ink); stroke-width: 1.3; stroke-linejoin: round; }
+svg .pulley { fill: var(--box); stroke: var(--ink); stroke-width: 1.3; }
+svg .hub { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
 svg .dot { fill: var(--ink); }
 svg .lbl { fill: var(--ink); }
 svg .lbl.small { font-size: 13px; }
-svg .lbl.mass { font-size: 13px; }
-svg .sub { font-size: 70%; }
+svg .lbl.mass { font-size: 12.5px; fill: var(--muted); }
+svg .sub { font-size: 72%; }
+svg :is(.lbl, .flbl) { paint-order: stroke fill; stroke: var(--card); stroke-width: 3.5px; stroke-linejoin: round; }
+svg .lbl.mass { stroke: var(--box); }
 svg .force { color: var(--ink); }
-svg .force line { stroke: currentColor; stroke-width: 2.2; }
+svg .force line { stroke: currentColor; stroke-width: 1.9; stroke-linecap: butt; }
 svg .force polygon, svg .force circle { fill: currentColor; }
 svg .force text { fill: currentColor; font-size: 16px; }
 svg .k-g, .k-g { color: var(--f-g); }
 svg .k-comp { color: var(--f-g); }
-svg .k-comp line { stroke-dasharray: 5 3; stroke-width: 1.6; }
+svg .k-comp line { stroke-dasharray: 4 3; stroke-width: 1.3; }
+svg .k-comp polygon { fill-opacity: 0.8; }
 svg .k-n, .k-n { color: var(--f-n); }
 svg .k-r, .k-r { color: var(--f-r); }
 svg .k-s, .k-s { color: var(--f-s); }
 svg .k-k, .k-k { color: var(--f-k); }
 svg .k-acc, .k-acc { color: var(--f-acc); }
-svg .k-acc line { stroke-width: 1.4; }
-svg .force.hl line { stroke-width: 3.4; }
+svg .k-acc line { stroke-width: 1.2; }
+svg .force.hl line { stroke-width: 3; }
 svg .force.hl text { font-weight: 700; }
-svg .force.dim { opacity: 0.3; }
+svg .force.dim { opacity: 0.25; }
 .note .k-g, .note .k-n, .note .k-r, .note .k-s, .note .k-k, .note .k-acc { font-weight: 600; }
 
 /* answer form */
@@ -213,7 +222,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   --accent: #58c4dd; --accent-ink: #000;
   --ok: #83c167; --ok-bg: rgba(131, 193, 103, 0.2); --bad: #fc6255; --bad-bg: rgba(252, 98, 85, 0.15); --warn: #f0ac5f; --warn-bg: rgba(240, 172, 95, 0.15);
   --f-g: #fc6255; --f-n: #58c4dd; --f-r: #f0ac5f; --f-s: #83c167; --f-k: #c59ee6; --f-acc: #ffff00;
-  --slope: #141414; --mark: #806a00;
+  --slope: #141414; --box: rgba(88, 196, 221, 0.1); --mark: #806a00;
   --serif: KaTeX_Main, "Latin Modern Roman", "CMU Serif", "Times New Roman", serif;
   color-scheme: dark;
   background: #000; color: var(--ink); border-color: #000;

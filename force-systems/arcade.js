@@ -9,17 +9,14 @@
 (function (root) {
   'use strict';
 
-  const FS = root.FS, { generateFor, quiz } = root.Forces;
+  const FS = root.FS, { generateFor, quiz, SCENARIOS } = root.Forces;
   const $ = (sel) => document.querySelector(sel);
 
   const DURATION = 300; // s
   const PENALTY = 50, BONUS = 100;
   const REVEAL = 900; // ms the right option is shown before the next question
-  // Difficulty of the situations, 1 to 5; the game moves up one level every two questions.
-  const DIFFICULTY = {
-    'rest-up': 1, 'pull-friction': 2, 'rest-angle': 2, 'push-pair': 3, atwood: 3, 'rope-pair': 3,
-    'table-pulley': 4, 'incline-pull': 4, 'incline-pulley': 5,
-  };
+  // Difficulty of the situations, 1 to 5 (see scenarios.js); the game moves up one level every two questions.
+  const DIFFICULTY = Object.fromEntries(SCENARIOS.map((s) => [s.id, s.difficulty]));
   const par = (d) => 15 + 15 * d; // s; the speed bonus is gone after this time
   // The idea behind each wrong-answer flag (g = 9.81 m/s² never comes up: the values are made for g = 10 m/s²).
   const CONCEPT = { swap: 'comp', whole: 'comp', flatN: 'normal', noFric: 'friction', noSlope: 'slope', oneMass: 'mass', hangW: 'rope', hangW2: 'rope', pass: 'pass', dirF: 'dir' };

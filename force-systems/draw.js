@@ -9,7 +9,7 @@
 
   const { svgSym } = root.FS;
   const f = (x) => (Math.round(x * 10) / 10).toString();
-  const MAX_LEN = 96, MIN_LEN = 30, HEAD = 10;
+  const MAX_LEN = 96, MIN_LEN = 30, HEAD = 11, NOTCH = 8, BARB = 4.2;
 
   class Scene {
     constructor(w, h, label) {
@@ -30,6 +30,26 @@
     poly(pts, cls = 'body') { pts.forEach((p) => this.see(...p)); return this.add(`<polygon class="${cls}" points="${pts.map((p) => p.map(f).join(',')).join(' ')}"/>`); }
     text(x, y, html, cls = 'lbl', anchor = 'middle') { this.seeText(x, y, html, anchor); return this.add(`<text class="${cls}" x="${f(x)}" y="${f(y)}" text-anchor="${anchor}">${html}</text>`); }
     circle(cx, cy, r, cls = 'pulley') { this.see(cx - r, cy - r); this.see(cx + r, cy + r); return this.add(`<circle class="${cls}" cx="${f(cx)}" cy="${f(cy)}" r="${f(r)}"/>`); }
+    // A fixed surface from p1 to p2, hatched on one side as in mechanics drawings: side 1 is to
+    // the right of the direction p1 → p2 (below a floor drawn left to right), -1 the other side.
+    surface(p1, p2, side = 1, cls = 'ground') {
+      const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]), t = [(p2[0] - p1[0]) / len, (p2[1] - p1[1]) / len];
+      const n = [-t[1] * side, t[0] * side], d = [(n[0] - t[0]) * 6, (n[1] - t[1]) * 6];
+      let path = '';
+      for (let k = 5; k < len; k += 8) {
+        const q = [p1[0] + k * t[0], p1[1] + k * t[1]];
+        path += `M${f(q[0])} ${f(q[1])}l${f(d[0])} ${f(d[1])}`;
+        this.see(q[0] + d[0], q[1] + d[1]);
+      }
+      this.add(`<path class="hatch" d="${path}"/>`);
+      return this.line(...p1, ...p2, cls);
+    }
+    // A pulley: rim, hub and axle.
+    pulley(cx, cy, r) {
+      this.circle(cx, cy, r, 'pulley');
+      this.circle(cx, cy, Math.max(3, r * 0.3), 'hub');
+      return this.circle(cx, cy, 1.8, 'dot');
+    }
     // A box from its bottom-left corner, along the unit vector u (its base) and n (upwards).
     box(o, u, n, w, h, label) {
       const at = (s, t) => [o[0] + s * u[0] + t * n[0], o[1] + s * u[1] + t * n[1]];
@@ -80,11 +100,12 @@
         if (count) { bounds.see(...a); bounds.see(...tip); }
         const lbl = label(s, tip, draw, count);
         if (!draw) return;
-        const end = [tip[0] - HEAD * ux, tip[1] - HEAD * uy];
-        const head = [tip, [end[0] - 5 * uy, end[1] + 5 * ux], [end[0] + 5 * uy, end[1] - 5 * ux]];
-        out.push(`<g class="${cls}"><line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(end[0])}" y2="${f(end[1])}"/>` +
+        // a slim, notched arrowhead; the shaft ends in the notch
+        const back = [tip[0] - HEAD * ux, tip[1] - HEAD * uy], notch = [tip[0] - NOTCH * ux, tip[1] - NOTCH * uy];
+        const head = [tip, [back[0] - BARB * uy, back[1] + BARB * ux], notch, [back[0] + BARB * uy, back[1] - BARB * ux]];
+        out.push(`<g class="${cls}"><line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(notch[0])}" y2="${f(notch[1])}"/>` +
           `<polygon points="${head.map((p) => p.map(f).join(',')).join(' ')}"/>` +
-          `<circle cx="${f(a[0])}" cy="${f(a[1])}" r="2.2"/>` + lbl + '</g>');
+          `<circle cx="${f(a[0])}" cy="${f(a[1])}" r="2"/>` + lbl + '</g>');
       };
       for (const s of this.forces) {
         if (!(s.mag > 1e-9)) continue;
