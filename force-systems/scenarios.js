@@ -1,6 +1,7 @@
 // The situations of the worksheet “Übungen Kräftesysteme”: one box at rest or pulled across the
 // floor, two boxes pushed or joined by a rope, pulleys and slopes. A scenario has an id, a
-// difficulty from 1 to 5 (for practice levels and the arcade), and:
+// difficulty from 1 to 5 (for practice levels and the arcade), trig if its results need sine or
+// cosine, and:
 //   make(r, o)         random parameters (null if they do not fit); with o.nice, angles are
 //                      the 3-4-5 angle, so that no calculator is needed
 //   solve(p, o)        the wanted quantities; o switches on a typical wrong idea (see WHY in
@@ -93,7 +94,7 @@
       b.weight(); b.normal();
       // the rope pulls at the top, in line with the weight; the hand pushes on the top, right of the normal force
       if (p.dir === 'up') b.sc.force({ id: 'F', kind: 's', at: b.at(b.bw / 2 - 6, b.bh), dir: [0, -1], sym: ['F'], value: q(p.F, 'N'), task: 'value', lab: [-8, 4] });
-      else b.sc.force({ id: 'F', kind: 's', at: b.at(b.bw / 2 + 20, b.bh), dir: [0, 1], sym: ['F'], value: q(p.F, 'N'), task: 'value', lab: [8, 4] });
+      else b.sc.force({ id: 'F', kind: 's', at: b.at(b.bw / 2 + 20, b.bh), dir: [0, 1], max: 0.75 * b.bh, labTail: true, sym: ['F'], value: q(p.F, 'N'), task: 'value', lab: [6, -12] });
       return sized(b.sc, { G: v.G, N: v.N, F: p.F });
     },
     hints: (p) => [
@@ -121,7 +122,7 @@
   };
 
   const restAngle = {
-    id: 'rest-angle', difficulty: 2,
+    id: 'rest-angle', difficulty: 2, trig: true,
     make(r, o = {}) {
       const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5]), ref = pick(r, ['v', 'h']), alpha = o.nice ? A345 : pick(r, [20, 25, 30, 35, 40, 45, 50, 60]);
       const F = pick(r, o.nice ? [5, 10, 15, 20, 25, 30, 40] : [4, 5, 6, 8, 10, 12, 14, 15, 16, 18, 20, 25, 30, 40]);
@@ -407,8 +408,9 @@
   const atwood = {
     id: 'atwood', difficulty: 3,
     make(r) {
-      const m1 = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6]), m2 = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6]);
-      return m1 === m2 ? null : { m1, m2 };
+      const ms = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 12], m1 = pick(r, ms), m2 = pick(r, ms);
+      // at most 6 times heavier, so that both boxes fit the drawing (sizes follow the masses)
+      return m1 === m2 || Math.max(m1, m2) > 6 * Math.min(m1, m2) ? null : { m1, m2 };
     },
     solve(p, o = {}) {
       const g = o.g || G, hv = Math.max(p.m1, p.m2), lt = Math.min(p.m1, p.m2);
@@ -476,7 +478,8 @@
   const tablePulley = {
     id: 'table-pulley', difficulty: 4,
     make(r) {
-      const m1 = pick(r, [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 1.5, 2, 3, 4, 5]), mu = pick(r, [0.1, 0.2, 0.3, 0.4, 0.5]);
+      const m1 = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8]), m2 = pick(r, [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6]), mu = pick(r, [0.1, 0.2, 0.25, 0.3, 0.4, 0.5]);
+      if (Math.max(m1, m2) > 6 * Math.min(m1, m2)) return null; // see atwood
       return m2 * G > mu * m1 * G + 0.3 * (m1 + m2) ? { m1, m2, mu } : null;
     },
     solve(p, o = {}) {
@@ -576,7 +579,7 @@
   const slopeMake = (r, o = {}) => ({ alpha: o.nice ? A345 : pick(r, [15, 20, 25, 30, 35, 40, 45]), mu: pick(r, o.nice ? [0.1, 0.2, 0.25, 0.5] : [0.1, 0.2, 0.3, 0.4, 0.5]) });
 
   const inclinePull = {
-    id: 'incline-pull', difficulty: 4,
+    id: 'incline-pull', difficulty: 4, trig: true,
     make(r, o = {}) {
       const { alpha, mu } = slopeMake(r, o);
       return { m: pick(r, [1, 2, 3, 4, 5, 6, 8]), alpha, mu, a: r() < 0.2 ? 0 : pick(r, [0.5, 1, 1.5, 2, 3]) };
@@ -640,7 +643,7 @@
   };
 
   const inclinePulley = {
-    id: 'incline-pulley', difficulty: 5,
+    id: 'incline-pulley', difficulty: 5, trig: true,
     make(r, o = {}) {
       const { alpha, mu } = slopeMake(r, o), m1 = pick(r, [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 2, 3, 4, 5, 6, 8]);
       const a = rad(alpha), drive = m2 * G - m1 * G * (Math.sin(a) + mu * Math.cos(a));

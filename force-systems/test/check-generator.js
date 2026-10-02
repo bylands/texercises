@@ -84,6 +84,9 @@ for (const lang of FS.LANGS) {
     for (let seed = 1; seed <= SAMPLES; seed++) {
       const ex = Forces.generate(level, seed);
       seen[ex.scenario] = (seen[ex.scenario] || 0) + 1;
+      // nice results (at most one decimal place, exact), except where sine or cosine come in
+      const sc = Forces.SCENARIOS.find((x) => x.id === ex.scenario);
+      if (!sc.trig) for (const f of ex.fields) if (Math.abs(10 * f.value - Math.round(10 * f.value)) > 1e-9) fail(`${lang} ${ex.id}: ${f.key} = ${f.value} is not a nice result`);
       checkExercise(ex, `${lang} ${ex.id}`);
     }
   }

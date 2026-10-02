@@ -57,12 +57,26 @@
     };
   }
 
-  const make = (scn, r) => { let p = null; for (let k = 0; k < 500 && !p; k++) p = scn.make(r); return p; };
+  // Parameters for which ok(p) holds, if found; else the first that fit at all.
+  function make(scn, r, ok, o) {
+    let first = null;
+    for (let k = 0; k < 5000; k++) {
+      const p = scn.make(r, o);
+      if (!p) continue;
+      if (!ok || ok(p)) return p;
+      first = first || p;
+    }
+    return first;
+  }
+  // Results that are exact with at most one decimal place, so that none needs rounding.
+  const tenth = (x) => Math.abs(10 * x - Math.round(10 * x)) < 1e-9;
+  const neat = (scn) => (scn.trig ? null : (p) => Object.values(scn.solve(p)).every(tenth));
 
+  // A practice exercise: with nice results, except where sine or cosine come in.
   function generate(level, seed) {
     const r = rng(seed), list = pool(level);
     const scn = list[Math.floor(r() * list.length)];
-    return { ...exercise(scn, make(scn, r)), id: `${level}-${seed}`, level, seed };
+    return { ...exercise(scn, make(scn, r, neat(scn))), id: `${level}-${seed}`, level, seed };
   }
 
   // All wanted quantities multiples of 0.5 and the angle (if any) the 3-4-5 angle: solvable
@@ -72,13 +86,8 @@
 
   // An exercise of the given situation (for the arcade); with o.nice, one that needs no calculator.
   function generateFor(scenario, seed, o = {}) {
-    const scn = byId(scenario), r = rng(seed);
-    let p = null;
-    for (let k = 0; k < 5000; k++) {
-      const c = scn.make(r, o);
-      if (c && (!o.nice || nice(scn, c))) { p = c; break; }
-    }
-    return { ...exercise(scn, p || make(scn, r)), seed, nice: !!o.nice };
+    const scn = byId(scenario);
+    return { ...exercise(scn, make(scn, rng(seed), o.nice ? (p) => nice(scn, p) : null, o)), seed, nice: !!o.nice };
   }
 
   // A multiple-choice question about one quantity of an exercise: the right value and three wrong

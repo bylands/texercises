@@ -60,7 +60,8 @@
     }
     // A force { id, kind: g|n|r|s|k|comp, at, dir (unit vector), mag (N), sym: [key, index],
     // value (its label in the task), task: 'value'|'sym' (shown in the task), lab: offset of the
-    // label from the tip }. The arrow starts where the force acts, also for pushes.
+    // label from the tip (from the tail with labTail), max: the longest it may be drawn }. The arrow starts where the force
+    // acts, also for pushes.
     force(spec) { this.forces.push(spec); return this; }
     // An acceleration arrow { id, at, dir, sym, value, task, lab }, drawn with a fixed length.
     accel(spec) { this.marks.push(spec); return this; }
@@ -77,8 +78,13 @@
       const task = !!view.task, hl = view.hl || new Set();
       const cls = (s, kind) => `force k-${kind}${hl.has(s.id) ? ' hl' : hl.size ? ' dim' : ''}`;
       const shown = (s) => (task ? !!s.task : !view.show || view.show.has(s.id));
-      const mags = this.forces.filter((s) => s.mag > 1e-9).map((s) => s.mag);
-      const scale = MAX_LEN / Math.max(...mags, 1e-9);
+      // The task scales the forces it shows (often just the given one, drawn at full length); the
+      // free-body diagram scales all forces, so that arrows keep their lengths from step to step.
+      const scaleOf = (list) => MAX_LEN / Math.max(...list.map((s) => s.mag), 1e-9);
+      const all = this.forces.filter((s) => s.mag > 1e-9);
+      const scale = task ? scaleOf(all.filter(shown)) : scaleOf(all), scaleAll = scaleOf(all);
+      // an arrow's length; s.max caps it (e.g. a push that would cross the whole body)
+      const length = (s, k) => Math.min(Math.max(MIN_LEN, s.mag * k), s.max || Infinity);
       const out = [], bounds = new Scene(0, 0);
       bounds.box0 = [...this.box0];
       const label = (s, tip, draw, count) => {
@@ -98,7 +104,7 @@
         const tip = [a[0] + len * ux, a[1] + len * uy];
         const count = draw || !view.tight;
         if (count) { bounds.see(...a); bounds.see(...tip); }
-        const lbl = label(s, tip, draw, count);
+        const lbl = label(s, s.labTail ? a : tip, draw, count);
         if (!draw) return;
         // a slim, notched arrowhead; the shaft ends in the notch
         const back = [tip[0] - HEAD * ux, tip[1] - HEAD * uy], notch = [tip[0] - NOTCH * ux, tip[1] - NOTCH * uy];
@@ -107,10 +113,8 @@
           `<polygon points="${head.map((p) => p.map(f).join(',')).join(' ')}"/>` +
           `<circle cx="${f(a[0])}" cy="${f(a[1])}" r="2"/>` + lbl + '</g>');
       };
-      for (const s of this.forces) {
-        if (!(s.mag > 1e-9)) continue;
-        arrow(s, Math.max(MIN_LEN, s.mag * scale), cls(s, s.kind), shown(s));
-      }
+      // forces not shown still reserve their room at the diagram's scale
+      for (const s of all) arrow(s, length(s, shown(s) ? scale : scaleAll), cls(s, s.kind), shown(s));
       for (const s of this.marks) arrow(s, s.len || 46, cls(s, 'acc'), shown(s));
       const PAD = 10, [x0, y0, x1, y1] = bounds.box0.map((v, k) => Math.round(v + (k < 2 ? -PAD : PAD)));
       return `<div class="fig"><svg viewBox="${x0} ${y0} ${x1 - x0} ${y1 - y0}" width="${x1 - x0}" role="img" aria-label="${this.label}">` +
