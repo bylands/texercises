@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Force Systems</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+  <script defer src="core.js"></script>
+  <script defer src="draw.js"></script>
+  <script defer src="scenarios.js"></script>
+  <script defer src="generator.js"></script>
+  <script defer src="lessons.js"></script>
+  <script defer src="tutor.js"></script>
+  <script defer src="arcade.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <h1 data-i18n="title">Force Systems</h1>
+      <div class="top-right">
+        <p id="score" class="score"></p>
+        <div id="langs" class="levels small" role="radiogroup" aria-label="Language">
+          <label><input type="radio" name="lang" value="en" checked><span title="English">EN</span></label>
+          <label><input type="radio" name="lang" value="de"><span title="Deutsch">DE</span></label>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="toolbar">
+      <div id="modes" class="levels" role="radiogroup" data-i18n-label="mode" aria-label="Mode">
+        <label><input type="radio" name="mode" value="tutor" checked><span data-i18n="tutor">Tutor</span></label>
+        <label><input type="radio" name="mode" value="practice"><span data-i18n="practice">Practice</span></label>
+        <label><input type="radio" name="mode" value="arcade"><span data-i18n="arcade">Arcade</span></label>
+      </div>
+      <div id="levels" class="levels practice" role="radiogroup" data-i18n-label="topic" aria-label="Topic" hidden></div>
+      <button id="new" type="button" class="new-btn practice" data-i18n="new" hidden>New exercise</button>
+    </div>
+
+    <section id="tutor" class="card">
+      <div id="examples" class="levels examples" role="radiogroup" data-i18n-label="example" aria-label="Example"></div>
+      <h2 id="t-title"></h2>
+      <p id="t-idea" class="note"></p>
+      <div id="t-figure" class="figs"></div>
+      <div class="progress" aria-hidden="true"><div id="t-bar"></div></div>
+      <div id="t-text" class="steps tutor-text" aria-live="polite"></div>
+      <div class="actions tutor-nav">
+        <button type="button" id="t-prev">← Back</button>
+        <span id="t-count" class="note"></span>
+        <button type="button" id="t-next" class="primary">Next →</button>
+      </div>
+      <p class="note" data-i18n-html="tutorNote"></p>
+    </section>
+
+    <section id="task" class="card practice" hidden>
+      <h2 id="title"></h2>
+      <div id="prompt"></div>
+      <div id="figure" class="figs"></div>
+
+      <form id="answers" novalidate>
+        <div id="fields" class="fields"></div>
+        <div class="actions">
+          <button type="submit" class="primary" data-i18n="check">Check</button>
+          <button type="button" id="hint">Hint</button>
+          <button type="button" id="reveal" data-i18n="reveal">Show solution</button>
+        </div>
+        <p id="reveal-note" class="note" data-i18n="revealNote">The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.</p>
+        <p id="status" class="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section id="hints" class="card" hidden>
+      <h3 data-i18n="hints">Hints</h3>
+      <ol id="hint-list"></ol>
+    </section>
+
+    <section id="solution" class="card" hidden>
+      <h3 data-i18n="solution">Solution</h3>
+      <div id="sol-figure" class="figs"></div>
+      <div id="sol-steps" class="steps"></div>
+      <p id="sol-short" class="short"></p>
+    </section>
+
+    <section id="arcade" class="card" hidden>
+      <div id="ar-start">
+        <h2 id="ar-start-title"></h2>
+        <div id="ar-rules" class="steps"></div>
+        <p id="ar-best" class="note"></p>
+        <div class="actions"><button type="button" id="ar-go" class="primary"></button></div>
+      </div>
+
+      <div id="ar-play" hidden>
+        <div class="ar-bar">
+          <span id="ar-time" class="ar-time" aria-live="off"></span>
+          <span id="ar-score" class="ar-score"></span>
+          <span id="ar-level" class="ar-level"></span>
+        </div>
+        <div class="progress" aria-hidden="true"><div id="ar-tbar"></div></div>
+        <p id="ar-toast" class="ar-toast" aria-live="polite"></p>
+        <div id="ar-stage">
+          <h2 id="ar-title"></h2>
+          <div id="ar-prompt"></div>
+          <div id="ar-figure" class="figs"></div>
+          <p id="ar-ask" class="ar-ask"></p>
+          <div id="ar-options" class="ar-options" role="group"></div>
+        </div>
+        <div class="actions ar-actions">
+          <button type="button" id="ar-skip"></button>
+          <button type="button" id="ar-quit"></button>
+        </div>
+      </div>
+
+      <div id="ar-summary" hidden>
+        <h2 id="ar-sum-title"></h2>
+        <p id="ar-sum-score" class="ar-big"></p>
+        <p id="ar-sum-stats"></p>
+        <ul id="ar-sum-notes" class="ar-notes"></ul>
+        <div id="ar-sum-list" class="ar-list"></div>
+        <div class="actions"><button type="button" id="ar-again" class="primary"></button></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
