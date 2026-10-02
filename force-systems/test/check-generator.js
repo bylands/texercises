@@ -68,6 +68,10 @@ function checkExercise(ex, id) {
   ex.solution.forEach((s, k) => checkText(id, `step ${k + 1}`, s));
   checkText(id, 'results', ex.results);
   checkText(id, 'task figure', ex.figure({ task: true }));
+  // every number in the task figure (masses, forces, μ, angles) must be the one in the text
+  const nums = (html) => (html.replace(/<[^>]*>/g, ' ').match(/\d+(?:[.,]\d+)?/g) || []).map((x) => x.replace(',', '.'));
+  const inText = new Set(nums(ex.text));
+  for (const x of nums(ex.figure({ task: true }).replace(/<svg[^>]*>/, ''))) if (!inText.has(x)) fail(`${id}: figure shows ${x}, the text does not`);
   checkText(id, 'solution figure', ex.solutionFigure());
   ex.steps.forEach((s, k) => checkText(id, `step figure ${k + 1}`, ex.figure({ show: new Set(s.show || []), hl: new Set(s.hl || []) })));
 }

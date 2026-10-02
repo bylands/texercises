@@ -53,7 +53,7 @@
     const y0 = h - 76, [bw, bh] = dims(m), x0 = (w - bw) / 2;
     sc.surface([40, y0], [w - 40, y0]);
     const at = sc.box([x0, y0], [1, 0], [0, -1], bw, bh, kg(m));
-    if (mu != null) sc.text(48, y0 + 22, `${svgSym('mu')} = ${num(mu)}`, 'lbl small', 'start');
+    if (mu != null) sc.text(48, y0 + 22, `${svgSym('mu')} = ${num(mu, 2)}`, 'lbl small', 'start');
     const c = at(bw / 2, bh / 2);
     return {
       sc, at, bw, bh, y0, c,
@@ -296,7 +296,7 @@
     // In the free-body diagram, the boxes are drawn apart, so that each contact force sits on its box.
     scene(p, v, view = {}) {
       const b = floorPair(p, view.task ? 0 : 64), sc = b.sc;
-      sc.text(36, b.y0 + 22, `${svgSym('mu')} = ${num(p.mu, 2)}`, 'lbl small', 'start');
+      if (p.mu) sc.text(36, b.y0 + 22, `${svgSym('mu')} = ${num(p.mu, 2)}`, 'lbl small', 'start'); // else the text says: no friction
       sc.force({ id: 'F', kind: 's', at: b.at1(0, 0.36 * b.h1), dir: [1, 0], sym: ['F'], value: q(p.F, 'N'), task: 'value', lab: [0, -12] });
       const hm = Math.min(b.h1, b.h2);
       sc.force({ id: 'K2', kind: 'k', at: [b.x2, b.y0 - 0.38 * hm], dir: [1, 0], sym: ['K'], lab: [0, -12] });
