@@ -8,9 +8,11 @@
 //   motion (speeding up, constant, slowing down; up or down), the speed after a kick, the
 //   direction of two forces, and that the picture options are far enough apart,
 // - every misconception appears among the wrong options, and the tutor lessons build,
-// - the German version matches the English one and has no English left (and no ß).
+// - the German version matches the English one and has no English left (and no ß),
+// - every exercise type has a difficulty, and every practice level gives its difficulties.
 'use strict';
 
+require('../lang.js');
 require('../draw.js');
 const FC = require('../core.js');
 ['gravity', 'inertia', 'force', 'interact', 'sorting', 'predict', 'truefalse'].forEach((f) => require(`../${f}.js`));
@@ -298,6 +300,19 @@ for (const lang of FC.LANGS) {
   }
 }
 FC.setLang('en');
+
+for (const g of FC.pool('mixed')) if (!FC.DIFFICULTY[g.name]) fail(`${g.name}: no difficulty`);
+for (const [level, ds] of Object.entries(FC.LEVELS)) {
+  const seen = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    const ex = FC.generate(level, seed);
+    if (!ds.includes(ex.difficulty)) fail(`${level}-${seed}: difficulty ${ex.difficulty}`);
+    if (ex.id !== `${level}-${seed}`) fail(`${level}-${seed}: id ${ex.id}`);
+    seen[ex.difficulty] = (seen[ex.difficulty] || 0) + 1;
+  }
+  if (Object.keys(seen).length !== ds.length) fail(`${level}: difficulties ${JSON.stringify(seen)}`);
+  console.log(`${level}: ${JSON.stringify(seen)}`);
+}
 
 console.log(`${checked} exercises checked, ${allGens.size} scenarios, ${[...codes].filter((c) => FC.MIS[c]).length} misconceptions offered.`);
 if (failures) { console.error(`${failures} failure(s).`); process.exit(1); }

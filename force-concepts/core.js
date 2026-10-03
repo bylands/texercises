@@ -14,17 +14,17 @@
 // a ranking ('rank'), a matching ('match') or a prediction with its explanation ('two'); see the
 // constructors below. Each wrong element carries a misconception code and an explanation.
 //
-// Languages: English and German (Swiss spelling, no ß). The generators write every text with
-// T(english, german), read at generation time; the random numbers do not depend on the language,
+// Languages: English and German (Swiss spelling, no ß), from lang.js (shared by the apps). The
+// generators write every text with T(english, german), read at generation time; the random numbers do not depend on the language,
 // so the same seed gives the same exercise, with the options in the same order, in both.
 (function (root) {
   'use strict';
 
-  const LANGS = ['en', 'de'];
-  let lang = 'en';
-  const setLang = (l) => { lang = LANGS.includes(l) ? l : 'en'; };
-  const getLang = () => lang;
-  const T = (en, de) => (lang === 'de' ? de : en);
+  const Lang = root.Lang || require('./lang.js');
+  const LANGS = Lang.LANGS;
+  const setLang = (l) => Lang.set(l, true);
+  const getLang = () => Lang.get();
+  const T = (en, de) => Lang.L(en, de);
 
   const TOPICS = {
     mixed: { en: 'Mixed', de: 'Gemischt' },
@@ -33,7 +33,7 @@
     force: { en: 'Net force', de: 'Resultierende' },
     interact: { en: 'Interaction', de: 'Wechselwirkung' },
   };
-  const topicName = (k) => TOPICS[k][lang];
+  const topicName = (k) => TOPICS[k][getLang()];
 
   // Each misconception: its name, what it claims, and the correct concept.
   const MIS = {
@@ -90,7 +90,7 @@
       de: ['Richtungen vergessen', 'Geschwindigkeiten oder Kräfte werden wie Zahlen addiert, ohne ihre Richtungen zu beachten.', 'Geschwindigkeiten und Kräfte haben Richtungen und addieren sich als Vektoren: In entgegengesetzter Richtung subtrahieren sie sich, und bei einem Winkel hängt man die Pfeile aneinander.'],
     },
   };
-  const mis = (code) => (MIS[code] ? { name: MIS[code][lang][0], text: MIS[code][lang][1], fix: MIS[code][lang][2] } : null);
+  const mis = (code) => (MIS[code] ? { name: MIS[code][getLang()][0], text: MIS[code][getLang()][1], fix: MIS[code][getLang()][2] } : null);
 
   // ---------------------------------------------------------------- random numbers
   function rng(seed) {
@@ -122,14 +122,14 @@
     G: ['G', 'G'], N: ['N', 'N'], T: ['T', 'S'], f: ['f', 'R'], R: ['R', 'W'], D: ['D', 'L'],
     net: ['net', 'res'], push: ['push', 'D'], drive: ['drive', 'A'], res: ['res', 'W'],
   };
-  const sub = (k) => (SUBS[k] ? SUBS[k][lang === 'de' ? 1 : 0] : k);
+  const sub = (k) => (SUBS[k] ? SUBS[k][getLang() === 'de' ? 1 : 0] : k);
   const F = (k) => `<i>F</i><sub>${sub(k)}</sub>`;   // HTML
   const FL = (k) => `F_${sub(k)}`;                    // label in a picture
   const list = (xs) => `<ul>${xs.map((x) => `<li>${x}</li>`).join('')}</ul>`;
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-  // Numbers with sig significant digits, without trailing zeros (decimal point in both
-  // languages); units after a no-break space.
-  const num = (x, sig = 2) => String(Number(x.toPrecision(sig)));
+  // Numbers with sig significant digits, without trailing zeros (decimal comma in German, as in
+  // the other apps); units after a no-break space.
+  const num = (x, sig = 2) => { const t = String(Number(x.toPrecision(sig))); return getLang() === 'de' ? t.replace('.', ',') : t; };
   const qty = (x, unit, sig = 2) => `${num(x, sig)}&nbsp;${unit}`;
   const deg = (rad) => Math.round((rad * 180) / Math.PI);
 
@@ -209,7 +209,7 @@
     predict: { en: 'Predict & explain', de: 'Vorhersagen & begründen' },
     tf: { en: 'True or false', de: 'Richtig oder falsch' },
   };
-  const formatName = (k) => FORMATS[k][lang];
+  const formatName = (k) => FORMATS[k][getLang()];
   function register(topic, name, fn, params = {}, format = 'choice') {
     GENS[name] = fn;
     POOLS[topic].push({ name, params, format });
@@ -219,15 +219,29 @@
     ex.id = id;
     ex.topic = topic;
     ex.gen = gen;
-    ex.lang = lang;
+    ex.lang = getLang();
+    ex.difficulty = DIFFICULTY[gen];
     ex.short = ex.questions.map((qu) => ({ prompt: qu.prompt, answer: answerText(qu) }));
     return ex;
   }
 
-  // The exercises of a topic in a format ('all' for any); a topic without that format falls back
-  // to all topics. Ids: topic-seed, or topic-format-seed when a format is chosen.
+  // How hard each exercise type is, 1–5: one simple idea in a familiar situation (1) up to
+  // several ideas combined, in a format that asks for every detail (5).
+  const DIFFICULTY = {
+    drop: 1, support: 1,
+    collision: 2, 'push-car': 2, kick: 2, balance: 2, 'tf-motion': 2,
+    throw: 3, circle: 3, 'push-apart': 3, magnets: 3, rolloff: 3, engine: 3, 'tf-throw': 3, 'tf-interact': 3,
+    thruster: 4, 'two-forces': 4, 'pendulum-cut': 4, 'rank-elevator': 4, 'rank-launch': 4, 'match-partners': 4,
+    'match-diagrams': 5, 'cart-launcher': 5, ramp: 5,
+  };
+  // The practice levels: the difficulties they include.
+  const LEVELS = { easy: [1, 2], medium: [3], hard: [4, 5], mixed: [1, 2, 3, 4, 5] };
+
+  // The exercises of a level, or of a topic, in a format ('all' for any); a topic without that
+  // format falls back to all topics. Ids: key-seed, or key-format-seed when a format is chosen.
   function pool(topic, format = 'all') {
-    const all = topic === 'mixed' ? Object.values(POOLS).flat() : POOLS[topic];
+    const all = LEVELS[topic] ? Object.values(POOLS).flat().filter((g) => LEVELS[topic].includes(DIFFICULTY[g.name]))
+      : topic === 'mixed' ? Object.values(POOLS).flat() : POOLS[topic];
     if (format === 'all') return all;
     const some = all.filter((g) => g.format === format);
     return some.length ? some : Object.values(POOLS).flat().filter((g) => g.format === format);
@@ -247,7 +261,7 @@
     'tf-throw': ['True or false: thrown up', 'Richtig oder falsch: hochgeworfen'], 'tf-motion': ['True or false: Newton’s laws', 'Richtig oder falsch: Newtonsche Gesetze'],
     'tf-interact': ['True or false: pulling on each other', 'Richtig oder falsch: gegenseitige Anziehung'],
   };
-  const typeName = (gen) => (TYPE_NAMES[gen] ? TYPE_NAMES[gen][lang === 'de' ? 1 : 0] : gen);
+  const typeName = (gen) => (TYPE_NAMES[gen] ? TYPE_NAMES[gen][getLang() === 'de' ? 1 : 0] : gen);
 
   // How hard each type was for the student: stats { type: { n, s } }, s a moving average of the
   // scores in [0, 1] (0: right at once, 1: solution needed). A type comes up with weight
@@ -291,7 +305,7 @@
   }
 
   const api = {
-    LANGS, setLang, getLang, T, TOPICS, topicName, FORMATS, formatName, MIS, mis, POOLS, GENS, rng,
+    LANGS, setLang, getLang, T, TOPICS, LEVELS, DIFFICULTY, topicName, FORMATS, formatName, MIS, mis, POOLS, GENS, rng,
     it, F, FL, list, cap, num, qty, deg, noun, o, q, stmt, tf, rank, match, two, ranksOf, rankText, answerText, misreads,
     register, pool, genOf, freshSeed, generate, build, TYPE_NAMES, typeName, recordResult, weightOf,
   };

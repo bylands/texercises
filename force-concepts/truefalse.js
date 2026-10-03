@@ -34,8 +34,8 @@
         T(`${only} So <i>a</i> = ${FG}/<i>m</i> = <i>g</i>, downward, all the time.`, `${only} Also ist <i>a</i> = ${FG}/<i>m</i> = <i>g</i>, nach unten, die ganze Zeit.`)),
       stmt(T('At the highest point, the velocity of the ball is zero.', 'Im höchsten Punkt ist die Geschwindigkeit des Balls null.'), true,
         T('It stops rising and starts falling: for a moment it is at rest.', 'Er hört auf zu steigen und beginnt zu fallen: Einen Moment lang ist er in Ruhe.')),
-      stmt(T('On the way down, the ball gets faster by about 9.8 m/s every second.', 'Auf dem Weg nach unten wird der Ball jede Sekunde um etwa 9.8 m/s schneller.'), true,
-        T('Its acceleration is <i>g</i> ≈ 9.8 m/s², downward.', 'Seine Beschleunigung ist <i>g</i> ≈ 9.8 m/s², nach unten.')),
+      stmt(T('On the way down, the ball gets faster by about 9.8 m/s every second.', 'Auf dem Weg nach unten wird der Ball jede Sekunde um etwa 9,8 m/s schneller.'), true,
+        T('Its acceleration is <i>g</i> ≈ 9.8 m/s², downward.', 'Seine Beschleunigung ist <i>g</i> ≈ 9,8 m/s², nach unten.')),
       stmt(T('The weight of the ball is larger on the way down than on the way up.', 'Die Gewichtskraft des Balls ist auf dem Weg nach unten grösser als auf dem Weg nach oben.'), false,
         T(`${FG} = <i>m·g</i> does not depend on the motion.`, `${FG} = <i>m·g</i> hängt nicht von der Bewegung ab.`)),
       stmt(T('The ball keeps rising only as long as an upward force acts on it.', 'Der Ball steigt nur so lange, wie eine Kraft nach oben auf ihn wirkt.'), false,
@@ -44,7 +44,7 @@
         T('Nothing touches it any more, and air resistance is negligible.', 'Nichts berührt ihn mehr, und der Luftwiderstand ist vernachlässigbar.'), 'impetus'),
       stmt(T('A heavier ball thrown up at the same speed reaches a lower height.', 'Ein schwererer Ball, mit gleicher Geschwindigkeit hochgeworfen, erreicht eine kleinere Höhe.'), false,
         T('A heavier ball is pulled harder but is also harder to slow down: its acceleration is <i>g</i> as well, so it rises just as high.', 'Ein schwererer Ball wird stärker gezogen, ist aber auch schwerer abzubremsen: Seine Beschleunigung ist ebenfalls <i>g</i>, also steigt er gleich hoch.'), 'heavier-faster'),
-      stmt(T('On the way up, the ball loses about 9.8 m/s of speed every second.', 'Auf dem Weg nach oben verliert der Ball jede Sekunde etwa 9.8 m/s an Geschwindigkeit.'), true,
+      stmt(T('On the way up, the ball loses about 9.8 m/s of speed every second.', 'Auf dem Weg nach oben verliert der Ball jede Sekunde etwa 9,8 m/s an Geschwindigkeit.'), true,
         T('The acceleration <i>g</i> points down, against the velocity: the ball slows down at that rate.', 'Die Beschleunigung <i>g</i> zeigt nach unten, gegen die Geschwindigkeit: Der Ball wird in diesem Mass langsamer.')),
     ];
     const items = pickFive(r, all);
@@ -59,7 +59,7 @@
         T('Which forces act on the ball after it has left the hand?', 'Welche Kräfte wirken auf den Ball, nachdem er die Hand verlassen hat?'),
         T('Plan: find the forces, then the acceleration (second law); then check each statement against them. Keep force, velocity and acceleration apart.', 'Plan: Bestimme die Kräfte, dann die Beschleunigung (zweites Gesetz); prüfe dann jede Aussage daran. Halte Kraft, Geschwindigkeit und Beschleunigung auseinander.'),
         T(`<i>a</i> = ${F('net')}/<i>m</i>. The velocity can be zero while the acceleration is not.`, `<i>a</i> = ${F('net')}/<i>m</i>. Die Geschwindigkeit kann null sein, während die Beschleunigung es nicht ist.`),
-        T(`Here only the weight acts, at every point: <i>a</i> = <i>g</i> ≈ 9.8 m/s², downward.`, `Hier wirkt in jedem Punkt nur die Gewichtskraft: <i>a</i> = <i>g</i> ≈ 9.8 m/s², nach unten.`),
+        T(`Here only the weight acts, at every point: <i>a</i> = <i>g</i> ≈ 9.8 m/s², downward.`, `Hier wirkt in jedem Punkt nur die Gewichtskraft: <i>a</i> = <i>g</i> ≈ 9,8 m/s², nach unten.`),
       ],
       steps: steps(items, fig),
     };

@@ -1,17 +1,6 @@
+/* Force Concepts: its colours, pictures, question formats, the typical-slips overlay and the tutor
+   extras; the general look is in ui.css (shared by the apps). */
 :root {
-  --bg: #f6f5f1;
-  --card: #ffffff;
-  --ink: #1f2328;
-  --muted: #646b73;
-  --line: #d9d6ce;
-  --accent: #2b59c3;
-  --accent-ink: #ffffff;
-  --new: #0f766e;
-  --new-ink: #ffffff;
-  --ok: #1d7a3e;
-  --ok-bg: #e6f4ea;
-  --bad: #b3261e;
-  --bad-bg: #fbe9e7;
   --force: #d24a0f;
   --vel: #1f5fd6;
   --acc: #1d7a3e;
@@ -23,25 +12,10 @@
   --space: #edeef5;
   --glow: #ffc21a;
   --flame: #f08c1a;
-  --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
-  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15171a;
-    --card: #1e2125;
-    --ink: #e6e3dc;
-    --muted: #9aa0a6;
-    --line: #3a3e44;
-    --accent: #7aa2ff;
-    --accent-ink: #0d1320;
-    --new: #2dd4bf;
-    --new-ink: #08201d;
-    --ok: #7fd49a;
-    --ok-bg: #1d3325;
-    --bad: #ff8a80;
-    --bad-bg: #3d2322;
     --force: #ff8a4c;
     --vel: #74a7ff;
     --acc: #7fd49a;
@@ -53,48 +27,9 @@
     --space: #1a1c2a;
     --glow: #ffd23f;
     --flame: #ffa040;
-    color-scheme: dark;
   }
 }
 
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-.wrap { max-width: 920px; margin: 0 auto; padding-inline: 16px; }
-
-.top { border-bottom: 1px solid var(--line); background: var(--card); }
-.top .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px; padding-block: 14px; }
-h1 { font-size: 1.25rem; margin: 0; }
-.score { margin: 0; color: var(--muted); font-size: 0.9rem; }
-.top-right { display: flex; align-items: center; gap: 12px; }
-.levels.small span { padding: 3px 10px; font-size: 0.85rem; }
-
-.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 20px 0 14px; }
-button, input { font: inherit; color: inherit; }
-.levels { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
-.levels label { position: relative; }
-.levels input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.levels span { display: block; padding: 7px 14px; border-left: 1px solid var(--line); }
-.levels label:first-child span { border-left: 0; }
-.levels input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.levels input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
-}
-.card h2 { margin: 0 0 6px; font-size: 1.1rem; }
-.card h3 { margin: 0 0 8px; font-size: 1rem; }
 #situation p { margin: 6px 0; }
 
 /* pictures */
@@ -167,7 +102,9 @@ svg .lbl.faint { fill: var(--muted); }
 svg .lbl .sub { font-style: normal; font-size: 0.72em; }
 svg .txt { fill: var(--muted); font: 12px system-ui, sans-serif; }
 
-/* questions: one block per question, the options as a list of sentences or as pictures */
+/* questions: one block per question, the options as a list of sentences or as pictures (not the
+   numeric fields of ui.css) */
+#fields .field { display: block; }
 #fields { display: grid; gap: 18px; margin-bottom: 16px; }
 .qprompt { margin: 0 0 8px; font-weight: 600; }
 .qn {
@@ -278,33 +215,11 @@ svg .txt { fill: var(--muted); font: 12px system-ui, sans-serif; }
   font-size: 0.78rem; font-weight: 600; white-space: nowrap;
 }
 
-.actions { display: flex; flex-wrap: wrap; gap: 8px; }
-button {
-  padding: 7px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  cursor: pointer;
-}
-button:hover:not(:disabled) { border-color: var(--accent); }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-button.new-btn { background: var(--new); border-color: var(--new); color: var(--new-ink); font-weight: 600; }
-button.new-btn:hover:not(:disabled) { border-color: var(--ink); }
 #profile-btn { display: inline-flex; align-items: center; gap: 6px; }
 .badge { display: inline-grid; place-items: center; min-width: 1.5em; height: 1.5em; padding: 0 5px; border-radius: 999px; background: var(--bad); color: var(--card); font-size: 0.78rem; font-weight: 700; }
-button:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.note { color: var(--muted); font-size: 0.9rem; margin: 10px 0 0; }
-.status { margin: 10px 0 0; min-height: 1.4em; }
-.status.ok { color: var(--ok); font-weight: 600; }
-.status.bad { color: var(--bad); }
-
-#hint-list { margin: 0; padding-left: 1.4em; }
-#hint-list li { margin: 6px 0; }
-
 .steps h4 { margin: 16px 0 2px; font-size: 1rem; }
 .steps p { margin: 8px 0; }
-.short { list-style: none; margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); font-weight: 600; }
+.short { list-style: none; margin: 14px 0 0; padding: 12px 0 0; }
 .short li { margin: 4px 0; }
 
 /* the “typical slips” overlay */
@@ -331,25 +246,24 @@ button.close:hover:not(:disabled) { color: var(--ink); }
 #profile-list .fix b { color: var(--ok); }
 
 /* tutor mode */
-.examples { margin-bottom: 14px; }
-.tutor-text { min-height: 8em; }
 .tutor-text .step-rule { color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
 .tutor-text .tq { margin: 8px 0; padding-left: 1.4em; font-weight: 600; }
 .tutor-text details { margin: 2px 0 12px 2.1em; }
 .tutor-text summary { cursor: pointer; color: var(--accent); font-size: 0.93rem; }
 .tutor-text .wrong { margin: 6px 0; padding-left: 1.2em; font-size: 0.93rem; }
 .tutor-text .wrong li { margin: 8px 0; }
-.tutor-nav { align-items: center; justify-content: space-between; margin-top: 12px; }
-.tutor-nav .note { margin: 0; }
-.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
-#t-bar { height: 100%; background: var(--accent); transition: width 0.2s; }
 .k-f { color: var(--force); font-weight: 600; }
 .k-v { color: var(--vel); font-weight: 600; }
 .k-a { color: var(--acc); font-weight: 600; }
 .k-net { color: var(--net); font-weight: 600; }
 
 @media (max-width: 560px) {
-  .card { padding: 14px; }
   .opts.pics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .levels span { padding: 7px 10px; }
 }
+
+/* arcade: manim's colours for forces, velocities, accelerations and the net force */
+#arcade { --force: #fc6255; --vel: #58c4dd; --acc: #83c167; --net: #c55f73; --obj: #1a1a1a; --heavy: #555; --solid: #333; --ice: #10202a; --space: #0d0d1a; }
+#arcade .figs svg.scene { width: 420px; }
+#arcade .ar-opt { font-size: 1.05rem; text-align: left; padding-left: 30px; }
+#arcade .ar-opt .val svg { width: 100%; max-width: 200px; margin: 0 auto; }
+#arcade .ar-answers svg { width: 160px; display: block; }

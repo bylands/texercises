@@ -1,21 +1,25 @@
+// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // Tutor mode: worked examples of increasing difficulty, explained step by step. The app gives
 // the examples as { name, idea, frames() }, where frames() returns [{ text, figure }] (HTML);
 // every frame marks in its figure what the text talks about. A frame's figure may be a getter,
 // so that refresh() can redraw it (e.g. after switching between linear and log-log axes).
-// helpers.t (optional) gives the button texts in the page's language; relabel(examples)
+// The button texts follow the page language (see lang.js; helpers.t may give others); relabel(examples)
 // swaps in the same examples in another language and stays on the current frame.
 (function (root) {
   'use strict';
 
   const $ = (sel) => document.querySelector(sel);
 
-  const EN = { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' };
+  const TEXTS = {
+    en: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
+    de: { example: (i, n) => `Beispiel ${i} von ${n}`, back: '← Zurück', prevEx: '← Vorheriges Beispiel', next: 'Weiter →', nextEx: 'Nächstes Beispiel →', done: 'Selbst üben →' },
+  };
 
   // helpers.after() runs once a frame is shown, helpers.done() once the last example is finished.
   function createTutor(examples, helpers) {
     let ex = 0, frame = 0;
     let cache = [];
-    const t = () => (helpers.t ? helpers.t() : EN);
+    const t = () => (helpers.t ? helpers.t() : TEXTS[root.Lang ? root.Lang.get() : 'en']);
     const load = (i) => (cache[i] = cache[i] || examples[i].frames());
 
     function show() {
