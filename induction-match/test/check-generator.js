@@ -1,5 +1,6 @@
 // Verifies the matching exercises: run with `node induction-match/test/check-generator.js`.
 // For many seeds of every family it checks that
+// - the difficulty fits the family, and every practice level gives its difficulties,
 // - every voltage graph is −dΦ/dt of its flux graph (by numerical differentiation),
 // - the flux is continuous and stays on the flux axis, the voltage on the voltage axis,
 // - the answer pairs the four flux graphs with the four voltage graphs one to one,
@@ -11,7 +12,8 @@
 // - both kinds of diagram render.
 'use strict';
 
-const { T, PHI_MAX, V_MAX, BEND, FAMILIES, generate, diagnose, flux, volt, curved } = require('../generator.js');
+require('../lang.js');
+const { T, PHI_MAX, V_MAX, BEND, FAMILIES, LEVELS, generate, ofDifficulty, diagnose, flux, volt, curved } = require('../generator.js');
 const { fluxGraph, voltGraph } = require('../plot.js');
 
 const SAMPLES = 2000;
@@ -19,13 +21,16 @@ let failures = 0;
 const fail = (msg) => { failures++; if (failures < 30) console.error('  FAIL ' + msg); };
 const grid = (n) => Array.from({ length: n }, (x, k) => ((k + 0.5) * T) / n);
 
-for (const family of Object.keys(FAMILIES)) {
+const RANGE = { straight: [1], pieces: [2, 3], exp: [3, 4], sine: [4, 5] };
+for (const family of FAMILIES) {
   const t0 = Date.now();
   const seen = new Set(), diagnoses = {}, kinds = {};
   let withAverage = 0;
   for (let seed = 1; seed <= SAMPLES; seed++) {
     const tag = `${family} ${seed}`;
     const ex = generate(family, seed);
+    if (!RANGE[family].includes(ex.difficulty)) fail(`${tag}: difficulty ${ex.difficulty}`);
+    if (family === 'straight' && ex.flux.some((f) => f.pieces.some(curved))) fail(`${tag}: curved piece`);
     seen.add(JSON.stringify(ex.flux.map((f) => f.pieces)));
 
     for (const f of ex.flux) {
@@ -44,7 +49,7 @@ for (const family of Object.keys(FAMILIES)) {
         const dphi = (flux(f, t + h) - flux(f, t - h)) / (2 * h);
         if (Math.abs(volt(f, t) + dphi) > 1e-5) { fail(`${tag}: voltage of ${f.id} is not −dΦ/dt at ${t.toFixed(2)} s`); break; }
       }
-      if (family === 'pieces') {
+      if (family === 'pieces' || family === 'straight') {
         ps.forEach((p, i) => {
           if (curved(p) && Math.abs(p.d1 - p.d0) * (p.t1 - p.t0) < BEND) fail(`${tag}: curve in ${f.id} barely bends`);
           const q = ps[i - 1], rate = (x) => (x.d1 - x.d0) / (x.t1 - x.t0);
@@ -70,7 +75,7 @@ for (const family of Object.keys(FAMILIES)) {
         if (d !== 'right') diagnoses[d] = (diagnoses[d] || 0) + 1;
       }
     }
-    if (!found.has('copy')) fail(`${tag}: no voltage graph copies a flux graph`);
+    if (family !== 'straight' && !found.has('copy')) fail(`${tag}: no voltage graph copies a flux graph`);
     if (!found.has('sign')) fail(`${tag}: no sign trap`);
     if (!found.has('steepness') && !found.has('average')) fail(`${tag}: no steepness or average-slope trap`);
     if (found.has('average')) withAverage++;
@@ -82,6 +87,19 @@ for (const family of Object.keys(FAMILIES)) {
   console.log(`${family}: ${SAMPLES} seeds, ${seen.size} distinct, pieces ${JSON.stringify(kinds)}, ${Date.now() - t0} ms`);
   console.log(`  wrong pairs by misconception: ${JSON.stringify(diagnoses)}${withAverage ? `; average-slope trap in ${Math.round((100 * withAverage) / SAMPLES)}%` : ''}`);
 }
+
+for (const [level, ds] of Object.entries(LEVELS)) {
+  const seen = {};
+  for (let seed = 1; seed <= 200; seed++) {
+    const ex = generate(level, seed);
+    if (!ds.includes(ex.difficulty)) fail(`${level} ${seed}: difficulty ${ex.difficulty}`);
+    if (ex.id !== `${level}-${seed}`) fail(`${level} ${seed}: id ${ex.id}`);
+    seen[ex.difficulty] = (seen[ex.difficulty] || 0) + 1;
+  }
+  if (Object.keys(seen).length !== ds.length) fail(`${level}: difficulties ${JSON.stringify(seen)}`);
+  console.log(`${level}: ${JSON.stringify(seen)}`);
+}
+for (let d = 1; d <= 5; d++) for (let seed = 1; seed <= 50; seed++) if (ofDifficulty(d, seed).difficulty !== d) fail(`difficulty ${d} seed ${seed}`);
 
 if (failures) { console.error(`\n${failures} failures`); process.exit(1); }
 console.log('Generator OK');

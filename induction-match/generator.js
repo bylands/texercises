@@ -7,13 +7,16 @@
 //   exp:  Φ = p0 + q·τ + r·(e^(−τ/tc) − 1); a·(1 − e^(−τ/tc)) is q = 0, r = −a
 //   sine: Φ = p0 + A·(sin(w·τ + ph) − sin(ph))
 // Exercise families:
-//   pieces: 3–4 straight or parabolic pieces with shared breakpoints,
-//   exp:    a field switched on or off (or both): exponential approach to a new value,
-//   sine:   a sinusoidal flux, possibly switched on after a while.
+//   straight: 3–4 straight pieces with shared breakpoints (difficulty 1),
+//   pieces: 3–4 straight or parabolic pieces with shared breakpoints (2–3, by the number of
+//     curved pieces),
+//   exp:    a field switched on or off (3), or both (4): exponential approach to a new value,
+//   sine:   a sinusoidal flux (4), possibly switched on after a while (5).
+// The levels of the practice mode pick an exercise of the right difficulty from these families.
 // The four flux graphs of an exercise are chosen so that typical misconceptions lead to
 // wrong pairs:
 //   copy (“higher flux, higher voltage”): a voltage graph is built with exactly the shape of
-//     a flux graph it does not belong to,
+//     a flux graph it does not belong to (not for straight pieces: their voltage graphs jump),
 //   sign (Lenz's rule forgotten): the mirror image of a graph,
 //   steepness: a graph that changes faster or slower (a steeper piece, a shorter time
 //     constant, a larger amplitude), or, for straight and curved pieces, average slope: a
@@ -28,7 +31,11 @@
   const V_MAX = 3;                    // voltage axis: −V_MAX … V_MAX mV
   const FLUX = ['A', 'B', 'C', 'D'];
   const VOLT = ['1', '2', '3', '4'];
-  const FAMILIES = { pieces: 'Straight and curved', exp: 'Exponential', sine: 'Sinusoidal' };
+  const FAMILIES = ['straight', 'pieces', 'exp', 'sine'];
+  // practice levels: the difficulties they include; the families that give each difficulty
+  const LEVELS = { easy: [1, 2], medium: [3], hard: [4, 5], mixed: [1, 2, 3, 4, 5] };
+  const BY_DIFFICULTY = { 1: ['straight'], 2: ['pieces'], 3: ['pieces', 'exp'], 4: ['exp', 'sine'], 5: ['sine'] };
+  const MANY_CURVES = 5;              // pieces family: with this many curved pieces or more, difficulty 3
 
   const SLOPES = [-2, -1, 0, 1, 2];   // mWb/s, straight and curved pieces
   const CURVED = 0.45;                // chance that a piece is curved (where that is visible)
@@ -176,6 +183,21 @@
     return set.every((g) => g && usablePieces(g)) ? set : null;
   }
 
+  // ---------------------------------------------------------------- family: straight pieces only
+  // P, its mirror image, P with one piece steeper or flatter, and that one mirrored or another graph.
+  function straightFamily(r) {
+    const make = () => {
+      const ts = breakpoints(r);
+      return graph(ts.slice(0, -1).map((t0, i) => {
+        const t1 = ts[i + 1];
+        return straight(t0, t1, r.pick(SLOPES.filter((d) => Math.abs(d) * (t1 - t0) <= 4)));
+      }));
+    };
+    const p = make(), near = nearPieces(r, p);
+    const set = [p, mirror(p), near, near && (r.next() < 0.5 ? mirror(near) : make())];
+    return set.every((g) => g && usablePieces(g)) ? set : null;
+  }
+
   // ---------------------------------------------------------------- family: exponential
   // Switched at ts towards a new value (and, for a pulse, back again at t2).
   function expFamily(r) {
@@ -209,10 +231,19 @@
     return [base, copied, mirror(r.pick([base, copied])), build(r.pick(amps))];
   }
 
-  const BUILD = { pieces: piecesFamily, exp: expFamily, sine: sineFamily };
+  const BUILD = { straight: straightFamily, pieces: piecesFamily, exp: expFamily, sine: sineFamily };
 
   // ---------------------------------------------------------------- exercise
-  function generate(family, seed) {
+  // Difficulty 1–5 (see the families above).
+  function difficulty(family, fluxes) {
+    const n = fluxes[0].pieces.length;
+    if (family === 'straight') return 1;
+    if (family === 'pieces') return fluxes.flatMap((f) => f.pieces).filter(curved).length >= MANY_CURVES ? 3 : 2;
+    if (family === 'exp') return n === 3 ? 4 : 3;
+    return n === 2 ? 5 : 4;
+  }
+
+  function build(family, seed) {
     const r = rng(seed);
     for (;;) {
       const set = BUILD[family](r);
@@ -231,12 +262,30 @@
       return {
         id: `${family}-${seed}`,
         family,
+        difficulty: difficulty(family, fluxes),
         flux: fluxes,
         volt: volts,
         answer: Object.fromEntries(volts.map((u) => [u.of, u.id])),
       };
     }
   }
+
+  // An exercise of one of the difficulties ds, drawn from the families that give it.
+  function pick(ds, seed) {
+    const r = rng(seed ^ 0x5bd1e995), d = r.pick(ds);
+    for (let k = 0; ; k++) {
+      const e = build(r.pick(BY_DIFFICULTY[d]), (seed + 7919 * k) >>> 0);
+      if (e.difficulty === d) return e;
+    }
+  }
+
+  // generate(level, seed): a practice exercise (easy, medium, hard, mixed); generate(family, seed):
+  // one of a family (for the worked examples).
+  function generate(key, seed) {
+    if (BUILD[key]) return build(key, seed);
+    return { ...pick(LEVELS[key], seed), id: `${key}-${seed}` };
+  }
+  const ofDifficulty = (d, seed) => pick([d], seed);
 
   // ---------------------------------------------------------------- misconceptions
   function correlation(a, b) {
@@ -268,7 +317,7 @@
     return 'other';
   }
 
-  const api = { T, PHI_MAX, V_MAX, FLUX, VOLT, FAMILIES, BEND, generate, diagnose, correlation, flux, volt, curved, SHAPE };
+  const api = { T, PHI_MAX, V_MAX, FLUX, VOLT, FAMILIES, LEVELS, BEND, generate, ofDifficulty, diagnose, correlation, flux, volt, curved, SHAPE };
   root.Induction = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

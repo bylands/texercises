@@ -1,16 +1,7 @@
+/* Induction Matching: its colours, graph cards, diagrams and tutor marks; the general look is in
+   ui.css (shared by the apps). */
 :root {
-  --bg: #f6f5f1;
-  --card: #ffffff;
-  --ink: #1f2328;
-  --muted: #646b73;
-  --line: #d9d6ce;
   --grid: #ebe8e1;
-  --accent: #2b59c3;
-  --accent-ink: #ffffff;
-  --ok: #1d7a3e;
-  --ok-bg: #e6f4ea;
-  --bad: #b3261e;
-  --bad-bg: #fbe9e7;
   /* one colour per pair, keyed by the flux graph A–D */
   --p1: #2b59c3;
   --p2: #c2410c;
@@ -19,24 +10,11 @@
   --q-flux: #1b7f3b;
   --q-volt: #c62828;
   --focus-band: rgba(43, 89, 195, 0.1);
-  --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
-  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15171a;
-    --card: #1e2125;
-    --ink: #e6e3dc;
-    --muted: #9aa0a6;
-    --line: #3a3e44;
     --grid: #2c3035;
-    --accent: #7aa2ff;
-    --accent-ink: #0d1320;
-    --ok: #7fd49a;
-    --ok-bg: #1d3325;
-    --bad: #ff8a80;
-    --bad-bg: #3d2322;
     --p1: #7aa2ff;
     --p2: #fb923c;
     --p3: #2dd4bf;
@@ -44,50 +22,18 @@
     --q-flux: #5fd07e;
     --q-volt: #ff7b72;
     --focus-band: rgba(122, 162, 255, 0.12);
-    color-scheme: dark;
   }
 }
 
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
+/* four graphs in a row need more room than the other apps */
+.wrap { max-width: 1180px; }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; }
-
-.top { border-bottom: 1px solid var(--line); background: var(--card); }
-.top .wrap { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; padding-block: 14px; }
-h1 { font-size: 1.25rem; margin: 0; }
-.score { margin: 0; color: var(--muted); font-size: 0.9rem; }
-
-.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 20px 0 14px; }
-button, input { font: inherit; color: inherit; }
-.levels { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
-.levels label { position: relative; }
-.levels input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.levels span { display: block; padding: 7px 14px; border-left: 1px solid var(--line); }
-.levels label:first-child span { border-left: 0; }
-.levels input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.levels input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
-}
-.card h2 { margin: 0 0 6px; font-size: 1.1rem; }
-.card h3 { margin: 18px 0 8px; font-size: 1rem; }
-.card > h3:first-child { margin-top: 0; }
+#board h3 { margin: 16px 0 8px; }
+.actions { margin-top: 18px; }
 
 /* graph cards */
-.graphs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.graphs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 1000px) { .graphs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .gcard {
   position: relative;
   display: block;
@@ -96,12 +42,11 @@ button, input { font: inherit; color: inherit; }
   border: 2px solid var(--line);
   border-radius: 10px;
   background: var(--card);
-  cursor: pointer;
   text-align: left;
 }
 .gcard:hover:not(:disabled) { border-color: var(--muted); }
 .gcard:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.gcard:disabled { cursor: default; }
+.gcard:disabled { cursor: default; opacity: 1; }
 .gcard svg { display: block; width: 100%; height: auto; }
 .gname { position: absolute; top: 5px; right: 12px; font-weight: 700; font-size: 1.05rem; }
 .badge:empty { display: none; }
@@ -139,56 +84,27 @@ svg.qc-volt .qlabel { fill: var(--q-volt); }
 svg .jump { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
 svg .ann { fill: var(--accent); font-size: 11px; font-weight: 600; font-family: system-ui, sans-serif; paint-order: stroke; stroke: var(--card); stroke-width: 3px; }
 
-/* actions and feedback */
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-.actions button, .toolbar button {
-  padding: 7px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  cursor: pointer;
-}
-.actions button:hover:not(:disabled), .toolbar button:hover { border-color: var(--accent); }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.actions button:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.note { color: var(--muted); font-size: 0.9rem; margin: 10px 0 0; }
-.status { margin: 10px 0 0; min-height: 1.4em; }
-.status.ok { color: var(--ok); font-weight: 600; }
-.status.bad { color: var(--bad); }
+/* feedback and solution */
 .feedback { margin: 6px 0 0; padding-left: 1.2em; }
 .feedback:empty { display: none; }
 .feedback li { margin: 4px 0; }
-
-#hint-list { margin: 0; padding-left: 1.4em; }
-#hint-list li { margin: 6px 0; }
 #sol-text p { margin: 8px 0; }
 .pairs { margin: 8px 0; padding-left: 1.2em; }
 .pairs li { margin: 4px 0; }
 
-@media (max-width: 560px) {
-  .card { padding: 14px; }
-}
-
 /* tutor mode */
-.examples { margin-bottom: 14px; }
 .tgraphs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
 .tgraphs svg, #t-figure .gcard svg { display: block; width: 100%; height: auto; }
-#t-figure h3 { margin: 4px 0 2px; font-size: 0.95rem; }
-#t-figure .gcard { cursor: default; }
+.tgraphs h3, #t-figure h3 { margin: 4px 0 2px; font-size: 0.95rem; }
 #t-figure .graphs { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 #t-figure .gcard .gname { font-size: 0.95rem; }
 #t-figure .gcard.trap { border-color: var(--bad); border-style: dashed; }
 #t-figure .gcard.trap .badge { background: var(--bad); }
-.tutor-text { min-height: 8em; }
 .tutor-text p { margin: 8px 0; }
 .tutor-text ul { margin: 8px 0; padding-left: 1.2em; }
 .tutor-text li { margin: 4px 0; }
 .tutor-text .step-rule { color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
-.tutor-nav { align-items: center; justify-content: space-between; }
-.tutor-nav .note { margin: 0; }
-.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 10px 0 6px; }
-#t-bar { height: 100%; background: var(--accent); transition: width 0.2s; }
+.progress { margin-top: 10px; }
 svg .tband { fill: var(--focus-band); }
 svg .tri { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 4 3; }
 svg .tangent { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
@@ -201,3 +117,15 @@ svg .tag { fill: var(--ink); font: 600 10px system-ui, sans-serif; paint-order: 
   .tgraphs { grid-template-columns: minmax(0, 1fr); }
   #t-figure .graphs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* arcade: manim's green and red for flux and voltage */
+#arcade { --q-flux: #83c167; --q-volt: #fc6255; --grid: #1c1c1c; --focus-band: rgba(88, 196, 221, 0.15); }
+#arcade #ar-figure .fig svg, #arcade .ar-explain .figs .fig svg { width: 320px; }
+#arcade .ar-opt { padding: 24px 8px 6px; }
+#arcade .ar-opt .val { width: 100%; }
+#arcade .ar-opt .val svg { width: 100%; max-width: 270px; margin: 0 auto; }
+#arcade .ar-explain .tgraphs { max-width: 640px; }
+#arcade .ar-answers svg { width: 260px; display: block; }
+.ar-hero .figs .fig svg { width: 300px; }
+/* the start picture: first the flux, then its voltage */
+#ar-hero.animate .fig:nth-child(2) .curve { animation-delay: 1.4s, 1.8s; }

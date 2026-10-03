@@ -1,4 +1,4 @@
-// SVG diagrams of a flux graph Φ(t) and of its induced voltage V_ind(t) = −dΦ/dt, drawn by
+// SVG diagrams of a flux graph Φ(t) and of its induced voltage V_ind(t) = −dΦ/dt (U_ind in German), drawn by
 // sampling each piece. Each quantity has its colour (class qc-flux: green, qc-volt: red) for
 // the curve and the axis label. For the solution, the slope of Φ (mWb/s) or the voltage (mV) at the
 // start and end of every piece is written in a row above the plot (not for sine pieces).
@@ -6,8 +6,12 @@
   'use strict';
 
   const { T, PHI_MAX, V_MAX, SHAPE, flux, volt } = root.Induction || require('./generator.js');
+  const Lang = root.Lang || require('./lang.js');
+  const say = (en, de) => Lang.L(en, de);
+  // decimal comma in German
+  const dec = (x) => say(String(x), String(x).replace('.', ','));
   const W = 280, H = 196, L = 34, R = 44, TOP = 44, B = 26;
-  const num = (x) => (x > 0 ? '+' + x : x < 0 ? '−' + -x : '0');
+  const num = (x) => (x > 0 ? '+' + dec(x) : x < 0 ? '−' + dec(-x) : '0');
   const r1 = (x) => Math.round(x * 10) / 10;
   const f1 = (x) => Math.round(x * 10) / 10;
 
@@ -63,13 +67,13 @@
     const pts = fg.pieces.flatMap((p, i) => points(p, (t) => flux(fg, t), g).slice(i ? 1 : 0));
     const ann = annotate ? labels(g, fg.pieces, fg.pieces.map((p) => slopes(p, 1))) : '';
     const over = opts.overlay ? opts.overlay(g) : '';
-    return svg(band(g, opts.band, 0, PHI_MAX) + g.s + `<path class="curve" d="M${pts.join(' L')}"/>` + ann + over, 'Graph of the magnetic flux against time', 'qc-flux');
+    return svg(band(g, opts.band, 0, PHI_MAX) + g.s + `<path class="curve" d="M${pts.join(' L')}"/>` + ann + over, say('Graph of the magnetic flux against time', 'Graph des magnetischen Flusses gegen die Zeit'), 'qc-flux');
   }
 
   // The voltage jumps where the slope of Φ does; jumps are drawn as dotted lines. For the
   // tutorial, opts.upto: only the first pieces; opts.band and opts.overlay as for fluxGraph.
   function voltGraph(fg, annotate, opts = {}) {
-    const g = frame(-V_MAX, V_MAX, 1, '<tspan class="it">V</tspan><tspan class="sub" dy="3">ind</tspan><tspan dy="-3"> in mV</tspan>');
+    const g = frame(-V_MAX, V_MAX, 1, `<tspan class="it">${say('V', 'U')}</tspan><tspan class="sub" dy="3">ind</tspan><tspan dy="-3"> in mV</tspan>`);
     let s = band(g, opts.band, -V_MAX, V_MAX) + g.s, d = '';
     fg.pieces.forEach((p, i) => {
       if (opts.upto !== undefined && i >= opts.upto) return;
@@ -82,7 +86,7 @@
     if (d) s += `<path class="curve" d="${d.trim()}"/>`;
     if (annotate) s += labels(g, fg.pieces, fg.pieces.map((p) => slopes(p, -1)));
     if (opts.overlay) s += opts.overlay(g);
-    return svg(s, 'Graph of the induced voltage against time', 'qc-volt');
+    return svg(s, say('Graph of the induced voltage against time', 'Graph der induzierten Spannung gegen die Zeit'), 'qc-volt');
   }
 
   // ---------------------------------------------------------------- tutorial marks
@@ -104,7 +108,7 @@
     },
   };
 
-  const api = { fluxGraph, voltGraph, num, range, Tut, V_MAX, PHI_MAX };
+  const api = { fluxGraph, voltGraph, num, dec, range, Tut, V_MAX, PHI_MAX };
   root.Plot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
