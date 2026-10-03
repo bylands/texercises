@@ -10,14 +10,18 @@
   'use strict';
 
   const Circuit = root.Circuit || require('./circuit.js');
+  // The page language (lang.js, shared by the apps); English where it is not loaded.
+  const Lang = root.Lang || (typeof require === 'function' ? require('./lang.js') : null);
+  const L = (en, de) => (Lang ? Lang.L(en, de) : en);
+  const de = () => !!Lang && Lang.get() === 'de';
   const M = String.raw;
   const RS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20];
   const MAX_WIDTH = 15; // diagram width in drawing units
 
   const LEVELS = {
-    easy: { name: 'Easy', n: [2, 3], V: [4, 40], depth: 1, inverse: 0.4, hidden: [1, 1], hideV: 0, targets: [1, 2], steps: [1, 5] },
-    medium: { name: 'Medium', n: [3, 5], V: [6, 80], depth: 2, compact: true, inverse: 0.7, hidden: [1, 1], hideV: 0.3, targets: [2, 2], steps: [3, 9] },
-    hard: { name: 'Hard', n: [5, 7], V: [6, 120], depth: 3, compact: true, inverse: 1, hidden: [1, 2], hideV: 0.5, targets: [3, 3], steps: [7, 18] },
+    easy: { name: () => L('Easy', 'Einfach'), n: [2, 3], V: [4, 40], depth: 1, inverse: 0.4, hidden: [1, 1], hideV: 0, targets: [1, 2], steps: [1, 5] },
+    medium: { name: () => L('Medium', 'Mittel'), n: [3, 5], V: [6, 80], depth: 2, compact: true, inverse: 0.7, hidden: [1, 1], hideV: 0.3, targets: [2, 2], steps: [3, 9] },
+    hard: { name: () => L('Hard', 'Schwierig'), n: [5, 7], V: [6, 120], depth: 3, compact: true, inverse: 1, hidden: [1, 2], hideV: 0.5, targets: [3, 3], steps: [7, 18] },
   };
 
   // ---------------------------------------------------------------- random numbers
@@ -52,15 +56,16 @@
   const fdiv = (a, b) => F(a.n * b.d, a.d * b.n);
   const fval = (f) => f.n / f.d;
 
+  // Numbers with a decimal point in English, a decimal comma in German.
   function fmt(x) {
-    if (Math.abs(x - Math.round(x)) < 1e-9) return String(Math.round(x));
-    if (Math.abs(x) >= 1) return String(parseFloat(x.toFixed(2)));
-    return String(parseFloat(x.toPrecision(2)));
+    const s = Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x))
+      : Math.abs(x) >= 1 ? String(parseFloat(x.toFixed(2))) : String(parseFloat(x.toPrecision(2)));
+    return de() ? s.replace('.', ',') : s;
   }
 
   // Decimal if it terminates within two places, otherwise a fraction.
   function ftex(f) {
-    if (f.d === 1 || (100 % f.d === 0)) return fmt(fval(f));
+    if (f.d === 1 || (100 % f.d === 0)) return fmt(fval(f)).replace(',', '{,}');
     return M`\tfrac{${f.n}}{${f.d}}`;
   }
 
@@ -298,24 +303,28 @@
       const [a, b] = [node.leaves[0], node.leaves[node.leaves.length - 1]];
       return node.leaves.length <= 3 ? node.leaves.join('') : M`${a}\text{–}${b}`;
     };
-    const sym = (key) => {
-      const q = key[0], node = nodeOf(key);
-      if (node === c.root) return q === 'R' ? M`R_\text{tot}` : q;
+    // Voltage is V in English and U in German, as in the textbooks; lang 'en' gives the English
+    // symbol in any case (the names in the tutorial paths).
+    const sym = (key, lang) => {
+      const node = nodeOf(key), en = lang === 'en' || !de();
+      const q = key[0] === 'V' && !en ? 'U' : key[0];
+      if (node === c.root) return q === 'R' ? (en ? M`R_\text{tot}` : M`R_\text{ges}`) : q;
       return `${q}_{${node.t === 'R' ? node.idx : range(node)}}`;
     };
     const qtex = (key) => `${ftex(valueOf(key))}\\,${UNIT_TEX[key[0]]}`;
     const res = (key) => (targets.includes(key) ? `\\htmlClass{result}{${qtex(key)}}` : qtex(key));
     const who = (node) => {
-      if (node === c.root) return 'the battery';
+      if (node === c.root) return L('the battery', 'die Batterie');
       if (node.t === 'R') return `$R_{${node.idx}}$`;
-      return `the ${node.t === 'S' ? 'series' : 'parallel'} combination $${sym('R' + node.id)}$`;
+      return node.t === 'S' ? L(`the series combination $${sym('R' + node.id)}$`, `die Serieschaltung $${sym('R' + node.id)}$`)
+        : L(`the parallel combination $${sym('R' + node.id)}$`, `die Parallelschaltung $${sym('R' + node.id)}$`);
     };
     return { nodeOf, valueOf, sym, qtex, res, who };
   }
 
   const cap = (s) => s[0].toUpperCase() + s.slice(1);
   const al = (...lines) => M`$$\begin{aligned}` + lines.join(M` \\ `) + M`\end{aligned}$$`;
-  const listing = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+  const listing = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} ${L('and', 'und')} ${items[items.length - 1]}`);
 
   function structure(c, nm) {
     const parts = [];
@@ -323,29 +332,30 @@
       if (node.t === 'R') return;
       node.kids.forEach(walk);
       const kids = listing(node.kids.map((k) => `$${nm.sym('R' + k.id)}$`));
-      const name = node === c.root ? `the whole circuit, $${nm.sym('R0')}$` : `$${nm.sym('R' + node.id)}$`;
-      parts.push(`${kids} are in ${node.t === 'S' ? 'series' : 'parallel'} (${name})`);
+      const name = node === c.root ? L(`the whole circuit, $${nm.sym('R0')}$`, `die ganze Schaltung, $${nm.sym('R0')}$`) : `$${nm.sym('R' + node.id)}$`;
+      parts.push(node.t === 'S' ? L(`${kids} are in series (${name})`, `${kids} sind in Serie (${name})`) : L(`${kids} are in parallel (${name})`, `${kids} sind parallel (${name})`));
     })(c.root);
     return parts;
   }
 
-  const RULE = {
-    ohm: "Ohm's law",
-    eqI: 'the series rule (same current)',
-    eqV: 'the parallel rule (same voltage)',
-    vratio: 'the voltage divider rule (voltages in the ratio of the resistances)',
-    iratio: 'the current divider rule (currents in the inverse ratio of the resistances)',
-    sumR: 'adding the series resistances',
-    invR: 'combining the parallel resistances',
-    sumV: 'the voltage rule (voltages in series add up)',
-    sumI: 'the junction rule (currents in parallel add up)',
-    vdiv: 'the voltage divider rule (share of the total voltage)',
-  };
-  const SHORT = {
-    ohm: "Ohm's law", eqI: 'series', eqV: 'parallel',
-    vratio: 'voltage divider', iratio: 'current divider', sumR: 'series resistances', invR: 'parallel resistances',
-    sumV: 'voltage rule', sumI: 'junction rule', vdiv: 'voltage divider',
-  };
+  // The rules, as in “follows from …” (German: dative).
+  const RULE = () => ({
+    ohm: L("Ohm's law", 'dem ohmschen Gesetz'),
+    eqI: L('the series rule (same current)', 'der Serieregel (gleicher Strom)'),
+    eqV: L('the parallel rule (same voltage)', 'der Parallelregel (gleiche Spannung)'),
+    vratio: L('the voltage divider rule (voltages in the ratio of the resistances)', 'der Spannungsteilerregel (Spannungen im Verhältnis der Widerstände)'),
+    iratio: L('the current divider rule (currents in the inverse ratio of the resistances)', 'der Stromteilerregel (Ströme im umgekehrten Verhältnis der Widerstände)'),
+    sumR: L('adding the series resistances', 'dem Addieren der Serienwiderstände'),
+    invR: L('combining the parallel resistances', 'dem Zusammenfassen der Parallelwiderstände'),
+    sumV: L('the voltage rule (voltages in series add up)', 'der Maschenregel (Spannungen in Serie addieren sich)'),
+    sumI: L('the junction rule (currents in parallel add up)', 'der Knotenregel (Ströme parallel addieren sich)'),
+    vdiv: L('the voltage divider rule (share of the total voltage)', 'der Spannungsteilerregel (Anteil an der Gesamtspannung)'),
+  });
+  const SHORT = () => ({
+    ohm: L("Ohm's law", 'ohmsches Gesetz'), eqI: L('series', 'Serie'), eqV: L('parallel', 'parallel'),
+    vratio: L('voltage divider', 'Spannungsteiler'), iratio: L('current divider', 'Stromteiler'), sumR: L('series resistances', 'Serienwiderstände'),
+    invR: L('parallel resistances', 'Parallelwiderstände'), sumV: L('voltage rule', 'Maschenregel'), sumI: L('junction rule', 'Knotenregel'), vdiv: L('voltage divider', 'Spannungsteiler'),
+  });
   const ruleOf = (rel) => rel.rule;
 
   // A solution step in parts: intro sentence, symbolic equation lhs = rhs, the same with numbers
@@ -356,19 +366,21 @@
     const out = { lhs: s(key), res: nm.res(key) };
     if (rel.kind === 'ohm') {
       const n = rel.node, V = 'V' + n.id, I = 'I' + n.id, R = 'R' + n.id;
-      out.intro = n === nm.nodeOf('R0') ? "Ohm's law for the whole circuit:" : `Ohm's law for ${nm.who(n)}:`;
+      out.intro = n === nm.nodeOf('R0') ? L("Ohm's law for the whole circuit:", 'Ohmsches Gesetz für die ganze Schaltung:') : L(`Ohm's law for ${nm.who(n)}:`, `Ohmsches Gesetz für ${nm.who(n)}:`);
       if (q === 'V') return { ...out, rhs: M`${s(I)}\,${s(R)}`, num: M`${qt(I)}\times${qt(R)}` };
       if (q === 'I') return { ...out, rhs: M`\frac{${s(V)}}{${s(R)}}`, num: M`\frac{${qt(V)}}{${qt(R)}}` };
       return { ...out, rhs: M`\frac{${s(V)}}{${s(I)}}`, num: M`\frac{${qt(V)}}{${qt(I)}}` };
     }
     if (rel.kind === 'eq') {
       const other = step.from[0];
-      const what = rel.q === 'I' ? 'carry the same current (series connection)' : 'are at the same voltage (parallel connection)';
-      return { ...out, rhs: s(other), inline: `${cap(nm.who(rel.child))} and ${nm.who(rel.parent)} ${what}: $${s(key)} = ${s(other)} = ${nm.res(key)}$.` };
+      const what = rel.q === 'I' ? L('carry the same current (series connection)', 'führen denselben Strom (Serieschaltung)')
+        : L('are at the same voltage (parallel connection)', 'liegen an derselben Spannung (Parallelschaltung)');
+      return { ...out, rhs: s(other), inline: `${cap(nm.who(rel.child))} ${L('and', 'und')} ${nm.who(rel.parent)} ${what}: $${s(key)} = ${s(other)} = ${nm.res(key)}$.` };
     }
     if (rel.kind === 'vdiv') {
       const Rk = 'R' + rel.child.id, Vp = 'V' + rel.parent.id, rs = rel.parent.kids.map((k) => 'R' + k.id);
-      out.intro = `Voltage divider rule: ${listing(rs.map((r) => `$${s(r)}$`))} are in series, so they share $${s(Vp)}$ in the ratio of their resistances:`;
+      out.intro = L(`Voltage divider rule: ${listing(rs.map((r) => `$${s(r)}$`))} are in series, so they share $${s(Vp)}$ in the ratio of their resistances:`,
+        `Spannungsteilerregel: ${listing(rs.map((r) => `$${s(r)}$`))} sind in Serie, teilen sich also $${s(Vp)}$ im Verhältnis ihrer Widerstände:`);
       return { ...out, rhs: M`\frac{${s(Rk)}}{${rs.map(s).join(' + ')}}\,${s(Vp)}`, num: M`\frac{${qt(Rk)}}{${rs.map(qt).join(' + ')}}\times ${qt(Vp)}`, split: true };
     }
     if (rel.kind === 'ratio') {
@@ -376,8 +388,10 @@
       const volt = rel.q === 'V';
       const x = [rel.q + a.id, rel.q + b.id], y = volt ? [Ra, Rb] : [Rb, Ra];
       out.intro = volt
-        ? `Voltage divider rule: $${s(Ra)}$ and $${s(Rb)}$ are in series, so their voltages are in the ratio of their resistances, $${s(x[0])}/${s(x[1])} = ${s(Ra)}/${s(Rb)}$. Hence`
-        : `Current divider rule: $${s(Ra)}$ and $${s(Rb)}$ are in parallel, so their currents are in the inverse ratio of their resistances, $${s(x[0])}/${s(x[1])} = ${s(Rb)}/${s(Ra)}$. Hence`;
+        ? L(`Voltage divider rule: $${s(Ra)}$ and $${s(Rb)}$ are in series, so their voltages are in the ratio of their resistances, $${s(x[0])}/${s(x[1])} = ${s(Ra)}/${s(Rb)}$. Hence`,
+          `Spannungsteilerregel: $${s(Ra)}$ und $${s(Rb)}$ sind in Serie, ihre Spannungen stehen also im Verhältnis ihrer Widerstände, $${s(x[0])}/${s(x[1])} = ${s(Ra)}/${s(Rb)}$. Somit`)
+        : L(`Current divider rule: $${s(Ra)}$ and $${s(Rb)}$ are in parallel, so their currents are in the inverse ratio of their resistances, $${s(x[0])}/${s(x[1])} = ${s(Rb)}/${s(Ra)}$. Hence`,
+          `Stromteilerregel: $${s(Ra)}$ und $${s(Rb)}$ sind parallel, ihre Ströme stehen also im umgekehrten Verhältnis ihrer Widerstände, $${s(x[0])}/${s(x[1])} = ${s(Rb)}/${s(Ra)}$. Somit`);
       // x0/x1 = y0/y1, solved for the unknown as num/den · mul
       const [n, d, m] = key === x[0] ? [y[0], y[1], x[1]] : key === x[1] ? [y[1], y[0], x[0]]
         : key === y[0] ? [x[0], x[1], y[1]] : [x[1], x[0], y[0]];
@@ -389,17 +403,19 @@
     if (rel.kind === 'inv') {
       if (key === P) {
         const f = (h) => M`\left(${kids.map((k) => M`\frac{1}{${h(k)}}`).join('+')}\right)^{-1}`;
-        return { ...out, intro: `${names} are in parallel:`, rhs: f(s), num: f(qt), split: true };
+        return { ...out, intro: L(`${names} are in parallel:`, `${names} sind parallel:`), rhs: f(s), num: f(qt), split: true };
       }
       const others = kids.filter((k) => k !== key);
       const f = (h) => M`\left(\frac{1}{${h(P)}} - ${others.map((k) => M`\frac{1}{${h(k)}}`).join(' - ')}\right)^{-1}`;
-      return { ...out, intro: `The parallel resistances combine to $${s(P)}$, so`, rhs: f(s), num: f(qt), split: true };
+      return { ...out, intro: L(`The parallel resistances combine to $${s(P)}$, so`, `Die Parallelwiderstände ergeben zusammen $${s(P)}$, also`), rhs: f(s), num: f(qt), split: true };
     }
     // sums: series R, series V, parallel I
     out.intro = {
-      R: key === P ? `${names} are in series:` : `The series resistances add up to $${s(P)}$, so`,
-      V: key === P ? `The voltages across ${names} add up (series connection):` : `The voltages in series add up to $${s(P)}$, so`,
-      I: key === P ? `Junction rule: the currents through ${names} add up (parallel connection):` : `Junction rule: the branch currents add up to $${s(P)}$, so`,
+      R: key === P ? L(`${names} are in series:`, `${names} sind in Serie:`) : L(`The series resistances add up to $${s(P)}$, so`, `Die Serienwiderstände ergeben zusammen $${s(P)}$, also`),
+      V: key === P ? L(`The voltages across ${names} add up (series connection):`, `Die Spannungen an ${names} addieren sich (Serieschaltung):`)
+        : L(`The voltages in series add up to $${s(P)}$, so`, `Die Spannungen in Serie ergeben zusammen $${s(P)}$, also`),
+      I: key === P ? L(`Junction rule: the currents through ${names} add up (parallel connection):`, `Knotenregel: Die Ströme durch ${names} addieren sich (Parallelschaltung):`)
+        : L(`Junction rule: the branch currents add up to $${s(P)}$, so`, `Knotenregel: Die Zweigströme ergeben zusammen $${s(P)}$, also`),
     }[rel.q];
     const terms = key === P ? kids : [P, ...kids.filter((k) => k !== key)];
     const op = key === P ? ' + ' : ' - ';
@@ -427,35 +443,37 @@
     const $ = (k) => `$${nm.sym(k)}$`;
     const formula = (st) => { const p = stepParts(st, nm); return `$\\displaystyle ${p.lhs} = ${p.rhs}$`; };
     const list = (items) => `<ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul>`;
-    const hints = [`Break the circuit down: ${struct.join('; ')}.`];
+    const hints = [`${L('Break the circuit down', 'Zerlege die Schaltung')}: ${struct.join('; ')}.`];
 
     const plan = targets.map((t) => {
       const st = origin(t);
-      const via = byKey.get(t).rel.kind === 'eq' ? ` (it equals ${$(st.key)})` : '';
+      const via = byKey.get(t).rel.kind === 'eq' ? L(` (it equals ${$(st.key)})`, ` (gleich ${$(st.key)})`) : '';
       const all = st.from.every((k) => givens.has(k));
-      return `${$(t)}${via} follows from ${RULE[st.rel.rule]}, ${all ? 'directly from the given' : 'using'} ${listing(st.from.map($))}.`;
+      return L(`${$(t)}${via} follows from ${RULE()[st.rel.rule]}, ${all ? 'directly from the given' : 'using'} ${listing(st.from.map($))}.`,
+        `${$(t)}${via} folgt aus ${RULE()[st.rel.rule]}, ${all ? 'direkt aus den gegebenen Grössen' : 'mit'} ${listing(st.from.map($))}.`);
     });
-    hints.push(`Plan for each unknown:${list(plan)}`);
+    hints.push(`${L('Plan for each unknown', 'Plan für jede Unbekannte')}:${list(plan)}`);
 
     const real = steps.filter((st) => st.rel.kind !== 'eq');
-    const first = real.slice(0, 3).map((st) => `${formula(st)} &nbsp;(${SHORT[st.rel.rule]})`);
-    hints.push(`First steps:${list(first)}`);
+    const first = real.slice(0, 3).map((st) => `${formula(st)} &nbsp;(${SHORT()[st.rel.rule]})`);
+    hints.push(`${L('First steps', 'Erste Schritte')}:${list(first)}`);
 
     // Values of the intermediate quantities that the final steps rely on.
     const inputs = new Set(targets.flatMap((t) => origin(t).from));
     const key = real.filter((st) => !targets.includes(st.key) && !givens.has(st.key));
     const chosen = [...key.filter((st) => inputs.has(st.key)), ...key.filter((st) => !inputs.has(st.key))].slice(0, 3)
       .sort((a, b) => steps.indexOf(a) - steps.indexOf(b));
-    if (chosen.length) hints.push(`Check your intermediate results: ${listing(chosen.map((st) => `$${nm.sym(st.key)} = ${nm.qtex(st.key)}$`))}.`);
+    if (chosen.length) hints.push(`${L('Check your intermediate results', 'Prüfe deine Zwischenresultate')}: ${listing(chosen.map((st) => `$${nm.sym(st.key)} = ${nm.qtex(st.key)}$`))}.`);
     return hints;
   }
 
   function describeTarget(key, nm) {
     const q = key[0], node = nm.nodeOf(key), s = nm.sym(key);
-    if (node === nm.nodeOf('R0')) return q === 'V' ? 'the battery voltage $V$' : 'the battery current $I$';
-    if (q === 'R') return `the resistance $${s}$`;
-    if (q === 'I') return `the current $${s}$ through $R_{${node.idx}}$`;
-    return `the voltage $${s}$ across $R_{${node.idx}}$`;
+    // German: accusative (“Bestimme …”)
+    if (node === nm.nodeOf('R0')) return q === 'V' ? L('the battery voltage $V$', 'die Batteriespannung $U$') : L('the battery current $I$', 'den Batteriestrom $I$');
+    if (q === 'R') return L(`the resistance $${s}$`, `den Widerstand $${s}$`);
+    if (q === 'I') return L(`the current $${s}$ through $R_{${node.idx}}$`, `den Strom $${s}$ durch $R_{${node.idx}}$`);
+    return L(`the voltage $${s}$ across $R_{${node.idx}}$`, `die Spannung $${s}$ an $R_{${node.idx}}$`);
   }
 
   // ---------------------------------------------------------------- drawing
@@ -649,9 +667,10 @@
   }
 
   // ---------------------------------------------------------------- exercise assembly
+  // level: easy, medium, hard, or mixed (one of them at random).
   function build(level, seed) {
-    const lv = LEVELS[level];
     const r = rng(seed);
+    const lv = LEVELS[level === 'mixed' ? r.pick(['easy', 'medium', 'hard']) : level];
     for (let attempt = 0; attempt < 5000; attempt++) {
       const n = r.int(lv.n[0], lv.n[1]);
       const tree = arrangeRoot(buildTree(n, null, r));
@@ -668,7 +687,8 @@
     throw new Error(`No ${level} exercise found for seed ${seed}`);
   }
 
-  const taskText = (targets, nm) => `Applying the rules for series and parallel circuits, find ${listing(targets.map((t) => describeTarget(t, nm)))} in the circuit below.`;
+  const taskText = (targets, nm) => L(`Applying the rules for series and parallel circuits, find ${listing(targets.map((t) => describeTarget(t, nm)))} in the circuit below.`,
+    `Bestimme mit den Regeln für Serie- und Parallelschaltungen ${listing(targets.map((t) => describeTarget(t, nm)))} in der Schaltung unten.`);
 
   function generate(level, seed) {
     const { c, prob, nm, lv } = build(level, seed);
@@ -678,13 +698,15 @@
     return {
       id: `${level}-${seed}`,
       level,
-      title: `${lv.name} · ${c.leaves.length} resistors`,
+      // 1–5 by the number of solution steps
+      difficulty: steps.length <= 2 ? 1 : steps.length <= 4 ? 2 : steps.length <= 7 ? 3 : steps.length <= 11 ? 4 : 5,
+      title: L(`Circuit with ${c.leaves.length} resistors`, `Schaltung mit ${c.leaves.length} Widerständen`),
       text: taskText(targets, nm),
       fields: targets.map((t) => ({ key: t, sym: nm.sym(t), unit: UNIT[t[0]], value: fval(nm.valueOf(t)) })),
       tol: 0.01,
       figure: (sol) => `<div class="fig">${draw(c, nm, prob, { known: sol ? all : givenOnly(prob) }).toSVG()}</div>`,
       hints,
-      solution: [`Structure of the circuit: ${struct.join('; ')}.`, ...steps.map((st) => stepText(st, nm))],
+      solution: [`${L('Structure of the circuit', 'Aufbau der Schaltung')}: ${struct.join('; ')}.`, ...steps.map((st) => stepText(st, nm))],
       results: targets.map((t) => `$${nm.sym(t)} = ${nm.qtex(t)}$`).join(', '),
       // for tests
       circuit: c, givens: prob.givens, targets, steps,
@@ -697,11 +719,11 @@
   // diagram shows what is known so far and marks what the text talks about: the parts being
   // combined are highlighted strongly, the group they belong to lightly; the value just found
   // is highlighted (new) and the values it is found from are set in bold (use).
-  const TITLE = {
-    ohm: "Ohm's law", eqI: 'same current in series', eqV: 'same voltage in parallel', vratio: 'voltage divider rule',
-    vdiv: 'voltage divider rule', iratio: 'current divider rule', sumR: 'series resistances', invR: 'parallel resistances',
-    sumV: 'voltage rule', sumI: 'junction rule',
-  };
+  const TITLE = () => ({
+    ohm: L("Ohm's law", 'ohmsches Gesetz'), eqI: L('same current in series', 'gleicher Strom in Serie'), eqV: L('same voltage in parallel', 'gleiche Spannung parallel'),
+    vratio: L('voltage divider rule', 'Spannungsteilerregel'), vdiv: L('voltage divider rule', 'Spannungsteilerregel'), iratio: L('current divider rule', 'Stromteilerregel'),
+    sumR: L('series resistances', 'Serienwiderstände'), invR: L('parallel resistances', 'Parallelwiderstände'), sumV: L('voltage rule', 'Maschenregel'), sumI: L('junction rule', 'Knotenregel'),
+  });
 
   // Voltage divider rule between a part of a series group and the whole group,
   // V_k = R_k / (R_a + R_b + …) · V. Only the tutorial uses it: exercises divide pairwise.
@@ -724,7 +746,7 @@
     const rels = [...relations(c), ...dividers(c)];
     const byName = new Map();
     for (const node of c.nodes) {
-      for (const q of 'RIV') byName.set(nm.sym(q + node.id).replace(/\\text\{([^}]*)\}/g, '$1').replace(/[_{}]/g, ''), q + node.id);
+      for (const q of 'RIV') byName.set(nm.sym(q + node.id, 'en').replace(/\\text\{([^}]*)\}/g, '$1').replace(/[_{}]/g, ''), q + node.id);
     }
     const known = new Set(prob.givens);
     const out = path.map((items) => items.map((item) => {
@@ -741,8 +763,10 @@
     return out;
   }
 
-  const SERIES = '<b>In series</b> the same current flows through every part, and the voltages across the parts add up to the voltage across the whole.';
-  const PARALLEL = '<b>In parallel</b> every branch is at the same voltage, and the branch currents add up to the current into the whole.';
+  const SERIES = () => L('<b>In series</b> the same current flows through every part, and the voltages across the parts add up to the voltage across the whole.',
+    '<b>In Serie</b> fliesst durch jeden Teil derselbe Strom, und die Spannungen an den Teilen addieren sich zur Spannung am Ganzen.');
+  const PARALLEL = () => L('<b>In parallel</b> every branch is at the same voltage, and the branch currents add up to the current into the whole.',
+    '<b>Parallel</b> liegt jeder Zweig an derselben Spannung, und die Zweigströme addieren sich zum Strom ins Ganze.');
 
   // path: the solution steps to show, grouped into frames (see pathSteps); by default the
   // steps of the worked solution, one per frame.
@@ -758,7 +782,7 @@
     };
 
     const given = [...givens].sort(byReading).map((k) => `$${nm.sym(k)} = ${nm.qtex(k)}$`);
-    frame(`<p>${taskText(targets, nm)}</p><p>Given: ${listing(given)}.</p>`, givens);
+    frame(`<p>${taskText(targets, nm)}</p><p>${L('Given', 'Gegeben')}: ${listing(given)}.</p>`, givens);
 
     const explained = new Set();
     (function walk(node) {
@@ -766,11 +790,12 @@
       node.kids.forEach(walk);
       const mark = new Map([[node.id, 'light'], ...node.kids.map((k) => [k.id, 'strong'])]);
       const kids = listing(node.kids.map((k) => $('R' + k.id)));
-      let t = `${kids} are connected in ${node.t === 'S' ? 'series' : 'parallel'}: `;
-      t += node === c.root ? `together they make up the whole circuit, with the total resistance ${$('R0')}.` : `together they act like a single resistor ${$('R' + node.id)}.`;
-      if (!explained.has(node.t)) t += ' ' + (node.t === 'S' ? SERIES : PARALLEL);
+      let t = node.t === 'S' ? L(`${kids} are connected in series: `, `${kids} sind in Serie geschaltet: `) : L(`${kids} are connected in parallel: `, `${kids} sind parallel geschaltet: `);
+      t += node === c.root ? L(`together they make up the whole circuit, with the total resistance ${$('R0')}.`, `Zusammen bilden sie die ganze Schaltung mit dem Gesamtwiderstand ${$('R0')}.`)
+        : L(`together they act like a single resistor ${$('R' + node.id)}.`, `Zusammen wirken sie wie ein einzelner Widerstand ${$('R' + node.id)}.`);
+      if (!explained.has(node.t)) t += ' ' + (node.t === 'S' ? SERIES() : PARALLEL());
       explained.add(node.t);
-      frame(`<p class="step-rule">Structure of the circuit</p><p>${t}</p>`, givens, mark);
+      frame(`<p class="step-rule">${L('Structure of the circuit', 'Aufbau der Schaltung')}</p><p>${t}</p>`, givens, mark);
     })(c.root);
 
     const known = new Set(givens);
@@ -787,13 +812,13 @@
         from.forEach((k) => { if (!focus.has(k)) focus.set(k, 'use'); });
         focus.set(key, 'new');
       }
-      const title = cap(listing([...new Set(group.map((st) => TITLE[st.rel.rule]))]));
-      const goal = group.some((st) => targets.includes(st.key)) ? ' · finds one of the unknowns' : '';
+      const title = cap(listing([...new Set(group.map((st) => TITLE()[st.rel.rule]))]));
+      const goal = group.some((st) => targets.includes(st.key)) ? L(' · finds one of the unknowns', ' · liefert eine der Unbekannten') : '';
       const text = group.map((st) => `<p>${stepText(st, nm)}</p>`).join('');
-      frame(`<p class="step-rule">Step ${i + 1} of ${groups.length}: ${title}${goal}</p>${text}`, known, mark, focus);
+      frame(`<p class="step-rule">${L(`Step ${i + 1} of ${groups.length}`, `Schritt ${i + 1} von ${groups.length}`)}: ${title}${goal}</p>${text}`, known, mark, focus);
     });
 
-    frame(`<p class="step-rule">Results</p><p>${listing(targets.map((t) => `$${nm.sym(t)} = ${nm.res(t)}$`))}</p>`,
+    frame(`<p class="step-rule">${L('Results', 'Resultate')}</p><p>${listing(targets.map((t) => `$${nm.sym(t)} = ${nm.res(t)}$`))}</p>`,
       known, new Map(), new Map(targets.map((t) => [t, 'new'])));
 
     // One viewBox for all frames, so that the diagram does not jump while stepping through.
@@ -809,7 +834,7 @@
     };
   }
 
-  const api = { LEVELS, generate, tutorial, padded, F, fval };
+  const api = { LEVELS, generate, tutorial, padded, F, fval, fmt, ftex };
   root.Generator = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,96 +1,29 @@
+/* Resistor Circuit Trainer: its colours, circuit diagrams and tutor marks; the general look is in
+   ui.css (shared by the apps). */
 :root {
-  --bg: #f6f5f1;
-  --card: #ffffff;
-  --ink: #1f2328;
-  --muted: #646b73;
-  --line: #d9d6ce;
-  --accent: #2b59c3;
-  --accent-ink: #ffffff;
   --cur: #1f5fd6;
   --vol: #c8322b;
-  --ok: #1d7a3e;
-  --ok-bg: #e6f4ea;
-  --warn: #8a5a00;
-  --warn-bg: #fdf3dc;
-  --bad: #b3261e;
-  --bad-bg: #fbe9e7;
   --zone-light: rgba(43, 89, 195, 0.06);
   --zone-light-line: rgba(43, 89, 195, 0.45);
   --zone-strong: rgba(43, 89, 195, 0.16);
   --zone-strong-line: rgba(43, 89, 195, 0.6);
-  --mark: #ffe066;
-  --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
-  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15171a;
-    --card: #1e2125;
-    --ink: #e6e3dc;
-    --muted: #9aa0a6;
-    --line: #3a3e44;
-    --accent: #7aa2ff;
-    --accent-ink: #0d1320;
     --cur: #74a7ff;
     --vol: #ff8a80;
-    --ok: #7fd49a;
-    --ok-bg: #1d3325;
-    --warn: #f2c46b;
-    --warn-bg: #3a3020;
-    --bad: #ff8a80;
-    --bad-bg: #3d2322;
     --zone-light: rgba(122, 162, 255, 0.07);
     --zone-light-line: rgba(122, 162, 255, 0.45);
     --zone-strong: rgba(122, 162, 255, 0.2);
     --zone-strong-line: rgba(122, 162, 255, 0.65);
-    --mark: #6b5600;
-    color-scheme: dark;
   }
 }
 
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-.wrap { max-width: 920px; margin: 0 auto; padding-inline: 16px; }
-
-.top { border-bottom: 1px solid var(--line); background: var(--card); }
-.top .wrap { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; padding-block: 14px; }
-h1 { font-size: 1.25rem; margin: 0; }
-.score { margin: 0; color: var(--muted); font-size: 0.9rem; }
-
-.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 20px 0 14px; }
-input, button { font: inherit; color: inherit; }
-.levels { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
-.levels label { position: relative; }
-.levels input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.levels span { display: block; padding: 7px 16px; border-left: 1px solid var(--line); }
-.levels label:first-child span { border-left: 0; }
-.levels input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.levels input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
-}
-.card h2 { margin: 0 0 6px; font-size: 1.1rem; }
-.card h3 { margin: 0 0 8px; font-size: 1rem; }
-
-.figs { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; justify-content: center; margin: 12px 0 18px; }
-.fig { max-width: 100%; overflow-x: auto; }
-.fig.scrolls::after { content: "Scroll sideways to see the whole circuit"; position: sticky; left: 0; display: block; margin-top: 4px; font-size: 0.8rem; color: var(--muted); }
+#prompt { margin: 6px 0; }
 
 /* circuit drawing */
+.fig svg { max-width: none; }
 svg text { font-family: var(--serif); font-size: 14px; }
 svg .w { stroke: var(--ink); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 svg .w.thick { stroke-width: 4.5; stroke-linecap: butt; }
@@ -102,85 +35,13 @@ svg .cur { stroke: var(--cur); stroke-width: 1.8; fill: none; }
 svg .cur-h, svg .cur-t { fill: var(--cur); }
 svg .vol { stroke: var(--vol); stroke-width: 1.6; fill: none; }
 svg .vol-h, svg .vol-t { fill: var(--vol); }
-svg .grid { stroke: var(--line); stroke-width: 0.6; }
-svg .grid.major { stroke: var(--muted); stroke-width: 0.9; }
-svg .curve { stroke: var(--ink); stroke-width: 2.2; fill: none; }
-svg .tick { fill: var(--muted); font-size: 12px; font-family: system-ui, sans-serif; }
-svg .axis { fill: var(--ink); font-size: 13px; }
-svg .op { stroke: var(--vol); stroke-width: 1.4; stroke-dasharray: 5 4; fill: none; }
-svg .op-dot { fill: var(--vol); }
-
-/* answer form */
-#fields { display: grid; gap: 10px; margin-bottom: 14px; }
-.field {
-  display: grid;
-  grid-template-columns: minmax(3.5em, max-content) minmax(0, 9em) 2.5em 1fr;
-  align-items: center;
-  gap: 8px;
-}
-.field .sym { text-align: right; }
-.field input {
-  width: 100%;
-  padding: 7px 9px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--bg);
-  font-variant-numeric: tabular-nums;
-}
-.field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-.field .unit { color: var(--muted); }
-.field .fb { font-size: 0.9rem; }
-.field.ok input { border-color: var(--ok); background: var(--ok-bg); }
-.field.ok .fb { color: var(--ok); }
-.field.ok .fb::before { content: "✓ "; }
-.field.warn input { border-color: var(--warn); background: var(--warn-bg); }
-.field.warn .fb { color: var(--warn); }
-.field.bad input { border-color: var(--bad); background: var(--bad-bg); }
-.field.bad .fb { color: var(--bad); }
-.field.bad .fb::before { content: "✗ "; }
-
-.actions { display: flex; flex-wrap: wrap; gap: 8px; }
-button {
-  padding: 7px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  cursor: pointer;
-}
-button:hover:not(:disabled) { border-color: var(--accent); }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-button:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.note { color: var(--muted); font-size: 0.9rem; margin: 10px 0 0; }
-.status { margin: 10px 0 0; min-height: 1.4em; }
-.status.ok { color: var(--ok); font-weight: 600; }
-.status.bad { color: var(--bad); }
-
-#hint-list { margin: 0; padding-left: 1.4em; }
-#hint-list li { margin: 6px 0; }
-#hint-list ul { margin: 4px 0; padding-left: 1.2em; }
-#hint-list ul li { margin: 6px 0; }
-
-.steps p { margin: 10px 0; }
-.steps .katex-display { margin: 8px 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
-.short { font-weight: 600; border-top: 1px solid var(--line); padding-top: 12px; margin-bottom: 0; }
 .c-cur { color: var(--cur); }
 .c-vol { color: var(--vol); }
 
-@media (max-width: 560px) {
-  .card { padding: 14px; }
-  .field { grid-template-columns: max-content minmax(0, 1fr) 2.5em; }
-  .field .fb { grid-column: 1 / -1; }
-}
+#hint-list ul { margin: 4px 0; padding-left: 1.2em; }
+#hint-list ul li { margin: 6px 0; }
 
-/* tutor mode */
-.examples { margin-bottom: 14px; flex-wrap: wrap; }
-.tutor-text { min-height: 8.5em; }
-.tutor-text .step-rule { color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
-.tutor-nav { align-items: center; justify-content: space-between; }
-.tutor-nav .note { margin: 0; }
-.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
-#t-bar { height: 100%; background: var(--accent); transition: width 0.2s; }
+/* tutor: the parts a step is about */
 svg .zone { stroke-width: 1.2; }
 svg .zone.light { fill: var(--zone-light); stroke: var(--zone-light-line); stroke-dasharray: 4 3; }
 svg .zone.strong { fill: var(--zone-strong); stroke: var(--zone-strong-line); }
@@ -193,9 +54,5 @@ svg .mark { fill: var(--mark); }
 .k-light { background: var(--zone-light); border: 1px dashed var(--zone-light-line); border-radius: 3px; padding: 0 3px; }
 .k-new { background: var(--mark); border-radius: 3px; padding: 0 3px; font-weight: 600; }
 
-/* Results in the worked solution */
-.katex .result {
-  background: var(--ok-bg);
-  border-radius: 3px;
-  padding: 0.1em 0.25em;
-}
+/* arcade: currents and voltages in manim's colours */
+#arcade { --cur: #58c4dd; --vol: #fc6255; }

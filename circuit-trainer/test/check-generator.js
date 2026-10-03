@@ -98,8 +98,8 @@ for (const level of Object.keys(LEVELS)) {
 }
 
 // The tutor examples: their paths must work, and every step must hold numerically.
-for (const [i, e] of require('../tutor.js').EXAMPLES.entries()) {
-  const tag = `tutor example ${i + 1} (${e.name})`;
+for (const [i, e] of require('../lessons.js').EXAMPLES.entries()) {
+  const tag = `tutor example ${i + 1} (${e.name.en})`;
   let tut;
   try { tut = tutorial(e.level, e.seed, e.path); } catch (err) { fail(`${tag}: ${err.message}`); continue; }
   const c = tut.circuit, g = (k) => fval(c.nodes[Number(k.slice(1))][k[0]]);
