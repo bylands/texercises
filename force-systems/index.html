@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Force Systems</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+  <link rel="stylesheet" href="ui.css">
   <link rel="stylesheet" href="style.css">
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+  <script defer src="lang.js"></script>
   <script defer src="core.js"></script>
   <script defer src="draw.js"></script>
   <script defer src="scenarios.js"></script>
@@ -15,6 +17,7 @@
   <script defer src="lessons.js"></script>
   <script defer src="tutor.js"></script>
   <script defer src="arcade.js"></script>
+  <script defer src="arcade-src.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -87,46 +90,6 @@
       <p id="sol-short" class="short"></p>
     </section>
 
-    <section id="arcade" class="card" hidden>
-      <div id="ar-start">
-        <h2 id="ar-start-title"></h2>
-        <div id="ar-hero" class="ar-hero" aria-hidden="true"></div>
-        <p id="ar-tag" class="ar-tag"></p>
-        <details class="ar-more"><summary id="ar-more-sum"></summary><div id="ar-rules" class="steps"></div></details>
-        <p id="ar-best" class="note"></p>
-        <div class="actions"><button type="button" id="ar-go" class="primary"></button></div>
-      </div>
-
-      <div id="ar-play" hidden>
-        <div class="ar-bar">
-          <span id="ar-time" class="ar-time" aria-live="off"></span>
-          <span id="ar-score" class="ar-score"></span>
-          <span id="ar-level" class="ar-level"></span>
-        </div>
-        <div class="progress" aria-hidden="true"><div id="ar-tbar"></div></div>
-        <p id="ar-toast" class="ar-toast" aria-live="polite"></p>
-        <div id="ar-stage">
-          <h2 id="ar-title"></h2>
-          <div id="ar-prompt"></div>
-          <div id="ar-figure" class="figs"></div>
-          <p id="ar-ask" class="ar-ask"></p>
-          <div id="ar-options" class="ar-options" role="group"></div>
-        </div>
-        <div class="actions ar-actions">
-          <button type="button" id="ar-skip"></button>
-          <button type="button" id="ar-quit"></button>
-        </div>
-      </div>
-
-      <div id="ar-summary" hidden>
-        <h2 id="ar-sum-title"></h2>
-        <p id="ar-sum-score" class="ar-big"></p>
-        <p id="ar-sum-stats"></p>
-        <ul id="ar-sum-notes" class="ar-notes"></ul>
-        <div id="ar-sum-list" class="ar-list"></div>
-        <div class="actions"><button type="button" id="ar-again" class="primary"></button></div>
-      </div>
-    </section>
   </main>
 </body>
 </html>

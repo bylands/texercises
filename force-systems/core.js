@@ -1,13 +1,15 @@
-// Shared helpers: language, symbols, number formatting and random numbers.
+// Helpers of the app: language (from lang.js, shared by the apps), symbols, number formatting and
+// random numbers.
 (function (root) {
   'use strict';
 
-  const LANGS = ['en', 'de'];
-  let lang = 'en';
-  const setLang = (l) => { lang = LANGS.includes(l) ? l : 'en'; };
-  const getLang = () => lang;
+  const Lang = root.Lang || require('./lang.js');
+  const LANGS = Lang.LANGS;
+  // quiet: the app remembers the choice itself, through Lang.set
+  const setLang = (l) => Lang.set(l, true);
+  const getLang = () => Lang.get();
   // The text in the current language.
-  const L = (en, de) => (lang === 'de' ? de : en);
+  const L = (en, de) => Lang.L(en, de);
 
   const G = 10; // m/s², as on the worksheet
 
@@ -27,7 +29,7 @@
     alpha: { en: ['α', ''], de: ['α', ''] },
   };
   const TEX_LETTER = { μ: '\\mu', α: '\\alpha' };
-  const parts = (key, i = '') => { const [l, s] = SYM[key][lang]; return [l, `${s}${i}`]; };
+  const parts = (key, i = '') => { const [l, s] = SYM[key][getLang()]; return [l, `${s}${i}`]; };
 
   // KaTeX: F_\mathrm{N1}, m_1, \mu_\mathrm{G}
   function tex(key, i = '') {
@@ -51,8 +53,8 @@
   // ---------------------------------------------------------------- numbers
   // At most one decimal place (given values such as friction coefficients may ask for more).
   const round = (x, dec = 1) => (Number.isFinite(x) ? Number(x.toFixed(dec)) + 0 : 0);
-  const num = (x, dec) => { const s = String(round(x, dec)); return lang === 'de' ? s.replace('.', ',') : s; };
-  const texNum = (x, dec) => (lang === 'de' ? String(round(x, dec)).replace('.', '{,}') : String(round(x, dec)));
+  const num = (x, dec) => { const s = String(round(x, dec)); return getLang() === 'de' ? s.replace('.', ',') : s; };
+  const texNum = (x, dec) => (getLang() === 'de' ? String(round(x, dec)).replace('.', '{,}') : String(round(x, dec)));
 
   const UNITS = { N: 'N', a: 'm/s²', kg: 'kg', deg: '°' };
   const TEX_UNITS = { N: '\\mathrm{N}', a: '\\mathrm{m/s^2}', kg: '\\mathrm{kg}', deg: '^\\circ' };

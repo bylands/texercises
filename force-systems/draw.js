@@ -109,7 +109,7 @@
         // a slim, notched arrowhead; the shaft ends in the notch
         const back = [tip[0] - HEAD * ux, tip[1] - HEAD * uy], notch = [tip[0] - NOTCH * ux, tip[1] - NOTCH * uy];
         const head = [tip, [back[0] - BARB * uy, back[1] + BARB * ux], notch, [back[0] + BARB * uy, back[1] - BARB * ux]];
-        out.push(`<g class="${cls}"><line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(notch[0])}" y2="${f(notch[1])}"/>` +
+        out.push(`<g class="seq ${cls}"><line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(notch[0])}" y2="${f(notch[1])}"/>` +
           `<polygon points="${head.map((p) => p.map(f).join(',')).join(' ')}"/>` +
           `<circle cx="${f(a[0])}" cy="${f(a[1])}" r="2"/>` + lbl + '</g>');
       };

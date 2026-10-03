@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const FS = window.FS, { LEVELS, generate, tutorial } = window.Forces;
+  const FS = window.FS, Lang = window.Lang, Arcade = window.Arcade, { LEVELS, generate, tutorial } = window.Forces;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
@@ -242,13 +242,8 @@
   }));
 
   function applyStatic() {
-    const lang = FS.getLang();
-    document.documentElement.lang = lang;
     document.title = ui().title;
-    document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = ui()[el.dataset.i18n]; });
-    document.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = ui()[el.dataset.i18nHtml]; });
-    document.querySelectorAll('[data-i18n-label]').forEach((el) => { el.setAttribute('aria-label', ui()[el.dataset.i18nLabel]); });
-    document.querySelector(`input[name="lang"][value="${lang}"]`).checked = true;
+    Lang.apply(ui());
     let cur = $('#levels').childElementCount ? level() : stored('fs-level', 'easy');
     if (!LEVELS[cur]) cur = 'easy'; // a level of an earlier version
     $('#levels').innerHTML = Object.entries(LEVELS).map(([k, lv]) => `
@@ -256,9 +251,7 @@
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
-  function switchLang(lang) {
-    FS.setLang(lang);
-    store('fs-lang', lang);
+  function switchLang() {
     applyStatic();
     showScore();
     if (ex) {
@@ -324,15 +317,13 @@
 
   // ---------------------------------------------------------------- init
   function init() {
-    // Language: ?lang=de in the address, else the last choice, else the browser's language.
-    const asked = new URLSearchParams(location.search).get('lang');
-    const browser = (navigator.language || 'en').toLowerCase().startsWith('de') ? 'de' : 'en';
-    FS.setLang(FS.LANGS.includes(asked) ? asked : stored('fs-lang', browser));
+    Lang.init(); // see lang.js
+    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     applyStatic();
     $('#levels').addEventListener('change', () => { store('fs-level', level()); fresh(); });
     $('#calc').checked = stored('fs-calc', true);
     $('#calc').addEventListener('change', () => { store('fs-calc', calc()); fresh(); });
-    $('#langs').addEventListener('change', (evt) => switchLang(evt.target.value));
+    Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
     $('#hint').addEventListener('click', hint);
@@ -344,7 +335,7 @@
       done: practise,
       t: () => ui().tutorBtns,
     });
-    arcade = window.createArcade({ math, markScrollable, stored, store });
+    arcade = Arcade.create(window.ArcadeSource, { math, markScrollable, stored, store });
     $('#modes').addEventListener('change', () => {
       if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();
     });

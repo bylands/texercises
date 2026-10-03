@@ -9,7 +9,7 @@
 'use strict';
 
 const load = typeof require === 'function'
-  ? () => { require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../generator.js'); require('../lessons.js'); }
+  ? () => { require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../generator.js'); require('../lessons.js'); }
   : () => {};
 load();
 const { FS, Forces, Lessons } = globalThis;
