@@ -6,7 +6,7 @@
 set -e
 cd "$(dirname "$0")/.."
 # the apps that use the shared files so far
-APPS="force-systems bulb-brightness circuit-trainer impedance induction-match"
+APPS="force-systems bulb-brightness circuit-trainer impedance induction-match motion-graphs"
 FILES="ui.css lang.js tutor.js arcade.js"
 status=0
 for app in $APPS; do

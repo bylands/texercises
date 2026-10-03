@@ -1,17 +1,8 @@
+/* Motion Graphs: its colours, diagrams, drawing editor and tutor marks; the general look is in
+   ui.css (shared by the apps). */
 :root {
-  --bg: #f6f5f1;
-  --card: #ffffff;
-  --ink: #1f2328;
-  --muted: #646b73;
-  --line: #d9d6ce;
   --grid: #ebe8e1;
   --grid-major: #d9d5cb;
-  --accent: #2b59c3;
-  --accent-ink: #ffffff;
-  --ok: #1d7a3e;
-  --ok-bg: #e6f4ea;
-  --bad: #b3261e;
-  --bad-bg: #fbe9e7;
   /* one colour per quantity */
   --q-s: #c62828;
   --q-v: #1f5fc4;
@@ -20,25 +11,12 @@
   --focus-band: rgba(43, 89, 195, 0.1);
   --area-pos: rgba(43, 89, 195, 0.22);
   --area-neg: rgba(194, 65, 12, 0.24);
-  --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
-  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15171a;
-    --card: #1e2125;
-    --ink: #e6e3dc;
-    --muted: #9aa0a6;
-    --line: #3a3e44;
     --grid: #2a2e33;
     --grid-major: #3a3f45;
-    --accent: #7aa2ff;
-    --accent-ink: #0d1320;
-    --ok: #7fd49a;
-    --ok-bg: #1d3325;
-    --bad: #ff8a80;
-    --bad-bg: #3d2322;
     --q-s: #ff7b72;
     --q-v: #79a8ff;
     --q-a: #5fd07e;
@@ -46,47 +24,11 @@
     --focus-band: rgba(122, 162, 255, 0.12);
     --area-pos: rgba(122, 162, 255, 0.28);
     --area-neg: rgba(251, 146, 60, 0.28);
-    color-scheme: dark;
   }
 }
 
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-.wrap { max-width: 860px; margin: 0 auto; padding-inline: 16px; }
-
-.top { border-bottom: 1px solid var(--line); background: var(--card); }
-.top .wrap { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; padding-block: 14px; }
-h1 { font-size: 1.25rem; margin: 0; }
-.score { margin: 0; color: var(--muted); font-size: 0.9rem; }
-
-.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 20px 0 14px; }
-button, input { font: inherit; color: inherit; }
-.levels { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
-.levels label { position: relative; }
-.levels input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.levels span { display: block; padding: 7px 14px; border-left: 1px solid var(--line); white-space: nowrap; }
-.levels label:first-child span { border-left: 0; }
-.levels input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.levels input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
-}
-.card h2 { margin: 0 0 6px; font-size: 1.1rem; }
-.card h3 { margin: 18px 0 6px; font-size: 1rem; }
-.card > h3:first-child { margin-top: 0; }
+.card h3 { margin: 18px 0 6px; }
+.actions { margin-top: 16px; }
 
 i.bar { text-decoration: overline; text-decoration-thickness: 1px; }
 
@@ -126,49 +68,21 @@ svg .gp { fill: var(--qc); }
 svg .gp.on { fill: var(--card); stroke: var(--qc); stroke-width: 2; }
 svg .val { fill: var(--ink); font-size: 13px; font-family: system-ui, sans-serif; font-weight: 600; paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
 
-/* actions and feedback */
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.actions button, .toolbar button {
-  padding: 7px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  cursor: pointer;
-}
-.actions button:hover:not(:disabled), .toolbar button:hover { border-color: var(--accent); }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.actions button:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.note { color: var(--muted); font-size: 0.9rem; margin: 8px 0 0; }
-.status { margin: 10px 0 0; min-height: 1.4em; }
-.status.ok { color: var(--ok); font-weight: 600; }
-.status.bad { color: var(--bad); }
 .feedback { margin: 6px 0 0; padding-left: 1.2em; }
 .feedback:empty { display: none; }
 .feedback li { margin: 6px 0; }
 
-#hint-list { margin: 0; padding-left: 1.4em; }
-#hint-list li { margin: 8px 0; }
 #hint-list ul, .pieces { margin: 6px 0; padding-left: 1.2em; }
 #sol-text p { margin: 8px 0; }
 .pieces li { margin: 6px 0; }
 
-@media (max-width: 560px) {
-  .card { padding: 14px; }
-  .levels span { padding: 7px 10px; }
-}
 
 /* tutor mode */
-.examples { margin-bottom: 14px; flex-wrap: wrap; }
 .tgraphs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
 .tgraphs h3 { margin: 4px 0 2px; font-size: 0.95rem; }
 .tutor-text { min-height: 8em; }
 .tutor-text p { margin: 8px 0; }
 .tutor-text .step-rule { color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
-.tutor-nav { align-items: center; justify-content: space-between; }
-.tutor-nav .note { margin: 0; }
-.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 8px 0 6px; }
-#t-bar { height: 100%; background: var(--accent); transition: width 0.2s; }
 svg .band.focus { fill: var(--focus-band); }
 .tgraphs svg .val { font-size: 19px; }
 .tgraphs svg .tick, .tgraphs svg .pnum { font-size: 15px; }
@@ -185,3 +99,15 @@ svg .tdot.mean { fill: var(--card); stroke: var(--qc); stroke-width: 2; }
 @media (max-width: 760px) {
   .tgraphs { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* arcade: manim's colours for s, v and a */
+#arcade { --q-s: #fc6255; --q-v: #58c4dd; --q-a: #83c167; --grid: #1c1c1c; --grid-major: #333; --band: #222; }
+#arcade #ar-figure .fig svg, #arcade .ar-explain > .figs .fig svg { width: 420px; }
+#arcade .ar-opt { padding: 22px 8px 6px; }
+#arcade .ar-opt .val { width: 100%; }
+#arcade .ar-opt .val svg { width: 100%; max-width: 380px; margin: 0 auto; }
+#arcade .ar-answers svg { width: 300px; display: block; }
+#arcade .ar-explain .tgraphs { max-width: 760px; }
+.ar-hero .figs .fig svg { width: 340px; }
+/* the start picture: first the position, then its slope */
+#ar-hero.animate .fig:nth-child(2) .curve { animation-delay: 1.4s, 1.8s; }

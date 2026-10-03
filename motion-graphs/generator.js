@@ -15,6 +15,11 @@
 // parabola can be worked out at one of its ends (a horizontal tangent, or the smooth join to a
 // piece whose slope is known); the other end then follows from ΔG/Δt = (g_start + g_end)/2.
 //
+// Difficulty 1–5: derivatives 1–3, one more for each piece whose end value has to come from the
+// mean value (up to two); integrals 3–5, one more for each piece beyond the first in which the
+// given graph changes sign. The practice levels pick an exercise of the right difficulty:
+// easy 1–2, medium 3, hard 4–5.
+//
 // An answer (drawn or correct) is a list of pieces {y0, ym, y1}: the values at the start, in the
 // middle and at the end of the piece (a parabola through these three points). evaluate()
 // compares an answer with the correct one piece by piece and names the likely mistake.
@@ -32,6 +37,7 @@
     vs: { from: 'v', to: 's', dir: 'int' },
     av: { from: 'a', to: 'v', dir: 'int' },
   };
+  const LEVELS = { easy: [1, 2], medium: [3], hard: [4, 5], mixed: [1, 2, 3, 4, 5] };
   const LIMITS = { s: [-6, 30], v: [-12, 12] }; // range of G
   const G_AXIS = { lo: -4, hi: 4, label: 1, step: 0.5 };
 
@@ -152,15 +158,19 @@
     if (ps.some((p) => sloped(p) && (Math.abs(p.g1 - p.g0) * len(p)) / 8 < BEND * (Gaxis.hi - Gaxis.lo))) return null;
     const gValues = (p) => ({ y0: p.g0, ym: (p.g0 + p.g1) / 2, y1: p.g1 });
     const GValues = (p) => ({ y0: p.G0, ym: p.Gm, y1: p.G1 });
+    const difficulty = dir === 'diff'
+      ? 1 + Math.min(2, how.filter((h) => h.start === 'mean' || h.end === 'mean').length)
+      : 3 + Math.max(0, Math.min(2, ps.filter((p) => p.g0 * p.g1 < 0).length - 1));
     return {
       task, from, to, dir, pieces, c, how,
+      difficulty,
       axes: dir === 'diff' ? { source: Gaxis, target: G_AXIS } : { source: G_AXIS, target: Gaxis },
       source: pieces.map(dir === 'diff' ? GValues : gValues),
       answer: pieces.map(dir === 'diff' ? gValues : GValues),
     };
   }
 
-  function generate(task, seed) {
+  function make(task, seed) {
     const r = rng(seed);
     for (let k = 0; k < 20000; k++) {
       const ex = build(r, task);
@@ -168,6 +178,24 @@
     }
     throw new Error(`no exercise for ${task}-${seed}`);
   }
+
+  // An exercise of one of the difficulties ds, from the tasks that give it.
+  function pick(ds, seed) {
+    const r = rng(seed ^ 0x5bd1e995), d = r.pick(ds);
+    const tasks = Object.keys(TASKS).filter((t) => (TASKS[t].dir === 'diff' ? d <= 3 : d >= 3));
+    for (let k = 0; ; k++) {
+      const ex = make(r.pick(tasks), (seed + 7919 * k) >>> 0);
+      if (ex.difficulty === d) return ex;
+    }
+  }
+
+  // generate(level, seed): a practice exercise (easy, medium, hard, mixed); generate(task, seed):
+  // one of a task (sv, va, vs, av; for the worked examples).
+  function generate(key, seed) {
+    if (TASKS[key]) return make(key, seed);
+    return { ...pick(LEVELS[key], seed), id: `${key}-${seed}`, seed };
+  }
+  const ofDifficulty = (d, seed) => pick([d], seed);
 
   // ---------------------------------------------------------------- checking an answer
   const near = (a, b, tol) => Math.abs(a - b) <= tol + 1e-9;
@@ -226,7 +254,64 @@
     return same >= 4 && evaluate(ex, ans).some((r) => !r.ok);
   }
 
-  const api = { T, N, TASKS, BEND, MID_STEP, G_AXIS, generate, evaluate, copied, readable, g, G, gAt, GAt, len, sloped, rate, area, bend };
+  // ---------------------------------------------------------------- arcade: four graphs to choose from
+  // The right answer and three wrong ones from typical mistakes (flags as in evaluate(), plus
+  // copy: the shape of the given graph). Derivative: sign, average (the mean value for the whole
+  // piece), copy. Integral: sign, copy, and rectStart (Δ = value at the start · Δt, straight
+  // pieces) or curve (the right values at the breakpoints, but straight pieces). Every option
+  // has its own axis (integral), so that the scale does not give the answer away. null if two
+  // options look alike.
+  const flat = (y) => ({ y0: y, ym: y, y1: y });
+  const lineThrough = (y0, y1) => ({ y0, ym: (y0 + y1) / 2, y1 });
+  // Values along a piece drawn as a parabola through y0, ym, y1 (as in plot.js).
+  const samples = (v) => Array.from({ length: 11 }, (x, k) => {
+    const u = k / 10, c = 2 * v.ym - (v.y0 + v.y1) / 2;
+    return (1 - u) * (1 - u) * v.y0 + 2 * u * (1 - u) * c + u * u * v.y1;
+  });
+  function axisFor(vals) {
+    const ys = vals.flatMap(samples), lo = Math.min(0, Math.floor(Math.min(...ys)) - 1), hi = Math.max(0, Math.ceil(Math.max(...ys)) + 1);
+    const label = hi - lo <= 12 ? 2 : 5;
+    return { lo: Math.floor(lo / label) * label, hi: Math.ceil(hi / label) * label, label, step: 0.5 };
+  }
+  // the shape of the values `from`, stretched to the range of `to`, starting where `to` starts (integral)
+  function stretch(from, to, keepStart) {
+    const ys = from.flatMap(samples), m = Math.min(...ys), M = Math.max(...ys);
+    const ts = to.flatMap(samples), tm = Math.min(...ts), tM = Math.max(...ts);
+    const k = M > m ? (tM - tm) / (M - m) : 1;
+    const map = keepStart ? (y) => to[0].y0 + k * (y - from[0].y0) : (y) => tm + k * (y - m);
+    return from.map((v) => ({ y0: map(v.y0), ym: map(v.ym), y1: map(v.y1) }));
+  }
+
+  function quiz(ex, seed) {
+    const r = rng(seed ^ 0x2545f491), right = ex.answer, opts = [{ vals: right, correct: true, flag: null }];
+    if (ex.dir === 'diff') {
+      opts.push({ vals: right.map((v) => ({ y0: -v.y0, ym: -v.ym, y1: -v.y1 })), flag: 'sign' });
+      opts.push({ vals: right.map((v) => flat((v.y0 + v.y1) / 2)), flag: 'average' });
+      opts.push({ vals: stretch(ex.source, [flat(-3), flat(3)]), flag: 'copy' });
+    } else {
+      const G0 = right[0].y0;
+      opts.push({ vals: right.map((v) => ({ y0: 2 * G0 - v.y0, ym: 2 * G0 - v.ym, y1: 2 * G0 - v.y1 })), flag: 'sign' });
+      opts.push({ vals: stretch(ex.source, right, true), flag: 'copy' });
+      if (r.next() < 0.5) {
+        let y = G0;
+        opts.push({ vals: ex.pieces.map((p) => { const y0 = y; y += p.g0 * len(p); return lineThrough(y0, y); }), flag: 'rectStart' });
+      } else {
+        opts.push({ vals: right.map((v) => lineThrough(v.y0, v.y1)), flag: 'curve' });
+      }
+    }
+    // alike: no point of the drawn curves differs by more than a little of the axis
+    const curveOf = (o) => o.vals.flatMap(samples);
+    for (const o of opts) o.axis = ex.dir === 'diff' ? G_AXIS : axisFor(o.vals);
+    for (let i = 0; i < opts.length; i++) {
+      for (let j = i + 1; j < opts.length; j++) {
+        const a = curveOf(opts[i]), b = curveOf(opts[j]), span = opts[0].axis.hi - opts[0].axis.lo;
+        if (Math.max(...a.map((y, k) => Math.abs(y - b[k]))) < 0.08 * span) return null;
+      }
+    }
+    return { options: r.shuffle(opts) };
+  }
+
+  const api = { T, N, TASKS, LEVELS, BEND, MID_STEP, G_AXIS, generate, ofDifficulty, quiz, evaluate, copied, readable, g, G, gAt, GAt, len, sloped, rate, area, bend };
   root.Motion = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

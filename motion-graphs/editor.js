@@ -9,6 +9,7 @@
 
   const { MID_STEP } = root.Motion;
   const { scales, targetGraph, handles, UNIT, num, svgPoint, hoverPoint } = root.Plot;
+  const L = (en, de) => root.Lang.L(en, de);
 
   function createEditor(el, ex, onEdit) {
     const axis = ex.axes.target, s = scales(axis), n = ex.pieces.length;
@@ -43,7 +44,7 @@
     function render() {
       el.innerHTML = targetGraph(ex, values(), { ...view, active: view.locked ? null : active, hover });
       const h = active && valueOf(active);
-      el.setAttribute('aria-valuetext', h ? `${ex.to} at ${h.t} s: ${num(Math.round(h.value * 100) / 100)} ${UNIT[ex.to]}` : '');
+      el.setAttribute('aria-valuetext', h ? `${ex.to} ${L('at', 'bei')} ${num(h.t)} s: ${num(Math.round(h.value * 100) / 100)} ${UNIT[ex.to]}` : '');
     }
     function edited() {
       view.marks = null;
@@ -149,6 +150,9 @@
     return {
       values,
       reset() { reset(); edited(); },
+      // the drawing, to carry it over to a new editor (e.g. after switching the language)
+      state: () => JSON.parse(JSON.stringify(st)),
+      restore(saved) { st = JSON.parse(JSON.stringify(saved)); render(); },
       show(opts) { Object.assign(view, opts); if (view.locked) active = null; render(); },
     };
   }

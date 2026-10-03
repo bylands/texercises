@@ -4,48 +4,58 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Motion Graphs</title>
+  <link rel="stylesheet" href="ui.css">
   <link rel="stylesheet" href="style.css">
+  <script defer src="lang.js"></script>
   <script defer src="generator.js"></script>
   <script defer src="plot.js"></script>
   <script defer src="editor.js"></script>
   <script defer src="tutor.js"></script>
+  <script defer src="arcade.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
   <header class="top">
     <div class="wrap">
-      <h1>Motion Graphs</h1>
-      <p id="score" class="score"></p>
+      <h1 data-i18n="title">Motion Graphs</h1>
+      <div class="top-right">
+        <p id="score" class="score"></p>
+        <div id="langs" class="levels small" role="radiogroup" aria-label="Language">
+          <label><input type="radio" name="lang" value="en" checked><span title="English">EN</span></label>
+          <label><input type="radio" name="lang" value="de"><span title="Deutsch">DE</span></label>
+        </div>
+      </div>
     </div>
   </header>
 
   <main class="wrap">
     <div class="toolbar">
-      <div id="modes" class="levels" role="radiogroup" aria-label="Mode">
-        <label><input type="radio" name="mode" value="tutor" checked><span>Tutor</span></label>
-        <label><input type="radio" name="mode" value="practice"><span>Practice</span></label>
+      <div id="modes" class="levels" role="radiogroup" data-i18n-label="mode" aria-label="Mode">
+        <label><input type="radio" name="mode" value="tutor" checked><span data-i18n="tutor">Tutor</span></label>
+        <label><input type="radio" name="mode" value="practice"><span data-i18n="practice">Practice</span></label>
+        <label><input type="radio" name="mode" value="arcade"><span data-i18n="arcade">Arcade</span></label>
       </div>
-      <div id="tasks" class="levels practice" role="radiogroup" aria-label="Kind of exercise" hidden></div>
-      <button id="new" type="button" class="primary practice" hidden>New exercise</button>
+      <div id="levels" class="levels practice" role="radiogroup" data-i18n-label="difficulty" aria-label="Difficulty" hidden></div>
+      <button id="new" type="button" class="new-btn practice" data-i18n="new" hidden>New exercise</button>
     </div>
 
     <section id="tutor" class="card">
-      <div id="examples" class="levels examples" role="radiogroup" aria-label="Example"></div>
+      <div id="examples" class="levels examples" role="radiogroup" data-i18n-label="example" aria-label="Example"></div>
       <h2 id="t-title"></h2>
       <p id="t-idea" class="note"></p>
       <div id="t-figure"></div>
       <div class="progress" aria-hidden="true"><div id="t-bar"></div></div>
       <div id="t-text" class="tutor-text" aria-live="polite"></div>
       <div class="actions tutor-nav">
-        <button type="button" id="t-prev" class="secondary">← Back</button>
+        <button type="button" id="t-prev">← Back</button>
         <span id="t-count" class="note"></span>
         <button type="button" id="t-next" class="primary">Next →</button>
       </div>
-      <p class="note">Use the arrow keys ← → to step through. The piece a step is about is <span class="k-band">highlighted</span> in both graphs; dashed lines are chords (mean values), short lines tangents, and shaded areas count <span class="k-pos">positive</span> above and <span class="k-neg">negative</span> below the time axis.</p>
+      <p class="note" data-i18n-html="tutorNote"></p>
     </section>
 
     <section id="task" class="card practice" hidden>
-      <h2 id="task-title"></h2>
+      <h2 id="title"></h2>
       <p id="statement"></p>
 
       <h3 id="given-title"></h3>
@@ -59,22 +69,22 @@
 
       <div class="actions">
         <button type="button" id="check" class="primary">Check</button>
-        <button type="button" id="hint" class="secondary">Hint</button>
-        <button type="button" id="reset" class="secondary">Reset drawing</button>
-        <button type="button" id="reveal" class="secondary">Show solution</button>
+        <button type="button" id="hint">Hint</button>
+        <button type="button" id="reset" data-i18n="reset">Reset drawing</button>
+        <button type="button" id="reveal" data-i18n="reveal">Show solution</button>
       </div>
-      <p id="reveal-note" class="note">The solution unlocks once you have solved the exercise, used all hints or made three attempts.</p>
+      <p id="reveal-note" class="note" data-i18n="revealNote"></p>
       <p id="status" class="status" aria-live="polite"></p>
       <ul id="feedback" class="feedback"></ul>
     </section>
 
     <section id="hints" class="card" hidden>
-      <h3>Hints</h3>
+      <h3 data-i18n="hints">Hints</h3>
       <ol id="hint-list"></ol>
     </section>
 
     <section id="solution" class="card" hidden>
-      <h3>Solution</h3>
+      <h3 data-i18n="solution">Solution</h3>
       <div id="sol-text"></div>
     </section>
   </main>

@@ -7,13 +7,17 @@
   'use strict';
 
   const { T } = root.Motion || require('./generator.js');
+  const Lang = root.Lang || require('./lang.js');
+  const say = (en, de) => Lang.L(en, de);
   const H = 250, L = 58, R = 20, TOP = 26, B = 34;
   let W = 640, R_HANDLE = 7;
   // Narrow screens get a narrower drawing (larger text and handles once scaled down).
   function setNarrow(narrow) { W = narrow ? 420 : 640; R_HANDLE = narrow ? 9 : 7; }
   const UNIT = { s: 'm', v: 'm/s', a: 'm/s²' };
   const f1 = (x) => Math.round(x * 10) / 10;
-  const num = (x) => (x < 0 ? '−' + -x : String(x));
+  // decimal comma in German
+  const dec = (x) => say(String(x), String(x).replace('.', ','));
+  const num = (x) => (x < 0 ? '−' + dec(-x) : dec(x));
 
   const X = (t) => f1(L + (t / T) * (W - L - R));
   function scales(axis) {
@@ -148,16 +152,17 @@
     const q = ex.from;
     const { s, svg: grid } = frame(ex, ex.axes.source, q, opts.marks);
     const over = opts.overlay ? opts.overlay(s) : '';
-    return svg(`<g class="qc-${q}">${grid}${opts.under ? opts.under(s) : ''}${curve(ex, ex.source, s, '')}${over}</g>`, `Given graph of ${q} against time`);
+    return svg(`<g class="qc-${q}">${grid}${opts.under ? opts.under(s) : ''}${curve(ex, ex.source, s, '')}${over}</g>`, say(`Given graph of ${q} against time`, `Gegebener Graph von ${q} gegen die Zeit`));
   }
 
   // The answer graph for the tutorial: its first opts.upto pieces, with opts.marks and
-  // opts.overlay as for sourceGraph.
+  // opts.overlay as for sourceGraph. For the arcade, opts.vals and opts.axis draw another graph
+  // (a wrong option) in place of the answer.
   function answerGraph(ex, opts = {}) {
-    const q = ex.to;
-    const { s, svg: grid } = frame(ex, ex.axes.target, q, opts.marks);
-    const start = ex.dir === 'int' ? `<circle class="fixed" cx="${s.x(0)}" cy="${s.y(ex.answer[0].y0)}" r="${R_HANDLE - 1}"/>` : '';
-    return svg(`<g class="qc-${q}">${grid}${curve(ex, ex.answer, s, ' drawn', opts.upto)}${start}${opts.overlay ? opts.overlay(s) : ''}</g>`, `Graph of ${q} against time`);
+    const q = ex.to, vals = opts.vals || ex.answer, axis = opts.axis || ex.axes.target;
+    const { s, svg: grid } = frame(ex, axis, q, opts.marks);
+    const start = ex.dir === 'int' ? `<circle class="fixed" cx="${s.x(0)}" cy="${s.y(vals[0].y0)}" r="${R_HANDLE - 1}"/>` : '';
+    return svg(`<g class="qc-${q}">${grid}${curve(ex, vals, s, ' drawn', opts.upto)}${start}${opts.overlay ? opts.overlay(s) : ''}</g>`, say(`Graph of ${q} against time`, `Graph von ${q} gegen die Zeit`));
   }
 
   // ---------------------------------------------------------------- tutorial marks
@@ -220,7 +225,7 @@
       for (const h of hs) body += handleShape(h, `handle${h.id === o.active ? ' active' : ''}`);
       const h = hs.find((x) => x.id === o.active);
       if (h) {
-        const text = `${q}(${h.t} s) = ${num(Math.round(h.value * 100) / 100)} ${UNIT[q]}`;
+        const text = `${q}(${num(h.t)} s) = ${num(Math.round(h.value * 100) / 100)} ${UNIT[q]}`;
         const right = h.x < W - 150, above = h.y > TOP + 26;
         body += `<text class="val" x="${f1(h.x + (right ? 12 : -12))}" y="${f1(h.y + (above ? -12 : 22))}" text-anchor="${right ? 'start' : 'end'}">${text}</text>`;
       }
@@ -228,7 +233,7 @@
     return `<g class="qc-${q}">${body}</g>`;
   }
 
-  const api = { get W() { return W; }, H, TOP, B, setNarrow, UNIT, scales, sourceGraph, targetGraph, answerGraph, Tut, handles, svg, num, svgPoint, hoverPoint, hoverMark };
+  const api = { get W() { return W; }, H, TOP, B, setNarrow, UNIT, scales, dec, sourceGraph, targetGraph, answerGraph, Tut, handles, svg, num, svgPoint, hoverPoint, hoverMark };
   root.Plot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

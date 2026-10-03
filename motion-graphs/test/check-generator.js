@@ -9,9 +9,13 @@
 // - typical mistakes are recognised: the mirror image (sign), the average slope of a parabola,
 //   the rectangle g(start)·Δt instead of the trapezoid, a parabola drawn straight, a straight piece
 //   bent, and a copy of the given graph,
-// - both diagrams render.
+// - both diagrams render,
+// - the difficulty fits the task, and every practice level gives its difficulties,
+// - the arcade options (quiz()): one right, and every wrong one is judged wrong by evaluate(),
+//   with the mistake it stands for.
 'use strict';
 
+require('../lang.js');
 const M = require('../generator.js');
 const P = require('../plot.js');
 
@@ -127,6 +131,43 @@ for (const task of Object.keys(M.TASKS)) {
   }
   console.log(`${task}: ${SAMPLES} seeds, ${seen.size} distinct, ${(zeros / SAMPLES).toFixed(2)} turning points per graph, ${Date.now() - t0} ms`);
   console.log(`  mistakes recognised: ${JSON.stringify(found)}`);
+}
+
+const RANGE = { diff: [1, 2, 3], int: [3, 4, 5] };
+for (const task of Object.keys(M.TASKS)) {
+  for (let seed = 1; seed <= 300; seed++) {
+    const ex = M.generate(task, seed);
+    if (!RANGE[ex.dir].includes(ex.difficulty)) fail(`${task}-${seed}: difficulty ${ex.difficulty}`);
+  }
+}
+for (const [level, ds] of Object.entries(M.LEVELS)) {
+  const seen = {};
+  for (let seed = 1; seed <= 200; seed++) {
+    const ex = M.generate(level, seed);
+    if (!ds.includes(ex.difficulty)) fail(`${level}-${seed}: difficulty ${ex.difficulty}`);
+    if (ex.id !== `${level}-${seed}`) fail(`${level}-${seed}: id ${ex.id}`);
+    seen[ex.difficulty] = (seen[ex.difficulty] || 0) + 1;
+  }
+  if (Object.keys(seen).length !== ds.length) fail(`${level}: difficulties ${JSON.stringify(seen)}`);
+  console.log(`${level}: ${JSON.stringify(seen)}`);
+}
+const CODE = { sign: 'sign', average: 'average', rectStart: 'rectStart', curve: 'curve' };
+for (let d = 1; d <= 5; d++) {
+  let none = 0;
+  for (let seed = 1; seed <= 200; seed++) {
+    const ex = M.ofDifficulty(d, seed), q = M.quiz(ex, seed), tag = `quiz ${d}/${seed}`;
+    if (ex.difficulty !== d) fail(`${tag}: difficulty ${ex.difficulty}`);
+    if (!q) { none++; continue; }
+    if (q.options.length !== 4 || q.options.filter((o) => o.correct).length !== 1) fail(`${tag}: options`);
+    for (const o of q.options) {
+      const res = M.evaluate(ex, o.vals);
+      if (!!o.correct !== res.every((r) => r.ok)) fail(`${tag}: option ${o.flag} judged ${res.every((r) => r.ok) ? 'right' : 'wrong'}`);
+      if (CODE[o.flag] && !res.some((r) => r.codes.includes(CODE[o.flag]))) fail(`${tag}: option ${o.flag} not recognised: ${JSON.stringify(res.map((r) => r.codes))}`);
+      if (o.vals.some((v) => [v.y0, v.ym, v.y1].some((y) => y < o.axis.lo - 1e-9 || y > o.axis.hi + 1e-9))) fail(`${tag}: option ${o.flag} off its axis`);
+      if (/NaN|undefined/.test(P.answerGraph(ex, { vals: o.vals, axis: o.axis }))) fail(`${tag}: option diagram`);
+    }
+  }
+  console.log(`quiz, difficulty ${d}: ${none} of 200 seeds give options that look alike`);
 }
 
 if (failures) { console.error(`\n${failures} failures`); process.exit(1); }
