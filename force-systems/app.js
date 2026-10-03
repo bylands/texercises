@@ -14,7 +14,7 @@
     en: {
       title: 'Force Systems', mode: 'Mode', difficulty: 'Difficulty', calc: 'Calculator', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
       tutorNote: `Use the arrow keys ← → to step through. The forces a step is about are highlighted. Colours: ${LEGEND.en}.`,
-      check: 'Check', nextEx: 'Next exercise →', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
+      check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
@@ -27,7 +27,7 @@
     de: {
       title: 'Kräftesysteme', mode: 'Modus', difficulty: 'Schwierigkeit', calc: 'Taschenrechner', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
       tutorNote: `Mit den Pfeiltasten ← → blätterst du weiter. Die Kräfte, um die es in einem Schritt geht, sind hervorgehoben. Farben: ${LEGEND.de}.`,
-      check: 'Prüfen', nextEx: 'Nächste Aufgabe →', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
+      check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
@@ -147,8 +147,10 @@
   const canReveal = () => st.solved || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
 
   function updateButtons() {
-    // once everything is right, Check becomes Next
-    $('#check').textContent = st.solved ? ui().nextEx : ui().check;
+    // once everything is right, Check becomes New exercise, like the button at the top
+    $('#check').textContent = st.solved ? ui().new : ui().check;
+    $('#check').classList.toggle('primary', !st.solved);
+    $('#check').classList.toggle('new-btn', st.solved);
     const left = ex.hints.length - st.hints;
     const hb = $('#hint');
     hb.disabled = left === 0 || st.revealed;
@@ -186,7 +188,7 @@
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { fresh(); return; } // the button reads Next
+    if (st.solved) { fresh(); return; } // the button reads New exercise
     const r = feedback();
     st.checked = true;
     if (r === null) { showStatus('fill'); return; }
