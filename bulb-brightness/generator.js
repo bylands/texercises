@@ -224,12 +224,22 @@
       shorted: answers[i] === 'off' && !isZero(E),
       models: { forward: models.forward[i], fixedCurrent: models.fixedCurrent[i] },
     }));
-    return { id, level, packKey, pack: clone(pack), load, bulbs, E, reversed: packKey.startsWith('R') };
+    const reversed = packKey.startsWith('R');
+    return { id, level, packKey, pack: clone(pack), load, bulbs, E, reversed, difficulty: difficulty(load, bulbs, reversed) };
   }
 
+  // Difficulty from 1 to 5: two bulbs 1, three 2, four 3; one more for a bulb bridged by a wire,
+  // a reversed battery, and groups inside groups inside groups.
+  const depth = (node) => (node.kids ? 1 + Math.max(...node.kids.map(depth)) : 0);
+  function difficulty(load, bulbs, reversed) {
+    const d = (bulbs.length - 1) + (bulbs.some((b) => b.shorted) ? 1 : 0) + (reversed ? 1 : 0) + (depth(load) >= 3 ? 1 : 0);
+    return Math.max(1, Math.min(5, d));
+  }
+
+  // level: easy, medium, hard, or mixed (one of them at random).
   function generate(level, seed) {
-    const lv = LEVELS[level];
     const r = rng(seed);
+    const lv = LEVELS[level === 'mixed' ? r.pick(['easy', 'medium', 'hard']) : level];
     // The batteries are chosen once, so that retries do not favour easily decided ones.
     const packKey = r.pick(lv.packs);
     for (;;) {
@@ -240,7 +250,7 @@
       if (!ex) continue;
       // Beyond the easy level: not every bulb gets the same answer (unless no current flows),
       // and the fixed-current model predicts something wrong for at least one bulb.
-      if (level !== 'easy' && !isZero(ex.E)) {
+      if (lv !== LEVELS.easy && !isZero(ex.E)) {
         if (new Set(ex.bulbs.map((b) => b.answer)).size < 2) continue;
         if (ex.bulbs.every((b) => b.models.fixedCurrent === b.answer)) continue;
       }

@@ -4,32 +4,43 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bulb Brightness</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+  <link rel="stylesheet" href="ui.css">
   <link rel="stylesheet" href="style.css">
+  <script defer src="lang.js"></script>
   <script defer src="generator.js"></script>
   <script defer src="draw.js"></script>
   <script defer src="tutor.js"></script>
+  <script defer src="arcade.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
   <header class="top">
     <div class="wrap">
-      <h1>Bulb Brightness</h1>
-      <p id="score" class="score"></p>
+      <h1 data-i18n="title">Bulb Brightness</h1>
+      <div class="top-right">
+        <p id="score" class="score"></p>
+        <div id="langs" class="levels small" role="radiogroup" aria-label="Language">
+          <label><input type="radio" name="lang" value="en" checked><span title="English">EN</span></label>
+          <label><input type="radio" name="lang" value="de"><span title="Deutsch">DE</span></label>
+        </div>
+      </div>
     </div>
   </header>
 
   <main class="wrap">
     <div class="toolbar">
-      <div id="modes" class="levels" role="radiogroup" aria-label="Mode">
-        <label><input type="radio" name="mode" value="tutor" checked><span>Tutor</span></label>
-        <label><input type="radio" name="mode" value="practice"><span>Practice</span></label>
+      <div id="modes" class="levels" role="radiogroup" data-i18n-label="mode" aria-label="Mode">
+        <label><input type="radio" name="mode" value="tutor" checked><span data-i18n="tutor">Tutor</span></label>
+        <label><input type="radio" name="mode" value="practice"><span data-i18n="practice">Practice</span></label>
+        <label><input type="radio" name="mode" value="arcade"><span data-i18n="arcade">Arcade</span></label>
       </div>
-      <div id="levels" class="levels practice" role="radiogroup" aria-label="Difficulty" hidden></div>
-      <button id="new" type="button" class="primary practice" hidden>New exercise</button>
+      <div id="levels" class="levels practice" role="radiogroup" data-i18n-label="difficulty" aria-label="Difficulty" hidden></div>
+      <button id="new" type="button" class="new-btn practice" data-i18n="new" hidden>New exercise</button>
     </div>
 
     <section id="tutor" class="card">
-      <div id="examples" class="levels examples" role="radiogroup" aria-label="Example"></div>
+      <div id="examples" class="levels examples" role="radiogroup" data-i18n-label="example" aria-label="Example"></div>
       <h2 id="t-title"></h2>
       <p id="t-idea" class="note"></p>
       <div id="t-figure"></div>
@@ -40,21 +51,21 @@
         <span id="t-count" class="note"></span>
         <button type="button" id="t-next" class="primary">Next →</button>
       </div>
-      <p class="note">Use the arrow keys ← → to step through. In the diagram, the part whose voltage is shared is <span class="k-light">shaded</span>, the parts that share it are <span class="k-strong">highlighted</span>, and every bulb shows its voltage once it is known.</p>
+      <p class="note" data-i18n-html="tutorNote"></p>
     </section>
 
     <section id="task" class="card practice" hidden>
-      <h2>How bright are the bulbs?</h2>
-      <p>All batteries are identical, and so are all bulbs. Compare each bulb with the reference circuit: one bulb connected to one battery. Is it brighter, equally bright, less bright, or off?</p>
+      <h2 id="title"></h2>
+      <p data-i18n="taskText"></p>
 
       <div class="figs">
         <figure class="fig ref">
           <div id="ref"></div>
-          <figcaption>Reference</figcaption>
+          <figcaption data-i18n="reference">Reference</figcaption>
         </figure>
         <figure class="fig">
           <div id="figure"></div>
-          <figcaption>Your circuit</figcaption>
+          <figcaption data-i18n="yours">Your circuit</figcaption>
         </figure>
       </div>
 
@@ -63,21 +74,21 @@
       <div class="actions">
         <button type="button" id="check" class="primary">Check</button>
         <button type="button" id="hint">Hint</button>
-        <button type="button" id="reveal">Show solution</button>
+        <button type="button" id="reveal" data-i18n="reveal">Show solution</button>
       </div>
-      <p id="reveal-note" class="note">The solution unlocks once you have solved the exercise, used all hints or made three attempts.</p>
+      <p id="reveal-note" class="note" data-i18n="revealNote"></p>
       <p id="status" class="status" aria-live="polite"></p>
       <ul id="feedback" class="feedback"></ul>
     </section>
 
     <section id="hints" class="card" hidden>
-      <h3>Hints</h3>
+      <h3 data-i18n="hints">Hints</h3>
       <ol id="hint-list"></ol>
     </section>
 
     <section id="solution" class="card" hidden>
-      <h3>Solution</h3>
-      <p class="note">The bulbs glow according to their power.</p>
+      <h3 data-i18n="solution">Solution</h3>
+      <p class="note" data-i18n="power"></p>
       <div id="sol-figure" class="figs"></div>
       <div id="sol-text"></div>
     </section>
