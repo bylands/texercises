@@ -1,5 +1,5 @@
 // Verifies the impedance exercises: run with `node impedance/test/check-generator.js`.
-// For many seeds of every filter it checks that
+// For many seeds of every level it checks that
 // - Z and dZ/dω agree with a numerical derivative,
 // - the features the method uses are on the graph: corner frequency or resonance inside the
 //   ω axis, the curve inside the Z axis where it is read, minimum or maximum clearly visible,
@@ -56,14 +56,15 @@ function checkRender(tag, c, ax, an) {
   for (const x of [an.intro, ...an.steps.map((t) => t.text), ...Object.values(an.readings)]) if (/NaN|undefined|Infinity/.test(x)) fail(`${tag}: text ${x.slice(0, 60)}`);
 }
 
-for (const filter of Object.keys(I.FILTERS)) {
+for (const filter of Object.keys(I.LEVELS)) {
   const t0 = Date.now(), kinds = {}, tags = {};
   let worst = 0;
   for (let seed = 1; seed <= SAMPLES; seed++) {
     const tag = `${filter}-${seed}`, ex = I.generate(filter, seed), { c, ax, an } = ex;
     const kind = `${c.conn} ${c.kind}`;
     kinds[kind] = (kinds[kind] || 0) + 1;
-    if (filter !== 'mixed' && c.kind !== filter) fail(`${tag}: kind ${c.kind}`);
+    if (!I.LEVELS[filter].kinds.includes(kind)) fail(`${tag}: kind ${kind}`);
+    if (ex.difficulty !== I.DIFFICULTY[kind]) fail(`${tag}: difficulty ${ex.difficulty}`);
 
     // derivative
     for (const f of [0.1, 0.4, 0.9]) {

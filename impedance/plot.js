@@ -4,6 +4,8 @@
   'use strict';
 
   const I = root.Impedance || require('./generator.js');
+  // the page language (lang.js, shared by the apps); English where it is not loaded
+  const L = (en, de) => (root.Lang ? root.Lang.L(en, de) : en);
   const ML = 64, MR = 20, MT = 22, MB = 46;
   let W = 640, H = 360, PW = W - ML - MR, PH = H - MT - MB;
   // Narrow screens get a smaller drawing (larger text once scaled down).
@@ -158,7 +160,7 @@
   function graph(c, ax, mode, opts) {
     const o = opts || {}, s = scales(ax, mode), id = `clip${++uid}`;
     const anns = (o.ann || []).map((a) => annotation(c, ax, mode, s, a)).join('');
-    return `<svg class="zgraph" viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.label || 'Impedance against angular frequency'}">` +
+    return `<svg class="zgraph" viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.label || L('Impedance against angular frequency', 'Impedanz gegen Kreisfrequenz')}">` +
       `<defs><clipPath id="${id}"><rect x="${ML}" y="${MT}" width="${PW}" height="${PH}"/></clipPath></defs>` +
       grid(ax, mode, s) +
       `<rect class="frame" x="${ML}" y="${MT}" width="${PW}" height="${PH}"/>` +
@@ -225,7 +227,7 @@
 
   function schematic(c) {
     const ks = I.UNKNOWNS[c.kind], n = ks.length;
-    const name = `${c.conn === 'series' ? 'Series' : 'Parallel'} ${c.kind} circuit`;
+    const name = c.conn === 'series' ? L(`Series ${c.kind} circuit`, `${c.kind}-Serieschaltung`) : L(`Parallel ${c.kind} circuit`, `${c.kind}-Parallelschaltung`);
     let out = '', w;
     if (c.conn === 'series') {
       const top = 32, bot = 108, left = 30, right = left + 40 + 64 * n;

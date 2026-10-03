@@ -1,98 +1,22 @@
+/* Impedance Curves: its colours, schematic, impedance graph, probe and answer options; the general
+   look is in ui.css (shared by the apps). */
 :root {
-  --bg: #f6f5f1;
-  --card: #ffffff;
-  --ink: #1f2328;
-  --muted: #646b73;
-  --line: #d9d6ce;
-  --accent: #2b59c3;
-  --accent-ink: #ffffff;
-  --cur: #1f5fd6;
-  --vol: #c8322b;
-  --ok: #1d7a3e;
-  --ok-bg: #e6f4ea;
-  --bad: #b3261e;
-  --bad-bg: #fbe9e7;
-  --zone-light: rgba(43, 89, 195, 0.06);
-  --zone-light-line: rgba(43, 89, 195, 0.45);
-  --zone-strong: rgba(43, 89, 195, 0.16);
-  --zone-strong-line: rgba(43, 89, 195, 0.6);
-  --mark: #ffe066;
   --zc: #1f5fc4;
   --tan: #d4620a;
   --grid: #ebe8e1;
   --grid-major: #d2cec4;
-  --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
-  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15171a;
-    --card: #1e2125;
-    --ink: #e6e3dc;
-    --muted: #9aa0a6;
-    --line: #3a3e44;
-    --accent: #7aa2ff;
-    --accent-ink: #0d1320;
-    --cur: #74a7ff;
-    --vol: #ff8a80;
-    --ok: #7fd49a;
-    --ok-bg: #1d3325;
-    --bad: #ff8a80;
-    --bad-bg: #3d2322;
-    --zone-light: rgba(122, 162, 255, 0.07);
-    --zone-light-line: rgba(122, 162, 255, 0.45);
-    --zone-strong: rgba(122, 162, 255, 0.2);
-    --zone-strong-line: rgba(122, 162, 255, 0.65);
-    --mark: #6b5600;
     --zc: #79a8ff;
     --tan: #ffa057;
     --grid: #2a2e33;
     --grid-major: #3d4248;
-    color-scheme: dark;
   }
 }
 
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-.wrap { max-width: 920px; margin: 0 auto; padding-inline: 16px; }
-
-.top { border-bottom: 1px solid var(--line); background: var(--card); }
-.top .wrap { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; padding-block: 14px; }
-h1 { font-size: 1.25rem; margin: 0; }
-.score { margin: 0; color: var(--muted); font-size: 0.9rem; }
-
-.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 20px 0 14px; }
-input, button { font: inherit; color: inherit; }
-.levels { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
-.levels label { position: relative; }
-.levels input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.levels span { display: block; padding: 7px 16px; border-left: 1px solid var(--line); }
-.levels label:first-child span { border-left: 0; }
-.levels input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.levels input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
-}
-.card h2 { margin: 0 0 6px; font-size: 1.1rem; }
-.card h3 { margin: 0 0 8px; font-size: 1rem; }
-
-.figs { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; justify-content: center; margin: 12px 0 18px; }
-.fig { max-width: 100%; overflow-x: auto; }
-.fig.scrolls::after { content: "Scroll sideways to see the whole circuit"; position: sticky; left: 0; display: block; margin-top: 4px; font-size: 0.8rem; color: var(--muted); }
+#prompt { margin: 6px 0; }
 
 /* circuit schematic */
 svg text { font-family: var(--serif); font-size: 15px; }
@@ -132,7 +56,7 @@ svg .pin-n { fill: var(--accent); font-size: 11px; font-weight: 700; font-family
 .k-tan { color: var(--tan); font-weight: 600; }
 .steps h4 { margin: 14px 0 2px; font-size: 1rem; }
 
-/* answer form: one row of options per unknown */
+/* answers: one row of options per unknown */
 #fields { display: grid; gap: 12px; margin-bottom: 14px; }
 .field { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); align-items: center; gap: 6px 8px; }
 .field .sym { text-align: right; }
@@ -155,75 +79,21 @@ svg .pin-n { fill: var(--accent); font-size: 11px; font-weight: 700; font-family
 .opts input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .opts input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .field.ok input:checked + span { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
-.field.ok .fb { color: var(--ok); }
-.field.ok .fb::before { content: "✓ "; }
 .field.bad input:checked + span { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
-.field.bad .fb { color: var(--bad); }
-.field.bad .fb::before { content: "✗ "; }
-
-.actions { display: flex; flex-wrap: wrap; gap: 8px; }
-button {
-  padding: 7px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  cursor: pointer;
-}
-button:hover:not(:disabled) { border-color: var(--accent); }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-button:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.note { color: var(--muted); font-size: 0.9rem; margin: 10px 0 0; }
-.status { margin: 10px 0 0; min-height: 1.4em; }
-.status.ok { color: var(--ok); font-weight: 600; }
-.status.bad { color: var(--bad); }
-
-#hint-list { margin: 0; padding-left: 1.4em; }
-#hint-list li { margin: 6px 0; }
 #hint-list ul { margin: 4px 0; padding-left: 1.2em; }
 #hint-list ul li { margin: 6px 0; }
-
-.steps p { margin: 10px 0; }
-.steps .katex-display { margin: 8px 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
-.short { font-weight: 600; border-top: 1px solid var(--line); padding-top: 12px; margin-bottom: 0; }
-.c-cur { color: var(--cur); }
-.c-vol { color: var(--vol); }
 
 @media (max-width: 600px) {
   svg .tick { font-size: 15px; }
   svg .axis { font-size: 17px; }
   svg .ann { font-size: 15px; }
 }
-
 @media (max-width: 560px) {
-  .card { padding: 14px; }
   .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .opts span { min-width: 0; padding-inline: 8px; }
+  .field .sym { grid-column: auto; text-align: right; margin-top: 0; }
 }
 
-/* tutor mode */
-.examples { margin-bottom: 14px; flex-wrap: wrap; }
-.tutor-text { min-height: 6em; }
-.tutor-text .step-rule { color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
-.tutor-nav { align-items: center; justify-content: space-between; }
-.tutor-nav .note { margin: 0; }
-.progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
-#t-bar { height: 100%; background: var(--accent); transition: width 0.2s; }
-table.compare { border-collapse: collapse; margin: 10px 0; font-variant-numeric: tabular-nums; }
-table.compare th, table.compare td { border-bottom: 1px solid var(--line); padding: 4px 12px; text-align: right; }
-table.compare th:first-child { text-align: left; font-weight: 600; }
-.k-dim { opacity: 0.45; }
-svg .cap { fill: var(--ink); font-size: 13px; }
-svg .use { font-weight: 700; }
-svg .new { font-weight: 700; }
-svg .mark { fill: var(--mark); }
-.k-strong { background: var(--zone-strong); border: 1px solid var(--zone-strong-line); border-radius: 3px; padding: 0 3px; }
-.k-light { background: var(--zone-light); border: 1px dashed var(--zone-light-line); border-radius: 3px; padding: 0 3px; }
-.k-new { background: var(--mark); border-radius: 3px; padding: 0 3px; font-weight: 600; }
-
-/* Results in the worked solution */
-.katex .result {
-  background: var(--ok-bg);
-  border-radius: 3px;
-  padding: 0.1em 0.25em;
-}
+/* arcade: the curve in manim's blue, the tangent in its gold */
+#arcade { --zc: #58c4dd; --tan: #f0ac5f; --grid: #1c1c1c; --grid-major: #333; }
+#arcade .ar-opt { font-size: 1.2rem; }

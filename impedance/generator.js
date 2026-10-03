@@ -11,8 +11,20 @@
 (function (root) {
   'use strict';
 
+  // The page language (lang.js, shared by the apps); English where it is not loaded.
+  const Lang = root.Lang || (typeof require === 'function' ? require('./lang.js') : null);
+  const L = (en, de) => (Lang ? Lang.L(en, de) : en);
+  const de = () => !!Lang && Lang.get() === 'de';
+
   const TOL = 0.05;                     // answers within 5 % are right
-  const FILTERS = { mixed: 'Mixed', RL: 'RL', RC: 'RC', RLC: 'RLC' };
+  // Difficulty 1–5 of each kind of circuit, and the practice levels made of them.
+  const DIFFICULTY = { 'series RL': 1, 'series RC': 2, 'parallel RL': 3, 'parallel RC': 3, 'series RLC': 4, 'parallel RLC': 5 };
+  const LEVELS = {
+    easy: { name: () => L('Easy', 'Einfach'), kinds: ['series RL', 'series RC'] },
+    medium: { name: () => L('Medium', 'Mittel'), kinds: ['parallel RL', 'parallel RC'] },
+    hard: { name: () => L('Hard', 'Schwierig'), kinds: ['series RLC', 'parallel RLC'] },
+    mixed: { name: () => L('Mixed', 'Gemischt'), kinds: Object.keys(DIFFICULTY) },
+  };
   const UNKNOWNS = { RL: ['R', 'L'], RC: ['R', 'C'], RLC: ['R', 'L', 'C'] };
   const NICE = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
   const E6 = [1, 1.5, 2.2, 3.3, 4.7, 6.8];
@@ -106,10 +118,12 @@
   const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
   const sup = (n) => String(n).split('').map((ch) => SUP[ch]).join('');
   // n significant digits, three by default (trailing zeros kept), with a proper minus sign.
+  // (a decimal comma in German)
   function digits(x, n = 3) {
     if (Math.abs(x) < 1e-12) return '0';
     let s = Math.abs(x).toPrecision(n);
     if (s.includes('e')) s = String(Number(Math.abs(x).toPrecision(n)));
+    if (de()) s = s.replace('.', ',');
     return (x < 0 ? '−' : '') + s;
   }
   const UNITS = {
@@ -122,15 +136,15 @@
   // A value with a unit and n significant digits: { html, tex }. Units: ohm, H, F, ohms (Ω·s) and w (rad/s).
   function q(x, unit, n = 3) {
     if (unit === 'w') {
-      if (Math.abs(x) < 1e4) return { html: `${digits(x)} rad/s`, tex: `${digits(x).replace('−', '-')}\\,\\mathrm{rad/s}` };
+      if (Math.abs(x) < 1e4) return { html: `${digits(x)} rad/s`, tex: `${digits(x).replace('−', '-').replace(',', '{,}')}\\,\\mathrm{rad/s}` };
       const e = 3 * Math.floor(Math.log10(Math.abs(x) * (1 + 1e-12)) / 3), d = digits(x / 10 ** e);
-      return { html: `${d}·10${sup(e)} rad/s`, tex: `${d.replace('−', '-')}\\cdot 10^{${e}}\\,\\mathrm{rad/s}` };
+      return { html: `${d}·10${sup(e)} rad/s`, tex: `${d.replace('−', '-').replace(',', '{,}')}\\cdot 10^{${e}}\\,\\mathrm{rad/s}` };
     }
     const u = UNITS[unit], ps = u.prefixes;
     let p = ps[0];
     for (const k of ps) if (Math.abs(x) >= 10 ** k * (1 - 5e-4)) p = k;
     const d = digits(x / 10 ** p, n), [ph, pt] = PREFIX[p];
-    return { html: `${d} ${ph}${u.html}`, tex: `${d.replace('−', '-')}\\,${pt}${u.tex}` };
+    return { html: `${d} ${ph}${u.html}`, tex: `${d.replace('−', '-').replace(',', '{,}')}\\,${pt}${u.tex}` };
   }
   const H = (x, unit, n) => q(x, unit, n).html;
   const T = (x, unit) => q(x, unit).tex;
@@ -148,95 +162,114 @@
   // Worked analysis of circuit c with axes ax. Returns { intro, steps: [{ title, text, ann }],
   // plan, formulas, readings (per unknown), est (values found from the readings) }.
   function analysis(c, ax) {
-    const { R, L, C } = c, wf = feature(c), wR = ax.lin.wmax, wS = ax.lin.wmax / 400;
+    const { R, L: Lc, C } = c, wf = feature(c), wR = ax.lin.wmax, wS = ax.lin.wmax / 400;
     const series = c.conn === 'series';
     const Rh = H(R, 'ohm'), Rt = T(R, 'ohm');
     const sR = p3(dZ(c, wR)), sS = p3(dZ(c, wS)), w0 = p3(wf);
-    const slopeNote = 'Since $\\omega$ is in rad/s, a slope of $1\\,\\Omega\\,\\mathrm{s}$ is $1\\,\\mathrm{H}$.';
+    const slopeNote = L('Since $\\omega$ is in rad/s, a slope of $1\\,\\Omega\\,\\mathrm{s}$ is $1\\,\\mathrm{H}$.', 'Da $\\omega$ in rad/s gemessen wird, entspricht eine Steigung von $1\\,\\Omega\\,\\mathrm{s}$ genau $1\\,\\mathrm{H}$.');
+    const slope = L('slope', 'Steigung');
     const steps = [], plan = {}, formulas = {}, readings = {}, est = { R };
+    const triangle = L('In series, resistance and reactance add like the sides of a right triangle:', 'In Serie addieren sich Widerstand und Blindwiderstand wie die Seiten eines rechtwinkligen Dreiecks:');
+    const triangleP = L('In parallel, the admittances add like the sides of a right triangle:', 'Parallel addieren sich die Leitwerte wie die Seiten eines rechtwinkligen Dreiecks:');
+    const levelsOff = (Rh2) => L(`the graph levels off at ${Rh2}`, `der Graph nähert sich ${Rh2}`);
     let intro;
 
     if (c.kind === 'RL') {
-      const corner = { title: 'Check: the corner', ann: [vl(wf, 'ω = R/L')] };
+      const corner = { title: L('Check: the corner', 'Kontrolle: die Grenzfrequenz'), ann: [vl(wf, 'ω = R/L')] };
       if (series) {
-        intro = 'In series, resistance and reactance add like the sides of a right triangle: $$Z = \\sqrt{R^2 + (\\omega L)^2}$$';
-        steps.push({ title: 'Small ω: the inductor is a wire', ann: [pt(0, R, 'Z(0) = R')],
-          text: `At $\\omega = 0$ the reactance $\\omega L$ is zero, so the impedance is just the resistance: $Z(0) = R$. The graph starts at $Z(0) = ${Rt}$, so $R = ${Rt}$.` });
+        intro = `${triangle} $$Z = \\sqrt{R^2 + (\\omega L)^2}$$`;
+        steps.push({ title: L('Small ω: the inductor is a wire', 'Kleines ω: Die Spule ist ein Draht'), ann: [pt(0, R, 'Z(0) = R')],
+          text: L(`At $\\omega = 0$ the reactance $\\omega L$ is zero, so the impedance is just the resistance: $Z(0) = R$. The graph starts at $Z(0) = ${Rt}$, so $R = ${Rt}$.`,
+            `Bei $\\omega = 0$ ist der Blindwiderstand $\\omega L$ null, die Impedanz ist also einfach der Widerstand: $Z(0) = R$. Der Graph beginnt bei $Z(0) = ${Rt}$, also ist $R = ${Rt}$.`) });
         est.L = sR;
-        steps.push({ title: 'Large ω: the inductor dominates', ann: [line(0, 0, L, 'Z = ωL'), tan(wR, 'slope')],
-          text: `For large $\\omega$, $\\omega L \\gg R$ and $Z \\approx \\omega L$: the graph approaches a straight line through the origin with slope $L$. The tangent at the right end, $\\omega = ${T(wR, 'w')}$, has the slope $\\frac{dZ}{d\\omega} \\approx ${T(sR, 'ohms')}$, so $L \\approx ${T(sR, 'H')}$. ${slopeNote}` });
+        steps.push({ title: L('Large ω: the inductor dominates', 'Grosses ω: Die Spule dominiert'), ann: [line(0, 0, Lc, 'Z = ωL'), tan(wR, slope)],
+          text: L(`For large $\\omega$, $\\omega L \\gg R$ and $Z \\approx \\omega L$: the graph approaches a straight line through the origin with slope $L$. The tangent at the right end, $\\omega = ${T(wR, 'w')}$, has the slope $\\frac{dZ}{d\\omega} \\approx ${T(sR, 'ohms')}$, so $L \\approx ${T(sR, 'H')}$. ${slopeNote}`,
+            `Für grosses $\\omega$ ist $\\omega L \\gg R$ und $Z \\approx \\omega L$: Der Graph nähert sich einer Geraden durch den Ursprung mit der Steigung $L$. Die Tangente am rechten Rand, bei $\\omega = ${T(wR, 'w')}$, hat die Steigung $\\frac{dZ}{d\\omega} \\approx ${T(sR, 'ohms')}$, also ist $L \\approx ${T(sR, 'H')}$. ${slopeNote}`) });
         corner.ann.push(pt(wf, Math.SQRT2 * R, 'Z = √2·R'));
-        corner.text = `Where $\\omega L = R$, at $\\omega = R/L = ${T(wf, 'w')}$, the impedance is $Z = \\sqrt{2}\\,R = ${T(Math.SQRT2 * R, 'ohm')}$: the graph passes through this point.`;
-        plan.R = 'the value at ω = 0'; formulas.R = 'R = Z(0)'; readings.R = `Z(0) = ${Rh}`;
-        plan.L = 'the slope of the tangent at the right end (the asymptote Z ≈ ωL)'; formulas.L = 'L = \\frac{dZ}{d\\omega}\\ \\text{(large } \\omega)';
-        readings.L = `the tangent at ω = ${H(wR, 'w')} has the slope ${H(sR, 'ohms')}`;
+        corner.text = L(`Where $\\omega L = R$, at $\\omega = R/L = ${T(wf, 'w')}$, the impedance is $Z = \\sqrt{2}\\,R = ${T(Math.SQRT2 * R, 'ohm')}$: the graph passes through this point.`,
+          `Wo $\\omega L = R$ ist, bei $\\omega = R/L = ${T(wf, 'w')}$, beträgt die Impedanz $Z = \\sqrt{2}\\,R = ${T(Math.SQRT2 * R, 'ohm')}$: Der Graph geht durch diesen Punkt.`);
+        plan.R = L('the value at ω = 0', 'dem Wert bei ω = 0'); formulas.R = 'R = Z(0)'; readings.R = `Z(0) = ${Rh}`;
+        plan.L = L('the slope of the tangent at the right end (the asymptote Z ≈ ωL)', 'der Steigung der Tangente am rechten Rand (der Asymptote Z ≈ ωL)'); formulas.L = L('L = \\frac{dZ}{d\\omega}\\ \\text{(large } \\omega)', 'L = \\frac{dZ}{d\\omega}\\ \\text{(grosses } \\omega)');
+        readings.L = L(`the tangent at ω = ${H(wR, 'w')} has the slope ${H(sR, 'ohms')}`, `die Tangente bei ω = ${H(wR, 'w')} hat die Steigung ${H(sR, 'ohms')}`);
       } else {
-        intro = 'In parallel, the admittances add like the sides of a right triangle: $$\\frac{1}{Z} = \\sqrt{\\frac{1}{R^2} + \\frac{1}{(\\omega L)^2}}$$';
+        intro = `${triangleP} $$\\frac{1}{Z} = \\sqrt{\\frac{1}{R^2} + \\frac{1}{(\\omega L)^2}}$$`;
         est.L = sS;
-        steps.push({ title: 'Small ω: the inductor short-circuits', ann: [line(0, 0, L, 'Z = ωL'), tan(wS, 'slope')],
-          text: `For small $\\omega$ the inductor has a small reactance $\\omega L$ and takes almost all the current: $Z \\approx \\omega L$. So the graph starts at $Z = 0$ with the slope $L$. The tangent at the origin has the slope $\\frac{dZ}{d\\omega} \\approx ${T(sS, 'ohms')}$, so $L \\approx ${T(sS, 'H')}$. ${slopeNote}` });
-        steps.push({ title: 'Large ω: only the resistor carries current', ann: [hl(R, 'Z → R')],
-          text: `For large $\\omega$ the reactance $\\omega L$ is large and the current flows through the resistor: $Z \\to R$. The graph levels off at $${Rt}$, so $R = ${Rt}$.` });
+        steps.push({ title: L('Small ω: the inductor short-circuits', 'Kleines ω: Die Spule schliesst kurz'), ann: [line(0, 0, Lc, 'Z = ωL'), tan(wS, slope)],
+          text: L(`For small $\\omega$ the inductor has a small reactance $\\omega L$ and takes almost all the current: $Z \\approx \\omega L$. So the graph starts at $Z = 0$ with the slope $L$. The tangent at the origin has the slope $\\frac{dZ}{d\\omega} \\approx ${T(sS, 'ohms')}$, so $L \\approx ${T(sS, 'H')}$. ${slopeNote}`,
+            `Für kleines $\\omega$ hat die Spule einen kleinen Blindwiderstand $\\omega L$ und nimmt fast den ganzen Strom: $Z \\approx \\omega L$. Der Graph beginnt also bei $Z = 0$ mit der Steigung $L$. Die Tangente im Ursprung hat die Steigung $\\frac{dZ}{d\\omega} \\approx ${T(sS, 'ohms')}$, also ist $L \\approx ${T(sS, 'H')}$. ${slopeNote}`) });
+        steps.push({ title: L('Large ω: only the resistor carries current', 'Grosses ω: Nur der Widerstand führt Strom'), ann: [hl(R, 'Z → R')],
+          text: L(`For large $\\omega$ the reactance $\\omega L$ is large and the current flows through the resistor: $Z \\to R$. The graph levels off at $${Rt}$, so $R = ${Rt}$.`,
+            `Für grosses $\\omega$ ist der Blindwiderstand $\\omega L$ gross, und der Strom fliesst durch den Widerstand: $Z \\to R$. Der Graph nähert sich $${Rt}$, also ist $R = ${Rt}$.`) });
         corner.ann.push(pt(wf, R / Math.SQRT2, 'Z = R/√2'));
-        corner.text = `Where $\\omega L = R$, at $\\omega = R/L = ${T(wf, 'w')}$, the impedance is $Z = R/\\sqrt{2} = ${T(R / Math.SQRT2, 'ohm')}$: the graph passes through this point.`;
-        plan.R = 'the value the graph levels off at for large ω'; formulas.R = 'R = Z(\\omega \\to \\infty)'; readings.R = `the graph levels off at ${Rh}`;
-        plan.L = 'the slope of the tangent at the origin (Z ≈ ωL for small ω)'; formulas.L = 'L = \\frac{dZ}{d\\omega}\\ \\text{(at } \\omega = 0)';
-        readings.L = `the tangent at the origin has the slope ${H(sS, 'ohms')}`;
+        corner.text = L(`Where $\\omega L = R$, at $\\omega = R/L = ${T(wf, 'w')}$, the impedance is $Z = R/\\sqrt{2} = ${T(R / Math.SQRT2, 'ohm')}$: the graph passes through this point.`,
+          `Wo $\\omega L = R$ ist, bei $\\omega = R/L = ${T(wf, 'w')}$, beträgt die Impedanz $Z = R/\\sqrt{2} = ${T(R / Math.SQRT2, 'ohm')}$: Der Graph geht durch diesen Punkt.`);
+        plan.R = L('the value the graph levels off at for large ω', 'dem Wert, dem sich der Graph für grosses ω nähert'); formulas.R = 'R = Z(\\omega \\to \\infty)'; readings.R = levelsOff(Rh);
+        plan.L = L('the slope of the tangent at the origin (Z ≈ ωL for small ω)', 'der Steigung der Tangente im Ursprung (Z ≈ ωL für kleines ω)'); formulas.L = L('L = \\frac{dZ}{d\\omega}\\ \\text{(at } \\omega = 0)', 'L = \\frac{dZ}{d\\omega}\\ \\text{(bei } \\omega = 0)');
+        readings.L = L(`the tangent at the origin has the slope ${H(sS, 'ohms')}`, `die Tangente im Ursprung hat die Steigung ${H(sS, 'ohms')}`);
       }
       steps.push(corner);
     } else if (c.kind === 'RC') {
       const wc = p3(wf), Zc = series ? Math.SQRT2 * R : R / Math.SQRT2;
       est.C = p3(1 / (wc * R));
-      const cornerText = `The corner frequency is where the reactance $\\frac{1}{\\omega C}$ equals $R$; there $Z = ${series ? '\\sqrt{2}\\,R' : 'R/\\sqrt{2}'} = ${T(Zc, 'ohm')}$. The graph reaches this value at $\\omega_c \\approx ${T(wc, 'w')}$. From $\\frac{1}{\\omega_c C} = R$: $$C = \\frac{1}{\\omega_c R} = \\frac{1}{${T(wc, 'w')} \\cdot ${Rt}} = ${T(est.C, 'F')}$$`;
+      const cornerText = L(`The corner frequency is where the reactance $\\frac{1}{\\omega C}$ equals $R$; there $Z = ${series ? '\\sqrt{2}\\,R' : 'R/\\sqrt{2}'} = ${T(Zc, 'ohm')}$. The graph reaches this value at $\\omega_c \\approx ${T(wc, 'w')}$. From $\\frac{1}{\\omega_c C} = R$: $$C = \\frac{1}{\\omega_c R} = \\frac{1}{${T(wc, 'w')} \\cdot ${Rt}} = ${T(est.C, 'F')}$$`,
+        `Bei der Grenzfrequenz ist der Blindwiderstand $\\frac{1}{\\omega C}$ gleich $R$; dort ist $Z = ${series ? '\\sqrt{2}\\,R' : 'R/\\sqrt{2}'} = ${T(Zc, 'ohm')}$. Der Graph erreicht diesen Wert bei $\\omega_c \\approx ${T(wc, 'w')}$. Aus $\\frac{1}{\\omega_c C} = R$ folgt $$C = \\frac{1}{\\omega_c R} = \\frac{1}{${T(wc, 'w')} \\cdot ${Rt}} = ${T(est.C, 'F')}$$`);
       if (series) {
-        intro = 'In series, resistance and reactance add like the sides of a right triangle: $$Z = \\sqrt{R^2 + \\frac{1}{(\\omega C)^2}}$$';
-        steps.push({ title: 'Small ω: the capacitor blocks', ann: [fn((w) => 1 / (w * C), 'Z ≈ 1/(ωC)')],
-          text: 'For small $\\omega$ the reactance $\\frac{1}{\\omega C}$ of the capacitor is huge: $Z \\approx \\frac{1}{\\omega C}$ goes to infinity as $\\omega \\to 0$.' });
-        steps.push({ title: 'Large ω: only the resistor is left', ann: [hl(R, 'Z → R')],
-          text: `For large $\\omega$ the capacitor acts like a wire, and $Z \\to R$. The graph levels off at $${Rt}$, so $R = ${Rt}$.` });
-        plan.R = 'the value the graph levels off at for large ω'; formulas.R = 'R = Z(\\omega \\to \\infty)'; readings.R = `the graph levels off at ${Rh}`;
+        intro = `${triangle} $$Z = \\sqrt{R^2 + \\frac{1}{(\\omega C)^2}}$$`;
+        steps.push({ title: L('Small ω: the capacitor blocks', 'Kleines ω: Der Kondensator sperrt'), ann: [fn((w) => 1 / (w * C), 'Z ≈ 1/(ωC)')],
+          text: L('For small $\\omega$ the reactance $\\frac{1}{\\omega C}$ of the capacitor is huge: $Z \\approx \\frac{1}{\\omega C}$ goes to infinity as $\\omega \\to 0$.',
+            'Für kleines $\\omega$ ist der Blindwiderstand $\\frac{1}{\\omega C}$ des Kondensators riesig: $Z \\approx \\frac{1}{\\omega C}$ geht für $\\omega \\to 0$ gegen unendlich.') });
+        steps.push({ title: L('Large ω: only the resistor is left', 'Grosses ω: Nur der Widerstand bleibt'), ann: [hl(R, 'Z → R')],
+          text: L(`For large $\\omega$ the capacitor acts like a wire, and $Z \\to R$. The graph levels off at $${Rt}$, so $R = ${Rt}$.`,
+            `Für grosses $\\omega$ wirkt der Kondensator wie ein Draht, und $Z \\to R$. Der Graph nähert sich $${Rt}$, also ist $R = ${Rt}$.`) });
+        plan.R = L('the value the graph levels off at for large ω', 'dem Wert, dem sich der Graph für grosses ω nähert'); formulas.R = 'R = Z(\\omega \\to \\infty)'; readings.R = levelsOff(Rh);
       } else {
-        intro = 'In parallel, the admittances add like the sides of a right triangle: $$\\frac{1}{Z} = \\sqrt{\\frac{1}{R^2} + (\\omega C)^2}$$';
-        steps.push({ title: 'Small ω: the capacitor blocks', ann: [pt(0, R, 'Z(0) = R')],
-          text: `At $\\omega = 0$ no current flows through the capacitor, only through the resistor: $Z(0) = R$. The graph starts at $${Rt}$, so $R = ${Rt}$.` });
-        steps.push({ title: 'Large ω: the capacitor short-circuits', ann: [fn((w) => 1 / (w * C), 'Z ≈ 1/(ωC)')],
-          text: 'For large $\\omega$ the capacitor takes almost all the current: $Z \\approx \\frac{1}{\\omega C} \\to 0$.' });
-        plan.R = 'the value at ω = 0'; formulas.R = 'R = Z(0)'; readings.R = `Z(0) = ${Rh}`;
+        intro = `${triangleP} $$\\frac{1}{Z} = \\sqrt{\\frac{1}{R^2} + (\\omega C)^2}$$`;
+        steps.push({ title: L('Small ω: the capacitor blocks', 'Kleines ω: Der Kondensator sperrt'), ann: [pt(0, R, 'Z(0) = R')],
+          text: L(`At $\\omega = 0$ no current flows through the capacitor, only through the resistor: $Z(0) = R$. The graph starts at $${Rt}$, so $R = ${Rt}$.`,
+            `Bei $\\omega = 0$ fliesst kein Strom durch den Kondensator, nur durch den Widerstand: $Z(0) = R$. Der Graph beginnt bei $${Rt}$, also ist $R = ${Rt}$.`) });
+        steps.push({ title: L('Large ω: the capacitor short-circuits', 'Grosses ω: Der Kondensator schliesst kurz'), ann: [fn((w) => 1 / (w * C), 'Z ≈ 1/(ωC)')],
+          text: L('For large $\\omega$ the capacitor takes almost all the current: $Z \\approx \\frac{1}{\\omega C} \\to 0$.', 'Für grosses $\\omega$ nimmt der Kondensator fast den ganzen Strom: $Z \\approx \\frac{1}{\\omega C} \\to 0$.') });
+        plan.R = L('the value at ω = 0', 'dem Wert bei ω = 0'); formulas.R = 'R = Z(0)'; readings.R = `Z(0) = ${Rh}`;
       }
-      steps.push({ title: 'The corner frequency gives C', ann: [hl(Zc, series ? 'Z = √2·R' : 'Z = R/√2'), pt(wc, Zc, 'ω_c'), vl(wc, '')], text: cornerText });
-      plan.C = `the corner frequency ω<sub>c</sub>, where Z = ${series ? '√2·R' : 'R/√2'}`; formulas.C = 'C = \\frac{1}{\\omega_c R}';
-      readings.C = `Z = ${H(Zc, 'ohm')} at ω<sub>c</sub> ≈ ${H(wc, 'w')}`;
+      steps.push({ title: L('The corner frequency gives C', 'Die Grenzfrequenz liefert C'), ann: [hl(Zc, series ? 'Z = √2·R' : 'Z = R/√2'), pt(wc, Zc, 'ω_c'), vl(wc, '')], text: cornerText });
+      plan.C = L(`the corner frequency ω<sub>c</sub>, where Z = ${series ? '√2·R' : 'R/√2'}`, `der Grenzfrequenz ω<sub>c</sub>, bei der Z = ${series ? '√2·R' : 'R/√2'} ist`); formulas.C = 'C = \\frac{1}{\\omega_c R}';
+      readings.C = L(`Z = ${H(Zc, 'ohm')} at ω<sub>c</sub> ≈ ${H(wc, 'w')}`, `Z = ${H(Zc, 'ohm')} bei ω<sub>c</sub> ≈ ${H(wc, 'w')}`);
     } else {
       if (series) {
-        intro = 'In series, the reactances of the coil and the capacitor partly cancel: $$Z = \\sqrt{R^2 + \\left(\\omega L - \\frac{1}{\\omega C}\\right)^2}$$';
-        steps.push({ title: 'Small ω: the capacitor blocks', ann: [fn((w) => 1 / (w * C), 'Z ≈ 1/(ωC)')],
-          text: 'For small $\\omega$ the reactance of the capacitor dominates: $Z \\approx \\frac{1}{\\omega C} \\to \\infty$.' });
+        intro = L('In series, the reactances of the coil and the capacitor partly cancel:', 'In Serie heben sich die Blindwiderstände von Spule und Kondensator teilweise auf:') + ' $$Z = \\sqrt{R^2 + \\left(\\omega L - \\frac{1}{\\omega C}\\right)^2}$$';
+        steps.push({ title: L('Small ω: the capacitor blocks', 'Kleines ω: Der Kondensator sperrt'), ann: [fn((w) => 1 / (w * C), 'Z ≈ 1/(ωC)')],
+          text: L('For small $\\omega$ the reactance of the capacitor dominates: $Z \\approx \\frac{1}{\\omega C} \\to \\infty$.', 'Für kleines $\\omega$ dominiert der Blindwiderstand des Kondensators: $Z \\approx \\frac{1}{\\omega C} \\to \\infty$.') });
         est.L = sR;
-        steps.push({ title: 'Large ω: the inductor dominates', ann: [tan(wR, 'slope')],
-          text: `For large $\\omega$, $Z \\approx \\omega L$: the slope of the tangent approaches $L$. At the right end, $\\omega = ${T(wR, 'w')}$, it is $\\frac{dZ}{d\\omega} \\approx ${T(sR, 'ohms')}$, so $L \\approx ${T(sR, 'H')}$. ${slopeNote}` });
-        steps.push({ title: 'Resonance: the minimum', ann: [pt(w0, R, 'Z_min = R'), tan(w0, '')],
-          text: `At the resonance frequency $\\omega_0$ the two reactances cancel, $\\omega_0 L = \\frac{1}{\\omega_0 C}$, and $Z$ is smallest: $Z_{\\min} = R$. The tangent is horizontal at $\\omega_0 \\approx ${T(w0, 'w')}$, where $Z = ${Rt}$. So $R = ${Rt}$.` });
-        plan.R = 'the minimum of Z'; formulas.R = 'R = Z_{\\min}'; readings.R = `the minimum is Z = ${Rh}`;
-        plan.L = 'the slope of the tangent at the right end (Z ≈ ωL for large ω)'; formulas.L = 'L = \\frac{dZ}{d\\omega}\\ \\text{(large } \\omega)';
-        readings.L = `the tangent at ω = ${H(wR, 'w')} has the slope ${H(sR, 'ohms')}`;
+        steps.push({ title: L('Large ω: the inductor dominates', 'Grosses ω: Die Spule dominiert'), ann: [tan(wR, slope)],
+          text: L(`For large $\\omega$, $Z \\approx \\omega L$: the slope of the tangent approaches $L$. At the right end, $\\omega = ${T(wR, 'w')}$, it is $\\frac{dZ}{d\\omega} \\approx ${T(sR, 'ohms')}$, so $L \\approx ${T(sR, 'H')}$. ${slopeNote}`,
+            `Für grosses $\\omega$ ist $Z \\approx \\omega L$: Die Steigung der Tangente nähert sich $L$. Am rechten Rand, bei $\\omega = ${T(wR, 'w')}$, beträgt sie $\\frac{dZ}{d\\omega} \\approx ${T(sR, 'ohms')}$, also ist $L \\approx ${T(sR, 'H')}$. ${slopeNote}`) });
+        steps.push({ title: L('Resonance: the minimum', 'Resonanz: das Minimum'), ann: [pt(w0, R, 'Z_min = R'), tan(w0, '')],
+          text: L(`At the resonance frequency $\\omega_0$ the two reactances cancel, $\\omega_0 L = \\frac{1}{\\omega_0 C}$, and $Z$ is smallest: $Z_{\\min} = R$. The tangent is horizontal at $\\omega_0 \\approx ${T(w0, 'w')}$, where $Z = ${Rt}$. So $R = ${Rt}$.`,
+            `Bei der Resonanzfrequenz $\\omega_0$ heben sich die beiden Blindwiderstände auf, $\\omega_0 L = \\frac{1}{\\omega_0 C}$, und $Z$ ist am kleinsten: $Z_{\\min} = R$. Die Tangente ist bei $\\omega_0 \\approx ${T(w0, 'w')}$ waagrecht, dort ist $Z = ${Rt}$. Also ist $R = ${Rt}$.`) });
+        plan.R = L('the minimum of Z', 'dem Minimum von Z'); formulas.R = 'R = Z_{\\min}'; readings.R = L(`the minimum is Z = ${Rh}`, `das Minimum ist Z = ${Rh}`);
+        plan.L = L('the slope of the tangent at the right end (Z ≈ ωL for large ω)', 'der Steigung der Tangente am rechten Rand (Z ≈ ωL für grosses ω)'); formulas.L = L('L = \\frac{dZ}{d\\omega}\\ \\text{(large } \\omega)', 'L = \\frac{dZ}{d\\omega}\\ \\text{(grosses } \\omega)');
+        readings.L = L(`the tangent at ω = ${H(wR, 'w')} has the slope ${H(sR, 'ohms')}`, `die Tangente bei ω = ${H(wR, 'w')} hat die Steigung ${H(sR, 'ohms')}`);
       } else {
-        intro = 'In parallel, the susceptances of the coil and the capacitor partly cancel: $$\\frac{1}{Z} = \\sqrt{\\frac{1}{R^2} + \\left(\\omega C - \\frac{1}{\\omega L}\\right)^2}$$';
+        intro = L('In parallel, the susceptances of the coil and the capacitor partly cancel:', 'Parallel heben sich die Blindleitwerte von Spule und Kondensator teilweise auf:') + ' $$\\frac{1}{Z} = \\sqrt{\\frac{1}{R^2} + \\left(\\omega C - \\frac{1}{\\omega L}\\right)^2}$$';
         est.L = sS;
-        steps.push({ title: 'Small ω: the inductor short-circuits', ann: [line(0, 0, L, 'Z = ωL'), tan(wS, 'slope')],
-          text: `For small $\\omega$ the coil takes almost all the current: $Z \\approx \\omega L$. The tangent at the origin has the slope $\\frac{dZ}{d\\omega} \\approx ${T(sS, 'ohms')}$, so $L \\approx ${T(sS, 'H')}$. ${slopeNote}` });
-        steps.push({ title: 'Large ω: the capacitor short-circuits', ann: [fn((w) => 1 / (w * C), 'Z ≈ 1/(ωC)')],
-          text: 'For large $\\omega$ the capacitor takes almost all the current: $Z \\approx \\frac{1}{\\omega C} \\to 0$.' });
-        steps.push({ title: 'Resonance: the maximum', ann: [pt(w0, R, 'Z_max = R'), tan(w0, '')],
-          text: `At the resonance frequency $\\omega_0$ the currents through coil and capacitor cancel, and only the resistor counts: $Z_{\\max} = R$. The tangent is horizontal at $\\omega_0 \\approx ${T(w0, 'w')}$, where $Z = ${Rt}$. So $R = ${Rt}$.` });
-        plan.R = 'the maximum of Z'; formulas.R = 'R = Z_{\\max}'; readings.R = `the maximum is Z = ${Rh}`;
-        plan.L = 'the slope of the tangent at the origin (Z ≈ ωL for small ω)'; formulas.L = 'L = \\frac{dZ}{d\\omega}\\ \\text{(at } \\omega = 0)';
-        readings.L = `the tangent at the origin has the slope ${H(sS, 'ohms')}`;
+        steps.push({ title: L('Small ω: the inductor short-circuits', 'Kleines ω: Die Spule schliesst kurz'), ann: [line(0, 0, Lc, 'Z = ωL'), tan(wS, slope)],
+          text: L(`For small $\\omega$ the coil takes almost all the current: $Z \\approx \\omega L$. The tangent at the origin has the slope $\\frac{dZ}{d\\omega} \\approx ${T(sS, 'ohms')}$, so $L \\approx ${T(sS, 'H')}$. ${slopeNote}`,
+            `Für kleines $\\omega$ nimmt die Spule fast den ganzen Strom: $Z \\approx \\omega L$. Die Tangente im Ursprung hat die Steigung $\\frac{dZ}{d\\omega} \\approx ${T(sS, 'ohms')}$, also ist $L \\approx ${T(sS, 'H')}$. ${slopeNote}`) });
+        steps.push({ title: L('Large ω: the capacitor short-circuits', 'Grosses ω: Der Kondensator schliesst kurz'), ann: [fn((w) => 1 / (w * C), 'Z ≈ 1/(ωC)')],
+          text: L('For large $\\omega$ the capacitor takes almost all the current: $Z \\approx \\frac{1}{\\omega C} \\to 0$.', 'Für grosses $\\omega$ nimmt der Kondensator fast den ganzen Strom: $Z \\approx \\frac{1}{\\omega C} \\to 0$.') });
+        steps.push({ title: L('Resonance: the maximum', 'Resonanz: das Maximum'), ann: [pt(w0, R, 'Z_max = R'), tan(w0, '')],
+          text: L(`At the resonance frequency $\\omega_0$ the currents through coil and capacitor cancel, and only the resistor counts: $Z_{\\max} = R$. The tangent is horizontal at $\\omega_0 \\approx ${T(w0, 'w')}$, where $Z = ${Rt}$. So $R = ${Rt}$.`,
+            `Bei der Resonanzfrequenz $\\omega_0$ heben sich die Ströme durch Spule und Kondensator auf, und nur der Widerstand zählt: $Z_{\\max} = R$. Die Tangente ist bei $\\omega_0 \\approx ${T(w0, 'w')}$ waagrecht, dort ist $Z = ${Rt}$. Also ist $R = ${Rt}$.`) });
+        plan.R = L('the maximum of Z', 'dem Maximum von Z'); formulas.R = 'R = Z_{\\max}'; readings.R = L(`the maximum is Z = ${Rh}`, `das Maximum ist Z = ${Rh}`);
+        plan.L = L('the slope of the tangent at the origin (Z ≈ ωL for small ω)', 'der Steigung der Tangente im Ursprung (Z ≈ ωL für kleines ω)'); formulas.L = L('L = \\frac{dZ}{d\\omega}\\ \\text{(at } \\omega = 0)', 'L = \\frac{dZ}{d\\omega}\\ \\text{(bei } \\omega = 0)');
+        readings.L = L(`the tangent at the origin has the slope ${H(sS, 'ohms')}`, `die Tangente im Ursprung hat die Steigung ${H(sS, 'ohms')}`);
       }
       est.C = p3(1 / (w0 * w0 * est.L));
-      steps.push({ title: 'C from the resonance frequency', ann: [vl(w0, 'ω₀')],
-        text: `The resonance frequency is $\\omega_0 = \\frac{1}{\\sqrt{LC}}$, so $$C = \\frac{1}{\\omega_0^2 L} = \\frac{1}{(${T(w0, 'w')})^2 \\cdot ${T(est.L, 'H')}} = ${T(est.C, 'F')}$$` });
-      plan.C = 'the resonance frequency ω₀ (horizontal tangent) together with L'; formulas.C = 'C = \\frac{1}{\\omega_0^2 L}';
-      readings.C = `the tangent is horizontal at ω₀ ≈ ${H(w0, 'w')}`;
+      steps.push({ title: L('C from the resonance frequency', 'C aus der Resonanzfrequenz'), ann: [vl(w0, 'ω₀')],
+        text: L(`The resonance frequency is $\\omega_0 = \\frac{1}{\\sqrt{LC}}$, so $$C = \\frac{1}{\\omega_0^2 L} = \\frac{1}{(${T(w0, 'w')})^2 \\cdot ${T(est.L, 'H')}} = ${T(est.C, 'F')}$$`,
+          `Die Resonanzfrequenz ist $\\omega_0 = \\frac{1}{\\sqrt{LC}}$, also $$C = \\frac{1}{\\omega_0^2 L} = \\frac{1}{(${T(w0, 'w')})^2 \\cdot ${T(est.L, 'H')}} = ${T(est.C, 'F')}$$`) });
+      plan.C = L('the resonance frequency ω₀ (horizontal tangent) together with L', 'der Resonanzfrequenz ω₀ (waagrechte Tangente) zusammen mit L'); formulas.C = 'C = \\frac{1}{\\omega_0^2 L}';
+      readings.C = L(`the tangent is horizontal at ω₀ ≈ ${H(w0, 'w')}`, `die Tangente ist bei ω₀ ≈ ${H(w0, 'w')} waagrecht`);
     }
     return { intro, steps, plan, formulas, readings, est };
   }
@@ -244,12 +277,14 @@
   // What Z does at the ends and in between, for the first hint.
   function shape(c) {
     const s = {
-      'series RL': 'Z starts at R for ω = 0 and then grows, for large ω almost like the straight line ωL.',
-      'parallel RL': 'Z starts at 0 with the slope L and levels off at R for large ω.',
-      'series RC': 'Z comes down from infinity (like 1/(ωC)) and levels off at R for large ω.',
-      'parallel RC': 'Z starts at R for ω = 0 and falls towards 0 (like 1/(ωC)) for large ω.',
-      'series RLC': 'Z comes down from infinity (capacitor), has its minimum R at the resonance frequency ω₀ and grows again (coil), for large ω with the slope L.',
-      'parallel RLC': 'Z starts at 0 with the slope L (coil), has its maximum R at the resonance frequency ω₀ and falls towards 0 (capacitor).',
+      'series RL': L('Z starts at R for ω = 0 and then grows, for large ω almost like the straight line ωL.', 'Z beginnt bei ω = 0 bei R und wächst dann, für grosses ω fast wie die Gerade ωL.'),
+      'parallel RL': L('Z starts at 0 with the slope L and levels off at R for large ω.', 'Z beginnt bei 0 mit der Steigung L und nähert sich für grosses ω dem Wert R.'),
+      'series RC': L('Z comes down from infinity (like 1/(ωC)) and levels off at R for large ω.', 'Z kommt von unendlich herunter (wie 1/(ωC)) und nähert sich für grosses ω dem Wert R.'),
+      'parallel RC': L('Z starts at R for ω = 0 and falls towards 0 (like 1/(ωC)) for large ω.', 'Z beginnt bei ω = 0 bei R und fällt für grosses ω gegen 0 (wie 1/(ωC)).'),
+      'series RLC': L('Z comes down from infinity (capacitor), has its minimum R at the resonance frequency ω₀ and grows again (coil), for large ω with the slope L.',
+        'Z kommt von unendlich herunter (Kondensator), hat bei der Resonanzfrequenz ω₀ das Minimum R und wächst dann wieder (Spule), für grosses ω mit der Steigung L.'),
+      'parallel RLC': L('Z starts at 0 with the slope L (coil), has its maximum R at the resonance frequency ω₀ and falls towards 0 (capacitor).',
+        'Z beginnt bei 0 mit der Steigung L (Spule), hat bei der Resonanzfrequenz ω₀ das Maximum R und fällt dann gegen 0 (Kondensator).'),
     };
     return s[`${c.conn} ${c.kind}`];
   }
@@ -267,70 +302,81 @@
   // half the resonance frequency of an RLC circuit (for series RLC on the falling branch).
   const early = (c) => (c.kind === 'RLC' ? feature(c) / 2 : feature(c));
   function earlyWhy(c) {
-    const at = `the tangent at ω = ${H(early(c), 'w')}`;
-    return c.kind === 'RLC' && c.conn === 'series' ? `${at}, on the falling branch where the capacitor dominates` : `${at}, where the curve is not straight yet`;
+    const at = L(`the tangent at ω = ${H(early(c), 'w')}`, `der Tangente bei ω = ${H(early(c), 'w')}`);
+    return c.kind === 'RLC' && c.conn === 'series' ? L(`${at}, on the falling branch where the capacitor dominates`, `${at}, auf dem fallenden Ast, wo der Kondensator dominiert`)
+      : L(`${at}, where the curve is not straight yet`, `${at}, wo die Kurve noch nicht gerade ist`);
   }
 
   // Wrong values for unknown key, most telling first: [{ tag, value, why }].
   function mistakes(c, ax, an, key) {
-    const { R, L, C } = c, wf = feature(c), wmax = ax.lin.wmax;
+    const { R, L: Li, C } = c, wf = feature(c), wmax = ax.lin.wmax;
     const series = c.conn === 'series', rlc = c.kind === 'RLC';
-    const from = `${key} comes from ${an.plan[key]}.`;
+    const from = L(`${key} comes from ${an.plan[key]}.`, `${key} folgt aus ${an.plan[key]}.`);
     const out = [];
     const add = (tag, value, why) => out.push({ tag, value, why });
 
     if (key === 'R') {
       if (rlc) {
-        add('reactance', wf * L, `That is the reactance ω₀L of the coil at resonance. There the ${series ? 'reactances' : 'currents'} of coil and capacitor cancel, so Z<sub>${series ? 'min' : 'max'}</sub> = R.`);
-        add('sqrt2', series ? SQ2 * R : R / SQ2, `Z = ${series ? '√2·R' : 'R/√2'} where the net reactance equals R, on either side of the resonance. ${from}`);
+        add('reactance', wf * Li, L(`That is the reactance ω₀L of the coil at resonance. There the ${series ? 'reactances' : 'currents'} of coil and capacitor cancel, so Z<sub>${series ? 'min' : 'max'}</sub> = R.`,
+          `Das ist der Blindwiderstand ω₀L der Spule bei der Resonanz. Dort heben sich die ${series ? 'Blindwiderstände' : 'Ströme'} von Spule und Kondensator auf, also ist Z<sub>${series ? 'min' : 'max'}</sub> = R.`));
+        add('sqrt2', series ? SQ2 * R : R / SQ2, L(`Z = ${series ? '√2·R' : 'R/√2'} where the net reactance equals R, on either side of the resonance. ${from}`,
+          `Z = ${series ? '√2·R' : 'R/√2'} gilt dort, wo der gesamte Blindwiderstand gleich R ist, links und rechts der Resonanz. ${from}`));
       } else {
-        add('corner', series ? SQ2 * R : R / SQ2, `That is Z at the corner frequency, where the reactance equals R: Z = ${series ? '√2·R' : 'R/√2'}. ${from}`);
+        add('corner', series ? SQ2 * R : R / SQ2, L(`That is Z at the corner frequency, where the reactance equals R: Z = ${series ? '√2·R' : 'R/√2'}. ${from}`,
+          `Das ist Z bei der Grenzfrequenz, wo der Blindwiderstand gleich R ist: Z = ${series ? '√2·R' : 'R/√2'}. ${from}`));
       }
-      if (series && c.kind !== 'RC') add('end', Z(c, wmax), `That is Z at the right end of the graph, where the coil dominates. ${from}`);
-      if (!series && c.kind === 'RC') add('end', Z(c, wmax), `That is Z at the right end of the graph, where the capacitor already takes most of the current. ${from}`);
+      if (series && c.kind !== 'RC') add('end', Z(c, wmax), L(`That is Z at the right end of the graph, where the coil dominates. ${from}`, `Das ist Z am rechten Rand des Graphen, wo die Spule dominiert. ${from}`));
+      if (!series && c.kind === 'RC') add('end', Z(c, wmax), L(`That is Z at the right end of the graph, where the capacitor already takes most of the current. ${from}`, `Das ist Z am rechten Rand des Graphen, wo der Kondensator schon den grössten Teil des Stroms nimmt. ${from}`));
       if (!series) add('half', 2 * R, c.kind === 'RLC'
-        ? 'At resonance coil and capacitor together carry no net current, so the resistor is on its own: Z<sub>max</sub> = R, not R/2.'
-        : `Nothing halves R here: where the graph ${c.kind === 'RL' ? 'levels off' : 'starts'}, the ${c.kind === 'RL' ? 'coil' : 'capacitor'} carries no current, so the resistor is on its own.`);
+        ? L('At resonance coil and capacitor together carry no net current, so the resistor is on its own: Z<sub>max</sub> = R, not R/2.', 'Bei der Resonanz führen Spule und Kondensator zusammen keinen Strom, der Widerstand ist also allein: Z<sub>max</sub> = R, nicht R/2.')
+        : L(`Nothing halves R here: where the graph ${c.kind === 'RL' ? 'levels off' : 'starts'}, the ${c.kind === 'RL' ? 'coil' : 'capacitor'} carries no current, so the resistor is on its own.`,
+          `Hier halbiert nichts R: Wo der Graph ${c.kind === 'RL' ? 'flach wird' : 'beginnt'}, führt ${c.kind === 'RL' ? 'die Spule' : 'der Kondensator'} keinen Strom, der Widerstand ist also allein.`));
       if (!rlc) add('side', series ? R / SQ2 : SQ2 * R, series
-        ? `In series Z = √(R² + X²) is never smaller than R. ${from}`
-        : `In parallel a second branch only lets more current through, so Z is never larger than R. ${from}`);
+        ? L(`In series Z = √(R² + X²) is never smaller than R. ${from}`, `In Serie ist Z = √(R² + X²) nie kleiner als R. ${from}`)
+        : L(`In parallel a second branch only lets more current through, so Z is never larger than R. ${from}`, `Parallel lässt ein zweiter Zweig nur mehr Strom durch, also ist Z nie grösser als R. ${from}`));
     }
 
     if (key === 'L') {
-      const where = rlc ? 'the resonance' : 'the corner';
-      add('secant', Z(c, wf) / wf, `That is Z/ω at ${where}, ω = ${H(wf, 'w')}: the slope of the line from the origin to the curve, not of the tangent. Z ≈ ωL only holds for ${series ? 'large' : 'small'} ω. ${from}`);
+      const where = rlc ? L('the resonance', 'der Resonanz') : L('the corner', 'der Grenzfrequenz');
+      add('secant', Z(c, wf) / wf, L(`That is Z/ω at ${where}, ω = ${H(wf, 'w')}: the slope of the line from the origin to the curve, not of the tangent. Z ≈ ωL only holds for ${series ? 'large' : 'small'} ω. ${from}`,
+        `Das ist Z/ω bei ${where}, ω = ${H(wf, 'w')}: die Steigung der Geraden vom Ursprung zur Kurve, nicht die der Tangente. Z ≈ ωL gilt nur für ${series ? 'grosses' : 'kleines'} ω. ${from}`));
       const wt = early(c);
-      add('tangent', Math.abs(dZ(c, wt)), `That is the steepness of ${earlyWhy(c)}. ${from}`);
-      if (series && c.kind === 'RL') add('chord', (Z(c, wmax) - R) / wmax, `That is the slope of the line from the start of the graph to its right end. The curve only becomes straight for large ω. ${from}`);
-      const no2pi = 'The 2π is not needed: ω is already the angular frequency in rad/s, so a slope of 1 Ω·s is 1 H.';
-      add('2pi', L / TWO_PI, no2pi);
-      add('2pi', L * TWO_PI, no2pi);
-      add('inverse', 1 / L, 'That is the inverse of the slope, Δω/ΔZ. The slope of the tangent is ΔZ/Δω, in Ω·s = H.');
-      add('prefix', L * 1000, 'Off by a factor 1000: a slope of 1 Ω·s is 1 H = 1000 mH.');
-      add('prefix', L / 1000, 'Off by a factor 1000: a slope of 1 Ω·s is 1 H = 1000 mH.');
+      add('tangent', Math.abs(dZ(c, wt)), L(`That is the steepness of ${earlyWhy(c)}. ${from}`, `Das ist die Steigung ${earlyWhy(c)}. ${from}`));
+      if (series && c.kind === 'RL') add('chord', (Z(c, wmax) - R) / wmax, L(`That is the slope of the line from the start of the graph to its right end. The curve only becomes straight for large ω. ${from}`,
+        `Das ist die Steigung der Geraden vom Anfang des Graphen zu seinem rechten Rand. Die Kurve wird erst für grosses ω gerade. ${from}`));
+      const no2pi = L('The 2π is not needed: ω is already the angular frequency in rad/s, so a slope of 1 Ω·s is 1 H.', 'Das 2π braucht es nicht: ω ist schon die Kreisfrequenz in rad/s, eine Steigung von 1 Ω·s ist also 1 H.');
+      add('2pi', Li / TWO_PI, no2pi);
+      add('2pi', Li * TWO_PI, no2pi);
+      add('inverse', 1 / Li, L('That is the inverse of the slope, Δω/ΔZ. The slope of the tangent is ΔZ/Δω, in Ω·s = H.', 'Das ist der Kehrwert der Steigung, Δω/ΔZ. Die Steigung der Tangente ist ΔZ/Δω, in Ω·s = H.'));
+      const prefixL = L('Off by a factor 1000: a slope of 1 Ω·s is 1 H = 1000 mH.', 'Um den Faktor 1000 daneben: Eine Steigung von 1 Ω·s ist 1 H = 1000 mH.');
+      add('prefix', Li * 1000, prefixL);
+      add('prefix', Li / 1000, prefixL);
     }
 
     if (key === 'C' && !rlc) {
-      add('corner-z', series ? C / SQ2 : SQ2 * C, `In C = 1/(ω<sub>c</sub>R) use the resistance R, not the impedance ${series ? '√2·R' : 'R/√2'} at the corner.`);
-      add('half', series ? Math.sqrt(3) * C : C / Math.sqrt(3), `That uses the frequency where Z = ${series ? '2R' : 'R/2'}. The corner frequency ω<sub>c</sub> is where Z = ${series ? '√2·R' : 'R/√2'}.`);
-      const no2pi = 'The 2π is not needed: ω<sub>c</sub> is already an angular frequency, and C = 1/(ω<sub>c</sub>R).';
+      add('corner-z', series ? C / SQ2 : SQ2 * C, L(`In C = 1/(ω<sub>c</sub>R) use the resistance R, not the impedance ${series ? '√2·R' : 'R/√2'} at the corner.`,
+        `In C = 1/(ω<sub>c</sub>R) gehört der Widerstand R, nicht die Impedanz ${series ? '√2·R' : 'R/√2'} bei der Grenzfrequenz.`));
+      add('half', series ? Math.sqrt(3) * C : C / Math.sqrt(3), L(`That uses the frequency where Z = ${series ? '2R' : 'R/2'}. The corner frequency ω<sub>c</sub> is where Z = ${series ? '√2·R' : 'R/√2'}.`,
+        `Das verwendet die Frequenz, bei der Z = ${series ? '2R' : 'R/2'} ist. Die Grenzfrequenz ω<sub>c</sub> ist dort, wo Z = ${series ? '√2·R' : 'R/√2'} ist.`));
+      const no2pi = L('The 2π is not needed: ω<sub>c</sub> is already an angular frequency, and C = 1/(ω<sub>c</sub>R).', 'Das 2π braucht es nicht: ω<sub>c</sub> ist schon eine Kreisfrequenz, und C = 1/(ω<sub>c</sub>R).');
       add('2pi', C / TWO_PI, no2pi);
       add('2pi', C * TWO_PI, no2pi);
     }
     if (key === 'C' && rlc) {
-      const wt = early(c), fromL = `L comes from ${an.plan.L}; then C = 1/(ω₀²L).`;
-      add('secant', 1 / (wf * R), `That uses L = Z/ω at the resonance instead of the slope of the tangent. ${fromL}`);
-      add('tangent', 1 / (wf * wf * Math.abs(dZ(c, wt))), `That uses L from the steepness of ${earlyWhy(c)}. ${fromL}`);
-      const no2pi = 'The 2π is not needed: ω₀ is already the angular frequency, so C = 1/(ω₀²L).';
+      const wt = early(c), fromL = L(`L comes from ${an.plan.L}; then C = 1/(ω₀²L).`, `L folgt aus ${an.plan.L}; dann ist C = 1/(ω₀²L).`);
+      add('secant', 1 / (wf * R), L(`That uses L = Z/ω at the resonance instead of the slope of the tangent. ${fromL}`, `Das verwendet L = Z/ω bei der Resonanz statt der Steigung der Tangente. ${fromL}`));
+      add('tangent', 1 / (wf * wf * Math.abs(dZ(c, wt))), L(`That uses L from the steepness of ${earlyWhy(c)}. ${fromL}`, `Das verwendet L aus der Steigung ${earlyWhy(c)}. ${fromL}`));
+      const no2pi = L('The 2π is not needed: ω₀ is already the angular frequency, so C = 1/(ω₀²L).', 'Das 2π braucht es nicht: ω₀ ist schon die Kreisfrequenz, also C = 1/(ω₀²L).');
       add('2pi', C / (TWO_PI * TWO_PI), no2pi);
       add('2pi', C * TWO_PI * TWO_PI, no2pi);
-      add('square', 1 / (wf * L), 'C = 1/(ω₀L) misses the square: ω₀ = 1/√(LC) gives C = 1/(ω₀²L).');
+      add('square', 1 / (wf * Li), L('C = 1/(ω₀L) misses the square: ω₀ = 1/√(LC) gives C = 1/(ω₀²L).', 'Bei C = 1/(ω₀L) fehlt das Quadrat: Aus ω₀ = 1/√(LC) folgt C = 1/(ω₀²L).'));
     }
     if (key === 'C') {
-      add('prefix', C * 1000, 'Off by a factor 1000: check the unit prefix (1 µF = 1000 nF).');
-      add('prefix', C / 1000, 'Off by a factor 1000: check the unit prefix (1 µF = 1000 nF).');
+      const prefixC = L('Off by a factor 1000: check the unit prefix (1 µF = 1000 nF).', 'Um den Faktor 1000 daneben: Prüfe die Vorsilbe der Einheit (1 µF = 1000 nF).');
+      add('prefix', C * 1000, prefixC);
+      add('prefix', C / 1000, prefixC);
     }
-    for (const k of [2, 0.5, 3, 1 / 3, 5, 0.2]) add('other', c[key] * k, `Not correct. ${from}`);
+    for (const k of [2, 0.5, 3, 1 / 3, 5, 0.2]) add('other', c[key] * k, `${L('Not correct.', 'Nicht richtig.')} ${from}`);
     return out;
   }
 
@@ -349,7 +395,7 @@
   function exercise(c, id) {
     const ax = axesFor(c), an = analysis(c, ax);
     const fields = UNKNOWNS[c.kind].map((k) => ({ key: k, options: choices(c, ax, an, k) }));
-    return { id, c, ax, an, fields };
+    return { id, c, ax, an, fields, difficulty: DIFFICULTY[`${c.conn} ${c.kind}`] };
   }
 
   function build(r, kind, conn) {
@@ -357,19 +403,20 @@
     return usable(c, axesFor(c)) ? c : null;
   }
 
-  function generate(filter, seed) {
+  // level: easy, medium, hard or mixed (see LEVELS), or a kind of circuit such as 'series RL'.
+  function generate(level, seed) {
     const r = rng(seed);
     // the kind of circuit first, so that every kind comes up equally often
-    const kind = filter === 'mixed' ? r.pick(['RL', 'RC', 'RLC']) : filter, conn = r.pick(['series', 'parallel']);
+    const [conn, kind] = (LEVELS[level] ? r.pick(LEVELS[level].kinds) : level).split(' ');
     for (let k = 0; k < 100000; k++) {
       const c = build(r, kind, conn);
-      if (c) return exercise(c, `${filter}-${seed}`);
+      if (c) return exercise(c, `${level}-${seed}`);
     }
-    throw new Error(`no exercise for ${filter}-${seed}`);
+    throw new Error(`no exercise for ${level}-${seed}`);
   }
 
   const api = {
-    TOL, GAP, OPTIONS, FILTERS, UNKNOWNS, Z, dZ, feature, quality, axesFor, usable, analysis, shape, mistakes, choices, exercise, generate,
+    TOL, GAP, OPTIONS, LEVELS, DIFFICULTY, UNKNOWNS, Z, dZ, feature, quality, axesFor, usable, analysis, shape, mistakes, choices, exercise, generate,
     q, H, T, digits, sup, p3, niceUp,
   };
   root.Impedance = api;
