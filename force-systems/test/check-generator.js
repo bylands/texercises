@@ -83,6 +83,13 @@ for (const lang of FS.LANGS) {
   for (const level of Object.keys(Forces.LEVELS)) {
     for (let seed = 1; seed <= SAMPLES; seed++) {
       const ex = Forces.generate(level, seed);
+      // without a calculator: no sine or cosine, results multiples of 0.5
+      const nc = Forces.generate(level, seed, false);
+      checkExercise(nc, `${lang} ${nc.id}`);
+      const scn = Forces.SCENARIOS.find((x) => x.id === nc.scenario);
+      if (scn.trig) fail(`${lang} ${nc.id}: needs sine or cosine`);
+      if (!Forces.nice(scn, nc.p)) fail(`${lang} ${nc.id}: needs a calculator: ${JSON.stringify(nc.v)}`);
+      if (nc.id !== `${level}-nocalc-${seed}`) fail(`${lang} ${nc.id}: wrong id`);
       seen[ex.scenario] = (seen[ex.scenario] || 0) + 1;
       // nice results (at most one decimal place, exact), except where sine or cosine come in
       const sc = Forces.SCENARIOS.find((x) => x.id === ex.scenario);

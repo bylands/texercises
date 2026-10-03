@@ -12,7 +12,7 @@
   };
   const UI = {
     en: {
-      title: 'Force Systems', mode: 'Mode', difficulty: 'Difficulty', example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
+      title: 'Force Systems', mode: 'Mode', difficulty: 'Difficulty', calc: 'Calculator', example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
       tutorNote: `Use the arrow keys ← → to step through. The forces a step is about are highlighted. Colours: ${LEGEND.en}.`,
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
@@ -25,7 +25,7 @@
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
     de: {
-      title: 'Kräftesysteme', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
+      title: 'Kräftesysteme', mode: 'Modus', difficulty: 'Schwierigkeit', calc: 'Taschenrechner', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
       tutorNote: `Mit den Pfeiltasten ← → blätterst du weiter. Die Kräfte, um die es in einem Schritt geht, sind hervorgehoben. Farben: ${LEGEND.de}.`,
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
@@ -94,6 +94,8 @@
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
   const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'mixed';
+  // with a calculator, or without: then no sine or cosine, and results that are multiples of 0.5
+  const calc = () => $('#calc').checked;
 
   function open(exercise) {
     ex = exercise;
@@ -106,8 +108,8 @@
 
   // A new exercise, of another situation than the current one if possible.
   function fresh() {
-    let next = generate(level(), newSeed());
-    for (let k = 0; k < 6 && ex && next.scenario === ex.scenario; k++) next = generate(level(), newSeed());
+    let next = generate(level(), newSeed(), calc());
+    for (let k = 0; k < 6 && ex && next.scenario === ex.scenario; k++) next = generate(level(), newSeed(), calc());
     open(next);
   }
 
@@ -249,7 +251,7 @@
     if (ex) {
       const values = ex.fields.map((f) => $(`#in-${f.key}`).value);
       const keep = { ...st };
-      ex = generate(ex.level, ex.seed);
+      ex = generate(ex.level, ex.seed, ex.calc);
       render();
       st = keep;
       ex.fields.forEach((f, k) => { $(`#in-${f.key}`).value = values[k]; });
@@ -296,11 +298,12 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
-    m = h.match(/^(easy|medium|hard|mixed)-(\d+)$/);
+    m = h.match(/^(easy|medium|hard|mixed)(-nocalc)?-(\d+)$/);
     if (m) {
       setMode('practice');
       document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;
-      if (!ex || ex.id !== h) open(generate(m[1], Number(m[2])));
+      $('#calc').checked = !m[2];
+      if (!ex || ex.id !== h) open(generate(m[1], Number(m[3]), !m[2]));
       return true;
     }
     return false;
@@ -314,6 +317,8 @@
     FS.setLang(FS.LANGS.includes(asked) ? asked : stored('fs-lang', browser));
     applyStatic();
     $('#levels').addEventListener('change', () => { store('fs-level', level()); fresh(); });
+    $('#calc').checked = stored('fs-calc', true);
+    $('#calc').addEventListener('change', () => { store('fs-calc', calc()); fresh(); });
     $('#langs').addEventListener('change', (evt) => switchLang(evt.target.value));
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);

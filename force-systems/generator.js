@@ -1,5 +1,5 @@
 // Exercises and worked examples from the scenarios (see scenarios.js).
-// generate(level, seed) gives { id, scenario, title, text, fields: [{ key, sym, unit, what, value,
+// generate(level, seed, calc) gives { id, scenario, title, text, fields: [{ key, sym, unit, what, value,
 // traps: [{ value, why, flag }] }], figure(view), hints: [html], solution: [html], results: html },
 // where flag names the wrong idea behind a trap; generateFor(scenario, seed, { nice }) one of a given
 // situation; quiz(exercise, seed) a multiple-choice question about one of its quantities;
@@ -72,11 +72,13 @@
   const tenth = (x) => Math.abs(10 * x - Math.round(10 * x)) < 1e-9;
   const neat = (scn) => (scn.trig ? null : (p) => Object.values(scn.solve(p)).every(tenth));
 
-  // A practice exercise: with nice results, except where sine or cosine come in.
-  function generate(level, seed) {
-    const r = rng(seed), list = pool(level);
+  // A practice exercise: with nice results, except where sine or cosine come in. Without a
+  // calculator (calc false): no sine or cosine at all, and results that are multiples of 0.5.
+  function generate(level, seed, calc = true) {
+    const r = rng(seed), list = pool(level).filter((s) => calc || !s.trig);
     const scn = list[Math.floor(r() * list.length)];
-    return { ...exercise(scn, make(scn, r, neat(scn))), id: `${level}-${seed}`, level, seed };
+    const ok = calc ? neat(scn) : (p) => nice(scn, p);
+    return { ...exercise(scn, make(scn, r, ok)), id: `${level}${calc ? '' : '-nocalc'}-${seed}`, level, seed, calc };
   }
 
   // All wanted quantities multiples of 0.5 and the angle (if any) the 3-4-5 angle: solvable
