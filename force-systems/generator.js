@@ -44,6 +44,7 @@
     const all = new Set(steps.flatMap((s) => s.show || []));
     return {
       scenario: scn.id,
+      difficulty: scn.difficulty,
       title: scn.title(p),
       text: `<p>${scn.text(p)}</p><p class="note">${L('Draw all forces on each box and use Newton’s second law, F = m a. Take g = 10 m/s².', 'Zeichne alle Kräfte auf jede Kiste ein und verwende das Aktionsprinzip, F = m a. Rechne mit g = 10 m/s².')}</p>`,
       fields,

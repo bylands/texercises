@@ -105,6 +105,7 @@ input, button { font: inherit; color: inherit; }
 .card h2 { margin: 0 0 6px; font-size: 1.1rem; }
 .card h3 { margin: 0 0 8px; font-size: 1rem; }
 #prompt p { margin: 6px 0; }
+#title .stars { margin-left: 6px; color: #d4a017; font-size: 0.95rem; letter-spacing: 1px; font-weight: 400; white-space: nowrap; }
 
 .figs { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; justify-content: center; margin: 12px 0 18px; }
 .fig { max-width: 100%; overflow-x: auto; }
