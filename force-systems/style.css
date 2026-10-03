@@ -247,9 +247,28 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 #arcade .note { color: var(--muted); }
 #arcade .progress { background: #222; height: 2px; }
 #ar-start-title { font-size: 2.4rem !important; margin-bottom: 4px; }
-#ar-rules ul { margin: 10px 0; padding-left: 1.2em; }
-#ar-rules li { margin: 8px 0; }
-#ar-rules b { color: #ffff00; font-weight: 400; }
+#ar-rules ul { margin: 6px 0; padding-left: 1.2em; }
+#ar-rules li { margin: 6px 0; }
+#ar-rules b, .ar-tag b { color: #ffff00; font-weight: 400; }
+.ar-hero { display: flex; flex-direction: column; align-items: center; margin: 4px 0 0; }
+.ar-hero .figs { margin: 0; }
+.ar-hero .fig svg { max-width: min(100%, 520px); }
+.ar-law { font-size: 1.8rem; color: #ffff00; margin: 4px 0 10px; }
+.ar-tag { font-size: 1.15rem; text-align: center; margin: 0 0 14px; }
+.ar-more { margin: 0 0 14px; color: var(--muted); }
+.ar-more summary { cursor: pointer; }
+.ar-more #ar-rules { color: var(--ink); font-size: 0.95rem; }
+/* the start picture: the forces appear one after another, then the law is written */
+#ar-hero.animate .fig .force:nth-of-type(1) :is(line, polygon, circle) { animation-delay: 0.9s, 1.3s; }
+#ar-hero.animate .fig .force:nth-of-type(2) :is(line, polygon, circle) { animation-delay: 1.3s, 1.7s; }
+#ar-hero.animate .fig .force:nth-of-type(3) :is(line, polygon, circle) { animation-delay: 1.7s, 2.1s; }
+#ar-hero.animate .fig .force:nth-of-type(4) :is(line, polygon, circle) { animation-delay: 2.1s, 2.5s; }
+#ar-hero.animate .fig .force:nth-of-type(5) :is(line, polygon, circle) { animation-delay: 2.5s, 2.9s; }
+#ar-hero.animate .fig .force:nth-of-type(6) :is(line, polygon, circle) { animation-delay: 2.9s, 3.3s; }
+#ar-hero.animate .fig .force:nth-of-type(7) :is(line, polygon, circle) { animation-delay: 3.3s, 3.7s; }
+#ar-hero.animate .fig .force:nth-of-type(n+8) :is(line, polygon, circle) { animation-delay: 3.7s, 4.1s; }
+#ar-hero.animate .fig .force text { animation-delay: 4s; }
+#ar-hero.animate .ar-law { animation: ar-write 0.6s 4.3s both; }
 
 .ar-bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 22px; margin-bottom: 8px; }
 .ar-time { font-size: 2rem; font-variant-numeric: tabular-nums; }
@@ -307,7 +326,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 #arcade .animate .fig .force :is(line, polygon, circle) { animation-delay: 0.45s, 0.9s; }
 #arcade .animate .fig text { animation: ar-write 0.4s 0.6s both; }
 #arcade .animate :is(#ar-title, #ar-sum-title, #ar-start-title) { animation: ar-write 0.4s both; }
-#arcade .animate :is(#ar-prompt, #ar-rules, #ar-sum-score) { animation: ar-write 0.4s 0.1s both; }
+#arcade .animate :is(#ar-prompt, #ar-tag, #ar-sum-score) { animation: ar-write 0.4s 0.1s both; }
 #arcade .animate :is(#ar-ask, #ar-sum-stats, #ar-best) { animation: ar-write 0.4s 0.5s both; }
 #arcade .animate .ar-opt, #arcade .animate .ar-item { animation: ar-write 0.35s both; }
 #arcade .animate .ar-opt:nth-child(1), #arcade .animate .ar-item:nth-child(1) { animation-delay: 0.6s; }

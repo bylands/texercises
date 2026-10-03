@@ -24,9 +24,10 @@
   const T = {
     en: {
       start: 'Arcade',
+      tag: 'Answer as many questions as you can in <b>5 minutes</b>: four answers each, no calculator.',
+      more: 'How points work',
       rules: [
-        'Answer as many questions as you can in <b>5 minutes</b>. They get harder as you go.',
-        'Each question asks for one quantity: choose one of <b>four answers</b> (or press 1–4). No calculator needed: the numbers are made for mental arithmetic, with g = 10 m/s².',
+        'Questions get harder as you go. Choose one of four answers, or press 1–4. The numbers are made for mental arithmetic, with g = 10 m/s².',
         'A right answer earns <b>100 points per star</b> of difficulty, plus a speed bonus of up to as much again, which shrinks the longer you take.',
         'One try per question and no hints. If you are stuck, skip: that costs no points, but the question counts as not solved.',
         `Falling for the <b>same misconception again</b> (e.g. forgetting friction) costs ${PENALTY} points each time. After falling for one once, answering a question on the same idea correctly earns a <b>bonus of ${BONUS}</b> points.`,
@@ -57,9 +58,10 @@
     },
     de: {
       start: 'Arcade',
+      tag: 'Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich: je vier Antworten, kein Taschenrechner.',
+      more: 'So gibt es Punkte',
       rules: [
-        'Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich. Sie werden nach und nach schwieriger.',
-        'Jede Frage gilt einer Grösse: Wähle eine von <b>vier Antworten</b> (oder drücke 1–4). Du brauchst keinen Taschenrechner: Die Zahlen sind fürs Kopfrechnen gemacht, mit g = 10 m/s².',
+        'Die Fragen werden nach und nach schwieriger. Wähle eine von vier Antworten oder drücke 1–4. Die Zahlen sind fürs Kopfrechnen gemacht, mit g = 10 m/s².',
         'Eine richtige Antwort bringt <b>100 Punkte pro Stern</b> Schwierigkeit und einen Tempobonus von bis zu nochmals so viel, der kleiner wird, je länger du brauchst.',
         'Ein Versuch pro Frage, keine Tipps. Wenn du nicht weiterkommst, überspringe die Frage: Das kostet keine Punkte, aber sie gilt als nicht gelöst.',
         `Fällst du <b>nochmals auf dieselbe Fehlvorstellung</b> herein (z.B. die Reibung vergessen), kostet das jedes Mal ${PENALTY} Punkte. Bist du einmal auf eine hereingefallen und beantwortest danach eine Frage zur selben Idee richtig, gibt es einen <b>Bonus von ${BONUS}</b> Punkten.`,
@@ -112,9 +114,26 @@
     // Restarts the entrance animations of an element (see style.css).
     const animate = (el) => { el.classList.remove('animate'); void el.offsetWidth; el.classList.add('animate'); };
 
+    // The start page's picture: a box pulled up a slope with all its forces, drawn again and again,
+    // with Newton's second law below it.
+    let heroTimer = null;
+    function hero() {
+      const ex = generateFor('incline-pull', 7, { nice: true });
+      $('#ar-hero').innerHTML = `${ex.solutionFigure()}<p class="ar-law">$${FS.tex('res')} = m\\,a$</p>`;
+      h.math($('#ar-hero'));
+    }
+    function replay() {
+      clearInterval(heroTimer);
+      animate($('#ar-hero'));
+      heroTimer = setInterval(() => { if ($('#arcade').hidden || $('#ar-start').hidden) clearInterval(heroTimer); else animate($('#ar-hero')); }, 7000);
+    }
+
     function staticTexts() {
       $('#ar-start-title').textContent = t().start;
+      $('#ar-tag').innerHTML = t().tag;
+      $('#ar-more-sum').textContent = t().more;
       $('#ar-rules').innerHTML = `<ul>${t().rules.map((x) => `<li>${x}</li>`).join('')}</ul>`;
+      hero();
       $('#ar-best').textContent = t().best(h.stored('fs-arcade-best', 0));
       $('#ar-go').textContent = t().go;
       $('#ar-skip').textContent = t().skip;
@@ -317,10 +336,11 @@
 
     return {
       // the start page, or the game or summary in progress
-      show() { staticTexts(); if (!game) { show('start'); animate($('#ar-start')); } },
+      show() { staticTexts(); if (!game) { show('start'); animate($('#ar-start')); replay(); } },
       // leaving the arcade ends a game in progress; its summary stays
       stop() {
         if (game && !game.over) { game.over = true; clearInterval(timer); clearTimeout(nextTimer); game = null; show('start'); }
+        clearInterval(heroTimer);
       },
       relabel() {
         staticTexts();
