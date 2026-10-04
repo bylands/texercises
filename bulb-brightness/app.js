@@ -56,6 +56,16 @@
 
   let ex = null, st = null, tutor = null, arcade = null;
 
+  // ---------------------------------------------------------------- folded introductions
+  const SMALL = window.matchMedia('(max-width: 640px)');
+  function syncFold() {
+    document.querySelectorAll('details.intro').forEach((d) => {
+      const box = d.closest('#task, #ar-play');
+      if (box) box.classList.toggle('folded', !d.open);
+    });
+  }
+  const introHtml = () => `<details class="intro"${SMALL.matches ? '' : ' open'}><summary>${ui().introShow}</summary><p>${ui().taskText}</p></details>`;
+
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
     try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; }
@@ -477,7 +487,7 @@
     const flagOf = (a) => (b.shorted && a !== 'off' ? 'short' : e.reversed && a === b.models.forward ? 'reversed' : a === b.models.fixedCurrent ? 'fixedCurrent' : null);
     return withEx(e, () => ({
       title: ui().task,
-      text: `<p>${ui().taskText}</p>`,
+      text: introHtml(),
       figure: `<figure class="fig ref">${ref(GLOW.equal)}<figcaption>${ui().reference}</figcaption></figure><figure class="fig">${taskOf(e, [])}</figure>`,
       ask: L(`How bright is ${it(b.name)} compared with the reference bulb?`, `Wie hell leuchtet ${it(b.name)} im Vergleich zur Vergleichslampe?`),
       options: ANSWERS.map((a) => {
@@ -585,11 +595,12 @@
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    // The introduction is open on wide screens and folded on small ones (until opened there).
-    const small = window.matchMedia('(max-width: 640px)');
-    const fold = () => { $('#intro').open = !small.matches; };
-    fold();
-    small.addEventListener('change', fold);
+    // The introductions (practice and arcade) are open on wide screens and folded on small ones,
+    // until opened there; a folded one also hides the reference circuit (class folded, style.css).
+    SMALL.addEventListener('change', () => { document.querySelectorAll('details.intro').forEach((d) => { d.open = !SMALL.matches; }); syncFold(); });
+    document.addEventListener('toggle', (evt) => { if (evt.target.matches && evt.target.matches('details.intro')) syncFold(); }, true);
+    $('#intro').open = !SMALL.matches;
+    syncFold();
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     applyStatic();
     Lang.wire(switchLang);
@@ -601,7 +612,7 @@
     $('#fields').addEventListener('change', drawAnswers);
     window.addEventListener('hashchange', fromHash);
     tutor = window.createTutor(lessons(), { done: practise });
-    arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
+    arcade = Arcade.create(arcadeSource, { math: syncFold, markScrollable: () => {}, stored, store }); // math: runs after each question is shown
     $('#modes').addEventListener('change', () => {
       if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();
     });
