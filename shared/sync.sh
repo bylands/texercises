@@ -1,12 +1,13 @@
 #!/bin/bash
-# Copies the shared files (ui.css, lang.js, fit.js, tutor.js, arcade.js and the folder katex/) into every
-# app, so that each app stays a self-contained folder for deployment; pages that are no app (the
-# privacy page) get lang.js only. Edit the files here, never an app's copy.
+# Copies the shared files (ui.css, lang.js, fit.js, tutor.js, arcade.js) into every app, so that
+# each app stays a folder of its own for deployment; pages that are no app (the privacy page) get
+# lang.js only. Edit the files here, never an app's copy.
 #   shared/sync.sh          copy
 #   shared/sync.sh --check  only report copies that differ (exit 1 if any)
-# katex/ is KaTeX 0.16.9 (MIT, see katex/LICENSE) from cdnjs, with the woff2 fonts only (all
-# current browsers load those); it is served with the apps, so that no page loads anything from
-# another server.
+# KaTeX is not copied: the apps share one copy, katex/ at the top of the repository, served as
+# /katex/ (on the server /var/www/teachingphysics/katex/, deployed like an app). It is KaTeX 0.16.9
+# (MIT, see katex/LICENSE) with the woff2 fonts only, so that no page loads anything from another
+# server, and the browser caches it once for all apps.
 set -e
 cd "$(dirname "$0")/.."
 APPS="force-systems bulb-brightness circuit-trainer impedance induction-match motion-graphs force-concepts"
@@ -24,7 +25,7 @@ copy() { # copy shared/$1 to $2/$1, or with --check report a difference
 }
 MODE="$1"
 for app in $APPS; do
-  for f in $FILES katex; do copy "$f" "$app"; done
+  for f in $FILES; do copy "$f" "$app"; done
 done
 for page in $PAGES; do copy lang.js "$page"; done
 [ "$MODE" = "--check" ] && [ $status = 0 ] && echo "all shared files in sync"

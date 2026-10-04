@@ -199,6 +199,55 @@
     }
   }
 
+  // ---------------------------------------------------------------- arcade: questions with four options
+  // Every question of an exercise that can be asked with exactly four options, one right:
+  // [{ ask, options: [{ html, ok, code, why }], pics }]. Single choice and predictions with four
+  // options as they are; the reason of a prediction (four reasons); a true/false set as "which
+  // statement is true (false)?"; a ranking as the right order against the orders the
+  // misconceptions give (and the reversed order); a matching as "which fits this item?". r picks
+  // among more options than four.
+  function arcadeQuestions(ex, r) {
+    const out = [];
+    const four = (right, wrong) => {
+      const ws = r.shuffle(wrong).filter((w, i, a) => a.findIndex((v) => v.html === w.html) === i && w.html !== right.html).slice(0, 3);
+      return ws.length === 3 ? r.shuffle([right, ...ws]) : null;
+    };
+    const lq = T('“', '«'), rq = T('”', '»');
+    for (const qu of ex.questions) {
+      if ((qu.type === 'choice' || qu.type === 'two') && qu.options.length === 4) {
+        out.push({ ask: qu.prompt, pics: qu.pics, options: qu.options.map((x) => ({ html: x.label, ok: x.ok, code: x.code, why: x.why })) });
+      }
+      if (qu.type === 'two' && qu.reasons.length >= 4) {
+        const right = answerOf(qu.reasons), opts = four({ html: right.label, ok: true, code: 'ok', why: '' }, qu.reasons.filter((x) => !x.ok).map((x) => ({ html: x.label, ok: false, code: x.code, why: x.why })));
+        if (opts) out.push({ ask: `${qu.prompt} <b>${answerOf(qu.options).text}</b> ${qu.reasonPrompt}`, options: opts });
+      }
+      if (qu.type === 'tf') {
+        const yes = qu.items.filter((x) => x.value), no = qu.items.filter((x) => !x.value);
+        const opt = (x, ok) => ({ html: x.text, ok, code: ok ? 'ok' : x.code, why: ok ? '' : x.why });
+        if (yes.length && no.length >= 3) out.push({ ask: T('Which of these statements is true?', 'Welche dieser Aussagen ist richtig?'), options: four(opt(r.pick(yes), true), no.map((x) => opt(x, false))) });
+        if (no.length && yes.length >= 3) out.push({ ask: T('Which of these statements is false?', 'Welche dieser Aussagen ist falsch?'), options: four(opt(r.pick(no), true), yes.map((x) => opt(x, false))) });
+      }
+      if (qu.type === 'rank') {
+        const vs = qu.items.map((x) => x.value), right = rankText(qu.items, vs);
+        const wrong = qu.traps.map((t) => ({ html: rankText(qu.items, qu.items.map((x) => x.alt[t.key])), ok: false, code: t.code, why: t.why }));
+        wrong.push({ html: rankText(qu.items, vs.map((v) => -v)), ok: false, code: 'other', why: qu.why });
+        wrong.push({ html: rankText(qu.items, vs.map(() => 0)), ok: false, code: 'other', why: qu.why });
+        const opts = four({ html: right, ok: true, code: 'ok', why: '' }, wrong);
+        if (opts) out.push({ ask: `${qu.prompt.split(/(?<=\.) /)[0].replace(/[,:;] (from the|vom|von der|von den|von dem) .*$/, '').replace(/\.?$/, '.')} ${T('Which order is right?', 'Welche Reihenfolge stimmt?')}`, options: opts });
+      }
+      if (qu.type === 'match' && qu.choices.length >= 4) {
+        for (const x of qu.items) {
+          const c = qu.choices.find((y) => y.id === x.answer), w = x.wrong || {};
+          const opts = four({ html: c.label, ok: true, code: 'ok', why: '' }, qu.choices.filter((y) => y.id !== x.answer)
+            .map((y) => ({ html: y.label, ok: false, code: w[y.id] ? w[y.id].code : 'other', why: w[y.id] ? w[y.id].why : x.other || x.why })));
+          const named = x.label && !/<svg/.test(x.label) ? x.label : x.name;
+          if (opts) out.push({ ask: `${qu.prompt.split(/(?<=\.) /)[0]} ${T('Which fits', 'Was passt zu')} ${lq}${named}${rq}?`, pics: qu.pics, options: opts });
+        }
+      }
+    }
+    return out.filter((q) => q.options && q.options.filter((o) => o.ok).length === 1);
+  }
+
   // ---------------------------------------------------------------- registry
   const GENS = {};
   const POOLS = { gravity: [], inertia: [], force: [], interact: [] };
@@ -307,7 +356,7 @@
   const api = {
     LANGS, setLang, getLang, T, TOPICS, LEVELS, DIFFICULTY, topicName, FORMATS, formatName, MIS, mis, POOLS, GENS, rng,
     it, F, FL, list, cap, num, qty, deg, noun, o, q, stmt, tf, rank, match, two, ranksOf, rankText, answerText, misreads,
-    register, pool, genOf, freshSeed, generate, build, TYPE_NAMES, typeName, recordResult, weightOf,
+    arcadeQuestions, register, pool, genOf, freshSeed, generate, build, TYPE_NAMES, typeName, recordResult, weightOf,
   };
   root.FC = api;
   if (typeof module !== 'undefined') module.exports = api;

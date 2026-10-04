@@ -15,6 +15,7 @@
       tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
       tutorNote: 'Use the arrow keys ← → to step through. In the diagram, the part whose voltage is shared is <span class="k-light">shaded</span>, the parts that share it are <span class="k-strong">highlighted</span>, and every bulb shows its voltage once it is known.',
       task: 'How bright are the bulbs?',
+      introShow: 'Compared with: one bulb on one battery',
       taskText: 'All batteries are identical, and so are all bulbs. Compare each bulb with the reference circuit: one bulb connected to one battery. Is it brighter, equally bright, less bright, or off?',
       reference: 'Reference', yours: 'Your circuit', circuit: 'Circuit',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution',
@@ -34,6 +35,7 @@
       tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Im Schaltbild ist der Teil, dessen Spannung aufgeteilt wird, <span class="k-light">schattiert</span>, die Teile, die sie sich teilen, sind <span class="k-strong">hervorgehoben</span>, und jede Lampe zeigt ihre Spannung, sobald sie bekannt ist.',
       task: 'Wie hell leuchten die Lampen?',
+      introShow: 'Verglichen mit: eine Lampe an einer Batterie',
       taskText: 'Alle Batterien sind gleich, ebenso alle Lampen. Vergleiche jede Lampe mit der Vergleichsschaltung: eine Lampe an einer Batterie. Leuchtet sie heller, gleich hell, weniger hell, oder ist sie aus?',
       reference: 'Vergleich', yours: 'Deine Schaltung', circuit: 'Schaltung',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung',
@@ -583,6 +585,11 @@
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
+    // The introduction is open on wide screens and folded on small ones (until opened there).
+    const small = window.matchMedia('(max-width: 640px)');
+    const fold = () => { $('#intro').open = !small.matches; };
+    fold();
+    small.addEventListener('change', fold);
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     applyStatic();
     Lang.wire(switchLang);

@@ -133,7 +133,7 @@ for (const task of Object.keys(M.TASKS)) {
   console.log(`  mistakes recognised: ${JSON.stringify(found)}`);
 }
 
-const RANGE = { diff: [1, 2, 3], int: [3, 4, 5] };
+const RANGE = { diff: [3, 4], int: [3, 4, 5] };
 for (const task of Object.keys(M.TASKS)) {
   for (let seed = 1; seed <= 300; seed++) {
     const ex = M.generate(task, seed);

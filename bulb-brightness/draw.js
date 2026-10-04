@@ -94,7 +94,9 @@
   // the bottom of that column.
   function measure(node, right) {
     if (node.t === 'L') return (node.vl = { ax: COL.left, w: COL.left + right, h: LEAF_H });
-    if (node.t === 'W') return (node.vl = { ax: 0.3, w: 0.6, h: 0 });
+    // a bridging wire stands where a bulb's wire would, so that its column lines up with the
+    // columns of the groups above and below it (no room needed for a label on its right)
+    if (node.t === 'W') return (node.vl = { ax: COL.left, w: COL.left + 0.3, h: 0 });
     const kids = node.kids.map((k) => measure(k, right));
     if (node.t === 'S') {
       const ax = Math.max(...kids.map((k) => k.ax));

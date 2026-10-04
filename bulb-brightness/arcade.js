@@ -130,7 +130,7 @@
     // ------------------------------------------------------------ the game
     function start() {
       clearTimeout(nextTimer);
-      game = { t0: Date.now(), score: 0, items: [], counts: {}, redeemed: {}, notes: [], last: null, over: false };
+      game = { t0: Date.now(), score: 0, items: [], counts: {}, redeemed: {}, notes: [], last: null, over: false, asked: new Set() };
       show('play');
       $('#ar-toast').textContent = '';
       next();
@@ -162,8 +162,16 @@
       const d = levels.reduce((a, b) => (Math.abs(b - want) < Math.abs(a - want) || (Math.abs(b - want) === Math.abs(a - want) && b < a) ? b : a));
       let list = src.kinds.filter((k) => k.difficulty === d).map((k) => k.id);
       if (list.length > 1) list = list.filter((k) => k !== game.last);
-      const kind = list[Math.floor(Math.random() * list.length)];
-      cur = question(kind, newSeed(), d);
+      // a question not asked before in this game (an exercise type with few variants could
+      // otherwise come up again and again)
+      const sig = (c) => `${c.q.title}|${c.q.ask}|${c.q.figure}|${c.q.options.map((o) => o.html).join('|')}`;
+      for (let k = 0; k < 12; k++) {
+        const kind = list[Math.floor(Math.random() * list.length)];
+        cur = question(kind, newSeed(), d);
+        if (!game.asked.has(sig(cur))) break;
+      }
+      game.asked.add(sig(cur));
+      const kind = cur.kind;
       game.last = kind;
       game.since = Date.now();
       game.locked = false;

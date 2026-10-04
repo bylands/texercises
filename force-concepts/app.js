@@ -270,16 +270,16 @@
   function arcadeQuestion(kind, seed) {
     const types = arcadeTypes(Number(kind.slice(1)));
     for (let k = 0; ; k++) {
-      const s = (seed + 7919 * k) >>> 0, g = FC.rng(s).pick(types), e = FC.build(g.name, g.params, s);
-      const qs = e.questions.filter((qu) => (qu.type === 'choice' || qu.type === 'two') && qu.options.length === 4);
+      const s = (seed + 7919 * k) >>> 0, r = FC.rng(s), g = r.pick(types), e = FC.build(g.name, g.params, s);
+      const qs = FC.arcadeQuestions(e, r);
       if (!qs.length) continue;
-      const qu = qs[s % qs.length];
+      const qu = r.pick(qs);
       return {
         title: e.title,
         text: e.situation,
         figure: `<figure class="fig">${e.figure}</figure>`,
-        ask: qu.prompt,
-        options: qu.options.map((x) => ({ html: x.label, correct: x.ok, flag: FC.MIS[x.code] ? x.code : null, why: x.ok ? '' : x.why })),
+        ask: qu.ask,
+        options: qu.options.map((x) => ({ html: x.html, correct: x.ok, flag: FC.MIS[x.code] ? x.code : null, why: x.ok ? '' : x.why })),
         explain: () => `<div class="steps">${e.steps.map(stepHtml).join('')}</div>`,
       };
     }

@@ -15,10 +15,10 @@
 // parabola can be worked out at one of its ends (a horizontal tangent, or the smooth join to a
 // piece whose slope is known); the other end then follows from ΔG/Δt = (g_start + g_end)/2.
 //
-// Difficulty 1–5: derivatives 1–3, one more for each piece whose end value has to come from the
-// mean value (up to two); integrals 3–5, one more for each piece beyond the first in which the
-// given graph changes sign. The practice levels pick an exercise of the right difficulty:
-// easy 1–2, medium 3, hard 4–5.
+// Difficulty 3–5 (graphs with parabolic pieces are at least medium; the easy exercises come from
+// concepts.js): derivatives 3, or 4 when an end value has to come from the mean value; integrals
+// 3–5, one more for each piece beyond the first in which the given graph changes sign. The
+// practice levels pick an exercise of the right difficulty: easy 1–2, medium 3, hard 4–5.
 //
 // An answer (drawn or correct) is a list of pieces {y0, ym, y1}: the values at the start, in the
 // middle and at the end of the piece (a parabola through these three points). evaluate()
@@ -159,7 +159,7 @@
     const gValues = (p) => ({ y0: p.g0, ym: (p.g0 + p.g1) / 2, y1: p.g1 });
     const GValues = (p) => ({ y0: p.G0, ym: p.Gm, y1: p.G1 });
     const difficulty = dir === 'diff'
-      ? 1 + Math.min(2, how.filter((h) => h.start === 'mean' || h.end === 'mean').length)
+      ? 3 + Math.min(1, how.filter((h) => h.start === 'mean' || h.end === 'mean').length)
       : 3 + Math.max(0, Math.min(2, ps.filter((p) => p.g0 * p.g1 < 0).length - 1));
     return {
       task, from, to, dir, pieces, c, how,
@@ -185,13 +185,14 @@
   const KINDS = {};
   const register = (kind, def) => { KINDS[kind] = def; };
 
-  // An exercise of one of the difficulties ds: the difficulty first, then one of the tasks and
-  // kinds that give it, all equally likely.
+  // An exercise of one of the difficulties ds: first one of the tasks and kinds that give such a
+  // difficulty, all equally likely, then one of its difficulties among ds.
+  const DIFF_TASK = { diff: [3, 4], int: [3, 4, 5] };
   function pick(ds, seed) {
-    const r = rng(seed ^ 0x5bd1e995), d = r.pick(ds);
-    const tasks = Object.keys(TASKS).filter((t) => (TASKS[t].dir === 'diff' ? d <= 3 : d >= 3));
-    const kinds = Object.keys(KINDS).filter((k) => KINDS[k].difficulties.includes(d));
-    const which = r.pick([...tasks, ...kinds]);
+    const r = rng(seed ^ 0x5bd1e995);
+    const can = (k) => (TASKS[k] ? DIFF_TASK[TASKS[k].dir] : KINDS[k].difficulties).filter((d) => ds.includes(d));
+    const which = r.pick([...Object.keys(TASKS), ...Object.keys(KINDS)].filter((k) => can(k).length));
+    const d = r.pick(can(which));
     if (KINDS[which]) return KINDS[which].make((seed + 7919) >>> 0, d);
     for (let k = 0; ; k++) {
       const ex = make(which, (seed + 7919 * k) >>> 0);
