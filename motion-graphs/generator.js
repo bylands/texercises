@@ -179,20 +179,31 @@
     throw new Error(`no exercise for ${task}-${seed}`);
   }
 
-  // An exercise of one of the difficulties ds, from the tasks that give it.
+  // Other kinds of exercise (concepts.js: comparing speeds, direction, value tables, stroboscope
+  // pictures, areas) register here: kind → { difficulties: [1–5], make(seed, d) } (d: the
+  // difficulty wanted, or null for any). They come up in the levels like the drawing tasks.
+  const KINDS = {};
+  const register = (kind, def) => { KINDS[kind] = def; };
+
+  // An exercise of one of the difficulties ds: the difficulty first, then one of the tasks and
+  // kinds that give it, all equally likely.
   function pick(ds, seed) {
     const r = rng(seed ^ 0x5bd1e995), d = r.pick(ds);
     const tasks = Object.keys(TASKS).filter((t) => (TASKS[t].dir === 'diff' ? d <= 3 : d >= 3));
+    const kinds = Object.keys(KINDS).filter((k) => KINDS[k].difficulties.includes(d));
+    const which = r.pick([...tasks, ...kinds]);
+    if (KINDS[which]) return KINDS[which].make((seed + 7919) >>> 0, d);
     for (let k = 0; ; k++) {
-      const ex = make(r.pick(tasks), (seed + 7919 * k) >>> 0);
+      const ex = make(which, (seed + 7919 * k) >>> 0);
       if (ex.difficulty === d) return ex;
     }
   }
 
   // generate(level, seed): a practice exercise (easy, medium, hard, mixed); generate(task, seed):
-  // one of a task (sv, va, vs, av; for the worked examples).
+  // one of a task (sv, va, vs, av) or kind (for the worked examples and links).
   function generate(key, seed) {
     if (TASKS[key]) return make(key, seed);
+    if (KINDS[key]) return KINDS[key].make(seed, null);
     return { ...pick(LEVELS[key], seed), id: `${key}-${seed}`, seed };
   }
   const ofDifficulty = (d, seed) => pick([d], seed);
@@ -311,7 +322,7 @@
     return { options: r.shuffle(opts) };
   }
 
-  const api = { T, N, TASKS, LEVELS, BEND, MID_STEP, G_AXIS, generate, ofDifficulty, quiz, evaluate, copied, readable, g, G, gAt, GAt, len, sloped, rate, area, bend };
+  const api = { T, N, TASKS, KINDS, register, rng, LEVELS, BEND, MID_STEP, G_AXIS, generate, ofDifficulty, quiz, evaluate, copied, readable, g, G, gAt, GAt, len, sloped, rate, area, bend };
   root.Motion = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

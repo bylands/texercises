@@ -112,3 +112,61 @@ svg .tdot.mean { fill: var(--card); stroke: var(--qc); stroke-width: 2; }
 .ar-hero .figs .fig svg { width: 340px; }
 /* the start picture: first the position, then its slope */
 #ar-hero.animate .fig:nth-child(2) .curve { animation-delay: 1.4s, 1.8s; }
+
+/* exercises answered by choosing and entering numbers (quiz.js) */
+#q-fields { display: grid; gap: 18px; margin-bottom: 4px; }
+.qprompt { margin: 0 0 8px; font-weight: 600; }
+.qn {
+  display: inline-grid; place-items: center; width: 1.5em; height: 1.5em; margin-right: 8px;
+  border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+  font-size: 0.8rem; font-weight: 700; vertical-align: 1px;
+}
+.qopts { display: flex; flex-wrap: wrap; gap: 8px; }
+.qopts.pics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.qopt { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; }
+.qopt input { margin: 0; accent-color: var(--accent); }
+.qopts.pics .qopt { align-items: flex-start; padding: 6px; }
+.qopts.pics .qval { flex: 1; min-width: 0; }
+.qopts.pics .qval svg { display: block; width: 100%; height: auto; }
+.qopt:hover { border-color: var(--accent); }
+.qopt:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; background: var(--card); }
+.qopts .qopt.right { border-color: var(--ok); background: var(--ok-bg); box-shadow: 0 0 0 1px var(--ok) inset; }
+.qopts .qopt.wrong { border-color: var(--bad); background: var(--bad-bg); box-shadow: 0 0 0 1px var(--bad) inset; }
+.qfb { margin: 8px 0 0; font-size: 0.93rem; }
+.qfb:empty { display: none; }
+.qfb.ok { color: var(--ok); }
+.qfb.ok::before { content: "✓ "; }
+.qfb.bad { color: var(--bad); }
+.qfb.bad::before { content: "✗ "; }
+.qblock .fields { margin-bottom: 0; }
+@media (max-width: 560px) { .qopts.pics { grid-template-columns: minmax(0, 1fr); } }
+
+/* their figures (figs.js): graphs of several motions, stroboscope picture, value table */
+#q-figure .fig svg.cgraph, .steps .fig svg.cgraph, #t-figure .fig svg.cgraph { width: 420px; }
+/* two graphs side by side (A and B): the pair takes the full row */
+.figs.pair { flex: 1 1 100%; margin: 0; }
+#q-figure .figs.pair .fig svg.cgraph, .steps .figs.pair .fig svg.cgraph, #t-figure .figs.pair .fig svg.cgraph, #arcade .figs.pair .fig svg.cgraph { width: 320px; }
+svg.strobe { width: 480px; max-width: 100%; height: auto; display: block; }
+.figs.pair figcaption, .fig figcaption { text-align: center; font-style: italic; color: var(--muted); }
+svg .curve.dashed { stroke-dasharray: 9 6; }
+svg .lname { fill: var(--ink); font: italic 600 15px var(--serif); paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
+svg .sdot { fill: var(--qc); stroke: var(--card); stroke-width: 1.5; }
+svg .stime { fill: var(--ink); font: 600 11px system-ui, sans-serif; }
+svg .axhead { fill: var(--muted); }
+svg .vline { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 4; }
+.vtable { border-collapse: collapse; margin: 4px auto; font-variant-numeric: tabular-nums; }
+.vtable th, .vtable td { padding: 4px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.vtable thead th { font-weight: 600; border-bottom: 2px solid var(--line); }
+.vtable tbody th { text-align: left; font-weight: 400; }
+.vtable td.missing { color: var(--accent); font-size: 0.85rem; }
+@media (max-width: 560px) { .vtable th, .vtable td { padding: 4px 4px; font-size: 0.85rem; } }
+
+/* their worked examples in the tutor */
+.tutor-text .tq { margin: 8px 0; padding-left: 1.4em; font-weight: 600; }
+.tutor-text details { margin: 2px 0 12px 2.1em; }
+.tutor-text summary { cursor: pointer; color: var(--accent); font-size: 0.93rem; }
+.tutor-text .wrong { margin: 6px 0; padding-left: 1.2em; font-size: 0.93rem; }
+.tutor-text .wrong li { margin: 8px 0; }
+.tag { display: inline-block; margin-left: 4px; padding: 0 8px; border: 1px solid currentColor; border-radius: 999px; color: var(--bad); font-size: 0.78rem; font-weight: 600; }
+.short { list-style: none; padding-left: 0; }
+.short li { margin: 4px 0; }

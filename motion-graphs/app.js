@@ -2,6 +2,7 @@
   'use strict';
 
   const { generate, ofDifficulty, quiz, evaluate, copied, sloped, len, rate, area } = window.Motion;
+  const Concepts = window.Concepts, Quiz = window.Quiz;
   const Plot = window.Plot, { sourceGraph, UNIT, dec } = Plot;
   const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
   const NARROW = 560;
@@ -26,6 +27,12 @@
       some: (r, n, k) => `${r} of ${n} pieces are correct (attempt ${k}).`,
       canReveal: ' You can take a hint or look at the solution.', tryAgain: ' Correct the pieces marked ✗ and check again, or take a hint.',
       shown: 'The correct graph is now shown as a dashed black line.',
+      choose: 'Answer every question, then check again.',
+      qOk: 'All answers are correct, well done!',
+      qSome: (r, n, k) => `${r} of ${n} answers are correct (attempt ${k}).`,
+      qTry: ' Correct the answers marked ✗ and check again, or take a hint.',
+      qShown: 'The worked solution is shown below.',
+      answers: 'Answers', wrongs: 'Typical wrong answers',
     },
     de: {
       title: 'Bewegungsdiagramme', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
@@ -42,6 +49,12 @@
       some: (r, n, k) => `${r} von ${n} Stücken sind richtig (Versuch ${k}).`,
       canReveal: ' Du kannst einen Tipp nehmen oder die Lösung anschauen.', tryAgain: ' Korrigiere die mit ✗ markierten Stücke und prüfe nochmals, oder nimm einen Tipp.',
       shown: 'Der richtige Graph ist jetzt schwarz gestrichelt eingezeichnet.',
+      choose: 'Beantworte jede Frage und prüfe dann nochmals.',
+      qOk: 'Alle Antworten sind richtig, gut gemacht!',
+      qSome: (r, n, k) => `${r} von ${n} Antworten sind richtig (Versuch ${k}).`,
+      qTry: ' Korrigiere die mit ✗ markierten Antworten und prüfe nochmals, oder nimm einen Tipp.',
+      qShown: 'Die ausführliche Lösung steht unten.',
+      answers: 'Antworten', wrongs: 'Typische falsche Antworten',
     },
   };
   const ui = () => UI[Lang.get()];
@@ -338,7 +351,11 @@
   };
 
   const describe = (p, i) => (ex.dir === 'diff' ? describeDiff : describeInt)(p, i);
+  // the worked steps of a quiz exercise, then the answers
+  const stepsHtml = (e) => e.steps.map((x) => `<p class="step-rule">${x.title}</p><div class="figs">${x.figure.startsWith('<div') ? x.figure : `<figure class="fig">${x.figure}</figure>`}</div><p>${x.text}</p>`).join('') +
+    `<ul class="short">${e.questions.map((q, k) => `<li><span class="qn">${k + 1}</span>${e.answers[k]}</li>`).join('')}</ul>`;
   function solution() {
+    if (isQuiz()) return `<div class="steps">${stepsHtml(ex)}</div>`;
     const rows = ex.pieces.map((p, i) => `<li>${describe(p, i)}</li>`);
     return `<p>${ruleText()} ${L('The correct graph is drawn as a dashed black line.', 'Der richtige Graph ist schwarz gestrichelt eingezeichnet.')}</p><ul class="pieces">${rows.join('')}</ul>`;
   }
@@ -348,7 +365,15 @@
   const qc = (q) => `<span class="qc-${q}">${NAME()[q]} ${Q(q)}(<i>t</i>)</span>`;
 
   // The exercise as it stands (st): texts, graphs, the drawing (saved: the editor's drawing to keep).
+  // The exercises of concepts.js (ex.kind) are answered by choosing and entering numbers (quiz.js),
+  // the others by drawing.
+  const isQuiz = () => !!(ex && ex.kind);
+
   function render(saved) {
+    $('#drawing').hidden = isQuiz();
+    $('#quiz').hidden = !isQuiz();
+    $('#reset').hidden = isQuiz();
+    if (isQuiz()) { renderQuiz(saved); return; }
     $('#title').innerHTML = `${taskTitle(ex)} ${starsOf(ex.difficulty)}`;
     $('#statement').innerHTML = statement();
     $('#howto').innerHTML = howTo();
@@ -373,6 +398,21 @@
     updateButtons();
   }
 
+  // saved: the answers to keep, by question key
+  function renderQuiz(saved) {
+    $('#title').innerHTML = `${ex.title} ${starsOf(ex.difficulty)}`;
+    $('#statement').innerHTML = ex.text;
+    $('#q-figure').innerHTML = ex.figure.startsWith('<div') ? ex.figure : `<figure class="fig">${ex.figure}</figure>`;
+    $('#q-fields').innerHTML = ex.questions.map((q, k) => Quiz.html(q, k)).join('');
+    if (saved) ex.questions.forEach((q) => { if (q.key in saved) Quiz.setState(q, saved[q.key]); });
+    showHints();
+    showFeedback();
+    $('#solution').hidden = !st.revealed;
+    $('#sol-text').innerHTML = st.revealed ? solution() : '';
+    updateButtons();
+  }
+  const quizAnswers = () => Object.fromEntries(ex.questions.map((q) => [q.key, Quiz.state(q)]));
+
   // Marks, solution and lock of the drawing.
   function showDrawing() {
     const marks = st.res ? st.res.map((r) => (r.ok ? 'ok' : 'bad')) : null;
@@ -386,6 +426,7 @@
     status.className = 'status';
     status.textContent = '';
     $('#feedback').innerHTML = '';
+    if (isQuiz()) { showQuizFeedback(); return; }
     if (st.revealed && !st.solved) { status.textContent = ui().shown; return; }
     if (!st.res) return;
     const right = st.res.filter((r) => r.ok).length;
@@ -402,6 +443,25 @@
     $('#feedback').innerHTML = items.join('');
   }
 
+  // The marks of the last check, on the questions whose answers have not changed since.
+  function showQuizFeedback() {
+    const status = $('#status');
+    const now = quizAnswers();
+    ex.questions.forEach((q) => {
+      const then = st.checked && st.checked[q.key];
+      const same = st.checked && JSON.stringify(then) === JSON.stringify(now[q.key]);
+      Quiz.paint(q, same ? Quiz.evaluate(q, then) : null, now[q.key]);
+    });
+    if (st.revealed && !st.solved) { status.textContent = ui().qShown; return; }
+    if (!st.checked) return;
+    const evs = ex.questions.map((q) => Quiz.evaluate(q, st.checked[q.key]));
+    if (evs.some((e) => !e.complete)) { status.textContent = ui().choose; return; }
+    const right = evs.filter((e) => e.ok).length;
+    if (right === evs.length) { status.textContent = ui().qOk; status.className = 'status ok'; return; }
+    status.textContent = ui().qSome(right, evs.length, st.tries) + (canReveal() ? ui().canReveal : ui().qTry);
+    status.className = 'status bad';
+  }
+
   function onEdit() {
     if (st.revealed) return;
     if (st.res && !st.solved) { st.res = null; st.copied = false; showFeedback(); }
@@ -410,7 +470,7 @@
   // Redraw both graphs when the screen gets narrow or wide (the drawing is kept).
   const narrow = () => $('#given').clientWidth < NARROW;
   function relayout() {
-    if (!ex || $('#task').hidden || (Plot.W < 640) === narrow()) return;
+    if (!ex || isQuiz() || $('#task').hidden || (Plot.W < 640) === narrow()) return;
     Plot.setNarrow(narrow());
     $('#given').innerHTML = sourceGraph(ex);
     $('#draw').setAttribute('viewBox', `0 0 ${Plot.W} ${Plot.H}`);
@@ -420,7 +480,7 @@
   // Coordinates of the grid point or crossing under the mouse on the given graph.
   function hoverGiven(evt) {
     const el = $('#given svg');
-    if (!ex || !el) return;
+    if (!ex || isQuiz() || !el) return;
     const old = el.querySelector('.hover');
     if (old) old.remove();
     if (evt.type === 'pointerleave' || evt.pointerType === 'touch') return;
@@ -432,12 +492,12 @@
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
   const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'easy';
   const canReveal = () => st.solved || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
-  const hintsOf = () => (ex.dir === 'diff' ? hintsDiff() : hintsInt());
+  const hintsOf = () => (isQuiz() ? ex.hints : ex.dir === 'diff' ? hintsDiff() : hintsInt());
 
   function open(exercise) {
     ex = exercise;
     ex.hints = hintsOf();
-    st = { tries: 0, hints: 0, solved: false, revealed: false, res: null, copied: false };
+    st = { tries: 0, hints: 0, solved: false, revealed: false, res: null, copied: false, checked: null };
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
@@ -465,6 +525,7 @@
 
   function check() {
     if (st.solved) { fresh(); return; } // the button reads New exercise
+    if (isQuiz()) { checkQuiz(); return; }
     const ans = editor.values();
     st.tries++;
     st.res = evaluate(ex, ans);
@@ -484,6 +545,26 @@
     updateButtons();
   }
 
+  function checkQuiz() {
+    const ans = quizAnswers(), evs = ex.questions.map((q) => Quiz.evaluate(q, ans[q.key]));
+    st.checked = ans;
+    if (evs.every((e) => e.complete)) {
+      st.tries++;
+      if (evs.every((e) => e.ok)) {
+        if (!st.revealed) {
+          const s = stored('mg-score', { solved: 0, clean: 0 });
+          s.solved++;
+          if (st.tries === 1 && st.hints === 0) s.clean++;
+          store('mg-score', s);
+          showScore();
+        }
+        st.solved = true;
+      }
+    }
+    showFeedback();
+    updateButtons();
+  }
+
   function showHints() {
     $('#hint-list').innerHTML = ex.hints.slice(0, st.hints).map((h) => `<li>${h}</li>`).join('');
     $('#hints').hidden = !st.hints;
@@ -499,7 +580,7 @@
   function reveal() {
     if (!canReveal()) return;
     st.revealed = true;
-    showDrawing();
+    if (!isQuiz()) showDrawing();
     $('#sol-text').innerHTML = solution();
     $('#solution').hidden = false;
     showFeedback();
@@ -512,12 +593,27 @@
   // is highlighted in both graphs; derivative: the chord of the given graph (its mean slope)
   // and, for a parabola, the tangents at its ends; integral: the area under the given graph.
   const LESSONS = [
+    { name: () => L('Faster', 'Schneller'), kind: 'compare', d: 2, seed: 1,
+      idea: () => L('The speed is the steepness of the s(t) graph, not its height; a falling graph means motion in the negative direction.',
+        'Die Geschwindigkeit ist die Steilheit des s(t)-Graphen, nicht seine Höhe; ein fallender Graph bedeutet Bewegung in negativer Richtung.') },
+    { name: () => L('Direction', 'Richtung'), kind: 'direction', d: 2, seed: 1,
+      idea: () => L('The sign of v is the direction of motion: negative where s decreases, wherever the graph lies.',
+        'Das Vorzeichen von v ist die Bewegungsrichtung: negativ, wo s abnimmt, egal wo der Graph liegt.') },
+    { name: () => L('Value table', 'Wertetabelle'), kind: 'table', d: 2, seed: 1,
+      idea: () => L('In a value table, the direction shows in the changes from one time to the next, not in the signs of the positions.',
+        'In einer Wertetabelle zeigt sich die Richtung in den Änderungen von einem Zeitpunkt zum nächsten, nicht in den Vorzeichen der Orte.') },
+    { name: () => L('Stroboscope', 'Stroboskop'), kind: 'strobe', d: 2, seed: 1,
+      idea: () => L('In a stroboscope picture, the distance between neighbouring dots is the distance moved in one second: large gaps mean fast.',
+        'In einer Stroboskopaufnahme ist der Abstand benachbarter Punkte der Weg in einer Sekunde: Grosse Abstände bedeuten schnell.') },
     { name: 's → v', task: 'sv', seed: 17,
       idea: () => L('The velocity is the slope of the position graph: read it piece by piece, from straight lines and from the tangents to the curves.',
         'Die Geschwindigkeit ist die Steigung des Ort-Zeit-Graphen: Lies sie Stück für Stück ab, an Geraden und an den Tangenten der Kurven.') },
     { name: 'v → a', task: 'va', seed: 3,
       idea: () => L('The acceleration is the slope of the velocity graph. Where the velocity graph is curved, its slope changes, so the acceleration changes.',
         'Die Beschleunigung ist die Steigung des Geschwindigkeit-Zeit-Graphen. Wo dieser gekrümmt ist, ändert sich seine Steigung, also ändert sich die Beschleunigung.') },
+    { name: () => L('Area', 'Fläche'), kind: 'area', d: 4, seed: 1,
+      idea: () => L('The area under v(t) is the displacement (below the axis negative); counting all areas positive gives the distance travelled.',
+        'Die Fläche unter v(t) ist die Verschiebung (unter der Achse negativ); zählt man alle Flächen positiv, erhält man den zurückgelegten Weg.') },
     { name: 'v → s', task: 'vs', seed: 45,
       idea: () => L('The change of position in a piece is the area between the velocity graph and the time axis; below the axis it counts negative.',
         'Die Ortsänderung in einem Stück ist die Fläche zwischen dem Geschwindigkeit-Zeit-Graphen und der Zeitachse; unter der Achse zählt sie negativ.') },
@@ -578,7 +674,21 @@
   }
   // On a phone, the worked examples use the narrow drawings too (see Plot.setNarrow).
   const phone = () => window.matchMedia('(max-width: 640px)').matches;
-  const lessons = () => LESSONS.map((l) => ({ name: l.name, idea: l.idea(), frames: () => (phone() ? narrowed(() => lesson(l)) : lesson(l)) }));
+  // A worked example of a quiz exercise: the task, its worked steps, then the answers with the
+  // typical wrong ones and the misconception behind each.
+  const figOf = (f) => `<div class="figs">${f.startsWith('<div') ? f : `<figure class="fig">${f}</figure>`}</div>`;
+  function quizLesson(def) {
+    const e = Concepts.make(def.kind, def.seed, def.d);
+    const task = { text: `<p class="step-rule">${L('The task', 'Die Aufgabe')}</p>${e.text}<ol class="tq">${e.questions.map((q) => `<li>${q.prompt}</li>`).join('')}</ol>`, figure: figOf(e.figure) };
+    const steps = e.steps.map((x) => ({ text: `<p class="step-rule">${x.title}</p><p>${x.text}</p>`, figure: figOf(x.figure) }));
+    const wrongs = (q) => (q.type === 'num' ? q.traps.map((t) => ({ html: `${fmt(t.value)} ${q.unit}`, flag: t.flag, why: t.why })) : q.options.filter((o) => !o.correct))
+      .filter((o) => o.flag).map((o) => `<li>${o.html.startsWith('<svg') ? '' : `<i>${o.html}</i> `}<span class="tag">${Concepts.FLAGS[o.flag]()}</span><br>${o.why}</li>`).join('');
+    const answers = e.questions.map((q, k) => `<p><span class="qn">${k + 1}</span>${q.prompt} <b>${e.answers[k]}</b></p>` +
+      (wrongs(q) ? `<details><summary>${ui().wrongs}</summary><ul class="wrong">${wrongs(q)}</ul></details>` : '')).join('');
+    return [task, ...steps, { text: `<p class="step-rule">${ui().answers}</p>${answers}`, figure: steps[steps.length - 1].figure }];
+  }
+  const nameOf = (l) => (typeof l.name === 'function' ? l.name() : l.name);
+  const lessons = () => LESSONS.map((l) => ({ name: nameOf(l), idea: l.idea(), frames: () => (l.kind ? quizLesson(l) : phone() ? narrowed(() => lesson(l)) : lesson(l)) }));
 
   // ---------------------------------------------------------------- arcade
   // Each question shows a given graph; the options are the right graph and three from typical
@@ -607,7 +717,20 @@
   function arcadeQuestion(kind, seed) {
     const d = Number(kind.slice(1));
     let e = null, q = null;
-    for (let k = 0; !q; k++) { e = ofDifficulty(d, (seed + 7919 * k) >>> 0); q = quiz(e, seed); }
+    for (let k = 0; !q; k++) {
+      e = ofDifficulty(d, (seed + 7919 * k) >>> 0);
+      if (e.kind) break;
+      q = quiz(e, seed);
+    }
+    if (e.kind) {
+      // a quiz exercise: one of its questions with four options (concepts.js)
+      const a = Concepts.arcade(e, seed);
+      return {
+        title: e.title, text: e.text, figure: e.figure.startsWith('<div') ? e.figure : `<figure class="fig">${e.figure}</figure>`, ask: a.ask,
+        options: a.options.map((o) => ({ html: o.html, correct: o.correct, flag: o.correct ? null : o.flag, why: o.correct ? '' : o.why })),
+        explain: () => `<div class="steps">${stepsHtml(e)}</div>`,
+      };
+    }
     return withEx(e, () => narrowed(() => ({
       title: taskTitle(e),
       text: `<p>${statement().replace(/ (Draw|Zeichne) .*$/, '')}</p>`,
@@ -622,8 +745,12 @@
     id: 'mg',
     kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })),
     question: arcadeQuestion,
-    concept: { copy: 'copy', sign: 'sign', average: 'mean', rectStart: 'area', curve: 'shape' },
+    concept: {
+      copy: 'copy', sign: 'sign', average: 'mean', rectStart: 'area', curve: 'shape', rect: 'area',
+      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned'].map((f) => [f, f])),
+    },
     concepts: () => ({
+      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned'].map((f) => [f, Concepts.FLAGS[f]()])),
       copy: L('the value instead of the slope', 'der Wert statt der Steigung'),
       sign: L('the sign', 'das Vorzeichen'),
       mean: L('the mean value for a whole piece', 'der Mittelwert für ein ganzes Stück'),
@@ -631,9 +758,9 @@
       shape: L('straight instead of curved', 'gerade statt gekrümmt'),
     }),
     intro: () => ({
-      tag: L('Which graph matches? Answer as many questions as you can in <b>5 minutes</b>.', 'Welcher Graph passt? Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich.'),
-      rule: L('Questions get harder as you go: first slopes (from position to velocity, from velocity to acceleration), then areas. Each shows one graph; pick the matching one from four. Click a graph or press 1–4.',
-        'Die Fragen werden nach und nach schwieriger: zuerst Steigungen (vom Ort zur Geschwindigkeit, von der Geschwindigkeit zur Beschleunigung), dann Flächen. Jede zeigt einen Graphen; wähle aus vier den passenden. Klicke einen Graphen an oder drücke 1–4.'),
+      tag: L('Position, velocity and their graphs: answer as many questions as you can in <b>5 minutes</b>.', 'Ort, Geschwindigkeit und ihre Graphen: Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich.'),
+      rule: L('Questions get harder as you go: speeds and directions, value tables and stroboscope pictures first, then slopes and areas of graphs. Choose one of four answers: click it or press 1–4.',
+        'Die Fragen werden nach und nach schwieriger: zuerst Tempo und Richtung, Wertetabellen und Stroboskopaufnahmen, dann Steigungen und Flächen von Graphen. Wähle eine von vier Antworten: Klicke sie an oder drücke 1–4.'),
       example: L('copying the shape of the given graph', 'die Form des gegebenen Graphen übernehmen'),
     }),
     // the position and velocity of the first worked example, and the velocity as a slope
@@ -657,7 +784,13 @@
   function switchLang() {
     applyStatic();
     showScore();
-    if (ex) {
+    if (ex && isQuiz()) {
+      const keep = quizAnswers(), id = ex.id, [, key, seed] = id.match(/^([a-z]+)-(\d+)$/);
+      ex = generate(key, Number(seed));
+      ex.id = id;
+      render(keep);
+      if ($('#task').hidden) { $('#hints').hidden = true; $('#solution').hidden = true; }
+    } else if (ex) {
       ex.hints = hintsOf();
       render(editor.state());
       if ($('#task').hidden) { $('#hints').hidden = true; $('#solution').hidden = true; }
@@ -699,7 +832,7 @@
       return true;
     }
     // a level, or (older links) a task
-    m = h.match(/^(easy|medium|hard|mixed|sv|va|vs|av)-(\d+)$/);
+    m = h.match(/^(easy|medium|hard|mixed|sv|va|vs|av|compare|direction|table|strobe|area)-(\d+)$/);
     if (!m) return false;
     setMode('practice');
     const lv = document.querySelector(`input[name="level"][value="${m[1]}"]`);
@@ -716,6 +849,8 @@
     Lang.wire(switchLang);
     $('#levels').addEventListener('change', () => { store('mg-level', level()); fresh(); });
     $('#new').addEventListener('click', fresh);
+    $('#q-fields').addEventListener('input', () => { if (st && !st.solved) showFeedback(); });
+    $('#q-fields').addEventListener('change', () => { if (st && !st.solved) showFeedback(); });
     $('#given').addEventListener('pointermove', hoverGiven);
     $('#given').addEventListener('pointerleave', hoverGiven);
     $('#check').addEventListener('click', check);

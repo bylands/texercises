@@ -13,6 +13,9 @@
   <script defer src="generator.js"></script>
   <script defer src="plot.js"></script>
   <script defer src="editor.js"></script>
+  <script defer src="figs.js"></script>
+  <script defer src="concepts.js"></script>
+  <script defer src="quiz.js"></script>
   <script defer src="tutor.js"></script>
   <script defer src="arcade.js"></script>
   <script defer src="app.js"></script>
@@ -64,14 +67,23 @@
       <h2 id="title"></h2>
       <p id="statement"></p>
 
-      <h3 id="given-title"></h3>
-      <div id="given" class="plot"></div>
+      <!-- drawing exercises (s → v, v → a, v → s, a → v) -->
+      <div id="drawing">
+        <h3 id="given-title"></h3>
+        <div id="given" class="plot"></div>
 
-      <h3 id="draw-title"></h3>
-      <div class="plot draw-wrap">
-        <svg id="draw" tabindex="0" role="application"></svg>
+        <h3 id="draw-title"></h3>
+        <div class="plot draw-wrap">
+          <svg id="draw" tabindex="0" role="application"></svg>
+        </div>
+        <p id="howto" class="note"></p>
       </div>
-      <p id="howto" class="note"></p>
+
+      <!-- exercises answered by choosing and entering numbers (concepts.js, quiz.js) -->
+      <div id="quiz" hidden>
+        <div id="q-figure" class="figs"></div>
+        <div id="q-fields"></div>
+      </div>
 
       <div class="actions">
         <button type="button" id="check" class="primary">Check</button>

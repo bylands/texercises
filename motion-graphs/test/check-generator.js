@@ -155,7 +155,9 @@ const CODE = { sign: 'sign', average: 'average', rectStart: 'rectStart', curve: 
 for (let d = 1; d <= 5; d++) {
   let none = 0;
   for (let seed = 1; seed <= 200; seed++) {
-    const ex = M.ofDifficulty(d, seed), q = M.quiz(ex, seed), tag = `quiz ${d}/${seed}`;
+    const ex = M.ofDifficulty(d, seed), tag = `quiz ${d}/${seed}`;
+    if (ex.kind) continue; // a quiz exercise (concepts.js), checked below
+    const q = M.quiz(ex, seed);
     if (ex.difficulty !== d) fail(`${tag}: difficulty ${ex.difficulty}`);
     if (!q) { none++; continue; }
     if (q.options.length !== 4 || q.options.filter((o) => o.correct).length !== 1) fail(`${tag}: options`);
@@ -169,6 +171,87 @@ for (let d = 1; d <= 5; d++) {
   }
   console.log(`quiz, difficulty ${d}: ${none} of 200 seeds give options that look alike`);
 }
+
+// ---------------------------------------------------------------- the quiz exercises (concepts.js)
+// For every kind and difficulty: one right option per choice, distinct options, an explanation for
+// every wrong one, traps different from the answer, numbers in steps of 0.05, and answers that
+// agree with the motion behind the exercise (data), worked out again here; four valid arcade
+// options; the same in German, without ß.
+const C = require('../concepts.js');
+const Lang = require('../lang.js');
+const near = (a, b) => Math.abs(a - b) < 1e-6;
+const nice = (x) => near(Math.round(x * 20), x * 20);
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  for (const kind of C.KINDS) {
+    for (const d of C.DIFF[kind]) {
+      for (let seed = 1; seed <= 300; seed++) {
+        const tag = `${lang} ${kind}/${d}/${seed}`;
+        let ex;
+        try { ex = C.make(kind, seed, d); } catch (e) { fail(`${tag}: ${e.message}`); continue; }
+        if (ex.difficulty !== d) fail(`${tag}: difficulty ${ex.difficulty}`);
+        if (/NaN|undefined|Infinity|\[object/.test(JSON.stringify(ex))) fail(`${tag}: NaN/undefined`);
+        if (lang === 'de' && /ß/.test(JSON.stringify(ex))) fail(`${tag}: ß`);
+        if (ex.hints.length < 3 || ex.steps.length < 2) fail(`${tag}: hints or steps missing`);
+        for (const q of ex.questions) {
+          if (q.type === 'choice' && q.options.filter((o) => o.correct).length !== 1) fail(`${tag}: ${q.key} has not one right option`);
+          if (q.type === 'multi' && !q.options.some((o) => o.correct)) fail(`${tag}: ${q.key} has no right option`);
+          if (q.options && new Set(q.options.map((o) => o.html)).size !== q.options.length) fail(`${tag}: ${q.key} options alike`);
+          if (q.options && q.options.some((o) => !o.correct && !o.why)) fail(`${tag}: ${q.key} wrong option without why`);
+          if (q.type === 'num') {
+            if (!nice(q.value)) fail(`${tag}: ${q.key} = ${q.value} not in steps of 0.05`);
+            if (q.traps.some((t) => Math.abs(t.value - q.value) < 0.05)) fail(`${tag}: ${q.key} trap equals the answer`);
+            if (q.traps.some((t) => !nice(t.value))) fail(`${tag}: ${q.key} trap not in steps of 0.05`);
+          }
+        }
+        const qOf = (key) => ex.questions.find((q) => q.key === key);
+        const right = (key) => qOf(key).options.filter((o) => o.correct).map((o) => o.html);
+        const D = ex.data;
+        if (kind === 'compare') {
+          const v = (p) => (p[1] - p[0]) / 10, vF = v(D.fast === 'A' ? D.A : D.B), vS = v(D.fast === 'A' ? D.B : D.A);
+          if (!(Math.abs(vF) > Math.abs(vS))) fail(`${tag}: ${D.fast} is not faster`);
+          if (!right('faster')[0].startsWith(D.fast)) fail(`${tag}: wrong answer to faster`);
+          if (!near(qOf('v').value, v(D.asked === 'A' ? D.A : D.B))) fail(`${tag}: wrong velocity`);
+          if (d === 2 && !(vF < 0)) fail(`${tag}: the faster one should move backwards`);
+        }
+        if (kind === 'direction') {
+          const want = D.pieces.filter((p) => p.s1 < p.s0).length;
+          if (right('neg').length !== want) fail(`${tag}: negative intervals`);
+          if (!near(qOf('v').value, (D.asked.s1 - D.asked.s0) / (D.asked.t1 - D.asked.t0))) fail(`${tag}: wrong velocity`);
+        }
+        if (kind === 'table' && d === 2) {
+          const back = D.rows.filter((r) => r.values.every((v, k) => k === 0 || v < r.values[k - 1])).map((r) => r.name);
+          if (right('back').join() !== back.join() && right('back').slice().sort().join() !== back.slice().sort().join()) fail(`${tag}: always backwards ${right('back')} vs ${back}`);
+          const U = D.rows.find((r) => r.name === D.uniform);
+          if (!near(qOf('v').value, (U.values[1] - U.values[0]) / 5)) fail(`${tag}: wrong velocity`);
+        }
+        if (kind === 'table' && d === 3) {
+          if (!near(qOf('vA').value, D.A.v) || !near(qOf('vB').value, D.B.v)) fail(`${tag}: wrong velocities`);
+          if (!near(qOf('sA').value, D.A.s0 + 20 * D.A.v) || !near(qOf('sB').value, D.B.s0)) fail(`${tag}: wrong positions`);
+        }
+        if (kind === 'strobe') {
+          if (D.xs.some((x) => x < -7 || x > 7)) fail(`${tag}: dot off the number line`);
+          if (D.xs.slice(1).some((x, k) => !near(x - D.xs[k], D.gaps[k]))) fail(`${tag}: gaps disagree with the dots`);
+        }
+        if (kind === 'area' && D.pts) {
+          const ds = C.integrate(D.pts, D.a, D.b, false), dist = C.integrate(D.pts, D.a, D.b, true);
+          if (!near(qOf('ds').value, Math.round(ds * 100) / 100)) fail(`${tag}: wrong displacement`);
+          if (d === 4 && !near(qOf('dist').value, Math.round(dist * 100) / 100)) fail(`${tag}: wrong distance`);
+          if (d === 4 && !(dist - Math.abs(ds) >= 1)) fail(`${tag}: distance and displacement too close`);
+        }
+        if (kind === 'area' && D.tq) {
+          const sA = C.integrate(D.A, 0, D.tq, false), sB = C.integrate(D.B, 0, D.tq, false);
+          if (right('far')[0] !== (Math.abs(sA) > Math.abs(sB) ? 'A' : 'B')) fail(`${tag}: wrong answer to far`);
+          if (!near(qOf('sB').value, Math.round(sB * 100) / 100)) fail(`${tag}: wrong displacement of B`);
+        }
+        const a = C.arcade(ex, seed);
+        if (a.options.length !== 4 || a.options.filter((o) => o.correct).length !== 1 || new Set(a.options.map((o) => o.html)).size !== 4) fail(`${tag}: arcade options`);
+      }
+    }
+  }
+}
+Lang.set('en', true);
+console.log(`quiz exercises: ${C.KINDS.length} kinds checked`);
 
 if (failures) { console.error(`\n${failures} failures`); process.exit(1); }
 console.log('Generator OK');
