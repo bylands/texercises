@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copies the shared files (ui.css, lang.js, fit.js, tutor.js, arcade.js) into every app, so that
+# Copies the shared files (ui.css, lang.js, fit.js, sign.js, tutor.js, arcade.js) into every app, so that
 # each app stays a folder of its own for deployment; pages that are no app (the privacy page) get
 # lang.js only. Edit the files here, never an app's copy.
 #   shared/sync.sh          copy
@@ -11,7 +11,7 @@
 set -e
 cd "$(dirname "$0")/.."
 APPS="force-systems bulb-brightness circuit-trainer impedance induction-match motion-graphs force-concepts"
-FILES="ui.css lang.js fit.js tutor.js arcade.js"
+FILES="ui.css lang.js fit.js sign.js tutor.js arcade.js"
 PAGES="privacy"
 status=0
 copy() { # copy shared/$1 to $2/$1, or with --check report a difference

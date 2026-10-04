@@ -128,6 +128,11 @@ input, button, select { font: inherit; color: inherit; }
   font-variant-numeric: tabular-nums;
 }
 .field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* the ± button next to a number field (sign.js), on touch screens only */
+.num { display: flex; gap: 6px; min-width: 0; }
+.num input { flex: 1 1 auto; min-width: 0; }
+.num .sign { display: none; flex: none; min-width: 2.6em; padding: 4px 10px; font-size: 1.05rem; font-weight: 600; }
+@media (pointer: coarse) { .num .sign { display: inline-block; } }
 .field .unit { color: var(--muted); }
 .field .fb { font-size: 0.9rem; }
 .field.ok input { border-color: var(--ok); background: var(--ok-bg); }

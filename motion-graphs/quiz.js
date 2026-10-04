@@ -12,7 +12,7 @@
     const head = `<p class="qprompt"><span class="qn">${k + 1}</span>${q.prompt}</p>`;
     if (q.type === 'num') {
       return `<div class="qblock" data-key="${q.key}">${head}<div class="fields"><div class="field">` +
-        `<label class="sym" for="q-${q.key}">${q.sym} =</label><input id="q-${q.key}" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="done" spellcheck="false">` +
+        `<label class="sym" for="q-${q.key}">${q.sym} =</label><input id="q-${q.key}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" spellcheck="false">` +
         `<span class="unit">${q.unit}</span><span class="fb"></span></div></div></div>`;
     }
     const type = q.type === 'multi' ? 'checkbox' : 'radio';

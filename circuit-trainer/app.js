@@ -120,7 +120,7 @@
     $('#fields').innerHTML = ex.fields.map((f) => `
       <div class="field" data-key="${f.key}">
         <label for="in-${f.key}" class="sym">$${f.sym}$&nbsp;=</label>
-        <input id="in-${f.key}" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="done" spellcheck="false">
+        <input id="in-${f.key}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" spellcheck="false">
         <span class="unit">${esc(f.unit)}</span>
         <span class="fb" aria-live="polite"></span>
       </div>`).join('');

@@ -117,7 +117,7 @@
   const fieldsHtml = (exercise, prefix) => exercise.fields.map((f) => `
       <div class="field" data-key="${f.key}">
         <label for="${prefix}-${f.key}" class="sym"><span class="what">${f.what}</span> $${FS.tex(...f.sym)}$&nbsp;=</label>
-        <input id="${prefix}-${f.key}" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="done" spellcheck="false">
+        <input id="${prefix}-${f.key}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" spellcheck="false">
         <span class="unit">${FS.UNITS[f.unit]}</span>
         <span class="fb" aria-live="polite"></span>
       </div>`).join('');
