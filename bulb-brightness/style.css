@@ -84,11 +84,10 @@ svg .note.v { fill: var(--vnote); font: italic 600 14px var(--serif); }
 #arcade .fig.ref svg { width: 160px; }
 #arcade .ar-opt { font-size: 1.15rem; }
 
-/* the introduction: a plain paragraph on wide screens; on small screens one line to open, which
-   also shows the reference circuit */
+/* the introduction: a plain paragraph on wide screens; on small screens one line to open (the
+   reference circuit stays visible) */
 #intro > summary { display: none; }
 #intro > p { margin: 0 0 4px; }
 @media (max-width: 640px) {
   #intro > summary { display: list-item; cursor: pointer; color: var(--accent); margin: 2px 0 6px; }
-  #task:has(#intro:not([open])) .fig.ref { display: none; }
 }
