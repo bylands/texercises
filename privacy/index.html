@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Datenschutz · Teaching Physics</title>
+  <!-- Privacy statement of teachingphysics.ch, in German and English (lang.js chooses, as in the
+       apps). Facts it relies on: no cookies, no analytics, nothing loaded from other servers
+       (KaTeX is served with the apps); nginx access logs (IP, time, URL, status, size, referrer,
+       user agent), rotated daily and kept 14 days (/etc/logrotate.d/nginx on the server);
+       localStorage keys tp-lang and <app>-* in the apps. Update it when any of these change. -->
+  <style>
+    :root {
+      --bg: #f6f5f1;
+      --card: #ffffff;
+      --ink: #1f2328;
+      --muted: #646b73;
+      --line: #d9d6ce;
+      --accent: #2b59c3;
+      --accent-ink: #ffffff;
+      --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
+      color-scheme: light;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #15171a;
+        --card: #1e2125;
+        --ink: #e6e3dc;
+        --muted: #9aa0a6;
+        --line: #3a3e44;
+        --accent: #7aa2ff;
+        --accent-ink: #0d1320;
+        color-scheme: dark;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+    header.wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-top: 28px; }
+    .back { color: var(--muted); text-decoration: none; }
+    .back:hover { color: var(--accent); }
+
+    .levels { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
+    .levels label { position: relative; }
+    .levels input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+    .levels span { display: block; padding: 3px 10px; font-size: 0.85rem; border-left: 1px solid var(--line); }
+    .levels label:first-child span { border-left: 0; }
+    .levels input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    .levels input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+    main.wrap { padding-bottom: 40px; }
+    h1 { margin: 24px 0 4px; font-family: var(--serif); font-size: 2.2rem; font-weight: 600; }
+    .date { margin: 0 0 24px; color: var(--muted); }
+    h2 { margin: 28px 0 6px; font-size: 1.15rem; }
+    p, li { max-width: 68ch; }
+    ul { padding-left: 1.3em; }
+    li { margin: 4px 0; }
+    a { color: var(--accent); text-underline-offset: 2px; }
+
+    footer.wrap { border-top: 1px solid var(--line); padding-top: 16px; padding-bottom: 32px; color: var(--muted); font-size: 0.85rem; }
+    footer a { color: inherit; }
+    footer a:hover { color: var(--accent); }
+  </style>
+  <script defer src="lang.js"></script>
+  <script>
+    // Shows the text in the page language (lang.js: ?lang=, else the choice made in the apps, else
+    // the browser's language), with the EN/DE switch.
+    document.addEventListener('DOMContentLoaded', () => {
+      const Lang = window.Lang;
+      const show = () => {
+        document.querySelectorAll('[data-lang]').forEach((el) => { el.hidden = el.dataset.lang !== Lang.get(); });
+        document.title = Lang.L('Privacy · Teaching Physics', 'Datenschutz · Teaching Physics');
+        Lang.apply({});
+      };
+      Lang.init();
+      show();
+      Lang.wire(show);
+    });
+  </script>
+</head>
+<body>
+  <header class="wrap">
+    <a class="back" href="/">← Teaching Physics</a>
+    <div id="langs" class="levels" role="radiogroup" aria-label="Language">
+      <label><input type="radio" name="lang" value="en"><span title="English">EN</span></label>
+      <label><input type="radio" name="lang" value="de" checked><span title="Deutsch">DE</span></label>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <article data-lang="de" lang="de">
+      <h1>Datenschutz</h1>
+      <p class="date">Stand: 4. Oktober 2026</p>
+
+      <h2>Verantwortlich</h2>
+      <p>Samuel Byland, MNG Rämibühl, Zürich<br>Kontakt: <a href="mailto:samuel.byland@mng.ch">samuel.byland@mng.ch</a></p>
+
+      <h2>Kurz gesagt</h2>
+      <p>Die Übungen auf teachingphysics.ch funktionieren ohne Anmeldung. Es gibt keine Cookies, kein Tracking, keine Werbung und keine Analysedienste. Alle Dateien, auch Schriften und Formelsatz (KaTeX), kommen von diesem Server; die Seiten laden nichts von anderen Servern.</p>
+
+      <h2>Hosting und Server-Logdateien</h2>
+      <p>Die Website liegt auf einem virtuellen Server der Infomaniak Network SA in der Schweiz. Bei jedem Aufruf speichert der Webserver automatisch:</p>
+      <ul>
+        <li>die IP-Adresse,</li>
+        <li>Datum und Uhrzeit,</li>
+        <li>die aufgerufene Adresse, den Statuscode und die übertragene Datenmenge,</li>
+        <li>die zuvor besuchte Seite (Referrer),</li>
+        <li>Browser und Betriebssystem (User-Agent).</li>
+      </ul>
+      <p>Diese Angaben dienen nur dem Betrieb und der Sicherheit des Servers, etwa um Fehler und Angriffe zu erkennen. Sie werden nicht ausgewertet, um Personen zu erkennen, nicht mit anderen Daten zusammengeführt und nach 14 Tagen automatisch gelöscht.</p>
+
+      <h2>Daten in deinem Browser</h2>
+      <p>Damit du beim nächsten Besuch weitermachen kannst, speichern die Apps einige Angaben im lokalen Speicher deines Browsers (localStorage): die gewählte Sprache, den Modus und die Schwierigkeitsstufe, die Zahl der gelösten Aufgaben, die Bestpunktzahl im Arcade-Modus und bei «Kraftkonzepte», hinter welchen deiner falschen Antworten welche Fehlvorstellung steckte und welche Aufgabentypen zuletzt kamen und dir schwerfielen (damit diese häufiger drankommen). Diese Angaben bleiben auf deinem Gerät und werden nicht an den Server übertragen. Du kannst sie jederzeit löschen, indem du in den Einstellungen deines Browsers die Websitedaten von teachingphysics.ch löschst.</p>
+
+      <h2>Links</h2>
+      <p>Für Websites, auf die verlinkt wird (zum Beispiel mng.ch), gelten deren eigene Datenschutzbestimmungen.</p>
+
+      <h2>Deine Rechte</h2>
+      <p>Nach dem Schweizer Datenschutzgesetz (DSG) kannst du Auskunft darüber verlangen, welche Personendaten über dich bearbeitet werden, und ihre Berichtigung oder Löschung verlangen. Da die Website ausser den Server-Logdateien keine Personendaten speichert, kann eine Auskunft nur diese betreffen. Wende dich dafür an die oben genannte Kontaktadresse.</p>
+    </article>
+
+    <article data-lang="en" lang="en" hidden>
+      <h1>Privacy</h1>
+      <p class="date">Last updated: 4 October 2026</p>
+
+      <h2>Responsible</h2>
+      <p>Samuel Byland, MNG Rämibühl, Zurich<br>Contact: <a href="mailto:samuel.byland@mng.ch">samuel.byland@mng.ch</a></p>
+
+      <h2>In short</h2>
+      <p>The exercises on teachingphysics.ch work without an account. There are no cookies, no tracking, no ads and no analytics. All files, including fonts and the formula typesetting (KaTeX), come from this server; the pages load nothing from other servers.</p>
+
+      <h2>Hosting and server logs</h2>
+      <p>The website runs on a virtual server of Infomaniak Network SA in Switzerland. For every request, the web server automatically records:</p>
+      <ul>
+        <li>the IP address,</li>
+        <li>date and time,</li>
+        <li>the address requested, the status code and the amount of data sent,</li>
+        <li>the page visited before (referrer),</li>
+        <li>browser and operating system (user agent).</li>
+      </ul>
+      <p>These records serve only to run and secure the server, for example to find errors and attacks. They are not analysed to identify anyone, not combined with other data, and deleted automatically after 14 days.</p>
+
+      <h2>Data in your browser</h2>
+      <p>So that you can carry on where you left off, the apps keep a few settings in your browser's local storage (localStorage): the language, mode and difficulty you chose, how many exercises you solved, your best arcade score and, in Force Concepts, which misconception was behind which of your wrong answers and which exercise types came up last and which you found hard (so that those come up more often). This stays on your device and is never sent to the server. You can delete it at any time by clearing the site data of teachingphysics.ch in your browser's settings.</p>
+
+      <h2>Links</h2>
+      <p>Websites linked from here (for example mng.ch) have their own privacy policies.</p>
+
+      <h2>Your rights</h2>
+      <p>Under the Swiss Federal Act on Data Protection (FADP), you can ask which personal data about you is processed, and ask for it to be corrected or deleted. As the website stores no personal data apart from the server logs, such a request can only concern those. Please use the contact address above.</p>
+    </article>
+  </main>
+
+  <footer class="wrap">
+    © Samuel Byland · <a href="https://mng.ch">MNG Rämibühl</a>
+  </footer>
+</body>
+</html>

@@ -4,12 +4,16 @@
 //   Lang.L(en, de)        the text in the current language
 //   Lang.get(), set(l)    the language; set() remembers it
 //   Lang.apply(dict)      fills in [data-i18n] (text), [data-i18n-html] and [data-i18n-label]
-//                         (aria-label) from dict, sets <html lang> and the EN/DE switch
+//                         (aria-label) from dict, and [data-i18n-common] from the texts all pages
+//                         share (COMMON, e.g. the privacy link in the footer); sets <html lang>
+//                         and the EN/DE switch
 //   Lang.wire(onChange)   connects the EN/DE switch (#langs) to onChange(lang)
 (function (root) {
   'use strict';
 
   const LANGS = ['en', 'de'], KEY = 'tp-lang';
+  // texts of the footer, the same on every page
+  const COMMON = { privacy: { en: 'Privacy', de: 'Datenschutz' } };
   let lang = 'en';
 
   const remembered = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
@@ -37,6 +41,7 @@
       document.querySelectorAll('[data-i18n]').forEach((el) => { if (dict[el.dataset.i18n] != null) el.textContent = text(dict[el.dataset.i18n]); });
       document.querySelectorAll('[data-i18n-html]').forEach((el) => { if (dict[el.dataset.i18nHtml] != null) el.innerHTML = text(dict[el.dataset.i18nHtml]); });
       document.querySelectorAll('[data-i18n-label]').forEach((el) => { if (dict[el.dataset.i18nLabel] != null) el.setAttribute('aria-label', text(dict[el.dataset.i18nLabel])); });
+      document.querySelectorAll('[data-i18n-common]').forEach((el) => { const c = COMMON[el.dataset.i18nCommon]; if (c) el.textContent = c[lang]; });
       const r = document.querySelector(`input[name="lang"][value="${lang}"]`);
       if (r) r.checked = true;
     },
