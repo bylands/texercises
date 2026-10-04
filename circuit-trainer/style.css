@@ -23,7 +23,6 @@
 #prompt { margin: 6px 0; }
 
 /* circuit drawing */
-.fig svg { max-width: none; }
 svg text { font-family: var(--serif); font-size: 14px; }
 svg .w { stroke: var(--ink); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 svg .w.thick { stroke-width: 4.5; stroke-linecap: butt; }

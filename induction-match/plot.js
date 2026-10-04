@@ -23,8 +23,12 @@
     for (let v = yMin; v <= yMax; v++) if (v !== 0) s += `<line class="grid" x1="${x(0)}" y1="${y(v)}" x2="${x(T)}" y2="${y(v)}"/>`;
     s += `<line class="ax" x1="${x(0)}" y1="${y(yMin)}" x2="${x(0)}" y2="${y(yMax) - 8}"/>`;
     s += `<line class="ax" x1="${x(0)}" y1="${y(0)}" x2="${x(T) + 8}" y2="${y(0)}"/>`;
-    for (let v = yMin; v <= yMax; v += yLabelStep) s += `<text class="tick" x="${x(0) - 5}" y="${y(v) + 4}" text-anchor="end">${num(v).replace('+', '')}</text>`;
-    for (let t = 0; t <= T; t += 2) s += `<text class="tick" x="${x(t)}" y="${H - B + 16}" text-anchor="middle">${t}</text>`;
+    // On a small graph (style.css), only the ticks that are not minor keep their labels: 0 and
+    // ±3 on the voltage axis, 0, 4 and 8 on the flux axis, and 2, 4, 6 on the time axis (0 would
+    // meet the vertical axis' labels, 8 the label t in s).
+    const minorY = (v) => (yLabelStep === 1 ? v % 3 !== 0 : v % 4 !== 0);
+    for (let v = yMin; v <= yMax; v += yLabelStep) s += `<text class="tick${minorY(v) ? ' minor' : ''}" x="${x(0) - 5}" y="${y(v) + 4}" text-anchor="end">${num(v).replace('+', '')}</text>`;
+    for (let t = 0; t <= T; t += 2) s += `<text class="tick${t === 0 || t === T ? ' minor' : ''}" x="${x(t)}" y="${H - B + 16}" text-anchor="middle">${t}</text>`;
     s += `<text class="axis" x="${W - 4}" y="${H - B + 16}" text-anchor="end"><tspan class="it">t</tspan> in s</text>`;
     s += `<text class="axis qlabel" x="6" y="15">${yLabel}</text>`;
     return { x, y, s };

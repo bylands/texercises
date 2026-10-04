@@ -9,10 +9,15 @@
   const { T } = root.Motion || require('./generator.js');
   const Lang = root.Lang || require('./lang.js');
   const say = (en, de) => Lang.L(en, de);
-  const H = 250, L = 58, R = 20, TOP = 26, B = 34;
-  let W = 640, R_HANDLE = 7;
-  // Narrow screens get a narrower drawing (larger text and handles once scaled down).
-  function setNarrow(narrow) { W = narrow ? 420 : 640; R_HANDLE = narrow ? 9 : 7; }
+  const L = 58, R = 20, B = 34;
+  let W = 640, H = 250, TOP = 26, R_HANDLE = 7, QY = 16;
+  // Narrow screens get a narrower drawing (larger text and handles once scaled down); its labels
+  // grow further on a phone (fit.js), so the quantity's label gets a row of its own above the
+  // piece numbers (the plot keeps its height).
+  function setNarrow(narrow) {
+    W = narrow ? 420 : 640; R_HANDLE = narrow ? 9 : 7;
+    TOP = narrow ? 46 : 26; H = narrow ? 270 : 250; QY = narrow ? 16 : TOP - 10;
+  }
   const UNIT = { s: 'm', v: 'm/s', a: 'm/s²' };
   const f1 = (x) => Math.round(x * 10) / 10;
   // decimal comma in German
@@ -55,7 +60,7 @@
     for (let v = axis.lo; v <= axis.hi; v += axis.label) out += `<text class="tick" x="${s.x(0) - 6}" y="${s.y(v) + 4}" text-anchor="end">${num(v)}</text>`;
     for (let t = 0; t <= T; t++) out += `<text class="tick" x="${s.x(t)}" y="${s.y(axis.lo) + 16}" text-anchor="middle">${t}</text>`;
     out += `<text class="axis" x="${W - 4}" y="${H - 3}" text-anchor="end"><tspan class="it">t</tspan> in s</text>`;
-    out += `<text class="axis qlabel" x="6" y="${TOP - 10}"><tspan class="it">${q}</tspan> in ${UNIT[q]}</text>`;
+    out += `<text class="axis qlabel" x="6" y="${QY}"><tspan class="it">${q}</tspan> in ${UNIT[q]}</text>`;
     return { s, svg: out };
   }
 
@@ -233,7 +238,7 @@
     return `<g class="qc-${q}">${body}</g>`;
   }
 
-  const api = { get W() { return W; }, H, TOP, B, setNarrow, UNIT, scales, dec, sourceGraph, targetGraph, answerGraph, Tut, handles, svg, num, svgPoint, hoverPoint, hoverMark };
+  const api = { get W() { return W; }, get H() { return H; }, get TOP() { return TOP; }, B, setNarrow, UNIT, scales, dec, sourceGraph, targetGraph, answerGraph, Tut, handles, svg, num, svgPoint, hoverPoint, hoverMark };
   root.Plot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

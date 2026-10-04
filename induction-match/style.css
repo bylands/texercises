@@ -48,6 +48,9 @@
 .gcard:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .gcard:disabled { cursor: default; opacity: 1; }
 .gcard svg { display: block; width: 100%; height: auto; }
+/* small graph cards (phones): fewer tick labels, so that the enlarged ones (fit.js) do not meet */
+.gcard { container-type: inline-size; }
+@container (max-width: 230px) { svg .tick.minor { display: none; } }
 .gname { position: absolute; top: 5px; right: 12px; font-weight: 700; font-size: 1.05rem; }
 .badge:empty { display: none; }
 .badge {
@@ -95,6 +98,9 @@ svg .ann { fill: var(--accent); font-size: 11px; font-weight: 600; font-family: 
 /* tutor mode */
 .tgraphs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
 .tgraphs svg, #t-figure .gcard svg { display: block; width: 100%; height: auto; }
+/* small graph cards (phones): fewer tick labels, so that the enlarged ones (fit.js) do not meet */
+.gcard { container-type: inline-size; }
+@container (max-width: 230px) { svg .tick.minor { display: none; } }
 .tgraphs h3, #t-figure h3 { margin: 4px 0 2px; font-size: 0.95rem; }
 #t-figure .graphs { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 #t-figure .gcard .gname { font-size: 0.95rem; }

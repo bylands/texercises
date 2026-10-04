@@ -576,7 +576,9 @@
       return frames;
     });
   }
-  const lessons = () => LESSONS.map((l) => ({ name: l.name, idea: l.idea(), frames: () => lesson(l) }));
+  // On a phone, the worked examples use the narrow drawings too (see Plot.setNarrow).
+  const phone = () => window.matchMedia('(max-width: 640px)').matches;
+  const lessons = () => LESSONS.map((l) => ({ name: l.name, idea: l.idea(), frames: () => (phone() ? narrowed(() => lesson(l)) : lesson(l)) }));
 
   // ---------------------------------------------------------------- arcade
   // Each question shows a given graph; the options are the right graph and three from typical

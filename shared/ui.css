@@ -61,6 +61,11 @@ body {
 .wrap { max-width: 920px; margin: 0 auto; padding-inline: 16px; }
 
 /* header: title, score, language */
+/* the title, after a link back to the landing page: Teaching Physics / Force Systems */
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.brand .home { color: var(--muted); text-decoration: none; font-size: 0.95rem; }
+.brand .home:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.brand .sep { color: var(--line); }
 .top { border-bottom: 1px solid var(--line); background: var(--card); }
 .top .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px; padding-block: 14px; }
 h1 { font-size: 1.25rem; margin: 0; }
@@ -102,7 +107,7 @@ input, button, select { font: inherit; color: inherit; }
 .stars { margin-left: 6px; color: var(--star); font-size: 0.95rem; letter-spacing: 1px; font-weight: 400; white-space: nowrap; }
 
 .figs { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; justify-content: center; margin: 12px 0 18px; }
-.fig { max-width: 100%; overflow-x: auto; }
+.fig { max-width: 100%; margin: 0; overflow-x: auto; } /* no default <figure> margin: the gap of .figs spaces them */
 .fig svg { display: block; max-width: 100%; height: auto; }
 .fig.scrolls::after { content: "↔"; position: sticky; left: 0; display: block; margin-top: 4px; font-size: 0.8rem; color: var(--muted); }
 
@@ -132,7 +137,7 @@ input, button, select { font: inherit; color: inherit; }
 .field.bad .fb::before { content: "✗ "; }
 
 /* footer: author, school, privacy */
-.foot { margin-top: 28px; padding-block: 16px 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+.foot { margin-top: 28px; padding-block: 16px 32px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
 .foot a { color: inherit; text-underline-offset: 2px; }
 .foot a:hover { color: var(--accent); }
 

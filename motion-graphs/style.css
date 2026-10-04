@@ -103,6 +103,7 @@ svg .tdot.mean { fill: var(--card); stroke: var(--qc); stroke-width: 2; }
 /* arcade: manim's colours for s, v and a */
 #arcade { --q-s: #fc6255; --q-v: #58c4dd; --q-a: #83c167; --grid: #1c1c1c; --grid-major: #333; --band: #222; }
 #arcade #ar-figure .fig svg, #arcade .ar-explain > .figs .fig svg { width: 420px; }
+#arcade #ar-figure .fig, #arcade .ar-explain > .figs .fig { flex: 0 1 420px; } /* full width on a phone */
 #arcade .ar-opt { padding: 22px 8px 6px; }
 #arcade .ar-opt .val { width: 100%; }
 #arcade .ar-opt .val svg { width: 100%; max-width: 380px; margin: 0 auto; }
