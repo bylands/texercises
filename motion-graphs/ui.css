@@ -83,6 +83,9 @@ input, button, select { font: inherit; color: inherit; }
 .levels input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .levels input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
 .levels.small span { padding: 3px 10px; font-size: 0.85rem; }
+/* the EN/DE switch keeps its two buttons side by side; a long score wraps instead */
+.levels.small { flex-wrap: nowrap; flex-shrink: 0; }
+.top-right .score { min-width: 0; }
 
 /* on/off switch */
 .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }

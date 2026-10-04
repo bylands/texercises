@@ -74,7 +74,7 @@
 
   // ---------------------------------------------------------------- input and feedback
   function parse(s) {
-    s = s.trim().replace(/,/g, '.').replace(/−/g, '-').replace(/[^\d.)]+$/, '').trim();
+    s = s.trim().replace(/,/g, '.').replace(/[−–—‒]/g, '-').replace(/[^\d.)]+$/, '').trim();
     const m = s.match(/^([-+]?\d*\.?\d+(?:e[-+]?\d+)?)(?:\s*\/\s*(\d*\.?\d+))?$/i);
     if (!m) return NaN;
     return m[2] ? Number(m[1]) / Number(m[2]) : Number(m[1]);
@@ -117,7 +117,7 @@
   const fieldsHtml = (exercise, prefix) => exercise.fields.map((f) => `
       <div class="field" data-key="${f.key}">
         <label for="${prefix}-${f.key}" class="sym"><span class="what">${f.what}</span> $${FS.tex(...f.sym)}$&nbsp;=</label>
-        <input id="${prefix}-${f.key}" type="text" inputmode="decimal" autocomplete="off" spellcheck="false">
+        <input id="${prefix}-${f.key}" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="done" spellcheck="false">
         <span class="unit">${FS.UNITS[f.unit]}</span>
         <span class="fb" aria-live="polite"></span>
       </div>`).join('');

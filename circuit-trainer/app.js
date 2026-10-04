@@ -81,7 +81,7 @@
 
   // ---------------------------------------------------------------- input and feedback
   function parse(s) {
-    s = s.trim().replace(/,/g, '.').replace(/[^\d.)]+$/, '').trim();
+    s = s.trim().replace(/,/g, '.').replace(/[−–—‒]/g, '-').replace(/[^\d.)]+$/, '').trim(); // the minus as phones type it
     const m = s.match(/^([-+]?\d*\.?\d+(?:e[-+]?\d+)?)(?:\s*\/\s*(\d*\.?\d+))?$/i);
     if (!m) return NaN;
     return m[2] ? Number(m[1]) / Number(m[2]) : Number(m[1]);
@@ -120,7 +120,7 @@
     $('#fields').innerHTML = ex.fields.map((f) => `
       <div class="field" data-key="${f.key}">
         <label for="in-${f.key}" class="sym">$${f.sym}$&nbsp;=</label>
-        <input id="in-${f.key}" type="text" inputmode="decimal" autocomplete="off" spellcheck="false">
+        <input id="in-${f.key}" type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="done" spellcheck="false">
         <span class="unit">${esc(f.unit)}</span>
         <span class="fb" aria-live="polite"></span>
       </div>`).join('');
