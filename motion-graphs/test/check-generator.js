@@ -232,6 +232,12 @@ for (const lang of ['en', 'de']) {
         if (kind === 'strobe') {
           if (D.xs.some((x) => x < -7 || x > 7)) fail(`${tag}: dot off the number line`);
           if (D.xs.slice(1).some((x, k) => !near(x - D.xs[k], D.gaps[k]))) fail(`${tag}: gaps disagree with the dots`);
+          // constant acceleration: the distances per second change by a each second, and the
+          // positions follow s₀ + v₀·t + a·t²/2
+          if (D.gaps.slice(1).some((g, k) => !near(g - D.gaps[k], D.acc))) fail(`${tag}: acceleration not constant`);
+          if (D.xs.some((x, t) => !near(x, D.xs[0] + D.v0 * t + (D.acc * t * t) / 2))) fail(`${tag}: positions are not s0 + v0 t + a t²/2`);
+          if (d === 3 && !near(qOf('a').value, D.acc)) fail(`${tag}: wrong acceleration`);
+          if (Math.abs(D.v0) > 6 || Math.abs(D.v0 + D.acc * D.gaps.length) > 6) fail(`${tag}: v off the axis`);
         }
         if (kind === 'area' && D.pts) {
           const ds = C.integrate(D.pts, D.a, D.b, false), dist = C.integrate(D.pts, D.a, D.b, true);

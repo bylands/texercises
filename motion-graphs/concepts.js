@@ -4,7 +4,8 @@
 //   compare    two motions in one s(t) graph: which is faster, and the velocity of one (★1–2)
 //   direction  a piecewise uniform s(t): when is v negative, and v in one interval (★2)
 //   table      value tables: which vehicles always move backwards, velocities, missing positions (★2–3)
-//   strobe     a stroboscope picture (one dot per second): its s(t) or v(t) graph, and the motion (★2–3)
+//   strobe     a stroboscope picture of a constantly accelerated cart: its s(t) or v(t) graph,
+//              the motion, and (★3) the acceleration (★2–3)
 //   area       v(t): displacement and distance between two times, or who is farther from the start (★3–4)
 // make(kind, seed, d) gives { kind, id, difficulty, title, text, figure, questions, hints, steps,
 // answers, data } in the current language (Lang); data: the motion behind it, for the tests.
@@ -355,89 +356,113 @@
   }
 
   // ---------------------------------------------------------------- strobe (C1.3, C1.4)
-  // One dot per second on a number line from −7 to 7 m. The motion is a pattern of distances per
-  // second. ★2: which s(t) graph fits; ★3: which v(t) graph (the mean velocity in every second).
-  const PATTERNS = {
-    speedup: { gaps: [1, 1, 1, 3, 3], how: 'speedup' },
-    slowdown: { gaps: [4, 3, 2, 1], how: 'slowdown' },
-    faster: { gaps: [1, 2, 3, 4], how: 'speedup' },
-    slower: { gaps: [3, 3, 3, 1, 1], how: 'slowdown' },
-    turn: { gaps: [3, 3, -2, -2, -2], how: 'turn' },
-  };
+  // A cart with constant acceleration, one dot per second on a number line from −7 to 7 m:
+  // s(t) = s₀ + v₀·t + a·t²/2. The distances moved in successive seconds then change by the same
+  // amount a·(1 s)² each second; each one is the mean velocity in that second, which the cart
+  // reaches in its middle, so v(t) is the straight line through them. The patterns below keep
+  // the positions whole metres. ★2: which s(t) graph fits; ★3: which v(t) graph, and the
+  // acceleration.
+  const PATTERNS = [
+    { gaps: [1, 2, 3, 4], how: 'speedup' },
+    { gaps: [2, 3, 4, 5], how: 'speedup' },
+    { gaps: [1, 3, 5], how: 'speedup' }, // from rest
+    { gaps: [4, 3, 2, 1], how: 'slowdown' },
+    { gaps: [5, 3, 1], how: 'slowdown' }, // to rest
+    { gaps: [3, 1, -1, -3, -5], how: 'turn' },
+    { gaps: [5, 3, 1, -1, -3], how: 'turn' },
+  ];
   function strobeEx(seed, d) {
     const r = rng(seed);
     d = d || r.pick([2, 3]);
-    const key = r.pick(Object.keys(PATTERNS)), pat = PATTERNS[key], dir = r.pick([1, -1]);
-    const gaps = pat.gaps.map((g) => dir * g);
+    const pat = r.pick(PATTERNS), dir = r.pick([1, -1]);
+    const gaps = pat.gaps.map((g) => dir * g), n = gaps.length;
+    const acc = gaps[1] - gaps[0];                       // m/s²
+    const v0 = gaps[0] - acc / 2;                        // m/s, at t = 0
     const posOf = (gs, x0) => gs.reduce((xs, g) => [...xs, xs[xs.length - 1] + g], [x0]);
-    // the wrong pattern: the gaps' sizes swapped (large ↔ small)
-    const mx = Math.max(...pat.gaps.map(Math.abs)), mn = Math.min(...pat.gaps.map(Math.abs));
-    const inv = gaps.map((g) => Math.sign(g) * (mx + mn - Math.abs(g)));
-    // a start that keeps both the motion and the swapped one on the number line
+    // the wrong patterns: the distances in the opposite order (large ↔ small, the opposite
+    // acceleration), the time order reversed, and a steady motion between the same ends
+    const inv = gaps.slice().reverse();
+    // a start that keeps the motion and the reversed one on the number line
     const span = [...posOf(gaps, 0), ...posOf(inv, 0)], lo = Math.min(...span), hi = Math.max(...span);
     const x0 = r.pick(Array.from({ length: 15 }, (x, k) => k - 7).filter((x) => x + lo >= -7 && x + hi <= 7));
-    const xs = posOf(gaps, x0), n = gaps.length;
-    const rev = xs.slice().reverse(); // the time order reversed
-    const sAxis = { lo: -8, hi: 8, step: 4 };
-    const sGraph = (ps) => graph('s', sAxis, n, [{ pts: ps.map((x, k) => [k, x]) }], { label: L('Position against time', 'Ort gegen die Zeit') });
-    const vSteps = (gs) => gs.flatMap((g, k) => [[k, g], [k + 1, g]]);
-    const vGraph = (gs) => graph('v', { lo: -4, hi: 4, step: 2 }, n, [{ pts: vSteps(gs) }], { label: L('Velocity against time', 'Geschwindigkeit gegen die Zeit') });
+    const xs = posOf(gaps, x0);
+    const sAt = (gs, x, t) => { const a = gs[1] - gs[0], u = gs[0] - a / 2; return x + u * t + (a * t * t) / 2; };
+    const curve = (gs, x) => Array.from({ length: 4 * n + 1 }, (z, k) => [k / 4, sAt(gs, x, k / 4)]);
+    const sAxis = { lo: -8, hi: 8, step: 4 }, vAxis = { lo: -6, hi: 6, step: 2 };
+    const sGraph = (pts, o = {}) => graph('s', sAxis, n, [{ pts }], { label: L('Position against time', 'Ort gegen die Zeit'), ...o });
+    const vLine = (gs) => { const a = gs[1] - gs[0], u = gs[0] - a / 2; return [[0, u], [n, u + a * n]]; };
+    const vGraph = (pts, o = {}) => graph('v', vAxis, n, [{ pts }], { label: L('Velocity against time', 'Geschwindigkeit gegen die Zeit'), ...o });
+    const steps = (gs) => gs.flatMap((g, k) => [[k, g], [k + 1, g]]);
+    const means = gaps.map((g, k) => [k + 0.5, g]);
     const WHYG = {
-      gaps: () => L('Large gaps between neighbouring dots mean many metres in one second: fast, not slow.', 'Grosse Abstände zwischen benachbarten Punkten bedeuten viele Meter in einer Sekunde: schnell, nicht langsam.'),
-      order: () => L('Start at t = 0: the dots are taken in the order of their times, and the graph starts where the dot of t = 0 is.', 'Beginne bei t = 0: Die Punkte gelten in der Reihenfolge ihrer Zeiten, und der Graph beginnt dort, wo der Punkt von t = 0 liegt.'),
-      average: () => L('This graph has the right start and end, but a constant speed. In the picture, the distances between the dots change.', 'Dieser Graph hat den richtigen Anfang und das richtige Ende, aber ein konstantes Tempo. Im Bild ändern sich die Abstände zwischen den Punkten.'),
-      sign: () => L('The dots move towards ' + (dir > 0 ? 'larger' : 'smaller') + ' s at first, so v starts ' + (dir > 0 ? 'positive' : 'negative') + '.', 'Die Punkte bewegen sich zuerst zu ' + (dir > 0 ? 'grösseren' : 'kleineren') + ' s, also ist v zuerst ' + (dir > 0 ? 'positiv' : 'negativ') + '.'),
-      position: () => L('This graph shows the positions of the dots, not their velocity. The velocity is the distance from one dot to the next, per second.', 'Dieser Graph zeigt die Orte der Punkte, nicht ihre Geschwindigkeit. Die Geschwindigkeit ist der Abstand von einem Punkt zum nächsten, pro Sekunde.'),
+      gaps: () => L('Large gaps between neighbouring dots mean many metres in one second: fast, not slow. Read the dots in the order of their times.', 'Grosse Abstände zwischen benachbarten Punkten bedeuten viele Meter in einer Sekunde: schnell, nicht langsam. Lies die Punkte in der Reihenfolge ihrer Zeiten.'),
+      order: () => L('Start at t = 0: the graph starts where the dot of t = 0 is, and follows the dots in the order of their times.', 'Beginne bei t = 0: Der Graph beginnt dort, wo der Punkt von t = 0 liegt, und folgt den Punkten in der Reihenfolge ihrer Zeiten.'),
+      steady: () => L('This graph has the right start and end, but a constant velocity. In the picture, the distances between the dots change: the velocity changes.', 'Dieser Graph hat den richtigen Anfang und das richtige Ende, aber eine konstante Geschwindigkeit. Im Bild ändern sich die Abstände zwischen den Punkten: Die Geschwindigkeit ändert sich.'),
+      sign: () => L(`At first the dots move towards ${dir > 0 ? 'larger' : 'smaller'} s, so v starts ${dir > 0 ? 'positive' : 'negative'}.`, `Zuerst wandern die Punkte zu ${dir > 0 ? 'grösseren' : 'kleineren'} s, also ist v zuerst ${dir > 0 ? 'positiv' : 'negativ'}.`),
+      jumps: () => L('With a constant acceleration, the velocity changes steadily, not in jumps once a second: the distance per second is only its mean in that second, reached in its middle.', 'Bei konstanter Beschleunigung ändert sich die Geschwindigkeit gleichmässig, nicht sprunghaft einmal pro Sekunde: Der Abstand pro Sekunde ist nur ihr Mittelwert in dieser Sekunde, erreicht in deren Mitte.'),
     };
-    let q1;
+    const questions = [];
     if (d === 2) {
-      const uni = Array.from({ length: n + 1 }, (x, k) => xs[0] + ((xs[n] - xs[0]) * k) / n);
-      q1 = choice('graph', L('Which s(t) graph belongs to this motion?', 'Welcher s(t)-Graph gehört zu dieser Bewegung?'), r.shuffle([
-        opt(sGraph(xs), true, null, ''),
-        opt(sGraph(posOf(inv, x0)), false, 'gaps', WHYG.gaps()),
-        opt(sGraph(rev), false, 'order', WHYG.order()),
-        opt(sGraph(uni), false, null, WHYG.average()),
-      ]), true);
+      questions.push(choice('graph', L('Which s(t) graph belongs to this motion?', 'Welcher s(t)-Graph gehört zu dieser Bewegung?'), r.shuffle([
+        opt(sGraph(curve(gaps, x0)), true, null, ''),
+        opt(sGraph(curve(inv, x0)), false, 'gaps', WHYG.gaps()),
+        opt(sGraph(curve(gaps, x0).map(([t]) => [t, sAt(gaps, x0, n - t)])), false, 'order', WHYG.order()),
+        opt(sGraph([[0, xs[0]], [n, xs[n]]]), false, null, WHYG.steady()),
+      ]), true));
     } else {
-      q1 = choice('graph', L('Which v(t) graph belongs to this motion?', 'Welcher v(t)-Graph gehört zu dieser Bewegung?'), r.shuffle([
-        opt(vGraph(gaps), true, null, ''),
-        opt(vGraph(inv), false, 'gaps', WHYG.gaps()),
-        opt(vGraph(gaps.map((g) => -g)), false, 'sign', WHYG.sign()),
-        opt(vGraph(xs.slice(1).map((x) => Math.max(-4, Math.min(4, x / 2)))), false, 'position', WHYG.position()),
-      ]), true);
+      questions.push(choice('graph', L('Which v(t) graph belongs to this motion?', 'Welcher v(t)-Graph gehört zu dieser Bewegung?'), r.shuffle([
+        opt(vGraph(vLine(gaps)), true, null, ''),
+        opt(vGraph(vLine(inv)), false, 'gaps', WHYG.gaps()),
+        opt(vGraph(vLine(gaps.map((g) => -g))), false, 'sign', WHYG.sign()),
+        opt(vGraph(steps(gaps)), false, null, WHYG.jumps()),
+      ]), true));
     }
+    // how the cart moves, as the answer and in the sentence "So the cart …"
     const HOW = {
-      speedup: () => L('first slow, then faster', 'zuerst langsam, dann schneller'),
-      slowdown: () => L('first fast, then slower', 'zuerst schnell, dann langsamer'),
-      steady: () => L('always equally fast', 'immer gleich schnell'),
-      turn: () => L('it turns around', 'er kehrt um'),
+      speedup: () => L('gets faster and faster', 'wird immer schneller'),
+      slowdown: () => L('gets slower and slower', 'wird immer langsamer'),
+      steady: () => L('moves at a steady speed', 'fährt immer gleich schnell'),
+      turn: () => L('slows down and turns back', 'bremst ab und kehrt um'),
     };
     const invHow = { speedup: 'slowdown', slowdown: 'speedup', turn: 'steady' }[pat.how];
-    const q2 = choice('how', L('How does the cart move?', 'Wie bewegt sich der Wagen?'), r.shuffle(['speedup', 'slowdown', 'steady', 'turn'].map((h) =>
+    questions.push(choice('how', L('How does the cart move?', 'Wie bewegt sich der Wagen?'), r.shuffle(['speedup', 'slowdown', 'steady', 'turn'].map((h) =>
       opt(HOW[h](), h === pat.how, h === invHow && pat.how !== 'turn' ? 'gaps' : null, h === invHow && pat.how !== 'turn' ? WHYG.gaps()
         : h === 'turn' ? L('The dots keep moving the same way; the cart does not come back.', 'Die Punkte wandern immer in dieselbe Richtung; der Wagen kommt nicht zurück.')
           : pat.how === 'turn' ? L('Look at the times: after a while the dots come back towards the start.', 'Schau auf die Zeiten: Nach einer Weile kommen die Punkte zum Start zurück.')
-            : L('Compare the distances between neighbouring dots: they are not all the same.', 'Vergleiche die Abstände zwischen benachbarten Punkten: Sie sind nicht alle gleich.')))));
+            : L('Compare the distances between neighbouring dots: they are not all the same.', 'Vergleiche die Abstände zwischen benachbarten Punkten: Sie sind nicht alle gleich.'))))));
+    if (d === 3) {
+      questions.push(numQ('a', L('The acceleration of the cart:', 'Die Beschleunigung des Wagens:'), L('What is the acceleration of the cart?', 'Wie gross ist die Beschleunigung des Wagens?'), it('a'), 'm/s²', acc, [
+        { value: -acc, flag: 'sign', why: L(`The distances per second ${acc * dir > 0 ? 'grow' : 'shrink'} in the direction of motion${pat.how === 'turn' ? ' at first' : ''}: work out the sign from how the signed distance changes, from ${sval(gaps[0], 'm')} to ${sval(gaps[1], 'm')}.`,
+          `Die Abstände pro Sekunde ${acc * dir > 0 ? 'wachsen' : 'schrumpfen'}${pat.how === 'turn' ? ' zuerst' : ''} in Bewegungsrichtung: Bestimme das Vorzeichen daraus, wie sich der Abstand mit Vorzeichen ändert, von ${sval(gaps[0], 'm')} auf ${sval(gaps[1], 'm')}.`) },
+        { value: gaps[n - 1], flag: null, why: L('That is the distance moved in the last second, a mean velocity. The acceleration is how much this distance changes from one second to the next, per second squared.', 'Das ist der Abstand in der letzten Sekunde, eine mittlere Geschwindigkeit. Die Beschleunigung ist, um wie viel sich dieser Abstand von einer Sekunde zur nächsten ändert, pro Sekunde im Quadrat.') },
+        { value: acc / 2, flag: null, why: L('The distances per second change by a · (1 s)² from one second to the next, so a is that change itself, not half of it.', 'Die Abstände pro Sekunde ändern sich von einer Sekunde zur nächsten um a · (1 s)², also ist a diese Änderung selbst, nicht die Hälfte davon.') },
+      ], L('a = (change of the distance per second) / (1 s)².', 'a = (Änderung des Abstands pro Sekunde) / (1 s)².')));
+    }
     const fig = () => strobe(xs, -7, 7, { label: L('Stroboscope picture: one dot per second', 'Stroboskopaufnahme: ein Punkt pro Sekunde') });
     const gapText = gaps.map((g, k) => `${k}–${k + 1} s: ${g > 0 ? '+' : ''}${num(g)} m`).join(', ');
     return finish('strobe', seed, d, {
-      data: { xs, gaps, how: pat.how },
+      data: { xs, gaps, how: pat.how, acc, v0 },
       title: L('Stroboscope picture', 'Stroboskopaufnahme'),
-      text: L('<p>A cart moves along a straight track. The stroboscope picture shows where it is every second, from t = 0 (the numbers above the dots are the times in s).</p>',
-        '<p>Ein Wagen bewegt sich auf einer geraden Bahn. Die Stroboskopaufnahme zeigt, wo er jede Sekunde ist, ab t = 0 (die Zahlen über den Punkten sind die Zeiten in s).</p>'),
+      text: L('<p>A cart moves along a straight track with constant acceleration. The stroboscope picture shows where it is every second, from t = 0 (the numbers above the dots are the times in s).</p>',
+        '<p>Ein Wagen bewegt sich mit konstanter Beschleunigung auf einer geraden Bahn. Die Stroboskopaufnahme zeigt, wo er jede Sekunde ist, ab t = 0 (die Zahlen über den Punkten sind die Zeiten in s).</p>'),
       figure: fig(),
-      questions: [q1, q2],
+      questions,
       hints: [
-        L('The distance between two neighbouring dots is how far the cart moves in one second: a large distance means fast, a small one slow.', 'Der Abstand zwischen zwei benachbarten Punkten ist, wie weit der Wagen in einer Sekunde fährt: Ein grosser Abstand bedeutet schnell, ein kleiner langsam.'),
-        L('Follow the dots in the order of their times. Moving towards smaller s means v < 0.', 'Folge den Punkten in der Reihenfolge ihrer Zeiten. Bewegung zu kleinerem s bedeutet v < 0.'),
+        L('The distance between two neighbouring dots is how far the cart moves in one second, its mean velocity in that second: a large distance means fast, a small one slow.', 'Der Abstand zwischen zwei benachbarten Punkten ist, wie weit der Wagen in einer Sekunde fährt, seine mittlere Geschwindigkeit in dieser Sekunde: Ein grosser Abstand bedeutet schnell, ein kleiner langsam.'),
+        L('With constant acceleration, the distances per second change by the same amount each second, and s(t) is a parabola.', 'Bei konstanter Beschleunigung ändern sich die Abstände pro Sekunde jede Sekunde um gleich viel, und s(t) ist eine Parabel.'),
         L(`The changes of position per second: ${gapText}.`, `Die Ortsänderungen pro Sekunde: ${gapText}.`),
-        d === 2 ? L(`So the s(t) graph goes through ${xs.map((x, k) => `(${k} s, ${num(x)} m)`).join(', ')}.`, `Der s(t)-Graph geht also durch ${xs.map((x, k) => `(${k} s, ${num(x)} m)`).join(', ')}.`)
-          : L(`So v is ${gaps.map((g) => sval(g, 'm/s')).join(', ')} in the successive seconds.`, `Also ist v in den aufeinanderfolgenden Sekunden ${gaps.map((g) => sval(g, 'm/s')).join(', ')}.`),
+        d === 2 ? L(`So the s(t) graph goes through ${xs.map((x, k) => `(${k} s, ${num(x)} m)`).join(', ')}, curved like a parabola.`, `Der s(t)-Graph geht also durch ${xs.map((x, k) => `(${k} s, ${num(x)} m)`).join(', ')}, gekrümmt wie eine Parabel.`)
+          : L(`The mean velocity in each second is reached in its middle: v(0.5 s) = ${sval(gaps[0], 'm/s')}, v(1.5 s) = ${sval(gaps[1], 'm/s')}, …; v(t) is the straight line through these points.`,
+            `Die mittlere Geschwindigkeit jeder Sekunde wird in deren Mitte erreicht: v(0,5 s) = ${sval(gaps[0], 'm/s')}, v(1,5 s) = ${sval(gaps[1], 'm/s')}, …; v(t) ist die Gerade durch diese Punkte.`),
       ],
       steps: [
-        step(L('Distances per second', 'Abstände pro Sekunde'), L(`From one dot to the next, the cart moves: ${gapText}.`, `Von einem Punkt zum nächsten fährt der Wagen: ${gapText}.`), fig()),
-        step(L('The s(t) graph', 'Der s(t)-Graph'), L('Each dot gives a point (t, s); between them the cart moves on, so the points are joined.', 'Jeder Punkt gibt einen Punkt (t, s); dazwischen fährt der Wagen weiter, also werden die Punkte verbunden.'), sGraph(xs)),
-        step(L('The v(t) graph', 'Der v(t)-Graph'), L(`The mean velocity in each second is the distance moved in it: ${gaps.map((g) => sval(g, 'm/s')).join(', ')}. The cart moves ${HOW[pat.how]()}.`, `Die mittlere Geschwindigkeit in jeder Sekunde ist der darin zurückgelegte Abstand: ${gaps.map((g) => sval(g, 'm/s')).join(', ')}. Der Wagen fährt ${HOW[pat.how]()}.`), vGraph(gaps)),
+        step(L('Distances per second', 'Abstände pro Sekunde'), L(`From one dot to the next, the cart moves: ${gapText}. They change by ${sval(acc, 'm')} each second: a constant acceleration a = ${sval(acc, 'm/s²')}.`,
+          `Von einem Punkt zum nächsten fährt der Wagen: ${gapText}. Sie ändern sich jede Sekunde um ${sval(acc, 'm')}: eine konstante Beschleunigung a = ${sval(acc, 'm/s²')}.`), fig()),
+        step(L('The s(t) graph', 'Der s(t)-Graph'), L('Each dot gives a point (t, s). With constant acceleration, s(t) is a parabola through these points.', 'Jeder Punkt gibt einen Punkt (t, s). Bei konstanter Beschleunigung ist s(t) eine Parabel durch diese Punkte.'),
+          sGraph(curve(gaps, x0), { dots: xs.map((x, k) => [k, x]) })),
+        step(L('The v(t) graph', 'Der v(t)-Graph'), L(`The distance in each second is the mean velocity in that second, reached in its middle (dots). v(t) is the straight line through them, from ${sval(v0, 'm/s')} at t = 0 with slope a = ${sval(acc, 'm/s²')}. So the cart ${HOW[pat.how]()}.`,
+          `Der Abstand in jeder Sekunde ist die mittlere Geschwindigkeit in dieser Sekunde, erreicht in deren Mitte (Punkte). v(t) ist die Gerade durch sie, von ${sval(v0, 'm/s')} bei t = 0 mit der Steigung a = ${sval(acc, 'm/s²')}. Der Wagen ${HOW[pat.how]()}.`),
+          vGraph(vLine(gaps), { dots: means })),
       ],
     });
   }
