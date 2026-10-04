@@ -159,6 +159,8 @@ svg .vline { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 4; }
 .vtable thead th { font-weight: 600; border-bottom: 2px solid var(--line); }
 .vtable tbody th { text-align: left; font-weight: 400; }
 .vtable td.missing { color: var(--accent); font-size: 0.85rem; }
+.vtable tr.diff th, .vtable tr.diff td { color: var(--muted); font-size: 0.9rem; }
+.vtable tr.diff td { text-align: center; }
 @media (max-width: 560px) { .vtable th, .vtable td { padding: 4px 4px; font-size: 0.85rem; } }
 
 /* their worked examples in the tutor */

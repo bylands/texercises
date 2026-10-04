@@ -97,11 +97,14 @@
   }
 
   // ---------------------------------------------------------------- value table
-  // times: [t, …] (s); rows: [{ name, values: [s, null (asked for: shown by its name) or '' (empty)] }]
+  // times: [t, …] (s); rows: [{ name, values: [s, null (asked for: shown by its name) or '' (empty)] }].
+  // A row with head (HTML) is a row of its own kind (e.g. the differences in a solution), its
+  // values plain numbers or strings; name may be '' for a single body (s instead of s_A).
   function table(times, rows) {
-    const cell = (v, name, t) => (v === '' ? '<td></td>' : v == null ? `<td class="missing">${name}(${num(t)} s)</td>` : `<td>${num(v)}</td>`);
+    const sym = (r) => (r.name ? `<i>s</i><sub>${r.name}</sub>` : '<i>s</i>');
+    const cell = (v, r, t) => (v === '' ? '<td></td>' : v == null ? `<td class="missing">${sym(r)}(${num(t)} s)</td>` : `<td>${typeof v === 'number' ? num(v) : v}</td>`);
     return `<table class="vtable"><thead><tr><th><i>t</i> in s</th>${times.map((t) => `<th>${num(t)}</th>`).join('')}</tr></thead>` +
-      `<tbody>${rows.map((r) => `<tr><th><i>s</i><sub>${r.name}</sub> in m</th>${r.values.map((v, k) => cell(v, `<i>s</i><sub>${r.name}</sub>`, times[k])).join('')}</tr>`).join('')}</tbody></table>`;
+      `<tbody>${rows.map((r) => `<tr${r.head ? ' class="diff"' : ''}><th>${r.head || `${sym(r)} in m`}</th>${r.values.map((v, k) => cell(v, r, times[k])).join('')}</tr>`).join('')}</tbody></table>`;
   }
 
   const api = { graph, strobe, table, valueAt, num, dec };

@@ -239,6 +239,16 @@ for (const lang of ['en', 'de']) {
           if (d === 3 && !near(qOf('a').value, D.acc)) fail(`${tag}: wrong acceleration`);
           if (Math.abs(D.v0) > 6 || Math.abs(D.v0 + D.acc * D.gaps.length) > 6) fail(`${tag}: v off the axis`);
         }
+        if (kind === 'atable') {
+          const g = D.xs.slice(1).map((x, k) => x - D.xs[k]);
+          if (g.slice(1).some((x, k) => !near(x - g[k], D.a))) fail(`${tag}: acceleration not constant`);
+          if (!near(qOf('a').value, D.a)) fail(`${tag}: wrong acceleration`);
+          if (d === 3 && (!near(qOf('s4').value, D.xs[4]) || !near(qOf('s5').value, D.xs[5]))) fail(`${tag}: wrong positions`);
+          if (d === 4) {
+            if (!near(qOf('s1').value, D.xs[1]) || !near(qOf('s5').value, D.xs[5])) fail(`${tag}: wrong positions`);
+            if (!near(qOf('v2').value, (D.xs[4] - D.xs[0]) / 4)) fail(`${tag}: wrong velocity at 2 s`);
+          }
+        }
         if (kind === 'area' && D.pts) {
           const ds = C.integrate(D.pts, D.a, D.b, false), dist = C.integrate(D.pts, D.a, D.b, true);
           if (!near(qOf('ds').value, Math.round(ds * 100) / 100)) fail(`${tag}: wrong displacement`);

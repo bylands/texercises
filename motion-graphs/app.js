@@ -744,10 +744,10 @@
     question: arcadeQuestion,
     concept: {
       copy: 'copy', sign: 'sign', average: 'mean', rectStart: 'area', curve: 'shape', rect: 'area',
-      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned'].map((f) => [f, f])),
+      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned', 'linear', 'steps'].map((f) => [f, f])),
     },
     concepts: () => ({
-      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned'].map((f) => [f, Concepts.FLAGS[f]()])),
+      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned', 'linear', 'steps'].map((f) => [f, Concepts.FLAGS[f]()])),
       copy: L('the value instead of the slope', 'der Wert statt der Steigung'),
       sign: L('the sign', 'das Vorzeichen'),
       mean: L('the mean value for a whole piece', 'der Mittelwert für ein ganzes Stück'),
@@ -829,7 +829,7 @@
       return true;
     }
     // a level, or (older links) a task
-    m = h.match(/^(easy|medium|hard|mixed|sv|va|vs|av|compare|direction|table|strobe|area)-(\d+)$/);
+    m = h.match(/^(easy|medium|hard|mixed|sv|va|vs|av|compare|direction|table|atable|strobe|area)-(\d+)$/);
     if (!m) return false;
     setMode('practice');
     const lv = document.querySelector(`input[name="level"][value="${m[1]}"]`);
