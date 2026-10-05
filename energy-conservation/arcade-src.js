@@ -8,7 +8,7 @@
   const L = (en, de) => EC.L(en, de);
 
   // The idea behind each wrong-answer flag.
-  const concept = { root: 'root', square: 'square', half: 'half', fall: 'height', extra: 'height', start: 'start', addv: 'addv', dir: 'dir', spring: 'spring', equil: 'equil', weight: 'weight' };
+  const concept = { root: 'root', square: 'square', half: 'half', fall: 'height', extra: 'height', start: 'start', addv: 'addv', dir: 'dir', spring: 'spring', equil: 'equil', weight: 'weight', angle: 'angle' };
   const concepts = () => ({
     root: L('square root forgotten', 'Wurzel vergessen'),
     square: L('energy not squared', 'Quadrat in der Energie vergessen'),
@@ -20,6 +20,7 @@
     spring: L('elastic energy forgotten', 'Spannenergie vergessen'),
     equil: L('lowest point taken as equilibrium', 'tiefster Punkt als Gleichgewicht'),
     weight: L('m g h without g', 'm g h ohne g'),
+    angle: L('the angle of the slope matters', 'der Winkel der Ebene zählt'),
   });
 
   function question(kind, seed) {

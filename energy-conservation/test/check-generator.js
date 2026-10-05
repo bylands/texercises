@@ -32,6 +32,13 @@ const LAWS = {
   'spring-up': (p, V) => [[(V.k * sq(V.s)) / 2, V.m * g * V.h]],
   'speed-fraction': (p, V) => { const v0 = Math.sqrt(2 * g * V.h), vp = (p.fr[0] / p.fr[1]) * v0; return [[g * V.hp + sq(vp) / 2, sq(v0) / 2]]; },
   'drop-spring': (p, V) => [[V.m * g * (V.h + V.s), (V.k * sq(V.s)) / 2]],
+  'ekin-epot': (p, V) => [[g * V.h, g * V.hp + sq(V.vp) / 2], [sq(V.vp) / 2, ((p.n[0] / p.n[1]) * g * V.hp)]],
+  'slope-launch': (p, V) => [[(V.k * sq(V.s)) / 2, (V.m * g * V.d) / 2]],
+  'ramp-spring': (p, V) => [[V.m * g * V.h, (V.k * sq(V.s)) / 2]],
+  incline: (p, V) => [[g * V.h, sq(V.v) / 2], ...(p.ask === 's' ? [[V.h, V.s * Math.sin(Math.PI / 6)]] : [])],
+  buffer: (p, V) => [[(V.m * sq(V.v)) / 2, (V.k * sq(V.s)) / 2]],
+  bungee: (p, V) => [[V.m * g * (V.l + V.s), (V.k * sq(V.s)) / 2]],
+  twice: (p, V) => [[V.m * g * (V.h + V.s), (V.k * sq(V.s)) / 2], [V.m * g * (V.hp + 2 * V.s), (V.k * sq(2 * V.s)) / 2]],
   'spring-hang': (p, V) => {
     const x = (p.fr[0] / p.fr[1]) * V.s;
     return p.ask === 'k' ? [[V.m * g * V.s, (V.k * sq(V.s)) / 2]]

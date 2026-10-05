@@ -35,6 +35,7 @@
     equil: () => L('The lowest point is not where the body would hang at rest: there the spring force is larger than the weight. Use energy conservation, not a balance of forces.', 'Der tiefste Punkt ist nicht die Ruhelage: Dort ist die Federkraft grösser als die Gewichtskraft. Verwende die Energieerhaltung, nicht ein Kräftegleichgewicht.'),
     weight: () => L('The factor g is missing: the potential energy is m g h.', 'Der Faktor g fehlt: Die Lageenergie ist m g h.'),
     solve: () => L('Check how you solved for the wanted quantity.', 'Prüfe, wie du nach der gesuchten Grösse aufgelöst hast.'),
+    angle: () => L('The angle does not matter: only the height difference counts. On a steeper slope the body gets there sooner, but not faster.', 'Der Winkel spielt keine Rolle: Nur der Höhenunterschied zählt. Auf einer steileren Ebene ist der Körper früher unten, aber nicht schneller.'),
     extra: () => L('The ball falls further than h: while it compresses the spring, it drops by s more.', 'Der Ball fällt weiter als h: Während er die Feder zusammendrückt, sinkt er um s weiter.'),
   };
   const FORMS = (scn) => (scn.spring ? ['pot', 'kin', 'el'] : ['pot', 'kin']);

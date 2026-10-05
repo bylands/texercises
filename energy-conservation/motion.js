@@ -14,7 +14,7 @@
   'use strict';
 
   const EC = root.EC, { Fig } = root.Draw, H$ = root.Scenarios.helpers;
-  const { R, ball, groundAt, ceilingAt, zeroLine, track, tangentAt, heightAt, DIRS } = H$;
+  const { R, ball, groundAt, ceilingAt, zeroLine, track, tangentAt, heightAt, DIRS, slope, slopeBlock, launchParts, RS, rsAt, rampSpringTrack } = H$;
   const G = EC.G;
   const sq = (x) => x * x;
   const fval = ([n, d]) => n / d;
@@ -221,6 +221,142 @@
           fig.spring([0, 0], [0, L0 + S0 * s], 8, 9);
           fig.rect(-bw / 2, L0 + S0 * s, bw, bh, 'body');
           velocity(fig, [bw / 2 + 8 - R, L0 + S0 * s + 4 - R], [0, 1], mo.v(s), mo.vmax, 40);
+        },
+      };
+    },
+
+    incline(p) {
+      const sl = slope(p.ang), h = p.V.h, total = G * h;
+      const u = (s) => lerp(sl.u1, sl.u2, s), P = (s) => sl.at(u(s));
+      const pos = (s) => [P(s)[0] + 13 * sl.n[0], P(s)[1] + 13 * sl.n[1]];
+      return {
+        states: [0, 1], pos,
+        energy: (s) => ({ pot: total * (1 - s), kin: total * s }),
+        draw(fig, s, lit, mo) {
+          fig.path(`M0 ${-sl.Hs}L${sl.W.toFixed(1)} 0L0 0Z`, [[0, -sl.Hs], [sl.W, 0], [0, 0]], 'tower');
+          fig.surface(-20, sl.W + 60, 0);
+          zeroLine(fig, P(1)[0] + 16, P(1)[0] + 60, P(1)[1]);
+          [0, 1].forEach((i) => { slopeBlock(fig, sl, P(i), 'ghost'); const c = pos(i); fig.text(c[0] - 6, c[1] - 26, EC.CIRCLED[i], `lbl state${lit === i ? ' hl' : ''}`); });
+          slopeBlock(fig, sl, P(s));
+          velocity(fig, pos(s), sl.d, mo.v(s), mo.vmax, 40);
+        },
+      };
+    },
+
+    buffer(p) {
+      const { k, s: sm, m, v } = p.V, L0 = 96, C = 38, bw = 40, bh = 30, xs = L0 + 150, xc = L0 - C, total = 0.5 * m * v * v;
+      const xb = (s) => lerp(xs, xc, s), comp = (s) => (sm * Math.max(0, L0 - xb(s))) / C;
+      return {
+        states: [0, 1],
+        pos: (s) => [xb(s) + bw / 2, -bh / 2],
+        energy: (s) => { const el = 0.5 * k * sq(comp(s)); return { el, kin: Math.max(0, total - el) }; },
+        draw(fig, s, lit, mo) {
+          fig.surface(0, xs + bw + 20, 0);
+          fig.wall(0, 0, -60);
+          ghostRect(fig, xs, -bh, bw, bh, 0, lit === 0, xs + bw / 2, 26);
+          ghostRect(fig, xc, -bh, bw, bh, 1, lit === 1, xc + bw / 2, 26);
+          const x = xb(s);
+          fig.spring([0, -bh / 2], [Math.min(x, L0), -bh / 2], 8, Math.min(x, L0) < L0 - 10 ? 5 : 7);
+          fig.rect(x, -bh, bw, bh, 'body');
+          velocity(fig, [x + bw / 2 - 8, -bh / 2 - 26], [-1, 0], mo.v(s), mo.vmax);
+        },
+      };
+    },
+
+    bungee(p) {
+      const { k, s: sm, m, l } = p.V, Lp = 110, Sp = 60, total = m * G * (l + sm);
+      const d = (s) => s * (l + sm); // the depth below the bridge (m)
+      const dpx = (s) => (d(s) <= l ? (Lp * d(s)) / l : Lp + (Sp * (d(s) - l)) / sm);
+      const pos = (s) => [0, dpx(s) + R];
+      return {
+        states: [0, l / (l + sm), 1], pos,
+        energy: (s) => {
+          const pot = m * G * (l + sm - d(s)), el = 0.5 * k * sq(Math.max(0, d(s) - l));
+          return { pot, kin: Math.max(0, total - pot - el), el };
+        },
+        draw(fig, s, lit, mo) {
+          const ax = -18;
+          fig.surface(-100, ax, 0);
+          fig.circle(ax, 0, 2.5, 'dot');
+          zeroLine(fig, -60, 60, Lp + Sp + 2 * R);
+          this.states.forEach((t, i) => ghostBall(fig, pos(t), i, lit === i, R + 18));
+          const y = dpx(s);
+          // the slack rope hangs in a loop; once taut, it stretches like a spring
+          if (d(s) < l) {
+            const sag = (Lp - y) / 2 + 10;
+            fig.path(`M${ax} 0Q${ax + 6} ${(y + sag).toFixed(1)} 0 ${y.toFixed(1)}`, [[ax, 0], [0, y], [ax, y + sag]], 'w rope');
+          } else if (d(s) <= l + 1e-9) fig.line(ax, 0, 0, y, 'w rope');
+          else fig.spring([ax, 0], [0, y], 6, 10);
+          fig.circle(0, y + R, R, 'body ball');
+          velocity(fig, [-R - 30, y + R - 20], [0, 1], mo.v(s), mo.vmax, 40);
+        },
+      };
+    },
+
+    twice(p) {
+      // the second drop, as a ball dropped onto a spring from h' with a compression of 2s
+      const d = MOTION['drop-spring']({ V: { ...p.V, h: p.V.hp, s: 2 * p.V.s } });
+      return { ...d, states: [0, 1] };
+    },
+
+    'ekin-epot': (p) => vertical(p, { top: p.V.h, hgt: (s) => p.V.h * (1 - s * (1 - fval(p.fr))), states: [0, 1] }),
+
+    'slope-launch'(p) {
+      const sl = slope(30), { k, s: sm, m, d } = p.V, U1 = 0.82, UR = 0.7, U2 = 0.15, total = 0.5 * k * sm * sm;
+      // s along the way up; up to UR the spring pushes, then the block slides on by itself
+      const up = (s) => s * d; // metres along the slope
+      const u = (s) => (up(s) <= sm ? U1 - ((U1 - UR) * up(s)) / sm : UR - ((UR - U2) * (up(s) - sm)) / (d - sm));
+      const pos = (s) => { const P = sl.at(u(s)); return [P[0] + 13 * sl.n[0], P[1] + 13 * sl.n[1]]; };
+      return {
+        states: [0, 1], pos,
+        energy: (s) => {
+          const el = 0.5 * k * sq(sm - Math.min(up(s), sm)), pot = m * G * up(s) * 0.5;
+          return { pot, kin: Math.max(0, total - el - pot), el };
+        },
+        draw(fig, s, lit, mo) {
+          fig.path(`M0 ${-sl.Hs}L${sl.W.toFixed(1)} 0L0 0Z`, [[0, -sl.Hs], [sl.W, 0], [0, 0]], 'tower');
+          fig.surface(-20, sl.W + 60, 0);
+          zeroLine(fig, pos(0)[0] + 16, sl.W + 70, sl.at(U1)[1]);
+          [U1, U2].forEach((uu, i) => { slopeBlock(fig, sl, sl.at(uu), 'ghost'); const c = pos(i); fig.text(c[0] - 4, c[1] - 30, EC.CIRCLED[i], `lbl state${lit === i ? ' hl' : ''}`); });
+          launchParts(fig, sl, Math.max(u(s), UR), u(s));
+          velocity(fig, pos(s), [-sl.d[0], -sl.d[1]], mo.v(s), mo.vmax, 40);
+        },
+      };
+    },
+
+    'ramp-spring'(p) {
+      const { k, s: sm, m, h } = p.V, { H, L0, C } = RS, total = m * G * h;
+      // the path of the ball's centre: down the ramp, along the floor, into the spring; with the
+      // height of the point where it touches the ground
+      const path = [];
+      for (let k2 = 0; k2 <= 30; k2++) { const c = rsAt(k2 / 30), t = rsAt(k2 / 30, true); path.push({ c, y: t[1] }); }
+      path.push({ c: [L0 + R, -R], y: 0 }, { c: [L0 - C + R, -R], y: 0 });
+      const len = [0];
+      for (let i = 1; i < path.length; i++) len.push(len[i - 1] + Math.hypot(path[i].c[0] - path[i - 1].c[0], path[i].c[1] - path[i - 1].c[1]));
+      const at = (s) => {
+        const x = s * len[len.length - 1];
+        let i = 1;
+        while (i < len.length - 1 && len[i] < x) i++;
+        const f = (x - len[i - 1]) / ((len[i] - len[i - 1]) || 1), a = path[i - 1], b = path[i];
+        return { c: [lerp(a.c[0], b.c[0], f), lerp(a.c[1], b.c[1], f)], y: lerp(a.y, b.y, f) };
+      };
+      const sMid = (() => { const l0 = len[30], l1 = len[31]; return (l0 + ((path[30].c[0] - RS.xm) / (path[30].c[0] - path[31].c[0])) * (l1 - l0)) / len[len.length - 1]; })();
+      const comp = (s) => (sm * Math.max(0, L0 + R - at(s).c[0])) / C;
+      return {
+        states: [0, sMid, 1],
+        pos: (s) => at(s).c,
+        energy: (s) => {
+          const q = at(s), pot = (total * Math.max(0, -q.y)) / H, el = 0.5 * k * sq(comp(s));
+          return { pot, kin: Math.max(0, total - pot - el), el };
+        },
+        draw(fig, s, lit, mo) {
+          rampSpringTrack(fig);
+          zeroLine(fig, RS.xt + 50, RS.xt + 52, 0);
+          this.states.forEach((t, i) => { const c = at(t).c; fig.circle(c[0], c[1], R, 'ghost'); fig.text(c[0], i === 0 ? c[1] - 2 * R - 8 : 26, EC.CIRCLED[i], `lbl state${lit === i ? ' hl' : ''}`); });
+          const c = at(s).c;
+          fig.spring([0, -R], [Math.min(c[0] - R, L0), -R], 7, Math.min(c[0] - R, L0) < L0 - 8 ? 5 : 7);
+          fig.circle(c[0], c[1], R, 'body ball');
+          velocity(fig, c, mo.dir(s), mo.v(s), mo.vmax, 40);
         },
       };
     },

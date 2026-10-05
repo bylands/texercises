@@ -831,10 +831,545 @@
     hint: () => m$(`${pot('(h + s)')} = ${el('s')}`),
   };
 
-  const SCENARIOS = [fall, partDrop, launcher, pendulum, ramp, tower, springUp, speedFrac, dropSpring, hang];
+  // ---------------------------------------------------------------- 11 down an inclined plane
+  // The slope from A (top left) down to B (bottom right); the block slides from u = 0.1 to 0.9.
+  function slope(ang) {
+    const Hs = 120, W = Hs / Math.tan((ang * Math.PI) / 180), len = Math.hypot(W, Hs);
+    const d = [W / len, Hs / len], n = [Hs / len, -W / len];
+    const at = (u) => [u * W, -Hs + u * Hs];
+    return { Hs, W, d, n, at, u1: 0.1, u2: 0.9 };
+  }
+  // a square block standing on the slope with the middle of its base at P
+  const slopeBlock = (fig, sl, P, cls = 'body', a = 26) => {
+    const c = [[-a / 2, 0], [a / 2, 0], [a / 2, a], [-a / 2, a]].map(([x, y]) => [P[0] + x * sl.d[0] + y * sl.n[0], P[1] + x * sl.d[1] + y * sl.n[1]]);
+    fig.path(`M${c.map((q) => q.map((y) => y.toFixed(1)).join(' ')).join('L')}Z`, c, cls);
+  };
+  const incline = {
+    id: 'incline', difficulty: 2,
+    make(r) {
+      const ask = pick(r, ['s', 'h']);
+      if (ask === 's') { const s = pick(r, [1, 1.6, 2, 2.5, 3.2, 4, 5, 6.4, 8, 10]); return { ask, ang: 30, V: { g: G, s, h: s / 2, v: Math.sqrt(G * s) } }; }
+      const h = pick(r, [0.8, 1.2, 1.8, 2, 2.5, 3.2, 4.5, 5]);
+      return { ask, ang: pick(r, [20, 25, 35, 40, 50]), V: { g: G, h, v: Math.sqrt(2 * G * h) } };
+    },
+    vars: (p) => (p.ask === 's' ? ['g', 's'] : ['g', 'h']),
+    want: () => ({ key: 'v', unit: 'v', what: L('speed', 'Geschwindigkeit') }),
+    f: (p) => (p.ask === 's' ? (V) => Math.sqrt(V.g * V.s) : (V) => Math.sqrt(2 * V.g * V.h)),
+    tex: (p) => (p.ask === 's' ? '\\sqrt{g\\,s}' : '\\sqrt{2\\,g\\,h}'),
+    insert: (p) => (p.ask === 's' ? `\\sqrt{${gq()}\\cdot ${tq(p.V.s, 'm')}}` : `\\sqrt{2\\cdot ${gq()}\\cdot ${tq(p.V.h, 'm')}}`),
+    traps(p) {
+      if (p.ask === 's') return [
+        { flag: 'fall', f: (V) => Math.sqrt(2 * V.g * V.s), tex: '\\sqrt{2\\,g\\,s}' },
+        { flag: 'fall', f: (V) => Math.sqrt(Math.sqrt(3) * V.g * V.s), tex: '\\sqrt{\\sqrt{3}\\,g\\,s}' },
+        { flag: 'root', f: (V) => V.g * V.s, tex: 'g\\,s' },
+        { flag: 'half', f: (V) => Math.sqrt((V.g * V.s) / 2), tex: '\\sqrt{\\tfrac{1}{2}\\,g\\,s}' },
+      ];
+      const sa = Math.sin((p.ang * Math.PI) / 180);
+      return [
+        { flag: 'angle', f: (V) => Math.sqrt(2 * V.g * V.h * sa), tex: '\\sqrt{2\\,g\\,h\\,\\sin\\alpha}' },
+        { flag: 'angle', f: (V) => Math.sqrt((2 * V.g * V.h) / sa), tex: '\\sqrt{\\frac{2\\,g\\,h}{\\sin\\alpha}}' },
+        { flag: 'half', f: (V) => Math.sqrt(V.g * V.h), tex: '\\sqrt{g\\,h}' },
+        { flag: 'root', f: (V) => 2 * V.g * V.h, tex: '2\\,g\\,h' },
+      ];
+    },
+    why: {
+      fall: () => L('The block does not drop by s: on a 30° slope it drops by h = s · sin 30° = s/2.', 'Der Klotz sinkt nicht um s: Auf einer 30°-Ebene sinkt er um h = s · sin 30° = s/2.'),
+    },
+    states: (p) => [{ pot: G * p.V.h }, { kin: G * p.V.h }],
+    energies: () => [{ pot: pot('h') }, { kin: kin('v') }],
+    efun: () => [{ pot: Pot((V) => V.h) }, { kin: Kin((V) => V.v) }],
+    esyms: (p) => (p.ask === 's' ? ['m', 'g', 'h', 's', 'v'] : ['m', 'g', 'h', 'v']),
+    rel: (p) => (p.ask === 's' ? (V) => ({ ...V, h: V.s / 2 }) : (V) => V),
+    zero: () => L('the height of the block in ②', 'die Höhe des Klotzes in ②'),
+    title: () => L('Down a slope', 'Die schiefe Ebene hinunter'),
+    text: (p, formal) => (p.ask === 's'
+      ? (formal
+        ? L('A block starts from rest and slides a distance $s$ down a smooth slope inclined at 30°. Find its speed $v$ in terms of $s$ and $g$.',
+          'Ein Klotz startet aus der Ruhe und gleitet eine Strecke $s$ eine glatte, um 30° geneigte Ebene hinunter. Wie gross ist seine Geschwindigkeit $v$? Drücke sie durch $s$ und $g$ aus.')
+        : L(`A block starts from rest and slides ${q(p.V.s, 'm')} down a smooth slope inclined at 30°. How fast is it then?`,
+          `Ein Klotz startet aus der Ruhe und gleitet ${q(p.V.s, 'm')} eine glatte, um 30° geneigte Ebene hinunter. Wie schnell ist er dann?`))
+      : (formal
+        ? L(`A block starts from rest and slides down a smooth slope inclined at ${p.ang}° until it is a height $h$ lower. Find its speed $v$ in terms of $h$ and $g$.`,
+          `Ein Klotz startet aus der Ruhe und gleitet eine glatte, um ${p.ang}° geneigte Ebene hinunter, bis er um die Höhe $h$ tiefer ist. Wie gross ist seine Geschwindigkeit $v$? Drücke sie durch $h$ und $g$ aus.`)
+        : L(`A block starts from rest and slides down a smooth slope inclined at ${p.ang}° until it is ${q(p.V.h, 'm')} lower. How fast is it then?`,
+          `Ein Klotz startet aus der Ruhe und gleitet eine glatte, um ${p.ang}° geneigte Ebene hinunter, bis er ${q(p.V.h, 'm')} tiefer ist. Wie schnell ist er dann?`))),
+    scene(p, formal, view) {
+      const fig = new Fig(this.title()), sl = slope(p.ang), P1 = sl.at(sl.u1), P2 = sl.at(sl.u2);
+      fig.path(`M0 ${-sl.Hs}L${sl.W.toFixed(1)} 0L0 0Z`, [[0, -sl.Hs], [sl.W, 0], [0, 0]], 'tower');
+      fig.surface(-20, sl.W + 120, 0);
+      slopeBlock(fig, sl, P1);
+      slopeBlock(fig, sl, P2);
+      const c1 = [P1[0] + 13 * sl.n[0], P1[1] + 13 * sl.n[1]], c2 = [P2[0] + 13 * sl.n[0], P2[1] + 13 * sl.n[1]];
+      atRest(fig, c1[0] + 22, c1[1] - 14);
+      speed(fig, c2[0] + 16 * sl.d[0], c2[1] + 16 * sl.d[1], sl.d, wanted('v'), 26, [-6, -26]);
+      // the height between the two positions, on the right; the zero level through ②
+      const xd = P2[0] + 95;
+      fig.line(P1[0] + 16, P1[1], xd + 6, P1[1], 'w dash');
+      if (p.ask === 'h') fig.dim(xd, P2[1], P1[1], given('h', formal, p.V.h, 'm'), 1);
+      else fig.dim(xd, P2[1], P1[1], '', 1);
+      zeroLine(fig, P2[0] + 16, xd + 30, P2[1]);
+      // the distance along the slope, inside the triangle; the angle at the foot
+      if (p.ask === 's') {
+        const m = sl.at((sl.u1 + sl.u2) / 2);
+        fig.text(m[0] - 20 * sl.n[0] - 6, m[1] - 20 * sl.n[1] + 4, given('s', formal, p.V.s, 'm'), 'lbl', 'middle');
+      }
+      fig.text(sl.W - 46, -7, formal && p.ask === 'h' ? '<tspan font-style="italic">α</tspan>' : `${p.ang}°`, 'lbl small', 'middle');
+      fig.state(c1[0] - 4, c1[1] - 30, 0, hl(view, 0));
+      fig.state(c2[0] - 10, c2[1] - 30, 1, hl(view, 1));
+      return fig;
+    },
+    steps(p) {
+      const h = p.ask === 's'
+        ? [step(L('Height', 'Höhe'), `<p>${L('Along the slope the block covers $s$; it drops by', 'Entlang der Ebene legt der Klotz $s$ zurück; er sinkt dabei um')} $h = s\\sin 30^\\circ = \\tfrac{1}{2}\\,s$.</p>`, ALL, [0])]
+        : [];
+      return [...h,
+        step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('The smooth slope does no work (its force is at right angles to the motion), so', 'Die glatte Ebene verrichtet keine Arbeit (ihre Kraft steht senkrecht zur Bewegung), also gilt')} $E_1 = E_2$:</p>` +
+          dm(`${pot('h')} = ${kin('v')} \;\\Rightarrow\; v = \\sqrt{2\\,g\\,h}${p.ask === 's' ? ' = \\sqrt{g\\,s}' : ''}`) +
+          `<p>${L('Only the height counts, not the angle: on a steeper slope the block gets there sooner, but not faster.', 'Nur die Höhe zählt, nicht der Winkel: Auf einer steileren Ebene ist der Klotz früher unten, aber nicht schneller.')}</p>`, ALL, [0, 1]),
+      ];
+    },
+    hint: (p) => m$(`${pot('h')} = ${kin('v')}`) + (p.ask === 's' ? L(', with ', ', mit ') + m$('h = s\\sin 30^\\circ') : L(' (the angle does not matter)', ' (der Winkel spielt keine Rolle)')),
+  };
+
+  // ---------------------------------------------------------------- 12 a spring buffer
+  const buffer = {
+    id: 'buffer', difficulty: 2, spring: true,
+    make(r) {
+      const m = pick(r, [0.5, 1, 2, 4, 5]), v = pick(r, [0.5, 1, 1.5, 2, 3, 4]), k = pick(r, [100, 200, 400, 500, 800, 1000, 2000]);
+      const s = v * Math.sqrt(m / k);
+      return s >= 0.02 && s <= 0.4 ? { V: { g: G, m, v, k, s } } : null;
+    },
+    vars: () => ['k', 'm', 'v'],
+    want: () => ({ key: 's', unit: 'm', what: L('compression', 'Stauchung') }),
+    f: () => (V) => V.v * Math.sqrt(V.m / V.k),
+    tex: () => 'v\\,\\sqrt{\\frac{m}{k}}',
+    insert: (p) => `${tq(p.V.v, 'v')}\\cdot\\sqrt{\\frac{${tq(p.V.m, 'kg')}}{${tq(p.V.k, 'k')}}}`,
+    traps: () => [
+      { flag: 'root', f: (V) => (V.m * sq(V.v)) / V.k, tex: '\\frac{m\\,v^2}{k}' },
+      { flag: 'half', f: (V) => V.v * Math.sqrt(V.m / (2 * V.k)), tex: 'v\\,\\sqrt{\\frac{m}{2\\,k}}' },
+      { flag: 'half', f: (V) => V.v * Math.sqrt((2 * V.m) / V.k), tex: 'v\\,\\sqrt{\\frac{2\\,m}{k}}' },
+      { flag: 'square', f: (V) => (V.m * V.v) / V.k, tex: '\\frac{m\\,v}{k}' },
+    ],
+    states: (p) => [{ kin: 0.5 * p.V.m * sq(p.V.v) }, { el: 0.5 * p.V.k * sq(p.V.s) }],
+    energies: () => [{ kin: kin('v') }, { el: el('s') }],
+    efun: () => [{ kin: Kin((V) => V.v) }, { el: El((V) => V.s) }],
+    esyms: () => ['m', 'k', 's', 'v'],
+    zero: () => L('the floor (the potential energy does not change)', 'der Boden (die Lageenergie ändert sich nicht)'),
+    title: () => L('Spring buffer', 'Federpuffer'),
+    text: (p, formal) => (formal
+      ? L('A cart of mass $m$ rolls with the speed $v$ against a spring buffer with spring constant $k$. How far does it compress the spring before it stops for a moment? Express $s$ in terms of $m$, $v$ and $k$.',
+        'Ein Wagen der Masse $m$ rollt mit der Geschwindigkeit $v$ gegen einen Federpuffer mit der Federkonstanten $k$. Wie stark drückt er die Feder zusammen, bis er einen Moment lang stillsteht? Drücke $s$ durch $m$, $v$ und $k$ aus.')
+      : L(`A cart of ${q(p.V.m, 'kg')} rolls at ${q(p.V.v, 'v')} against a spring buffer with a spring constant of ${q(p.V.k, 'k')}. How far does it compress the spring before it stops for a moment?`,
+        `Ein Wagen von ${q(p.V.m, 'kg')} rollt mit ${q(p.V.v, 'v')} gegen einen Federpuffer mit der Federkonstanten ${q(p.V.k, 'k')}. Wie stark drückt er die Feder zusammen, bis er einen Moment lang stillsteht?`)),
+    scene(p, formal, view) {
+      const fig = new Fig(this.title()), L0 = 96, C = 38, bw = 40, bh = 30, gap = 250;
+      [0, 1].forEach((i) => {
+        const x0 = i * gap, len = i === 0 ? L0 : L0 - C;
+        fig.surface(x0, x0 + 210, 0);
+        fig.wall(x0, 0, -60);
+        fig.spring([x0, -bh / 2], [x0 + len, -bh / 2], 8, i === 0 ? 7 : 5);
+        const bx = i === 0 ? x0 + L0 + 60 : x0 + len;
+        fig.rect(bx, -bh, bw, bh, 'body');
+        if (i === 0) {
+          speed(fig, bx - 6, -bh / 2, [-1, 0], given('v', formal, p.V.v, 'v'), 34, [4, -12]);
+          fig.text(x0 + 6, -bh - 30, given('k', formal, p.V.k, 'k'), 'lbl', 'start');
+        } else {
+          fig.line(x0 + L0, -bh - 6, x0 + L0, -bh - 28, 'w dash');
+          fig.line(bx, -bh - 6, bx, -bh - 28, 'w dash');
+          fig.arrow(x0 + L0, -bh - 20, bx, -bh - 20, 'dimarrow');
+          fig.text((x0 + L0 + bx) / 2, -bh - 26, wanted('s'), 'lbl');
+          atRest(fig, bx + bw + 8, -bh / 2 + 5);
+        }
+        fig.state(x0 + 105, 34, i, hl(view, i));
+      });
+      return fig;
+    },
+    steps: () => [
+      step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('The kinetic energy of the cart goes into the spring:', 'Die kinetische Energie des Wagens geht in die Feder:')}</p>${dm(`${kin('v')} = ${el('s')}`)}`, ALL, [0, 1]),
+      step(L('Solve', 'Auflösen'), dm('s^2 = \\frac{m\\,v^2}{k} \;\\Rightarrow\; s = v\\,\\sqrt{\\frac{m}{k}}') +
+        `<p>${L('Twice the speed gives twice the compression, but four times the energy.', 'Doppelte Geschwindigkeit ergibt doppelte Stauchung, aber vierfache Energie.')}</p>`, ALL),
+    ],
+    hint: () => m$(`${kin('v')} = ${el('s')}`),
+  };
+
+  // ---------------------------------------------------------------- 13 a bungee jump
+  const bungee = {
+    id: 'bungee', difficulty: 4, spring: true,
+    make(r) {
+      const m = pick(r, [50, 60, 70, 80, 90]), l = pick(r, [10, 12, 15, 20, 25]), s = pick(r, [8, 10, 12, 15, 20]);
+      const k = (2 * m * G * (l + s)) / (s * s);
+      return k >= 50 && k <= 1500 ? { V: { g: G, m, l, s, k, v: Math.sqrt(2 * G * l) } } : null;
+    },
+    vars: () => ['g', 'l', 'm', 's'],
+    want: () => ({ key: 'k', unit: 'k', what: L('spring constant of the rope', 'Federkonstante des Seils') }),
+    f: () => (V) => (2 * V.m * V.g * (V.l + V.s)) / sq(V.s),
+    tex: () => '\\frac{2\\,m\\,g\\,(\\ell + s)}{s^2}',
+    insert: (p) => `\\frac{2\\cdot ${tq(p.V.m, 'kg')}\\cdot ${gq()}\\cdot (${tq(p.V.l, 'm')} + ${tq(p.V.s, 'm')})}{\\left(${tq(p.V.s, 'm')}\\right)^2}`,
+    traps: () => [
+      { flag: 'extra', f: (V) => (2 * V.m * V.g * V.l) / sq(V.s), tex: '\\frac{2\\,m\\,g\\,\\ell}{s^2}' },
+      { flag: 'half', f: (V) => (V.m * V.g * (V.l + V.s)) / sq(V.s), tex: '\\frac{m\\,g\\,(\\ell + s)}{s^2}' },
+      { flag: 'square', f: (V) => (2 * V.m * V.g * (V.l + V.s)) / V.s, tex: '\\frac{2\\,m\\,g\\,(\\ell + s)}{s}' },
+      { flag: 'equil', f: (V) => (V.m * V.g) / V.s, tex: '\\frac{m\\,g}{s}' },
+    ],
+    why: {
+      extra: () => L('The jumper falls further than ℓ: while the rope stretches, they drop by s more.', 'Die Springerin fällt weiter als ℓ: Während sich das Seil dehnt, sinkt sie um s weiter.'),
+    },
+    states: (p) => { const { m, l, s, k } = p.V; return [{ pot: m * G * (l + s) }, { pot: m * G * s, kin: m * G * l }, { el: 0.5 * k * s * s }]; },
+    energies: () => [{ pot: pot('(\\ell + s)') }, { pot: pot('s'), kin: kin('v') }, { el: el('s') }],
+    efun: () => [{ pot: Pot((V) => V.l + V.s) }, { pot: Pot((V) => V.s), kin: Kin((V) => V.v) }, { el: El((V) => V.s) }],
+    esyms: () => ['m', 'g', 'l', 's', 'v', 'k'],
+    zero: () => L('the lowest point of the jump', 'der tiefste Punkt des Sprungs'),
+    title: () => L('Bungee jump', 'Bungee-Sprung'),
+    text: (p, formal) => (formal
+      ? L('A bungee jumper of mass $m$ steps off a bridge. The rope, of length $\\ell$ when slack, starts to stretch after a free fall of $\\ell$ and stops the jumper after stretching by $s$. Treat the rope as a spring and the jumper as a point. Find the spring constant $k$ of the rope in terms of $m$, $\\ell$, $s$ and $g$.',
+        'Eine Bungee-Springerin der Masse $m$ lässt sich von einer Brücke fallen. Das Seil mit der ungedehnten Länge $\\ell$ beginnt sich nach einem freien Fall von $\\ell$ zu dehnen und bremst sie, bis es um $s$ gedehnt ist. Behandle das Seil als Feder und die Springerin als Punkt. Wie gross ist die Federkonstante $k$ des Seils? Drücke sie durch $m$, $\\ell$, $s$ und $g$ aus.')
+      : L(`A bungee jumper of ${q(p.V.m, 'kg')} steps off a bridge. The rope, ${q(p.V.l, 'm')} long when slack, starts to stretch after a free fall of ${q(p.V.l, 'm')} and stops the jumper after stretching by ${q(p.V.s, 'm')}. Treat the rope as a spring and the jumper as a point. What is the spring constant of the rope?`,
+        `Eine Bungee-Springerin von ${q(p.V.m, 'kg')} lässt sich von einer Brücke fallen. Das Seil, ungedehnt ${q(p.V.l, 'm')} lang, beginnt sich nach ${q(p.V.l, 'm')} freiem Fall zu dehnen und bremst sie, bis es um ${q(p.V.s, 'm')} gedehnt ist. Behandle das Seil als Feder und die Springerin als Punkt. Wie gross ist die Federkonstante des Seils?`)),
+    scene(p, formal, view) {
+      const fig = new Fig(this.title()), Lp = 110, Sp = 60;
+      [0, 1, 2].forEach((i) => {
+        const cx = i * PW, ax = cx - 18, depth = [0, Lp, Lp + Sp][i];
+        fig.surface(cx - 80, ax, 0);
+        fig.circle(ax, 0, 2.5, 'dot');
+        if (i === 0) fig.path(`M${ax} 0Q${cx - 4} 26 ${cx} 0`, [[ax, 0], [cx, 0]], 'w rope');
+        else if (i === 1) fig.line(ax, 0, cx, depth, 'w rope');
+        else fig.spring([ax, 0], [cx, depth], 6, 10);
+        fig.circle(cx, depth + R, R, 'body ball');
+        if (i === 0) atRest(fig, cx + R + 8, R + 5);
+        if (i === 1) {
+          speed(fig, cx + R + 8, depth + 2, [0, 1], S('v'), 30);
+          fig.dim(cx - 40, 0, depth, given('l', formal, p.V.l, 'm'));
+        }
+        if (i === 2) {
+          atRest(fig, cx + R + 8, depth + R + 5);
+          fig.line(cx - 46, Lp, cx - 14, Lp, 'w dash');
+          fig.dim(cx - 40, Lp, depth, given('s', formal, p.V.s, 'm'));
+          fig.text(cx + 16, Lp - 20, wanted('k'), 'lbl', 'start');
+        }
+        fig.state(cx, -22, i, hl(view, i));
+      });
+      zeroLine(fig, -60, 2 * PW + 60, Lp + Sp + 2 * R);
+      return fig;
+    },
+    steps: () => [
+      step(L('Energy conservation ①③', 'Energieerhaltung ①③'), `<p>${L('From the bridge to the lowest point, the jumper drops by $\\ell + s$: by $\\ell$ in free fall (until ②), then by $s$ while the rope stretches. At both ends they are at rest:', 'Von der Brücke bis zum tiefsten Punkt sinkt die Springerin um $\\ell + s$: um $\\ell$ im freien Fall (bis ②), dann um $s$, während sich das Seil dehnt. An beiden Enden ruht sie:')}</p>` +
+        dm(`${pot('(\\ell + s)')} = ${el('s')}`), ALL, [0, 2]),
+      step(L('Solve', 'Auflösen'), dm('k = \\frac{2\\,m\\,g\\,(\\ell + s)}{s^2}') +
+        `<p>${L('At the lowest point the rope pulls far harder than the weight: the jumper is not at rest there for long.', 'Im tiefsten Punkt zieht das Seil viel stärker als die Gewichtskraft: Die Springerin bleibt dort nicht in Ruhe.')}</p>`, ALL),
+    ],
+    hint: () => m$(`${pot('(\\ell + s)')} = ${el('s')}`),
+  };
+
+  // ---------------------------------------------------------------- 14 twice the compression
+  const twice = {
+    id: 'twice', difficulty: 4, spring: true,
+    make(r) {
+      const h = pick(r, [0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1]), s = pick(r, [0.02, 0.03, 0.04, 0.05, 0.08, 0.1]), m = 1;
+      if (s > h / 3) return null;
+      const k = (2 * m * G * (h + s)) / (s * s);
+      return { V: { g: G, h, s, m, k, hp: 4 * h + 2 * s } };
+    },
+    vars: () => ['h', 's'],
+    want: () => ({ key: 'hp', unit: 'm', what: L('height', 'Höhe') }),
+    f: () => (V) => 4 * V.h + 2 * V.s,
+    tex: () => '4\\,h + 2\\,s',
+    insert: (p) => `4\\cdot ${tq(p.V.h, 'm')} + 2\\cdot ${tq(p.V.s, 'm')}`,
+    traps: () => [
+      { flag: 'square', f: (V) => 2 * V.h, tex: '2\\,h' },
+      { flag: 'extra', f: (V) => 4 * V.h, tex: '4\\,h' },
+      { flag: 'extra', f: (V) => 4 * V.h + 4 * V.s, tex: '4\\,h + 4\\,s' },
+      { flag: 'square', f: (V) => 2 * V.h + V.s, tex: '2\\,h + s' },
+    ],
+    why: {
+      square: () => L('The elastic energy grows with the square of the compression: twice the compression needs four times the energy.', 'Die Spannenergie wächst mit dem Quadrat der Stauchung: Doppelte Stauchung braucht vierfache Energie.'),
+      extra: () => L("Count the fall correctly: the ball drops by h' + 2s the second time, and by h + s the first time.", "Zähle den Fall richtig: Beim zweiten Mal sinkt der Ball um h' + 2s, beim ersten Mal um h + s."),
+    },
+    states: (p) => { const { m, hp, s, k } = p.V; return [{ pot: m * G * (hp + 2 * s) }, { el: 0.5 * k * sq(2 * s) }]; },
+    energies: () => [{ pot: pot("(h' + 2\\,s)") }, { el: el('(2\\,s)') }],
+    efun: () => [{ pot: Pot((V) => V.hp + 2 * V.s) }, { el: El((V) => 2 * V.s) }],
+    esyms: () => ['m', 'g', 'hp', 's', 'k'],
+    zero: () => L('the lowest point of the ball in the second drop', 'der tiefste Punkt des Balls beim zweiten Versuch'),
+    title: () => L('Twice the compression', 'Doppelte Stauchung'),
+    text: (p, formal) => (formal
+      ? L("A ball dropped from rest from a height $h$ above the top of a vertical spring compresses it by $s$. From what height $h'$ above the top of the spring must it be dropped to compress it by $2s$? Express $h'$ in terms of $h$ and $s$.",
+        "Ein Ball, der aus der Höhe $h$ über dem oberen Ende einer senkrechten Feder aus der Ruhe fallen gelassen wird, drückt sie um $s$ zusammen. Aus welcher Höhe $h'$ über dem oberen Ende der Feder muss man ihn fallen lassen, damit er sie um $2s$ zusammendrückt? Drücke $h'$ durch $h$ und $s$ aus.")
+      : L(`A ball dropped from rest from ${q(p.V.h, 'm')} above the top of a vertical spring compresses it by ${q(p.V.s, 'm')}. From what height above the top of the spring must it be dropped to compress it by ${q(2 * p.V.s, 'm')}?`,
+        `Ein Ball, der aus ${q(p.V.h, 'm')} über dem oberen Ende einer senkrechten Feder aus der Ruhe fallen gelassen wird, drückt sie um ${q(p.V.s, 'm')} zusammen. Aus welcher Höhe über dem oberen Ende der Feder muss man ihn fallen lassen, damit er sie um ${q(2 * p.V.s, 'm')} zusammendrückt?`)),
+    scene(p, formal, view) {
+      const fig = new Fig(this.title()), L0 = 80, C = 20, H1 = 70, H2 = 150;
+      const s2 = formal ? `2${S('s')}` : q(2 * p.V.s, 'm');
+      // the first drop, for reference: released from h, compressed by s
+      groundAt(fig, 0, 0, 90);
+      fig.spring([0, 0], [0, -(L0 - C)], 9, 7);
+      fig.line(-16, -(L0 - C), 16, -(L0 - C), 'w plate');
+      ball(fig, 0, -(L0 - C));
+      fig.circle(0, -L0 - H1 - R, R, 'ghost');
+      fig.line(-40, -L0, -18, -L0, 'w dash');
+      fig.dim(-34, -L0, -L0 - H1, given('h', formal, p.V.h, 'm'));
+      fig.line(-34, -L0 - H1, -R, -L0 - H1, 'w dash');
+      fig.dim(30, -L0, -(L0 - C), given('s', formal, p.V.s, 'm'), 1);
+      fig.line(18, -L0, 36, -L0, 'w dash');
+      fig.text(0, 30, L('first drop', 'erster Versuch'), 'lbl small');
+      // the second drop: ① released from h', ② compressed by 2s
+      [1, 2].forEach((i) => {
+        const cx = i * PW + 40, top = i === 2 ? -(L0 - 2 * C) : -L0;
+        groundAt(fig, cx, 0, 90);
+        fig.spring([cx, 0], [cx, top], 9, 7);
+        fig.line(cx - 16, top, cx + 16, top, 'w plate');
+        if (i === 1) {
+          ball(fig, cx, -L0 - H2);
+          atRest(fig, cx + R + 8, -L0 - H2 - R + 5);
+          fig.line(cx - 40, -L0, cx - 18, -L0, 'w dash');
+          fig.dim(cx - 34, -L0, -L0 - H2, wanted('hp'));
+          fig.line(cx - 34, -L0 - H2, cx - R, -L0 - H2, 'w dash');
+        } else {
+          ball(fig, cx, top);
+          atRest(fig, cx + R + 8, top - R + 5);
+          fig.line(cx - 40, -L0, cx - 18, -L0, 'w dash');
+          fig.dim(cx - 34, -L0, top, s2);
+        }
+        fig.state(cx, 34, i - 1, hl(view, i - 1));
+      });
+      zeroLine(fig, PW - 10, 2 * PW + 100, -(L0 - 2 * C));
+      return fig;
+    },
+    steps: () => [
+      step(L('First drop', 'Erster Versuch'), `<p>${L('The ball drops by $h + s$ and stops: its potential energy is now in the spring.', 'Der Ball sinkt um $h + s$ und hält an: Seine Lageenergie steckt jetzt in der Feder.')}</p>` +
+        dm(`${pot('(h + s)')} = ${el('s')}`), null, []),
+      step(L('Second drop', 'Zweiter Versuch'), `<p>$E_1 = E_2$: ${L("the ball drops by $h' + 2s$; the spring stores", "Der Ball sinkt um $h' + 2s$; die Feder speichert")} $\\tfrac{1}{2}\\,k\\,(2s)^2 = 4\\cdot\\tfrac{1}{2}\\,k\\,s^2$:</p>` +
+        dm(`${pot("(h' + 2\\,s)")} = 4\\cdot ${el('s')} = 4\\,${pot('(h + s)')}`), ALL, [0, 1]),
+      step(L('Solve', 'Auflösen'), dm("h' + 2\\,s = 4\\,h + 4\\,s \;\\Rightarrow\; h' = 4\\,h + 2\\,s") +
+        `<p>${L('Twice the compression needs four times the energy, so the ball must fall about four times as far, not twice.', 'Doppelte Stauchung braucht vierfache Energie, der Ball muss also etwa viermal so tief fallen, nicht doppelt so tief.')}</p>`, ALL),
+    ],
+    hint: () => m$(`${pot('(h + s)')} = ${el('s')}`) + L(' and ', ' und ') + m$(`${pot("(h' + 2\\,s)")} = \\tfrac{1}{2}\\,k\\,(2s)^2`),
+  };
+
+  // ---------------------------------------------------------------- 15 kinetic energy a multiple of the potential energy
+  const RATIO = [[1, 1], [2, 1], [3, 1], [1, 2], [1, 3]];
+  const RATIO_WORDS = {
+    '1/1': { en: 'equal to', de: 'gleich gross wie' }, '2/1': { en: 'twice', de: 'doppelt so gross wie' }, '3/1': { en: 'three times', de: 'dreimal so gross wie' },
+    '1/2': { en: 'half', de: 'halb so gross wie' }, '1/3': { en: 'one third of', de: 'nur ein Drittel so gross wie' },
+  };
+  const ratioWords = (n) => RATIO_WORDS[n.join('/')][EC.getLang()];
+  const ekin = {
+    id: 'ekin-epot', difficulty: 2,
+    make(r) {
+      const n = pick(r, RATIO), h = pick(r, [1.2, 1.8, 2.4, 3, 3.6, 4.8, 6]), fr = reduce([n[1], n[0] + n[1]]); // h'/h = 1/(n + 1)
+      const hp = fval(fr) * h;
+      return { n, fr, V: { g: G, h, hp, vp: Math.sqrt(2 * G * (h - hp)) } };
+    },
+    vars: () => ['h'],
+    want: () => ({ key: 'hp', unit: 'm', what: L('height', 'Höhe') }),
+    f: (p) => (V) => fval(p.fr) * V.h,
+    tex: (p) => `${coef(p.fr)}h`,
+    insert: (p) => `${coef(p.fr)}\\cdot ${tq(p.V.h, 'm')}`,
+    traps(p) {
+      const n = fval(p.n), down = sub(ONE, p.fr);
+      return [
+        { flag: 'fall', f: (V) => fval(down) * V.h, tex: `${coef(down)}h` },
+        { flag: 'solve', f: (V) => V.h / n, tex: `${coef(reduce([p.n[1], p.n[0]]))}h` },
+        { flag: 'square', f: (V) => sq(fval(p.fr)) * V.h, tex: `${coef(mul(p.fr, p.fr))}h` },
+        { flag: 'solve', f: (V) => V.h / (n + 2), tex: `${coef(reduce([p.n[1], p.n[0] + 2 * p.n[1]]))}h` },
+      ];
+    },
+    why: {
+      fall: () => L("That is how far the ball has fallen, h − h', not its height h' above the ground.", "Das ist die Strecke, um die der Ball gefallen ist, h − h', nicht seine Höhe h' über dem Boden."),
+      square: () => L('The potential energy is proportional to the height itself, not to its square.', 'Die Lageenergie ist proportional zur Höhe selbst, nicht zu ihrem Quadrat.'),
+    },
+    states: (p) => [{ pot: G * p.V.h }, { pot: G * p.V.hp, kin: G * (p.V.h - p.V.hp) }],
+    energies: () => [{ pot: pot('h') }, { pot: pot("h'"), kin: kin("v'") }],
+    efun: () => [{ pot: Pot((V) => V.h) }, { pot: Pot((V) => V.hp), kin: Kin((V) => V.vp) }],
+    esyms: () => ['m', 'g', 'h', 'hp', 'vp'],
+    zero: () => L('the ground', 'der Boden'),
+    title: () => L('Kinetic and potential energy', 'Kinetische und potentielle Energie'),
+    text(p, formal) {
+      const w = ratioWords(p.n), same = p.n[0] === p.n[1];
+      const en = same ? 'its kinetic energy equal to its potential energy' : `its kinetic energy ${w} its potential energy`;
+      const de = same ? 'seine kinetische Energie gleich gross wie seine Lageenergie' : `seine kinetische Energie ${w} seine Lageenergie`;
+      return formal
+        ? L(`A ball is dropped from a height $h$ (it starts at rest). At what height $h'$ is ${en}? Take the ground as zero level and express $h'$ in terms of $h$.`,
+          `Ein Ball wird aus der Höhe $h$ fallen gelassen (er startet aus der Ruhe). Auf welcher Höhe $h'$ ist ${de}? Nimm den Boden als Nullniveau und drücke $h'$ durch $h$ aus.`)
+        : L(`A ball is dropped from a height of ${q(p.V.h, 'm')} (it starts at rest). At what height is ${en}? Take the ground as zero level.`,
+          `Ein Ball wird aus ${q(p.V.h, 'm')} Höhe fallen gelassen (er startet aus der Ruhe). Auf welcher Höhe ist ${de}? Nimm den Boden als Nullniveau.`);
+    },
+    scene(p, formal, view) {
+      const fig = new Fig(this.title()), H = 150, h2 = H * fval(p.fr);
+      groundAt(fig, 0, 0); groundAt(fig, PW, 0);
+      ball(fig, 0, -H); height(fig, -34, 0, -H, given('h', formal, p.V.h, 'm'), 0); atRest(fig, R + 8, -H - R + 5);
+      ball(fig, PW, -h2); height(fig, PW - 34, 0, -h2, wanted('hp'), PW);
+      speed(fig, PW + R + 10, -h2 - 2 * R, [0, 1], S('vp'));
+      fig.state(0, 34, 0, hl(view, 0)); fig.state(PW, 34, 1, hl(view, 1));
+      zeroLine(fig, PW + 60, PW + 62, 0);
+      return fig;
+    },
+    steps(p) {
+      const n = p.n, ntex = n[0] === n[1] ? '' : coef(n), n1 = coef(reduce([n[0] + n[1], n[1]])) || '';
+      return [
+        step(L('Energy conservation', 'Energieerhaltung'), `<p>$E_1 = E_2$, ${L('with', 'mit')} ${m$(`${EC.etex('kin')} = ${ntex}${EC.etex('pot')}`)} ${L("at the height h':", "auf der Höhe h':")}</p>` +
+          dm(`${pot('h')} = ${pot("h'")} + ${ntex}${pot("h'")} = ${n1}${pot("h'")}`), ALL, [0, 1]),
+        step(L('Solve', 'Auflösen'), dm(`h' = ${this.tex(p)}`) +
+          `<p>${L(`The potential energy left is ${fplain(p.fr)} of the total: the ball is at ${fplain(p.fr)} of its starting height.`, `Die verbleibende Lageenergie ist ${fplain(p.fr)} der Gesamtenergie: Der Ball ist auf ${fplain(p.fr)} seiner Anfangshöhe.`)}</p>`, ALL),
+      ];
+    },
+    hint: (p) => m$(`${pot('h')} = ${pot("h'")} + ${EC.etex('kin')}`) + L(', with ', ', mit ') + m$(`${EC.etex('kin')} = ${p.n[0] === p.n[1] ? '' : coef(p.n)}${pot("h'")}`),
+  };
+
+  // ---------------------------------------------------------------- 16 a spring launcher up a slope
+  const slopeLaunch = {
+    id: 'slope-launch', difficulty: 3, spring: true,
+    make(r) {
+      const k = pick(r, [100, 200, 300, 400, 500, 800, 1000]), s = pick(r, [0.05, 0.08, 0.1, 0.12, 0.15, 0.2]), m = pick(r, [0.1, 0.2, 0.25, 0.4, 0.5, 1]);
+      const d = (k * s * s) / (m * G);
+      return d >= 0.4 && d <= 8 && d > 4 * s ? { V: { g: G, k, s, m, d, h: d / 2 } } : null;
+    },
+    vars: () => ['g', 'k', 'm', 's'],
+    want: () => ({ key: 'd', unit: 'm', what: L('distance along the slope', 'Strecke entlang der Ebene') }),
+    f: () => (V) => (V.k * sq(V.s)) / (V.m * V.g),
+    tex: () => '\\frac{k\\,s^2}{m\\,g}',
+    insert: (p) => `\\frac{${tq(p.V.k, 'k')}\\cdot\\left(${tq(p.V.s, 'm')}\\right)^2}{${tq(p.V.m, 'kg')}\\cdot ${gq()}}`,
+    traps: () => [
+      { flag: 'fall', f: (V) => (V.k * sq(V.s)) / (2 * V.m * V.g), tex: '\\frac{k\\,s^2}{2\\,m\\,g}' },
+      { flag: 'square', f: (V) => (V.k * V.s) / (V.m * V.g), tex: '\\frac{k\\,s}{m\\,g}' },
+      { flag: 'weight', f: (V) => (V.k * sq(V.s)) / V.m, tex: '\\frac{k\\,s^2}{m}' },
+      { flag: 'half', f: (V) => (2 * V.k * sq(V.s)) / (V.m * V.g), tex: '\\frac{2\\,k\\,s^2}{m\\,g}' },
+    ],
+    why: {
+      fall: () => L('That is the height the block rises, h. Along the 30° slope it travels twice as far: d = h / sin 30° = 2h.', 'Das ist die Höhe h, um die der Klotz steigt. Entlang der 30°-Ebene legt er doppelt so viel zurück: d = h / sin 30° = 2h.'),
+    },
+    states: (p) => [{ el: 0.5 * p.V.k * sq(p.V.s) }, { pot: p.V.m * G * p.V.h }],
+    energies: () => [{ el: el('s') }, { pot: pot('h') }],
+    efun: () => [{ el: El((V) => V.s) }, { pot: Pot((V) => V.h) }],
+    esyms: () => ['m', 'g', 'h', 'd', 'k', 's'],
+    rel: () => (V) => ({ ...V, h: V.d / 2 }),
+    zero: () => L('where the block starts, on the compressed spring', 'der Startpunkt des Klotzes auf der zusammengedrückten Feder'),
+    title: () => L('Shot up a slope', 'Die Ebene hinaufgeschossen'),
+    text: (p, formal) => (formal
+      ? L('At the foot of a smooth slope inclined at 30°, a spring with spring constant $k$ lies along the slope, compressed by $s$, with a block of mass $m$ against it. When the spring is released, it shoots the block up the slope. How far along the slope does the block get from its starting point? Express $d$ in terms of $k$, $s$, $m$ and $g$.',
+        'Am Fuss einer glatten, um 30° geneigten Ebene liegt eine Feder mit der Federkonstanten $k$ entlang der Ebene, um $s$ zusammengedrückt, mit einem Klotz der Masse $m$ davor. Lässt man die Feder los, schiesst sie den Klotz die Ebene hinauf. Wie weit kommt der Klotz entlang der Ebene, gemessen ab seinem Startpunkt? Drücke $d$ durch $k$, $s$, $m$ und $g$ aus.')
+      : L(`At the foot of a smooth slope inclined at 30°, a spring with a spring constant of ${q(p.V.k, 'k')} lies along the slope, compressed by ${q(p.V.s, 'm')}, with a block of ${q(p.V.m, 'kg')} against it. When the spring is released, it shoots the block up the slope. How far along the slope does the block get from its starting point?`,
+        `Am Fuss einer glatten, um 30° geneigten Ebene liegt eine Feder mit der Federkonstanten ${q(p.V.k, 'k')} entlang der Ebene, um ${q(p.V.s, 'm')} zusammengedrückt, mit einem Klotz von ${q(p.V.m, 'kg')} davor. Lässt man die Feder los, schiesst sie den Klotz die Ebene hinauf. Wie weit kommt der Klotz entlang der Ebene, gemessen ab seinem Startpunkt?`)),
+    scene(p, formal, view) {
+      const fig = new Fig(this.title()), sl = slope(30), U1 = 0.82, U2 = 0.15;
+      fig.path(`M0 ${-sl.Hs}L${sl.W.toFixed(1)} 0L0 0Z`, [[0, -sl.Hs], [sl.W, 0], [0, 0]], 'tower');
+      fig.surface(-20, sl.W + 60, 0);
+      launchParts(fig, sl, U1, U1);
+      slopeBlock(fig, sl, sl.at(U2));
+      const c1 = [sl.at(U1)[0] + 13 * sl.n[0], sl.at(U1)[1] + 13 * sl.n[1]], c2 = [sl.at(U2)[0] + 13 * sl.n[0], sl.at(U2)[1] + 13 * sl.n[1]];
+      atRest(fig, c2[0] + 20, c2[1] - 14);
+      fig.text(c1[0] + 30, c1[1] - 18, `${given('k', formal, p.V.k, 'k')}, ${given('s', formal, p.V.s, 'm')}`, 'lbl', 'start');
+      // the distance along the slope, inside the triangle
+      const a = sl.at(U2), b = sl.at(U1), off = [-22 * sl.n[0], -22 * sl.n[1]];
+      fig.arrow(b[0] + off[0], b[1] + off[1], a[0] + off[0], a[1] + off[1], 'dimarrow');
+      fig.text((a[0] + b[0]) / 2 + 2 * off[0], (a[1] + b[1]) / 2 + 2 * off[1] + 4, wanted('d'), 'lbl');
+      zeroLine(fig, c1[0] + 16, sl.W + 70, sl.at(U1)[1]);
+      fig.text(sl.W - 46, -7, '30°', 'lbl small');
+      fig.state(c1[0] - 4, c1[1] - 30, 0, hl(view, 0));
+      fig.state(c2[0] - 4, c2[1] - 30, 1, hl(view, 1));
+      return fig;
+    },
+    steps: () => [
+      step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('The elastic energy of the spring becomes potential energy; at the highest point the block is at rest for a moment:', 'Die Spannenergie der Feder wird zu Lageenergie; im höchsten Punkt ruht der Klotz einen Moment lang:')}</p>${dm(`${el('s')} = ${pot('h')}`)}`, ALL, [0, 1]),
+      step(L('Height and distance', 'Höhe und Strecke'), `<p>${L('Along the slope the block covers $d$ and rises by', 'Entlang der Ebene legt der Klotz $d$ zurück und steigt dabei um')} $h = d\\sin 30^\\circ = \\tfrac{1}{2}\\,d$:</p>` +
+        dm('\\tfrac{1}{2}\\,k\\,s^2 = \\tfrac{1}{2}\\,m\\,g\\,d \;\\Rightarrow\; d = \\frac{k\\,s^2}{m\\,g}'), ALL),
+    ],
+    hint: () => m$(`${el('s')} = ${pot('h')}`) + L(', with ', ', mit ') + m$('h = d\\sin 30^\\circ'),
+  };
+  // the stop at the foot of the slope, the spring up to us (where its end is; relaxed at u = 0.7)
+  // and the block at u (on the spring, or beyond it once it has left)
+  function launchParts(fig, sl, us, u, cls = 'body') {
+    const Q = sl.at(0.97), P = sl.at(us), a = 13;
+    fig.line(Q[0], Q[1], Q[0] + 30 * sl.n[0], Q[1] + 30 * sl.n[1], 'w plate');
+    fig.spring([Q[0] + a * sl.n[0], Q[1] + a * sl.n[1]], [P[0] + a * sl.d[0] + a * sl.n[0], P[1] + a * sl.d[1] + a * sl.n[1]], 6, 6);
+    slopeBlock(fig, sl, sl.at(u), cls);
+  }
+
+  // ---------------------------------------------------------------- 17 down a ramp into a spring buffer
+  // the ramp on the right, the floor, the spring on the wall at the left (px)
+  const RS = { H: 120, L0: 90, C: 30, xr: 260, xt: 380, xm: 210 }; // xm: the cart in ②
+  const rampSpring = {
+    id: 'ramp-spring', difficulty: 3, spring: true,
+    make(r) {
+      const m = pick(r, [0.2, 0.5, 1, 1.5, 2]), h = pick(r, [0.2, 0.3, 0.5, 0.8, 1, 1.2, 1.5, 2]), k = pick(r, [100, 200, 400, 500, 800, 1000, 2000]);
+      const s = Math.sqrt((2 * m * G * h) / k);
+      return s >= 0.03 && s <= 0.5 ? { V: { g: G, m, h, k, s, v: Math.sqrt(2 * G * h) } } : null;
+    },
+    vars: () => ['g', 'h', 'k', 'm'],
+    want: () => ({ key: 's', unit: 'm', what: L('compression', 'Stauchung') }),
+    f: () => (V) => Math.sqrt((2 * V.m * V.g * V.h) / V.k),
+    tex: () => '\\sqrt{\\frac{2\\,m\\,g\\,h}{k}}',
+    insert: (p) => `\\sqrt{\\frac{2\\cdot ${tq(p.V.m, 'kg')}\\cdot ${gq()}\\cdot ${tq(p.V.h, 'm')}}{${tq(p.V.k, 'k')}}}`,
+    traps: () => [
+      { flag: 'root', f: (V) => (2 * V.m * V.g * V.h) / V.k, tex: '\\frac{2\\,m\\,g\\,h}{k}' },
+      { flag: 'half', f: (V) => Math.sqrt((V.m * V.g * V.h) / V.k), tex: '\\sqrt{\\frac{m\\,g\\,h}{k}}' },
+      { flag: 'half', f: (V) => Math.sqrt((4 * V.m * V.g * V.h) / V.k), tex: '\\sqrt{\\frac{4\\,m\\,g\\,h}{k}}' },
+      { flag: 'weight', f: (V) => Math.sqrt((2 * V.m * V.h) / V.k), tex: '\\sqrt{\\frac{2\\,m\\,h}{k}}' },
+    ],
+    states: (p) => { const E = p.V.m * G * p.V.h; return [{ pot: E }, { kin: E }, { el: E }]; },
+    energies: () => [{ pot: pot('h') }, { kin: kin('v') }, { el: el('s') }],
+    efun: () => [{ pot: Pot((V) => V.h) }, { kin: Kin((V) => V.v) }, { el: El((V) => V.s) }],
+    esyms: () => ['m', 'g', 'h', 'v', 'k', 's'],
+    zero: () => L('the floor', 'der Boden'),
+    title: () => L('Down the ramp into the buffer', 'Die Rampe hinunter in den Puffer'),
+    text: (p, formal) => (formal
+      ? L('A cart of mass $m$ is released from rest at a height $h$ on a smooth ramp. It rolls down, along the floor, and into a spring buffer with spring constant $k$. How far does it compress the spring? Express $s$ in terms of $m$, $h$, $k$ and $g$.',
+        'Ein Wagen der Masse $m$ wird auf einer glatten Rampe in der Höhe $h$ aus der Ruhe losgelassen. Er rollt hinunter, über den Boden und in einen Federpuffer mit der Federkonstanten $k$. Wie stark drückt er die Feder zusammen? Drücke $s$ durch $m$, $h$, $k$ und $g$ aus.')
+      : L(`A cart of ${q(p.V.m, 'kg')} is released from rest ${q(p.V.h, 'm')} high on a smooth ramp. It rolls down, along the floor, and into a spring buffer with a spring constant of ${q(p.V.k, 'k')}. How far does it compress the spring?`,
+        `Ein Wagen von ${q(p.V.m, 'kg')} wird auf einer glatten Rampe ${q(p.V.h, 'm')} über dem Boden aus der Ruhe losgelassen. Er rollt hinunter, über den Boden und in einen Federpuffer mit der Federkonstanten ${q(p.V.k, 'k')}. Wie stark drückt er die Feder zusammen?`)),
+    scene(p, formal, view) {
+      const fig = new Fig(this.title()), { H, L0, C, xt } = RS;
+      rampSpringTrack(fig);
+      const top = rsAt(0), mid = [RS.xm, -R], low = [L0 - C + R, -R];
+      fig.spring([0, -R], [L0 - C, -R], 7, 5);
+      fig.circle(top[0], top[1], R, 'body ball');
+      fig.circle(mid[0], mid[1], R, 'body ball');
+      fig.circle(low[0], low[1], R, 'body ball');
+      atRest(fig, top[0] - R - 50, top[1] - R + 2);
+      speed(fig, mid[0] - R - 4, mid[1], [-1, 0], S('v'), 30, [-4, -12]);
+      atRest(fig, low[0] + R + 6, low[1] + 5);
+      fig.text(16, -2 * R - 46, given('k', formal, p.V.k, 'k'), 'lbl', 'start');
+      fig.line(L0, -2 * R - 4, L0, -2 * R - 24, 'w dash');
+      fig.line(L0 - C, -2 * R - 4, L0 - C, -2 * R - 24, 'w dash');
+      fig.arrow(L0, -2 * R - 16, L0 - C, -2 * R - 16, 'dimarrow');
+      fig.text(L0 - C / 2, -2 * R - 22, wanted('s'), 'lbl', 'middle');
+      fig.dim(xt + 34, 0, -H, given('h', formal, p.V.h, 'm'), 1);
+      fig.line(xt + 6, -H, xt + 40, -H, 'w dash');
+      zeroLine(fig, xt + 50, xt + 52, 0);
+      fig.state(top[0] - 4, top[1] - 2 * R - 12, 0, hl(view, 0));
+      fig.state(mid[0], 26, 1, hl(view, 1));
+      fig.state(low[0], 26, 2, hl(view, 2));
+      return fig;
+    },
+    steps: () => [
+      step(L('Energy conservation ①③', 'Energieerhaltung ①③'), `<p>${L('All the potential energy at the top becomes kinetic energy on the floor (②) and then elastic energy in the spring; at ① and ③ the cart is at rest:', 'Die ganze Lageenergie oben wird zu kinetischer Energie auf dem Boden (②) und dann zu Spannenergie in der Feder; in ① und ③ ruht der Wagen:')}</p>` +
+        dm(`${pot('h')} = ${el('s')}`), ALL, [0, 2]),
+      step(L('Solve', 'Auflösen'), dm('s^2 = \\frac{2\\,m\\,g\\,h}{k} \;\\Rightarrow\; s = \\sqrt{\\frac{2\\,m\\,g\\,h}{k}}') +
+        `<p>${L('The speed on the floor is not needed: state ② only passes the energy on.', 'Die Geschwindigkeit auf dem Boden braucht es nicht: Zustand ② gibt die Energie nur weiter.')}</p>`, ALL),
+    ],
+    hint: () => m$(`${pot('h')} = ${el('s')}`),
+  };
+  // the ramp of rampSpring: a curve from the top (xt, −H) down to the floor at xr, as points
+  const rsCurve = (() => {
+    const { H, xr, xt } = RS, pts = [];
+    for (let k = 0; k <= 30; k++) { const t = k / 30, a = [xt, -H], c = [xr + 90, 0], b = [xr, 0]; pts.push([0, 1].map((j) => (1 - t) * (1 - t) * a[j] + 2 * t * (1 - t) * c[j] + t * t * b[j])); }
+    return pts;
+  })();
+  // where a ball on the ramp touches it, and its centre, at t (0 at the top, 1 at the floor)
+  function rsAt(t, contact) {
+    const pts = rsCurve, x = t * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(x)), f = x - i;
+    const a = pts[i], b = pts[i + 1], d = [b[0] - a[0], b[1] - a[1]], n = Math.hypot(...d), c = [a[0] + d[0] * f, a[1] + d[1] * f];
+    return contact ? c : [c[0] - (d[1] / n) * R, c[1] + (d[0] / n) * R];
+  }
+  function rampSpringTrack(fig) {
+    const { xt } = RS;
+    fig.surface(-10, xt + 30, 0);
+    fig.wall(0, 0, -60);
+    fig.path(`M${rsCurve.map((q) => q.map((y) => y.toFixed(1)).join(' ')).join('L')}`, rsCurve, 'track');
+  }
+
+  const SCENARIOS = [fall, partDrop, ekin, incline, launcher, buffer, pendulum, ramp, tower, springUp, slopeLaunch, rampSpring, speedFrac, dropSpring, twice, bungee, hang];
 
   // helpers for the animations (motion.js)
-  const helpers = { R, PW, ball, groundAt, ceilingAt, zeroLine, track, tangentAt, heightAt, DIRS };
+  const helpers = { R, PW, ball, groundAt, ceilingAt, zeroLine, track, tangentAt, heightAt, DIRS, slope, slopeBlock, launchParts, RS, rsCurve, rsAt, rampSpringTrack };
   root.Scenarios = { SCENARIOS, helpers };
   if (typeof module !== 'undefined') module.exports = root.Scenarios;
 })(typeof window !== 'undefined' ? window : globalThis);
