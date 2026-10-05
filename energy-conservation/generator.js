@@ -95,6 +95,12 @@
       ? L(`Neglect friction and air resistance. Give the result as a formula in ${list('and')}.`, `Vernachlässige Reibung und Luftwiderstand. Gib das Resultat als Formel in ${list('und')} an.`)
       : L('Neglect friction and air resistance. Take g = 10 m/s².', 'Vernachlässige Reibung und Luftwiderstand. Rechne mit g = 10 m/s².');
 
+    // the energy of each state as a typed formula (see judgeEnergy): the symbols around their
+    // values (1 for those without one, e.g. a mass that cancels), and the relations of the text
+    const esyms = scn.esyms(p), ebase = { ...p.V, m: p.V.m || 1 };
+    esyms.forEach((k) => { if (ebase[k] == null) ebase[k] = 1; });
+    const energy = { efun: scn.efun(p), rel: scn.rel ? scn.rel(p) : (V) => V, esyms, ebase };
+
     return {
       scenario: scn.id,
       difficulty: scn.difficulty,
@@ -104,7 +110,7 @@
       zero: scn.zero(p),
       forms,
       table: states.map((s) => forms.map((k) => (s[k] || 0) > 1e-9)),
-      want, vars, f, sampled, value, answer, traps,
+      want, vars, f, sampled, value, answer, traps, energy,
       figure: (view = {}) => fig(view),
       solutionFigure: () => fig({ bars: null }),
       hints: [
@@ -164,6 +170,25 @@
     return { cls: 'bad', key: 'wrong', tree: r.tree };
   }
 
+  // Judges the typed energy of state i: { cls, key } with key one of ok, empty, syntax, unknown
+  // (vars: the symbols not allowed), missing (a form of energy is missing), half (the factor ½ of
+  // a kinetic or elastic energy is missing or doubled), wrong.
+  function judgeEnergy(ex, i, text) {
+    const r = Expr.parse(text);
+    if (r.error) return { cls: 'bad', key: r.error.key === 'empty' ? 'empty' : 'syntax' };
+    const { efun, rel, esyms, ebase } = ex.energy, allowed = new Set([...esyms, 'g', 'm']);
+    const bad = Expr.vars(r.tree).filter((v) => !allowed.has(v));
+    if (bad.length) return { cls: 'warn', key: 'unknown', vars: bad };
+    const terms = efun[i], forms = Object.keys(terms);
+    const sum = (scale) => (V) => { const W = rel(V); return forms.reduce((a, k) => a + (scale[k] == null ? 1 : scale[k]) * terms[k](W), 0); };
+    const typed = (V) => Expr.evaluate(r.tree, rel(V));
+    const like = (scale) => Expr.same(typed, sum(scale), ebase, esyms);
+    if (like({})) return { cls: 'ok', key: 'ok' };
+    if (forms.length > 1 && forms.some((k) => like({ [k]: 0 }))) return { cls: 'bad', key: 'missing' };
+    if (forms.some((k) => k !== 'pot' && (like({ [k]: 2 }) || like({ [k]: 0.5 })))) return { cls: 'bad', key: 'half' };
+    return { cls: 'bad', key: 'wrong' };
+  }
+
   // Judges a number: right within 2 %; else a trap's explanation, a rounding slip or wrong.
   function judgeNumber(ex, x) {
     if (Number.isNaN(x)) return { cls: 'bad', key: 'number' };
@@ -198,6 +223,6 @@
     return { frames: watch ? [first, watch, ...frames] : [first, ...frames], ex };
   }
 
-  root.Energy = { LEVELS, SCENARIOS, WHY, CIRCLED, generate, generateFor, quiz, judgeFormula, judgeNumber, tutorial };
+  root.Energy = { LEVELS, SCENARIOS, WHY, CIRCLED, generate, generateFor, quiz, judgeFormula, judgeEnergy, judgeNumber, tutorial };
   if (typeof module !== 'undefined') module.exports = root.Energy;
 })(typeof window !== 'undefined' ? window : globalThis);

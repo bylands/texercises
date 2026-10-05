@@ -1,7 +1,7 @@
 // Animations for the tutor: the body moves through the situation, from state ① to the last one,
 // while an energy bar chart beside it shows how the energy is shared at every moment; the
 // dashed line, the total energy, stays where it is. The motion pauses at each state, whose label
-// lights up, and runs as fast as the body moves (slow near rest, fast where its kinetic energy is
+// lights up, ends in the last state, and runs as fast as the body moves (slow near rest, fast where its kinetic energy is
 // large), with a lower limit so that it never stalls.
 // For each situation, MOTION[id](p) gives { states, pos(s), energy(s), draw(fig, s, state) }:
 // s runs from 0 to 1 along the motion, states are the values of s of the states ①②③, pos(s) is
@@ -227,7 +227,7 @@
   };
 
   // ---------------------------------------------------------------- the timeline
-  const N = 400, MOVE = 4.2, HOLD = 1.1, END = 1.4; // s
+  const N = 400, MOVE = 4.2, HOLD = 1.1; // s
 
   const made = {};
 
@@ -260,11 +260,11 @@
       dir: (s) => { const a = def.pos(Math.max(0, s - 0.004)), b = def.pos(Math.min(1, s + 0.004)); return [b[0] - a[0], b[1] - a[1]]; },
     };
 
-    // pauses at the states, the motion between them, and a longer pause at the end
+    // pauses at the states, the motion between them; it ends on arriving in the last state
     const pieces = [];
     let t = 0;
     def.states.forEach((st, j) => {
-      const hold = j === def.states.length - 1 ? HOLD + END : HOLD;
+      const hold = j === def.states.length - 1 ? 0 : HOLD;
       pieces.push({ t0: t, t1: t + hold, s0: st, s1: st, state: j });
       t += hold;
       if (j < def.states.length - 1) {
@@ -293,7 +293,7 @@
 
     function at(time) {
       const tt = Math.max(0, Math.min(duration, time));
-      const pc = pieces.find((q) => tt <= q.t1) || pieces[pieces.length - 1];
+      const pc = tt >= duration ? pieces[pieces.length - 1] : pieces.find((q) => tt < q.t1);
       const s = pc.state >= 0 ? pc.s0 : sOf(tauOf(pc.s0) + (tt - pc.t0));
       return { s, state: pc.state };
     }

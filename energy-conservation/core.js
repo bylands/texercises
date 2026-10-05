@@ -32,7 +32,7 @@
   }
   const plainSym = (key) => { const [l, s, p] = SYM[key]; return `${l}${p ? '′' : ''}${s || ''}`; };
   // How to type a symbol in a formula field.
-  const typed = (key) => { const [l, s] = SYM[key]; return `${l === 'ℓ' ? 'l' : l}${s || ''}`; };
+  const typed = (key) => { const [l, s, p] = SYM[key]; return `${l === 'ℓ' ? 'l' : l}${p ? "'" : ''}${s || ''}`; };
 
   // Energy forms: gravitational potential, kinetic, elastic (spring) energy.
   const ESYM = { pot: { en: 'pot', de: 'pot' }, kin: { en: 'kin', de: 'kin' }, el: { en: 'el', de: 'S' } };

@@ -19,11 +19,13 @@
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
-      tableHead: '1 · Energy in each state', answerHead: '2 · Result',
+      tableHead: '1 · Energy in each state', formulaHead: '2 · Energy as a formula', answerHead: '3 · Result',
+      formulaNote: (syms, typing) => `Write the energy of each state as a formula in ${syms}.${typing ? ` Type ${typing}.` : ''}`,
+      missing: 'A form of energy is missing: compare with your ticks in step 1', half: 'Check the factor ½',
       tableNote: (z) => `Tick the forms of energy that are not zero in each state. Zero level: ${z}.`,
       state: 'State',
       tableOk: '✓ The energy table is right.', tableBad: (n) => `✗ ${n === 1 ? 'One box is' : `${n} boxes are`} not right yet.`,
-      fill: 'Fill in the result, then check again.',
+      fill: 'Fill in all fields, then check again.',
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
       number: 'Enter a number', correct: 'Correct', close: 'Close: check your rounding', wrong: 'Not correct',
@@ -41,11 +43,13 @@
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
-      tableHead: '1 · Energie in jedem Zustand', answerHead: '2 · Resultat',
+      tableHead: '1 · Energie in jedem Zustand', formulaHead: '2 · Energie als Formel', answerHead: '3 · Resultat',
+      formulaNote: (syms, typing) => `Schreibe die Energie jedes Zustands als Formel in ${syms}.${typing ? ` Tippe ${typing}.` : ''}`,
+      missing: 'Eine Energieform fehlt: Vergleiche mit deinen Kreuzen in Schritt 1', half: 'Prüfe den Faktor ½',
       tableNote: (z) => `Kreuze in jedem Zustand die Energieformen an, die nicht null sind. Nullniveau: ${z}.`,
       state: 'Zustand',
       tableOk: '✓ Die Energietabelle stimmt.', tableBad: (n) => `✗ ${n === 1 ? 'Ein Feld stimmt' : `${n} Felder stimmen`} noch nicht.`,
-      fill: 'Gib das Resultat ein und prüfe dann nochmals.',
+      fill: 'Fülle alle Felder aus und prüfe dann nochmals.',
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
       number: 'Gib eine Zahl ein', correct: 'Richtig', close: 'Knapp daneben: Prüfe deine Rundung', wrong: 'Nicht richtig',
@@ -160,12 +164,37 @@
       <p class="note type-help">${ui().typeHelp(th.join(', '))}</p>`;
   }
 
-  // The typed formula as KaTeX, so that the student sees how it is read.
-  function preview() {
-    const el = $('#preview');
+  // The energy of each state as a formula: E₁ = …
+  const eTex = (i) => `E_${i + 1}`;
+  function efieldHtml() {
+    return ex.table.map((_, i) => `<div class="field formula" data-key="e${i}">
+        <label for="in-e${i}" class="sym">$${eTex(i)}$&nbsp;=</label>
+        <input id="in-e${i}" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="next" spellcheck="false">
+        <span class="fb" aria-live="polite"></span></div>
+      <p class="preview" id="pv-e${i}" aria-live="polite"></p>`).join('');
+  }
+  function formulaNote() {
+    const keys = ex.energy.esyms;
+    return ui().formulaNote(symList(keys), typeHints(keys).join(', '));
+  }
+  const judgeE = (i, raw) => {
+    const r = window.Energy.judgeEnergy(ex, i, raw);
+    const allowed = [...new Set([...ex.energy.esyms, 'g', 'm'])];
+    const named = (v) => (EC.SYM[v] ? EC.plainSym(v) : v.replace(/p/, '′'));
+    return { cls: r.cls, msg: { ok: ui().correct, empty: ui().empty, syntax: ui().syntax, wrong: ui().wrong, missing: ui().missing, half: ui().half,
+      unknown: r.vars && ui().unknown(named(r.vars[0]), symList(allowed)) }[r.key] };
+  };
+
+  // A typed formula as KaTeX, so that the student sees how it is read: the field id, the left side.
+  function previewOne(id, lhs) {
+    const el = $(`#${id === 'in-ans' ? 'preview' : `pv-${id.slice(3)}`}`);
     if (!el) return;
-    const raw = $('#in-ans').value, r = Expr.parse(raw);
-    el.innerHTML = raw.trim() && r.tree ? `${ui().preview}: ${katex1(`${EC.tex(ex.want.key)} = ${Expr.tex(r.tree)}`)}` : '';
+    const raw = $(`#${id}`).value, r = Expr.parse(raw);
+    el.innerHTML = raw.trim() && r.tree ? `${ui().preview}: ${katex1(`${lhs} = ${Expr.tex(r.tree)}`)}` : '';
+  }
+  function preview() {
+    previewOne('in-ans', EC.tex(ex.want.key));
+    ex.table.forEach((_, i) => previewOne(`in-e${i}`, eTex(i)));
   }
 
   function render() {
@@ -183,6 +212,8 @@
     $('#etable').innerHTML = tableHtml();
     $('#table-fb').textContent = '';
     $('#table-fb').className = 'table-fb';
+    $('#formula-note').textContent = formulaNote();
+    $('#efields').innerHTML = efieldHtml();
     $('#fields').className = `fields${ex.formal ? ' formula' : ''}`;
     $('#fields').innerHTML = fieldHtml();
     $('#hint-list').innerHTML = '';
@@ -221,12 +252,19 @@
     });
     $('#table-fb').className = `table-fb ${wrongCells ? 'bad' : 'ok'}`;
     $('#table-fb').textContent = wrongCells ? ui().tableBad(wrongCells) : ui().tableOk;
-    const row = $('#fields .field'), raw = $('#in-ans').value;
-    if (!raw.trim()) { row.className = row.className.replace(/ (ok|warn|bad)/g, ''); row.querySelector('.fb').textContent = ''; return null; }
-    const r = judge(raw);
-    row.className = `field${ex.formal ? ' formula' : ''} ${r.cls}`;
-    row.querySelector('.fb').textContent = r.msg;
-    return r.cls === 'ok' && !wrongCells;
+    // a field: marked with the verdict of judge, or left unmarked if empty; returns the verdict
+    const mark = (row, raw, judgeIt) => {
+      const base = row.className.replace(/ (ok|warn|bad)/g, '');
+      if (!raw.trim()) { row.className = base; row.querySelector('.fb').textContent = ''; return null; }
+      const r = judgeIt(raw);
+      row.className = `${base} ${r.cls}`;
+      row.querySelector('.fb').textContent = r.msg;
+      return r.cls === 'ok';
+    };
+    const verdicts = ex.table.map((_, i) => mark($(`#efields .field[data-key="e${i}"]`), $(`#in-e${i}`).value, (raw) => judgeE(i, raw)));
+    verdicts.push(mark($('#fields .field'), $('#in-ans').value, judge));
+    if (verdicts.includes(null)) return null;
+    return verdicts.every(Boolean) && !wrongCells;
   }
 
   // The status line: null (none), 'fill', 'ok' or 'bad'.
@@ -290,8 +328,9 @@
   }
 
   // ---------------------------------------------------------------- the tutor's animation
-  // The animation in a tutor frame (motion.js): it plays when the frame is shown and loops; ▶/❚❚
-  // pauses it and the slider moves through it. With reduced motion, it waits for ▶.
+  // The animation in a tutor frame (motion.js): it plays when the frame is shown and stops in the
+  // last state; ▶ then plays it again from the start, ❚❚ pauses it, and the slider moves through it.
+  // With reduced motion, it waits for ▶.
   let player = null;
   function startAnim() {
     if (player) player.stop();
@@ -310,12 +349,19 @@
     function tick(now) {
       if (!el.isConnected) return;
       if (playing) {
-        if (last != null) { t += (now - last) / 1000; if (t > anim.duration) t = 0; show(); }
+        if (last != null) {
+          t = Math.min(anim.duration, t + (now - last) / 1000);
+          show();
+          if (t >= anim.duration) setPlaying(false);
+        }
         last = now;
       }
       raf = requestAnimationFrame(tick);
     }
-    btn.addEventListener('click', () => setPlaying(!playing));
+    btn.addEventListener('click', () => {
+      if (!playing && t >= anim.duration) { t = 0; show(); } // at the end: from the start again
+      setPlaying(!playing);
+    });
     seek.addEventListener('input', () => { setPlaying(false); t = (Number(seek.value) / 1000) * anim.duration; show(); });
     setPlaying(!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     show();
@@ -343,11 +389,13 @@
     showScore();
     if (ex) {
       const value = $('#in-ans').value, boxes = [...document.querySelectorAll('#etable input')].map((b) => b.checked);
+      const energies = ex.table.map((_, i) => $(`#in-e${i}`).value);
       const keep = { ...st };
       ex = generate(ex.level, ex.seed, ex.formal);
       render();
       st = keep;
       $('#in-ans').value = value;
+      energies.forEach((v, i) => { $(`#in-e${i}`).value = v; });
       document.querySelectorAll('#etable input').forEach((b, k) => { b.checked = boxes[k]; });
       preview();
       if (st.checked) feedback();
@@ -415,7 +463,11 @@
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
-    $('#answers').addEventListener('input', (evt) => { if (evt.target.id === 'in-ans') preview(); });
+    $('#answers').addEventListener('input', (evt) => {
+      const id = evt.target.id;
+      if (id === 'in-ans') previewOne(id, EC.tex(ex.want.key));
+      else if (/^in-e\d$/.test(id)) previewOne(id, eTex(Number(id.slice(4))));
+    });
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);

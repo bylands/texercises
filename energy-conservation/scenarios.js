@@ -12,7 +12,9 @@
 //   traps(p)           answers under typical wrong ideas: [{ flag, f, tex }] (see WHY in
 //                      generator.js; why(p) of the scenario may say it better)
 //   states(p)          the energies in each state (J; m = 1 kg where no mass is given):
-//                      [{ pot, kin, el }]; energies(p, formal) the same as formulas (KaTeX)
+//                      [{ pot, kin, el }]; energies(p, formal) the same as formulas (KaTeX), and
+//                      efun(p) as functions of the symbols' values V; esyms(p) the symbols they
+//                      use, rel(p) (optional) what the text fixes among them, e.g. h' = 2/3 h
 //   zero(p)            where the zero level of the potential energy is
 //   text(p, formal), scene(p, formal, view)  the situation in words and as a drawing (draw.js);
 //                      view.hl: the states to highlight
@@ -41,6 +43,10 @@
   const ONE = [1, 1];
   // a root of a factor times symbols: \sqrt{\tfrac{2}{3}\,g\,h}
   const rootOf = (fr, syms) => `\\sqrt{${coef(fr)}${syms}}`;
+  // The energies as functions of the symbols' values V (for checking typed formulas)
+  const Pot = (h) => (V) => V.m * V.g * h(V);
+  const Kin = (v) => (V) => 0.5 * V.m * sq(v(V));
+  const El = (x) => (V) => 0.5 * V.k * sq(x(V));
 
   // ---------------------------------------------------------------- drawing helpers
   const R = 12; // ball radius
@@ -103,6 +109,8 @@
     },
     states: (p) => (p.dir === 'drop' ? [{ pot: G * p.V.h }, { kin: G * p.V.h }] : [{ kin: G * p.V.h }, { pot: G * p.V.h }]),
     energies: (p) => (p.dir === 'drop' ? [{ pot: pot('h') }, { kin: kin('v') }] : [{ kin: kin('v_0') }, { pot: pot('h') }]),
+    efun: (p) => (p.dir === 'drop' ? [{ pot: Pot((V) => V.h) }, { kin: Kin((V) => V.v) }] : [{ kin: Kin((V) => V.v0) }, { pot: Pot((V) => V.h) }]),
+    esyms: (p) => ['m', 'g', 'h', p.vk],
     zero: () => L('the ground', 'der Boden'),
     title: (p) => (p.dir === 'drop' ? L('Dropped', 'Fallen gelassen') : L('Thrown straight up', 'Senkrecht hochgeworfen')),
     text(p, formal) {
@@ -181,6 +189,9 @@
     },
     states: (p) => [{ pot: G * p.V.h }, { pot: G * p.V.hp, kin: G * (p.V.h - p.V.hp) }],
     energies: () => [{ pot: pot('h') }, { pot: pot("h'"), kin: kin("v'") }],
+    efun: () => [{ pot: Pot((V) => V.h) }, { pot: Pot((V) => V.hp), kin: Kin((V) => V.vp) }],
+    esyms: () => ['m', 'g', 'h', 'hp', 'vp'],
+    rel: (p) => (V) => ({ ...V, hp: fval(p.fr) * V.h }),
     zero: () => L('the ground', 'der Boden'),
     title: () => L('Part of the way down', 'Ein Teil des Wegs'),
     text: (p, formal) => (formal
@@ -242,6 +253,8 @@
         { flag: 'half', f: (V) => (2 * V.m * sq(V.v)) / sq(V.s), tex: '\\frac{2\\,m\\,v^2}{s^2}' }]),
     states: (p) => [{ el: 0.5 * p.V.k * sq(p.V.s) }, { kin: 0.5 * p.V.m * sq(p.V.v) }],
     energies: () => [{ el: el('s') }, { kin: kin('v') }],
+    efun: () => [{ el: El((V) => V.s) }, { kin: Kin((V) => V.v) }],
+    esyms: () => ['m', 'k', 's', 'v'],
     zero: () => L('the floor (the potential energy does not change)', 'der Boden (die Lageenergie ändert sich nicht)'),
     title: () => L('Spring launcher', 'Federkatapult'),
     text: (p, formal) => (p.ask === 'v'
@@ -315,6 +328,9 @@
     },
     states: (p) => [{ pot: G * p.V.h }, { kin: G * p.V.h }],
     energies: () => [{ pot: pot('h') }, { kin: kin('v') }],
+    efun: () => [{ pot: Pot((V) => V.h) }, { kin: Kin((V) => V.v) }],
+    esyms: () => ['m', 'g', 'h', 'l', 'v'],
+    rel: (p) => (V) => ({ ...V, h: V.l * (1 - Math.cos((p.ang * Math.PI) / 180)) }),
     zero: () => L('the lowest point of the bob', 'der tiefste Punkt des Pendelkörpers'),
     title: () => L('Pendulum', 'Pendel'),
     text: (p, formal) => {
@@ -413,6 +429,8 @@
     },
     states: (p) => [{ pot: G * p.V.h1, kin: 0.5 * sq(p.V.v1) }, { pot: G * p.V.h2, kin: 0.5 * sq(p.V.v2) }],
     energies: () => [{ pot: pot('h_1'), kin: kin('v_1') }, { pot: pot('h_2'), kin: kin('v_2') }],
+    efun: () => [{ pot: Pot((V) => V.h1), kin: Kin((V) => V.v1) }, { pot: Pot((V) => V.h2), kin: Kin((V) => V.v2) }],
+    esyms: () => ['m', 'g', 'h1', 'h2', 'v1', 'v2'],
     zero: () => L('the ground', 'der Boden'),
     title: () => L('On a track', 'Auf der Bahn'),
     text: (p, formal) => (formal
@@ -471,6 +489,8 @@
     },
     states: (p) => [{ pot: G * p.V.h, kin: 0.5 * sq(p.V.v0) }, { kin: 0.5 * sq(p.V.v) }],
     energies: () => [{ pot: pot('h'), kin: kin('v_0') }, { kin: kin('v') }],
+    efun: () => [{ pot: Pot((V) => V.h), kin: Kin((V) => V.v0) }, { kin: Kin((V) => V.v) }],
+    esyms: () => ['m', 'g', 'h', 'v0', 'v'],
     zero: () => L('the ground', 'der Boden'),
     title: () => L('Thrown from a tower', 'Vom Turm geworfen'),
     text(p, formal) {
@@ -539,6 +559,8 @@
     },
     states: (p) => [{ el: 0.5 * p.V.k * sq(p.V.s) }, { pot: p.V.m * G * p.V.h }],
     energies: () => [{ el: el('s') }, { pot: pot('h') }],
+    efun: () => [{ el: El((V) => V.s) }, { pot: Pot((V) => V.h) }],
+    esyms: () => ['m', 'g', 'h', 'k', 's'],
     zero: () => L('where the ball starts, on the compressed spring', 'der Startpunkt des Balls auf der zusammengedrückten Feder'),
     title: () => L('Shot up by a spring', 'Von einer Feder hochgeschossen'),
     text: (p, formal) => (formal
@@ -603,6 +625,9 @@
     },
     states: (p) => [{ pot: G * p.V.h }, { pot: G * p.V.hp, kin: 0.5 * sq(p.V.vp) }, { kin: G * p.V.h }],
     energies: () => [{ pot: pot('h') }, { pot: pot("h'"), kin: kin("v'") }, { kin: kin('v_0') }],
+    efun: () => [{ pot: Pot((V) => V.h) }, { pot: Pot((V) => V.hp), kin: Kin((V) => V.vp) }, { kin: Kin((V) => V.v0) }],
+    esyms: () => ['m', 'g', 'h', 'hp', 'vp', 'v0'],
+    rel: (p) => (V) => ({ ...V, vp: fval(p.fr) * V.v0 }),
     zero: () => L('the ground', 'der Boden'),
     title: () => L('A fraction of the final speed', 'Ein Bruchteil der Endgeschwindigkeit'),
     text: (p, formal) => (formal
@@ -674,6 +699,12 @@
       const all = [{ pot: pot('s') }, { pot: pot(`${coef(d)}s`), kin: kin("v'"), el: el(xs) }, { el: el('s') }];
       return p.ask === 'v' ? all : [all[0], all[2]];
     },
+    efun(p) {
+      const f = fval(p.fr);
+      const all = [{ pot: Pot((V) => V.s) }, { pot: Pot((V) => (1 - f) * V.s), kin: Kin((V) => V.vp), el: El((V) => f * V.s) }, { el: El((V) => V.s) }];
+      return p.ask === 'v' ? all : [all[0], all[2]];
+    },
+    esyms: (p) => (p.ask === 'v' ? ['m', 'g', 's', 'k', 'vp'] : ['m', 'g', 's', 'k']),
     zero: () => L('the lowest point of the block', 'der tiefste Punkt des Klotzes'),
     title: () => L('A block on a spring', 'Ein Klotz an der Feder'),
     text(p, formal) {
@@ -740,7 +771,7 @@
     make(r) {
       const m = pick(r, [0.1, 0.2, 0.25, 0.5, 1, 2]), h = pick(r, [0.2, 0.3, 0.4, 0.5, 0.8, 1, 1.2, 1.5]), s = pick(r, [0.02, 0.04, 0.05, 0.08, 0.1, 0.12, 0.15, 0.2]);
       const k = (2 * m * G * (h + s)) / (s * s);
-      return k >= 100 && k <= 50000 && s < h ? { V: { g: G, m, h, s, k } } : null;
+      return k >= 100 && k <= 50000 && s < h ? { V: { g: G, m, h, s, k, v: Math.sqrt(2 * G * h) } } : null;
     },
     vars: () => ['g', 'h', 'm', 's'],
     want: () => ({ key: 'k', unit: 'k', what: L('spring constant', 'Federkonstante') }),
@@ -755,6 +786,8 @@
     ],
     states: (p) => { const { m, h, s, k } = p.V; return [{ pot: m * G * (h + s) }, { pot: m * G * s, kin: m * G * h }, { el: 0.5 * k * s * s }]; },
     energies: () => [{ pot: pot('(h + s)') }, { pot: pot('s'), kin: kin('v') }, { el: el('s') }],
+    efun: () => [{ pot: Pot((V) => V.h + V.s) }, { pot: Pot((V) => V.s), kin: Kin((V) => V.v) }, { el: El((V) => V.s) }],
+    esyms: () => ['m', 'g', 'h', 's', 'v', 'k'],
     zero: () => L('the lowest point of the ball', 'der tiefste Punkt des Balls'),
     title: () => L('Dropped onto a spring', 'Auf eine Feder fallen gelassen'),
     text: (p, formal) => (formal

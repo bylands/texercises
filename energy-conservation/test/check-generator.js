@@ -1,7 +1,8 @@
 // Verifies the energy conservation generator: run with `node energy-conservation/test/check-generator.js`.
 // For many seeds per level, both languages and both modes (numbers and formulas) it checks
 // - the answer against energy conservation, written out independently for each situation,
-// - that the energies of all states add up to the same total, and the table follows from them,
+// - that the energies of all states add up to the same total, and the table and the energy
+//   formulas (for typed energies) follow from them,
 // - that every wrong-idea answer differs from the right one and is explained, and that there are
 //   at least three of them (for the arcade's four options),
 // - that texts, hints, solutions and drawings contain no undefined values.
@@ -58,6 +59,13 @@ function checkExercise(ex, id) {
   if (ex.table.some((r) => !r.some(Boolean))) fail(`${id}: a state without energy`);
   if (sc.energies(ex.p).length !== states.length) fail(`${id}: energies and states differ in number`);
   sc.energies(ex.p).forEach((e, i) => ex.forms.forEach((k, j) => { if (!!e[k] !== ex.table[i][j]) fail(`${id}: state ${i + 1}: formula and value of ${k} disagree`); }));
+  // the energies as functions: at the exercise's values, those of the states
+  const { efun, rel, ebase } = ex.energy, W = rel(ebase);
+  if (efun.length !== states.length) fail(`${id}: ${efun.length} energy functions for ${states.length} states`);
+  efun.forEach((e, i) => ['pot', 'kin', 'el'].forEach((k) => {
+    const a = e[k] ? e[k](W) : 0, b = states[i][k] || 0;
+    if (Math.abs(a - b) > 1e-9 * Math.max(1, totals[0])) fail(`${id}: state ${i + 1}: ${k} is ${a} as a function, ${b} as a value`);
+  }));
   // wrong ideas
   if (ex.formal && ex.traps.length < 3) fail(`${id}: only ${ex.traps.length} wrong ideas`);
   for (const t of ex.traps) {
@@ -144,6 +152,20 @@ for (const [k, text, key] of TYPED) {
   const ex = Energy.tutorial(Lessons.EXAMPLES[k]).ex, r = Energy.judgeFormula(ex, text);
   if (r.key !== key) fail(`lesson ${k + 1}: "${text}" judged ${r.key}, expected ${key}`);
 }
+// typed energies of the states, in the tutor's examples
+const ETYPED = [
+  [0, 0, 'mgh', 'ok'], [0, 1, '1/2 m v^2', 'ok'], [0, 1, 'm v²', 'half'], [0, 1, 'mgh', 'wrong'], [0, 0, 'mgh + 1/2 m x^2', 'unknown'],
+  [1, 1, "m g h' + 1/2 m v'^2", 'ok'], [1, 1, "m g 2/3 h + m v'^2/2", 'ok'], [1, 1, "m g h'", 'missing'], [1, 1, "m g h' + m v'^2", 'half'],
+  [2, 0, '1/2 k s^2', 'ok'], [2, 0, 'k s^2', 'half'],
+  [3, 0, 'm g h + 1/2 m v0^2', 'ok'], [3, 0, '1/2 m v0²', 'missing'],
+  [4, 1, "mgh' + 1/2 m (2/3 v0)^2", 'ok'], [4, 2, '1/2 m v_0^2', 'ok'],
+  [5, 1, "m g s/2 + 1/2 m v'^2 + 1/2 k (s/2)^2", 'ok'], [5, 1, "m g s/2 + 1/2 m v'^2", 'missing'], [5, 2, '1/2 k s^2', 'ok'], [5, 0, 'm g s', 'ok'],
+];
+for (const [k, i, text, key] of ETYPED) {
+  const ex = Energy.tutorial(Lessons.EXAMPLES[k]).ex, r = Energy.judgeEnergy(ex, i, text);
+  if (r.key !== key) fail(`lesson ${k + 1}, E${i + 1}: "${text}" judged ${r.key}, expected ${key}`);
+}
+
 // the worksheet's results for the tutor's examples 2, 5 and 6
 const SHEET = { 1: (V) => Math.sqrt((2 / 3) * V.g * V.h), 4: (V) => (5 / 9) * V.h, 5: (V) => Math.sqrt(0.5 * V.g * V.s) };
 for (const [k, f] of Object.entries(SHEET)) {
