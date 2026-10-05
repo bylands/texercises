@@ -1,0 +1,59 @@
+# Tests every app on each push to main and, only if all tests pass, deploys teachingphysics.ch
+# with deploy.sh. The deploy key belongs to the server user tpdeploy, which may only run rsync into
+# the web root (rrsync, see deploy.sh); the server's host key is pinned in .github/known_hosts.
+# Work that is not ready to go live stays on a branch: only main is deployed.
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# one deployment at a time, in the order of the pushes
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Shared files in sync
+        run: shared/sync.sh --check
+      - name: Tests of the apps
+        run: |
+          for t in */test/check-generator.js; do
+            echo "::group::$t"
+            node "$t"
+            echo "::endgroup::"
+          done
+      - name: Tests of the admin panel
+        run: python3 hub-admin/test_hubadmin.py
+
+  deploy:
+    needs: test
+    # not in forks: they have no deploy key
+    if: github.repository == 'bylands/texercises'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          cp .github/known_hosts ~/.ssh/known_hosts
+      - name: Deploy
+        env:
+          DEPLOY_TARGET: tpdeploy@179.237.97.105:
+          RSYNC_RSH: ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes
+        run: ./deploy.sh
