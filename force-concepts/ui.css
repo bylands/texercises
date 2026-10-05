@@ -256,6 +256,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 #arcade .ar-opt .key { position: absolute; left: 10px; top: 6px; font-size: 0.8rem; color: var(--muted); }
 #arcade .ar-opt .val { max-width: 100%; }
 #arcade .ar-opt .val svg { display: block; max-width: 100%; height: auto; }
+/* but formulas keep KaTeX's own sizes: its root signs and long arrows are svgs that need them */
+#arcade .ar-opt .val .katex svg { max-width: none; height: inherit; }
 #arcade .ar-opt:disabled { cursor: default; opacity: 0.4; }
 #arcade .ar-opt.right { border-color: var(--ok); background: rgba(131, 193, 103, 0.22); opacity: 1; }
 #arcade .ar-opt.wrong { border-color: var(--bad); background: rgba(252, 98, 85, 0.2); opacity: 1; }
