@@ -1,0 +1,25 @@
+# The admin panel of the hub (hubadmin.py), behind nginx at /admin/. Install:
+#   sudo useradd --system --no-create-home --shell /usr/sbin/nologin hubadmin
+#   sudo chmod 640 /opt/crosswords/teacher-password            # the group crosswords may read it
+#   (the service joins that group: SupplementaryGroups below)
+#   sudo install -d -o hubadmin -g hubadmin /var/www/teachingphysics/hub-data
+#   sudo install -D -m 644 hubadmin.py /opt/hub-admin/hubadmin.py
+#   sudo cp hub-admin.service /etc/systemd/system/ && sudo systemctl enable --now hub-admin
+[Unit]
+Description=Teaching Physics hub admin (tags and order of the apps)
+After=network.target
+
+[Service]
+User=hubadmin
+Group=hubadmin
+SupplementaryGroups=crosswords
+ExecStart=/usr/bin/python3 /opt/hub-admin/hubadmin.py --port 8040 --password-file /opt/crosswords/teacher-password --hub /var/www/teachingphysics/index.html --config /var/www/teachingphysics/hub-data/apps.json
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/www/teachingphysics/hub-data
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

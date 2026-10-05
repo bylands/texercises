@@ -31,6 +31,7 @@
     }
 
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
 
     body {
       margin: 0;
@@ -147,6 +148,52 @@
     .force { fill: none; stroke: #d24a0f; stroke-width: 2.5; }
     .forcehead { fill: #d24a0f; }
     .curve { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    /* the filter by tag (the tags come from /apps.json, set in the admin panel) */
+    .filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-bottom: 20px;
+    }
+
+    .filter button {
+      font: inherit;
+      font-size: 0.95rem;
+      color: var(--ink);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 14px;
+      cursor: pointer;
+    }
+
+    .filter button:hover {
+      border-color: var(--accent);
+    }
+
+    .filter button[aria-pressed="true"] {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--card);
+      font-weight: 600;
+    }
+
+    .app .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      list-style: none;
+      margin: 10px 0 0;
+      padding: 0;
+    }
+
+    .app .tags li {
+      font-size: 0.8rem;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 1px 9px;
+    }
   </style>
 </head>
 <body>
@@ -154,6 +201,8 @@
     <h1>Teaching Physics</h1>
     <p>Interactive exercises for physics lessons.</p>
   </header>
+
+  <nav id="filter" class="wrap filter" aria-label="Filter by topic" hidden></nav>
 
   <main class="wrap apps">
     <a class="app" href="/bulb-brightness/">
@@ -312,5 +361,58 @@
   <footer class="wrap">
     © Samuel Byland · <a href="https://mng.ch" target="_blank" rel="noopener">MNG Rämibühl</a> · 2026 · <a href="/privacy/">Privacy</a>
   </footer>
+  <script>
+    // Order, tags and the filter by tag, from /apps.json (written by the admin panel at /admin/).
+    // Without it, the cards stay as they are in this page. The chosen tag is kept in the address
+    // (?topic=…), so that a filtered page can be shared.
+    (function () {
+      const main = document.querySelector('main.apps'), nav = document.getElementById('filter');
+      const cards = [...main.querySelectorAll('a.app')];
+      const idOf = (a) => (a.getAttribute('href').match(/^\/([a-z0-9-]+)\/?$/) || [])[1];
+      const tagsOf = new Map();
+
+      function show(topic) {
+        cards.forEach((c) => { c.hidden = !!topic && !tagsOf.get(c).includes(topic); });
+        nav.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.topic || '') === (topic || ''))));
+        const url = new URL(location.href);
+        if (topic) url.searchParams.set('topic', topic); else url.searchParams.delete('topic');
+        history.replaceState(null, '', url);
+      }
+
+      function apply(cfg) {
+        const order = Array.isArray(cfg.order) ? cfg.order : [], tags = cfg.tags && typeof cfg.tags === 'object' ? cfg.tags : {};
+        const byId = new Map(cards.map((c) => [idOf(c), c]));
+        main.append(...order.filter((id) => byId.has(id)).map((id) => byId.get(id)), ...cards.filter((c) => !order.includes(idOf(c))));
+        cards.forEach((c) => {
+          const t = Array.isArray(tags[idOf(c)]) ? tags[idOf(c)].filter((x) => typeof x === 'string') : [];
+          tagsOf.set(c, t);
+          if (!t.length) return;
+          const ul = document.createElement('ul');
+          ul.className = 'tags';
+          ul.setAttribute('aria-label', 'Topics');
+          t.forEach((x) => { const li = document.createElement('li'); li.textContent = x; ul.append(li); });
+          c.querySelector('.text').append(ul);
+        });
+        const all = [...new Set([...tagsOf.values()].flat())].sort((a, b) => a.localeCompare(b));
+        if (!all.length) return;
+        nav.replaceChildren(...['', ...all].map((t) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = t || 'All';
+          if (t) b.dataset.topic = t;
+          b.addEventListener('click', () => show(t && b.getAttribute('aria-pressed') !== 'true' ? t : ''));
+          return b;
+        }));
+        nav.hidden = false;
+        const asked = new URLSearchParams(location.search).get('topic');
+        show(all.includes(asked) ? asked : '');
+      }
+
+      fetch('/apps.json', { cache: 'no-cache' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((cfg) => { if (cfg) apply(cfg); })
+        .catch(() => { /* no configuration yet: the page as it is */ });
+    })();
+  </script>
 </body>
 </html>
