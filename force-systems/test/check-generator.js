@@ -70,6 +70,13 @@ function checkExercise(ex, id) {
   if (ex.scenario === 'rope-pair' && t.table[1][ki('r')] !== ex.p.mu2 > 0) fail(`${id}: friction on the right box with mu2 = ${ex.p.mu2}`);
   if (['atwood'].includes(ex.scenario) && t.table.some((r) => r[ki('n')] || r[ki('r')])) fail(`${id}: normal force or friction on a hanging box`);
   t.boxes.forEach((b) => checkText(id, 'box name', b));
+  // ticking draws the forces in, those that do not act too, without resizing the drawing
+  const none = ex.taskFigure(new Set()), every = ex.taskFigure(new Set(t.boxes.flatMap((b, i) => t.kinds.map((k, j) => `${i}:${j}`))));
+  checkText(id, 'task figure with all forces ticked', every);
+  const vb = (svg) => svg.match(/viewBox="([^"]+)"/)[1];
+  if (vb(none) !== vb(every)) fail(`${id}: ticking forces resizes the drawing: ${vb(none)} → ${vb(every)}`);
+  const drawn = (every.match(/class="seq force k-[gnrsk]/g) || []).length;
+  if (drawn < t.boxes.length * t.kinds.length) fail(`${id}: ${drawn} arrows for ${t.boxes.length * t.kinds.length} ticks`);
   checkText(id, 'title', ex.title);
   checkText(id, 'text', ex.text);
   ex.hints.forEach((h, k) => checkText(id, `hint ${k + 1}`, h));

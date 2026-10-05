@@ -39,16 +39,61 @@
     s: () => L('push or pull from outside', 'Zug- oder Druckkraft von aussen'), k: () => L('rope or contact force', 'Seil- oder Kontaktkraft'),
   };
   // Which kinds of force act on which box: { boxes: [name], kinds, table[box][kind] }, from the
-  // forces of the drawing (those ending in 2 act on box 2, the others on box 1; a force of size
-  // zero, e.g. friction without a friction coefficient, does not act).
+  // forces of the drawing (those ending in 2 act on box 2, the others on box 1, unless the
+  // scenario says otherwise in forceOn; a force of size zero, e.g. friction without a friction
+  // coefficient, does not act). cells[box][kind] are the ids of the forces in a cell.
   function forceTable(scn, p, v) {
     const boxes = scn.boxes ? scn.boxes(p) : [L(`the box (${FS.q(p.m, 'kg')})`, `die Kiste (${FS.q(p.m, 'kg')})`)];
-    const table = boxes.map(() => KINDS.map(() => false));
+    const table = boxes.map(() => KINDS.map(() => false)), cells = boxes.map(() => KINDS.map(() => []));
     scn.scene(p, v, {}).forces.forEach((f) => {
-      const j = KINDS.indexOf(f.kind), i = scn.forceOn && f.id in scn.forceOn ? scn.forceOn[f.id] : /2$/.test(f.id) ? 1 : 0;
-      if (j >= 0 && i < boxes.length && f.mag > 1e-9) table[i][j] = true;
+      const j = KINDS.indexOf(f.kind), i = boxOf(scn, f);
+      if (j >= 0 && i < boxes.length && f.mag > 1e-9) { table[i][j] = true; cells[i][j].push(f.id); }
     });
-    return { boxes, kinds: KINDS.map((k) => ({ kind: k, name: KIND_NAMES[k]() })), table };
+    return { boxes, kinds: KINDS.map((k) => ({ kind: k, name: KIND_NAMES[k]() })), table, cells };
+  }
+  const boxOf = (scn, f) => (scn.forceOn && f.id in scn.forceOn ? scn.forceOn[f.id] : /2$/.test(f.id) ? 1 : 0);
+
+  // Arrows for the forces ticked in the table that do not act (or have no arrow), so that a
+  // wrong tick shows a force too: at a fixed length, placed and turned as such a force would be:
+  // a normal force pushing up from below, friction against the motion at the contact point, a
+  // push or pull from outside along the motion, a rope pulling up. The box's centre comes from
+  // its weight, the contact point from its normal force, the motion from the acceleration arrows.
+  const PHANTOM = 40; // px
+  function phantoms(scn, sc, t) {
+    const out = [], two = t.boxes.length > 1;
+    t.boxes.forEach((b, i) => {
+      const own = sc.forces.filter((f) => boxOf(scn, f) === i), of = (k) => own.find((f) => f.kind === k);
+      const C = of('g').at, N = of('n');
+      const mark = sc.marks.length === 1 ? sc.marks[0] : sc.marks.find((m) => m.id === `a${i + 1}`);
+      const m = mark ? mark.dir : null;
+      KINDS.forEach((k, j) => {
+        if (t.cells[i][j].length) return;
+        const zero = of(k); // e.g. friction of size zero: its place in the drawing
+        // each kind in a column of its own, beside the weight in the middle
+        const vertical = m && Math.abs(m[1]) > 0.5;
+        const place = zero ? { at: zero.at, dir: zero.dir }
+          : k === 'n' ? { at: [C[0] + 22, C[1] + 28], dir: [0, -1] }
+            : k === 'r' ? { at: N ? [N.at[0] - 24, N.at[1]] : [C[0] + 40, C[1] + 8], dir: m ? [-m[0], -m[1]] : [-1, 0] }
+              : k === 's' ? { at: vertical ? [C[0] - 24, C[1] - 6] : [C[0] + 16, C[1] - 14], dir: m || [1, 0] }
+                : { at: [C[0] - 20, C[1] - 26], dir: [0, -1] };
+        const key = { g: 'G', n: 'N', r: 'R', s: 'F', k: two ? 'K' : 'S' }[k];
+        out.push({ id: `ph${i}${k}`, kind: k, ...place, fixed: PHANTOM, sym: [key, two ? String(i + 1) : ''], lab: [8, 0] });
+      });
+    });
+    return out;
+  }
+
+  // The task with the forces ticked in the table drawn in: ticked { 'box:kind' } (see app.js).
+  function taskFigure(scn, p, v, t, ticked) {
+    const sc = scn.scene(p, v, { task: true });
+    sc.forces.push(...phantoms(scn, sc, t)); // always there, so that the drawing keeps its size
+    const ids = new Set();
+    t.boxes.forEach((b, i) => KINDS.forEach((k, j) => {
+      if (!ticked.has(`${i}:${j}`)) return;
+      if (t.cells[i][j].length) t.cells[i][j].forEach((id) => ids.add(id));
+      else ids.add(`ph${i}${k}`);
+    }));
+    return sc.render({ task: true, ticked: ids });
   }
 
   function exercise(scn, p) {
@@ -72,6 +117,8 @@
       forces: forceTable(scn, p, v),
       fields,
       figure: (view = { task: true }) => scn.scene(p, v, view).render(view),
+      // the task with the ticked forces (Set of 'box:kind') drawn in
+      taskFigure: (ticked) => taskFigure(scn, p, v, forceTable(scn, p, v), ticked),
       solutionFigure: () => scn.scene(p, v, {}).render({ show: all }),
       hints: scn.hints(p, v),
       solution: steps.map((s) => s.text),

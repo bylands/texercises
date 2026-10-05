@@ -19,7 +19,7 @@
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
       fill: 'Fill in all fields, then check again.',
-      forcesHead: '1 · Forces on each box', resultsHead: '2 · Results', forcesNote: (n) => (n > 1 ? 'Tick every force that acts on each box.' : 'Tick every force that acts on the box.'), box: 'Box',
+      forcesHead: '1 · Forces on each box', resultsHead: '2 · Results', forcesNote: (n) => (n > 1 ? 'Tick every force that acts on each box. Each force you tick appears in the drawing.' : 'Tick every force that acts on the box. Each force you tick appears in the drawing.'), box: 'Box',
       tableOk: '✓ The forces are right.', tableBad: (n) => `✗ ${n === 1 ? 'One entry is' : `${n} entries are`} not right yet.`,
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
@@ -34,7 +34,7 @@
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
       fill: 'Fülle alle Felder aus und prüfe dann nochmals.',
-      forcesHead: '1 · Kräfte auf jede Kiste', resultsHead: '2 · Resultate', forcesNote: (n) => (n > 1 ? 'Kreuze jede Kraft an, die auf die jeweilige Kiste wirkt.' : 'Kreuze jede Kraft an, die auf die Kiste wirkt.'), box: 'Kiste',
+      forcesHead: '1 · Kräfte auf jede Kiste', resultsHead: '2 · Resultate', forcesNote: (n) => (n > 1 ? 'Kreuze jede Kraft an, die auf die jeweilige Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.' : 'Kreuze jede Kraft an, die auf die Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.'), box: 'Kiste',
       tableOk: '✓ Die Kräfte stimmen.', tableBad: (n) => `✗ ${n === 1 ? 'Ein Feld stimmt' : `${n} Felder stimmen`} noch nicht.`,
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
@@ -136,6 +136,14 @@
     return `<table class="ftable"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>`;
   }
 
+  // The task's drawing with every force ticked in the table drawn in, whether it acts or not:
+  // the drawing shows what the student claims.
+  function drawTicked() {
+    const ticked = new Set([...document.querySelectorAll('#ftable input:checked')].map((b) => `${b.dataset.i}:${b.dataset.j}`));
+    $('#figure').innerHTML = ex.taskFigure(ticked);
+    markScrollable();
+  }
+
   function render() {
     $('#title').textContent = ex.title;
     // the difficulty, as in the arcade: ★★★☆☆
@@ -147,7 +155,7 @@
     stars.setAttribute('role', 'img');
     $('#title').append(' ', stars);
     $('#prompt').innerHTML = ex.text;
-    $('#figure').innerHTML = ex.figure({ task: true });
+    $('#figure').innerHTML = ex.taskFigure(new Set());
     $('#forces-note').textContent = ui().forcesNote(ex.forces.boxes.length);
     $('#ftable').innerHTML = forcesHtml();
     $('#ftable-fb').textContent = '';
@@ -288,6 +296,7 @@
       st = keep;
       ex.fields.forEach((f, k) => { $(`#in-${f.key}`).value = values[k]; });
       document.querySelectorAll('#ftable input').forEach((b, k) => { b.checked = ticks[k]; });
+      drawTicked();
       if (st.checked) feedback();
       showStatus(st.status);
       showHints();
@@ -353,6 +362,7 @@
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
+    $('#ftable').addEventListener('change', drawTicked);
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);

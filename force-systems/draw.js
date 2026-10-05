@@ -58,7 +58,7 @@
       if (label) this.text(...at(6, h - 17), label, 'lbl mass', 'start');
       return at;
     }
-    // A force { id, kind: g|n|r|s|k|comp, at, dir (unit vector), mag (N), sym: [key, index],
+    // A force { id, kind: g|n|r|s|k|comp, at, dir (unit vector), mag (N) or fixed (length in px), sym: [key, index],
     // value (its label in the task), task: 'value'|'sym' (shown in the task), lab: offset of the
     // label from the tip (from the tail with labTail), max: the longest it may be drawn }. The arrow starts where the force
     // acts, also for pushes.
@@ -77,14 +77,18 @@
     render(view = {}) {
       const task = !!view.task, hl = view.hl || new Set();
       const cls = (s, kind) => `force k-${kind}${hl.has(s.id) ? ' hl' : hl.size ? ' dim' : ''}`;
-      const shown = (s) => (task ? !!s.task : !view.show || view.show.has(s.id));
+      // in the task, the given forces and those ticked in the table of forces (view.ticked)
+      const shown = (s) => (task ? !!s.task || !!(view.ticked && view.ticked.has(s.id)) : !view.show || view.show.has(s.id));
       // The task scales the forces it shows (often just the given one, drawn at full length); the
       // free-body diagram scales all forces, so that arrows keep their lengths from step to step.
       const scaleOf = (list) => MAX_LEN / Math.max(...list.map((s) => s.mag), 1e-9);
-      const all = this.forces.filter((s) => s.mag > 1e-9);
-      const scale = task ? scaleOf(all.filter(shown)) : scaleOf(all), scaleAll = scaleOf(all);
+      // forces with a fixed length (s.fixed, e.g. a force ticked that does not act) do not count
+      // for the scale; with the table of forces, the task uses the diagram's scale throughout, so
+      // that ticking a force does not resize the others
+      const all = this.forces.filter((s) => s.mag > 1e-9 || s.fixed), sized = all.filter((s) => !s.fixed);
+      const scaleAll = scaleOf(sized), scale = task && !view.ticked ? scaleOf(sized.filter(shown)) : scaleAll;
       // an arrow's length; s.max caps it (e.g. a push that would cross the whole body)
-      const length = (s, k) => Math.min(Math.max(MIN_LEN, s.mag * k), s.max || Infinity);
+      const length = (s, k) => (s.fixed ? s.fixed : Math.min(Math.max(MIN_LEN, s.mag * k), s.max || Infinity));
       const out = [], bounds = new Scene(0, 0);
       bounds.box0 = [...this.box0];
       const label = (s, tip, draw, count) => {
