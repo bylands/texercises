@@ -56,16 +56,16 @@
   const fdiv = (a, b) => F(a.n * b.d, a.d * b.n);
   const fval = (f) => f.n / f.d;
 
-  // Numbers with a decimal point in English, a decimal comma in German.
+  // Numbers with a decimal point (in both languages).
   function fmt(x) {
     const s = Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x))
       : Math.abs(x) >= 1 ? String(parseFloat(x.toFixed(2))) : String(parseFloat(x.toPrecision(2)));
-    return de() ? s.replace('.', ',') : s;
+    return s;
   }
 
   // Decimal if it terminates within two places, otherwise a fraction.
   function ftex(f) {
-    if (f.d === 1 || (100 % f.d === 0)) return fmt(fval(f)).replace(',', '{,}');
+    if (f.d === 1 || (100 % f.d === 0)) return fmt(fval(f));
     return M`\tfrac{${f.n}}{${f.d}}`;
   }
 

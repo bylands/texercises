@@ -53,8 +53,8 @@
   // ---------------------------------------------------------------- numbers
   // At most one decimal place (given values such as friction coefficients may ask for more).
   const round = (x, dec = 1) => (Number.isFinite(x) ? Number(x.toFixed(dec)) + 0 : 0);
-  const num = (x, dec) => { const s = String(round(x, dec)); return getLang() === 'de' ? s.replace('.', ',') : s; };
-  const texNum = (x, dec) => (getLang() === 'de' ? String(round(x, dec)).replace('.', '{,}') : String(round(x, dec)));
+  const num = (x, dec) => String(round(x, dec)); // decimal point in both languages
+  const texNum = (x, dec) => String(round(x, dec));
 
   const UNITS = { N: 'N', a: 'm/s²', kg: 'kg', deg: '°' };
   const TEX_UNITS = { N: '\\mathrm{N}', a: '\\mathrm{m/s^2}', kg: '\\mathrm{kg}', deg: '^\\circ' };

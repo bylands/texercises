@@ -8,8 +8,7 @@
   const { T, PHI_MAX, V_MAX, SHAPE, flux, volt } = root.Induction || require('./generator.js');
   const Lang = root.Lang || require('./lang.js');
   const say = (en, de) => Lang.L(en, de);
-  // decimal comma in German
-  const dec = (x) => say(String(x), String(x).replace('.', ','));
+  const dec = (x) => String(x); // decimal point in both languages
   const W = 280, H = 196, L = 34, R = 44, TOP = 44, B = 26;
   const num = (x) => (x > 0 ? '+' + dec(x) : x < 0 ? '−' + dec(-x) : '0');
   const r1 = (x) => Math.round(x * 10) / 10;

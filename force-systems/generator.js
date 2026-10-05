@@ -22,7 +22,7 @@
 
   // What a wrong value suggests: the answer under a typical wrong idea (scenarios may say it better).
   const WHY = {
-    g: () => L('That is the value for g = 9.81 m/s². Here, use g = 10 m/s².', 'Das ist der Wert für g = 9,81 m/s². Rechne hier mit g = 10 m/s².'),
+    g: () => L('That is the value for g = 9.81 m/s². Here, use g = 10 m/s².', 'Das ist der Wert für g = 9.81 m/s². Rechne hier mit g = 10 m/s².'),
     swap: () => L('Sine and cosine swapped? Check which component lies next to the angle.', 'Sinus und Kosinus vertauscht? Prüfe, welche Komponente am Winkel anliegt.'),
     flatN: () => L('The normal force is not equal to the weight here.', 'Die Normalkraft ist hier nicht gleich der Gewichtskraft.'),
     noFric: () => L('Friction is missing.', 'Die Reibung fehlt.'),

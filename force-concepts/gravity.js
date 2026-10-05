@@ -117,7 +117,7 @@
           `${roll ? 'Sobald die Kugeln die Tische verlassen haben, berührt sie nichts mehr' : 'Nichts berührt die Kugeln'} (Luftwiderstand vernachlässigbar). Die einzige Kraft auf jede Kugel ist ihre Gewichtskraft ${FG} = <i>m·g</i>, senkrecht nach unten: ${qty(mH * G, 'N')} auf ${H.acc}, ${qty(mL * G, 'N')} auf ${Lt.acc} — ${k}-mal weniger.`) },
       { title: T('Acceleration', 'Beschleunigung'), figure: figure({ forces: true, acc: !roll }),
         text: T(`Newton's second law: <i>a</i> = ${FG}/<i>m</i> = <i>m·g</i>/<i>m</i> = <i>g</i> ≈ 9.8 m/s² for both balls. ${k} times the force, but also ${k} times the mass to accelerate: the mass cancels.`,
-          `Zweites Newtonsches Gesetz: <i>a</i> = ${FG}/<i>m</i> = <i>m·g</i>/<i>m</i> = <i>g</i> ≈ 9,8 m/s² für beide Kugeln. ${k}-fache Kraft, aber auch ${k}-fache Masse, die beschleunigt werden muss: Die Masse kürzt sich weg.`) },
+          `Zweites Newtonsches Gesetz: <i>a</i> = ${FG}/<i>m</i> = <i>m·g</i>/<i>m</i> = <i>g</i> ≈ 9.8 m/s² für beide Kugeln. ${k}-fache Kraft, aber auch ${k}-fache Masse, die beschleunigt werden muss: Die Masse kürzt sich weg.`) },
       { title: T('Fall time', 'Fallzeit'), figure: figure({ strobe: true }),
         text: T(`Same acceleration, same height, both start with no vertical speed: both take the same time, <i>t</i> = √(2<i>h</i>/<i>g</i>) ≈ ${qty(t, 's')}, and are at the same height at every moment.`,
           `Gleiche Beschleunigung, gleiche Höhe, beide starten ohne vertikale Geschwindigkeit: Beide brauchen gleich lange, <i>t</i> = √(2<i>h</i>/<i>g</i>) ≈ ${qty(t, 's')}, und sind in jedem Moment auf gleicher Höhe.`) +

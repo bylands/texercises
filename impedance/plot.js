@@ -48,8 +48,7 @@
     for (const m of STEPS) if (m * 10 ** e >= (max / 5) * (1 - 1e-9)) return m * 10 ** e;
     return 10 ** (e + 1);
   }
-  // tick labels: a decimal comma in German, as everywhere else in the app
-  const trim = (x) => L(String(Number(x.toPrecision(6))), String(Number(x.toPrecision(6))).replace('.', ',')).replace('-', '−');
+  const trim = (x) => String(Number(x.toPrecision(6))).replace('-', '−');
 
   // Grid, ticks and axis labels.
   function grid(ax, mode, s) {

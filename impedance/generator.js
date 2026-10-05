@@ -14,7 +14,6 @@
   // The page language (lang.js, shared by the apps); English where it is not loaded.
   const Lang = root.Lang || (typeof require === 'function' ? require('./lang.js') : null);
   const L = (en, de) => (Lang ? Lang.L(en, de) : en);
-  const de = () => !!Lang && Lang.get() === 'de';
 
   const TOL = 0.05;                     // answers within 5 % are right
   // Difficulty 1–5 of each kind of circuit, and the practice levels made of them.
@@ -118,12 +117,10 @@
   const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
   const sup = (n) => String(n).split('').map((ch) => SUP[ch]).join('');
   // n significant digits, three by default (trailing zeros kept), with a proper minus sign.
-  // (a decimal comma in German)
   function digits(x, n = 3) {
     if (Math.abs(x) < 1e-12) return '0';
     let s = Math.abs(x).toPrecision(n);
     if (s.includes('e')) s = String(Number(Math.abs(x).toPrecision(n)));
-    if (de()) s = s.replace('.', ',');
     return (x < 0 ? '−' : '') + s;
   }
   const UNITS = {
@@ -136,15 +133,15 @@
   // A value with a unit and n significant digits: { html, tex }. Units: ohm, H, F, ohms (Ω·s) and w (rad/s).
   function q(x, unit, n = 3) {
     if (unit === 'w') {
-      if (Math.abs(x) < 1e4) return { html: `${digits(x)} rad/s`, tex: `${digits(x).replace('−', '-').replace(',', '{,}')}\\,\\mathrm{rad/s}` };
+      if (Math.abs(x) < 1e4) return { html: `${digits(x)} rad/s`, tex: `${digits(x).replace('−', '-')}\\,\\mathrm{rad/s}` };
       const e = 3 * Math.floor(Math.log10(Math.abs(x) * (1 + 1e-12)) / 3), d = digits(x / 10 ** e);
-      return { html: `${d}·10${sup(e)} rad/s`, tex: `${d.replace('−', '-').replace(',', '{,}')}\\cdot 10^{${e}}\\,\\mathrm{rad/s}` };
+      return { html: `${d}·10${sup(e)} rad/s`, tex: `${d.replace('−', '-')}\\cdot 10^{${e}}\\,\\mathrm{rad/s}` };
     }
     const u = UNITS[unit], ps = u.prefixes;
     let p = ps[0];
     for (const k of ps) if (Math.abs(x) >= 10 ** k * (1 - 5e-4)) p = k;
     const d = digits(x / 10 ** p, n), [ph, pt] = PREFIX[p];
-    return { html: `${d} ${ph}${u.html}`, tex: `${d.replace('−', '-').replace(',', '{,}')}\\,${pt}${u.tex}` };
+    return { html: `${d} ${ph}${u.html}`, tex: `${d.replace('−', '-')}\\,${pt}${u.tex}` };
   }
   const H = (x, unit, n) => q(x, unit, n).html;
   const T = (x, unit) => q(x, unit).tex;

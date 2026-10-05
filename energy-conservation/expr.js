@@ -144,7 +144,7 @@
   function tex(n) {
     const wrap = (c, min) => (PREC[c.k] < min ? `\\left(${tex(c)}\\right)` : tex(c));
     switch (n.k) {
-      case 'num': return String(n.v).replace('.', root.EC && root.EC.getLang() === 'de' ? '{,}' : '.');
+      case 'num': return String(n.v);
       case 'var': return VTEX(n.v);
       case 'par': return `\\left(${tex(n.a)}\\right)`;
       case 'neg': return `-${wrap(n.a, 3)}`;

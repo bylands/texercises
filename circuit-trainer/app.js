@@ -261,7 +261,7 @@
     // the options in a fixed order: by size
     options.sort((a, b) => a.value - b.value);
     const unitTex = { V: '\\mathrm{V}', I: '\\mathrm{mA}', R: '\\mathrm{k\\Omega}' }[q];
-    const num = (x) => { const s = String(parseFloat(x.toFixed(2))); return Lang.get() === 'de' ? s.replace('.', '{,}') : s; };
+    const num = (x) => String(parseFloat(x.toFixed(2)));
     return {
       title: e.title,
       // only the quantity asked for: the exercise text lists all its unknowns
@@ -285,7 +285,7 @@
       tag: L('Find currents, voltages and resistances: as many as you can in <b>5 minutes</b>, four answers each.',
         'Bestimme Ströme, Spannungen und Widerstände: so viele wie möglich in <b>5 Minuten</b>, je vier Antworten.'),
       rule: L('Questions get harder as you go. Choose one of four answers, or press 1–4. The values are multiples of 0.5, made for mental arithmetic (V = kΩ · mA).',
-        'Die Fragen werden nach und nach schwieriger. Wähle eine von vier Antworten oder drücke 1–4. Die Werte sind Vielfache von 0,5, gemacht fürs Kopfrechnen (V = kΩ · mA).'),
+        'Die Fragen werden nach und nach schwieriger. Wähle eine von vier Antworten oder drücke 1–4. Die Werte sind Vielfache von 0.5, gemacht fürs Kopfrechnen (V = kΩ · mA).'),
       example: L('giving one part the whole battery voltage', 'einem Teil die ganze Batteriespannung zu geben'),
     }),
     // a mixed circuit with all its currents and voltages, and Ohm's law

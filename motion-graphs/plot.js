@@ -20,8 +20,7 @@
   }
   const UNIT = { s: 'm', v: 'm/s', a: 'm/s²' };
   const f1 = (x) => Math.round(x * 10) / 10;
-  // decimal comma in German
-  const dec = (x) => say(String(x), String(x).replace('.', ','));
+  const dec = (x) => String(x); // decimal point in both languages
   const num = (x) => (x < 0 ? '−' + dec(-x) : dec(x));
 
   const X = (t) => f1(L + (t / T) * (W - L - R));

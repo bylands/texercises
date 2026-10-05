@@ -23,8 +23,8 @@
   const Circuit = root.Circuit || require('./circuit.js');
   const Lang = root.Lang || require('./lang.js');
   const L = (en, de) => Lang.L(en, de);
-  // decimals with a comma in German (in KaTeX as {,})
-  const comma = (s, tex) => (Lang.get() === 'de' ? s.replace('.', tex ? '{,}' : ',') : s);
+  // decimals: a point in both languages
+  const comma = (s) => s;
   const M = String.raw;
   const RS = [10, 20, 30, 40, 50, 60, 80, 100, 120, 150, 200, 300, 400, 500]; // Ω
   const LS = [0.1, 0.2, 0.5, 1, 2];              // H: irrelevant right after switching

@@ -127,9 +127,9 @@
   const FL = (k) => `F_${sub(k)}`;                    // label in a picture
   const list = (xs) => `<ul>${xs.map((x) => `<li>${x}</li>`).join('')}</ul>`;
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-  // Numbers with sig significant digits, without trailing zeros (decimal comma in German, as in
-  // the other apps); units after a no-break space.
-  const num = (x, sig = 2) => { const t = String(Number(x.toPrecision(sig))); return getLang() === 'de' ? t.replace('.', ',') : t; };
+  // Numbers with sig significant digits, without trailing zeros (a decimal point in both
+  // languages, as in the other apps); units after a no-break space.
+  const num = (x, sig = 2) => String(Number(x.toPrecision(sig))); // decimal point in both languages
   const qty = (x, unit, sig = 2) => `${num(x, sig)}&nbsp;${unit}`;
   const deg = (rad) => Math.round((rad * 180) / Math.PI);
 

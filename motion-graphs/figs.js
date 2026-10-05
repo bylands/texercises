@@ -10,7 +10,7 @@
   const L = (en, de) => Lang.L(en, de);
   const UNIT = { s: 'm', v: 'm/s' };
   const f1 = (x) => Math.round(x * 10) / 10;
-  const dec = (x) => L(String(x), String(x).replace('.', ','));
+  const dec = (x) => String(x); // decimal point in both languages
   const num = (x) => (x < 0 ? '−' + dec(-x) : dec(x));
 
   // ---------------------------------------------------------------- graphs

@@ -50,10 +50,10 @@
   // ---------------------------------------------------------------- numbers
   // Values as given (they are chosen nice), results with three significant digits.
   const clean = (x) => Number(x.toPrecision(12)) + 0;
-  const str = (x) => (getLang() === 'de' ? String(x).replace('.', ',') : String(x));
+  const str = (x) => String(x); // decimal point in both languages
   const sig = (x, n = 3) => (Number.isFinite(x) ? clean(Number(x.toPrecision(n))) : 0);
   const num = (x) => str(clean(x));
-  const texNum = (x) => num(x).replace(',', '{,}');
+  const texNum = (x) => num(x);
   const UNITS = { m: 'm', v: 'm/s', kg: 'kg', k: 'N/m', g: 'm/s²' };
   const TEX_UNITS = { m: '\\mathrm{m}', v: '\\mathrm{\\tfrac{m}{s}}', kg: '\\mathrm{kg}', k: '\\mathrm{\\tfrac{N}{m}}', g: '\\mathrm{\\tfrac{m}{s^2}}' };
   // A quantity: "1.8 m", in text or in KaTeX.
@@ -61,7 +61,7 @@
   const tq = (x, u) => `${texNum(x)}\\,${TEX_UNITS[u]}`;
   // A result, rounded: "5.42 m/s".
   const rq = (x, u) => `${str(sig(x))} ${UNITS[u]}`;
-  const trq = (x, u) => `${str(sig(x)).replace(',', '{,}')}\\,${TEX_UNITS[u]}`;
+  const trq = (x, u) => `${str(sig(x))}\\,${TEX_UNITS[u]}`;
 
   // Fractions n/d, reduced; TeX \tfrac{n}{d}, or the integer.
   const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));

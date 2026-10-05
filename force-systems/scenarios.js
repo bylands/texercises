@@ -45,7 +45,7 @@
   const is345 = (p) => Math.abs(p.alpha - A345) < 1e-9;
   const angleLabel = (p) => (is345(p) ? '<tspan font-style="italic">α</tspan>' : q(p.alpha, 'deg'));
   const trig = (fn, p) => (is345(p) ? FS.texNum(fn === 'sin' ? 0.6 : 0.8) : `\\${fn}${tq(p.alpha, 'deg')}`);
-  const sinCos = () => L('sin α = 0.6 and cos α = 0.8', 'sin α = 0,6 und cos α = 0,8');
+  const sinCos = () => L('sin α = 0.6 and cos α = 0.8', 'sin α = 0.6 und cos α = 0.8');
 
   const step = (rule, text, show, hl) => ({ text: (rule ? `<p class="step-rule">${rule}</p>` : '') + text, show, hl: hl || show });
 

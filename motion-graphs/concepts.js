@@ -559,7 +559,7 @@
         L(`The changes of position per second: ${gapText}.`, `Die Ortsänderungen pro Sekunde: ${gapText}.`),
         d === 2 ? L(`So the s(t) graph goes through ${xs.map((x, k) => `(${k} s, ${num(x)} m)`).join(', ')}, curved like a parabola.`, `Der s(t)-Graph geht also durch ${xs.map((x, k) => `(${k} s, ${num(x)} m)`).join(', ')}, gekrümmt wie eine Parabel.`)
           : L(`The mean velocity in each second is reached in its middle: v(0.5 s) = ${sval(gaps[0], 'm/s')}, v(1.5 s) = ${sval(gaps[1], 'm/s')}, …; v(t) is the straight line through these points.`,
-            `Die mittlere Geschwindigkeit jeder Sekunde wird in deren Mitte erreicht: v(0,5 s) = ${sval(gaps[0], 'm/s')}, v(1,5 s) = ${sval(gaps[1], 'm/s')}, …; v(t) ist die Gerade durch diese Punkte.`),
+            `Die mittlere Geschwindigkeit jeder Sekunde wird in deren Mitte erreicht: v(0.5 s) = ${sval(gaps[0], 'm/s')}, v(1.5 s) = ${sval(gaps[1], 'm/s')}, …; v(t) ist die Gerade durch diese Punkte.`),
       ],
       steps: [
         step(L('Distances per second', 'Abstände pro Sekunde'), L(`From one dot to the next, the cart moves: ${gapText}. They change by ${sval(acc, 'm')} each second: a constant acceleration a = ${sval(acc, 'm/s²')}.`,

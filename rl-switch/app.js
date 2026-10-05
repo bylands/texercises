@@ -272,7 +272,7 @@
     const step = mA ? (Math.abs(f.value) >= 100 ? 50 : 10) : (f.value >= 10 ? 5 : 1);
     [2 * f.value, f.value / 2, f.value + step, f.value - step, f.value + 2 * step, 3 * f.value].forEach((x) => add(Math.round(x * 10) / 10, null));
     options.sort((a, b) => a.value - b.value);
-    const num = (x) => { const s = String(parseFloat(x.toFixed(2))).replace('-', '−'); return Lang.get() === 'de' ? s.replace('.', '{,}') : s; };
+    const num = (x) => String(parseFloat(x.toFixed(2))).replace('-', '−');
     const unitTex = mA ? '\\mathrm{mA}' : '\\mathrm{V}';
     return {
       title: e.title,
