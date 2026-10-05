@@ -329,6 +329,28 @@
       </div>
     </a>
 
+    <a class="app" href="/torque/">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A beam balanced on a support: a light load far out on the left, a heavy load close in on the right">
+        <path class="guide" d="M50 40 H120 M120 40 H155 M50 34 V46 M120 34 V46 M155 34 V46"/>
+        <rect class="res" x="30" y="56" width="180" height="9" rx="1"/>
+        <path class="wire" d="M120 65 L106 92 H134 Z M98 92 H142"/>
+        <path class="wire" d="M50 65 V92 M155 65 V88"/>
+        <rect class="res" x="39" y="92" width="22" height="18" rx="1"/>
+        <rect class="res" x="138" y="88" width="34" height="30" rx="1"/>
+        <path class="force" d="M50 110 V128"/>
+        <path class="forcehead" d="M45 124 L50 134 L55 124 Z"/>
+        <path class="force" d="M155 118 V132"/>
+        <path class="forcehead" d="M150 128 L155 138 L160 128 Z"/>
+        <text class="label" x="78" y="32">d<tspan dy="3">1</tspan></text>
+        <text class="label" x="131" y="32">d<tspan dy="3">2</tspan></text>
+        <text class="label" x="112" y="112">D</text>
+      </svg>
+      <div class="text">
+        <h2>Torque</h2>
+        <p>Lever arms and torques, levers in balance, where to hang a beam, and the centre of mass of wire figures.</p>
+      </div>
+    </a>
+
     <a class="app" href="/coe/">
       <svg viewBox="0 0 240 150" role="img" aria-label="A ball dropped from a height and halfway down, with bars of its potential and kinetic energy">
         <path class="axis" d="M14 112 H100 M124 112 H210"/>
@@ -451,6 +473,7 @@
         'force-systems': ['Kräftesysteme', 'Kisten, Seile, Rollen und schiefe Ebenen: Bestimme Kräfte und Beschleunigungen mit dem Aktionsprinzip.', 'Eine Kiste wird einen Hang hinaufgezogen: Ihre Gewichtskraft zeigt nach unten, die Zugkraft hangaufwärts'],
         'induction-match': ['Induktion zuordnen', 'Ordne Flussdiagramme den induzierten Spannungen zu: Es zählt die Steigung, nicht der Wert.', 'Ein Flussdiagramm, das steigt, gleich bleibt und fällt, und die induzierte Spannung: negativ, null, dann positiv'],
         'rl-switch': ['Schaltvorgänge mit Spulen', 'Unmittelbar nach dem Umlegen eines Schalters in einem Stromkreis mit Spulen: Der Spulenstrom kann nicht springen.', 'Stromkreis mit einer Batterie, einem Schalter, einem Widerstand und einer Spule'],
+        torque: ['Drehmoment', 'Hebelarme und Drehmomente, Hebel im Gleichgewicht, wo man einen Balken aufhängt, und der Schwerpunkt von Drahtfiguren.', 'Ein Balken im Gleichgewicht auf einer Stütze: links eine leichte Last weit aussen, rechts eine schwere Last nahe an der Stütze'],
         'motion-graphs': ['Bewegungsdiagramme', 'Tempo und Richtung, Wertetabellen, Stroboskopbilder, Steigungen und Flächen: vom Ort zur Geschwindigkeit und zurück.', 'Ein Ort-Zeit-Diagramm, das nach oben gekrümmt ist, und seine Geschwindigkeit: eine steigende Gerade'],
       };
       const parts = (c) => [c.querySelector('h2'), c.querySelector('.text p'), c.querySelector('svg')];
