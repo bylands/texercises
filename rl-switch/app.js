@@ -374,7 +374,7 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
-    m = h.match(/^(easy|medium|hard)-(\d+)$/);
+    m = h.match(/^(easy|medium|hard|mixed)-(\d+)$/);
     if (m) {
       setMode('practice');
       document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;

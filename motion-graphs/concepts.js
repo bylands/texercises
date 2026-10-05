@@ -144,6 +144,19 @@
     const line = (n, p, v) => L(`${n}: from ${val(p[0], 'm')} at t = 0 to ${val(p[1], 'm')} at t = 10 s, so ${sub('v', n)} = (${num(p[1])} m − ${p[0] < 0 ? `(${num(p[0])} m)` : `${num(p[0])} m`}) / 10 s = ${sval(v, 'm/s')}`,
       `${n}: von ${val(p[0], 'm')} bei t = 0 nach ${val(p[1], 'm')} bei t = 10 s, also ${sub('v', n)} = (${num(p[1])} m − ${p[0] < 0 ? `(${num(p[0])} m)` : `${num(p[0])} m`}) / 10 s = ${sval(v, 'm/s')}`);
     const dots = [[0, A[0]], [T, A[1]], [0, B[0]], [T, B[1]]];
+    // a slope triangle for each line over the same 5 s, A's in the first half, B's in the second,
+    // so that they do not lie on top of each other
+    const H = T / 2, sA = (t) => A[0] + vA * t, sB = (t) => B[0] + vB * t;
+    const dsA = vA * H, dsB = vB * H;
+    const ds = (x) => `Δ<tspan class="it">s</tspan> = ${x > 0 ? '+' : ''}${num(round(x))} m`, dt = `Δ<tspan class="it">t</tspan> = ${num(H)} s`;
+    const tris = [
+      { t0: 0, y0: sA(0), t1: H, y1: sA(H), corner: 'end', dt, dy: ds(dsA) },
+      // B's Δt inside its triangle: where the lines cross, A passes just outside it
+      { t0: H, y0: sB(H), t1: T, y1: sB(T), corner: 'end', dt, dy: ds(dsB), dtIn: true },
+    ];
+    const rises = (v) => (v > 0 ? L('rises', 'steigt') : L('falls', 'fällt'));
+    const dirOf = (v) => (v > 0 ? L('in the positive direction', 'in positiver Richtung') : L('in the negative direction', 'in negativer Richtung'));
+    const PQ = Q === 'A' ? A : B, dsQ = PQ[1] - PQ[0];
     return finish('compare', seed, d, {
       data: { A, B, fast: F, asked: Q },
       title: L('Who is faster?', 'Wer ist schneller?'),
@@ -160,10 +173,18 @@
           `Vergleiche die Beträge |${sub('v', 'A')}| = ${val(Math.abs(vA), 'm/s')} und |${sub('v', 'B')}| = ${val(Math.abs(vB), 'm/s')}: Für das Tempo zählt die Richtung (das Vorzeichen) nicht.`),
       ],
       steps: [
-        step(L('Reading off', 'Ablesen'), L('Where is each vehicle at the start and at the end? The marked points can be read from the grid.', 'Wo ist jedes Fahrzeug am Anfang und am Ende? Die markierten Punkte lassen sich am Raster ablesen.'), fig({ dots })),
-        step(L('Velocities', 'Geschwindigkeiten'), `${line('A', A, vA)}.<br>${line('B', B, vB)}.`, fig({ dots })),
-        step(L('Comparing', 'Vergleichen'), L(`${F} changes its position by ${val(Math.abs(fastIsA ? vA : vB), 'm')} per second, ${Sl} only by ${val(Math.abs(fastIsA ? vB : vA), 'm')}: <b>${F} is faster</b>.${d === 2 ? ` ${F} moves in the negative direction, but that does not make it slower.` : ` ${Sl} lies higher, but that is its position, not its speed.`}`,
-          `${F} ändert seinen Ort pro Sekunde um ${val(Math.abs(fastIsA ? vA : vB), 'm')}, ${Sl} nur um ${val(Math.abs(fastIsA ? vB : vA), 'm')}: <b>${F} ist schneller</b>.${d === 2 ? ` ${F} fährt in negativer Richtung, ist deshalb aber nicht langsamer.` : ` ${Sl} liegt höher, aber das ist sein Ort, nicht sein Tempo.`}`), fig()),
+        step(L('The slope is the velocity', 'Die Steigung ist die Geschwindigkeit'),
+          L('In an s(t) graph, the slope of the line is the velocity. Its <b>sign</b> gives the direction: a rising line means motion in the positive direction (v &gt; 0), a falling line motion in the negative direction (v &lt; 0). Its <b>steepness</b> gives the speed: the steeper the line, the more metres per second. How high a line lies is only the position.',
+            'Im s(t)-Diagramm ist die Steigung der Geraden die Geschwindigkeit. Ihr <b>Vorzeichen</b> gibt die Richtung an: Eine steigende Gerade bedeutet Bewegung in positiver Richtung (v &gt; 0), eine fallende Bewegung in negativer Richtung (v &lt; 0). Ihre <b>Steilheit</b> gibt das Tempo an: Je steiler die Gerade, desto mehr Meter pro Sekunde. Wie hoch eine Gerade liegt, ist nur der Ort.'), fig()),
+        step(L('The sign of the slope', 'Das Vorzeichen der Steigung'),
+          L(`A ${rises(vA)}: it moves ${dirOf(vA)}, ${sub('v', 'A')} ${vA > 0 ? '&gt;' : '&lt;'} 0. B ${rises(vB)}: it moves ${dirOf(vB)}, ${sub('v', 'B')} ${vB > 0 ? '&gt;' : '&lt;'} 0.${d === 2 ? ' The direction says nothing yet about who is faster.' : ''}`,
+            `A ${rises(vA)}: Es bewegt sich ${dirOf(vA)}, ${sub('v', 'A')} ${vA > 0 ? '&gt;' : '&lt;'} 0. B ${rises(vB)}: Es bewegt sich ${dirOf(vB)}, ${sub('v', 'B')} ${vB > 0 ? '&gt;' : '&lt;'} 0.${d === 2 ? ' Über das Tempo sagt die Richtung noch nichts.' : ''}`), fig({ dots })),
+        step(L('The steepness: who is faster', 'Die Steilheit: Wer ist schneller'),
+          L(`The slope triangles over the same ${num(H)} s: A changes its position by ${val(Math.abs(dsA), 'm')}, B by ${val(Math.abs(dsB), 'm')}. ${F}'s line is steeper, so <b>${F} is faster</b>.${d === 2 ? ` That ${F}'s line falls only means that ${F} moves in the negative direction; it does not make ${F} slower.` : ` ${Sl}'s line lies higher, but that is its position, not its speed.`}`,
+            `Die Steigungsdreiecke über dieselben ${num(H)} s: A ändert seinen Ort um ${val(Math.abs(dsA), 'm')}, B um ${val(Math.abs(dsB), 'm')}. Die Gerade von ${F} ist steiler, also <b>ist ${F} schneller</b>.${d === 2 ? ` Dass die Gerade von ${F} fällt, heisst nur, dass sich ${F} in negativer Richtung bewegt; langsamer ist ${F} deshalb nicht.` : ` Die Gerade von ${Sl} liegt höher, aber das ist der Ort, nicht das Tempo.`}`), fig({ tris })),
+        step(L(`The value of ${Q}'s slope`, `Der Wert der Steigung von ${Q}`),
+          L(`The slope is Δs/Δt, with its sign: from the triangle, ${sub('v', Q)} = ${ds(vQ * H).replace(/<[^>]+>/g, '').replace('Δs = ', '')} / ${num(H)} s = ${sval(vQ, 'm/s')} (or over the whole graph: ${line(Q, PQ, vQ).replace(/^[AB]: /, '')}). The sign ${vQ > 0 ? '+' : '−'} is the direction (the line ${rises(vQ)}), the size ${val(Math.abs(vQ), 'm/s')} the speed (${val(Math.abs(dsQ), 'm')} in 10 s).`,
+            `Die Steigung ist Δs/Δt, mit Vorzeichen: aus dem Dreieck ${sub('v', Q)} = ${ds(vQ * H).replace(/<[^>]+>/g, '').replace('Δs = ', '')} / ${num(H)} s = ${sval(vQ, 'm/s')} (oder über den ganzen Graphen: ${line(Q, PQ, vQ).replace(/^[AB]: /, '')}). Das Vorzeichen ${vQ > 0 ? '+' : '−'} ist die Richtung (die Gerade ${rises(vQ)}), der Betrag ${val(Math.abs(vQ), 'm/s')} das Tempo (${val(Math.abs(dsQ), 'm')} in 10 s).`), fig({ tris: tris.filter((t, k) => (k === 0) === (Q === 'A')) })),
       ],
     });
   }
@@ -216,9 +237,12 @@
         { value: P.s1 - P.s0, flag: 'nodt', why: WHY.nodt() },
         { value: P.s1, flag: 'position', why: WHY.position1() },
       ], L('v = Δs/Δt for this interval.', 'v = Δs/Δt für dieses Intervall.'));
-    const desc = (p) => (p.v === 0 ? L(`${interval(p.t0, p.t1)}: s stays at ${val(p.s0, 'm')}, the body is at rest (v = 0)`, `${interval(p.t0, p.t1)}: s bleibt bei ${val(p.s0, 'm')}, der Körper ruht (v = 0)`)
-      : L(`${interval(p.t0, p.t1)}: from ${val(p.s0, 'm')} to ${val(p.s1, 'm')}, ${p.v > 0 ? 'forward' : 'backward'}, v = ${num(p.s1 - p.s0)} m / ${num(p.t1 - p.t0)} s = ${sval(p.v, 'm/s')}`,
-        `${interval(p.t0, p.t1)}: von ${val(p.s0, 'm')} nach ${val(p.s1, 'm')}, ${p.v > 0 ? 'vorwärts' : 'rückwärts'}, v = ${num(p.s1 - p.s0)} m / ${num(p.t1 - p.t0)} s = ${sval(p.v, 'm/s')}`));
+    // each interval by the slope of its line: the sign is the direction, the steepness the speed
+    const desc = (p) => (p.v === 0
+      ? L(`${interval(p.t0, p.t1)}: the line is horizontal (slope 0): s stays at ${val(p.s0, 'm')}, the body is at rest, v = 0`,
+        `${interval(p.t0, p.t1)}: Die Gerade ist waagrecht (Steigung 0): s bleibt bei ${val(p.s0, 'm')}, der Körper ruht, v = 0`)
+      : L(`${interval(p.t0, p.t1)}: the line ${p.v > 0 ? 'rises' : 'falls'}, so its slope is ${p.v > 0 ? 'positive' : 'negative'}: the body moves ${p.v > 0 ? 'forward' : 'backward'}. Its steepness: s changes from ${val(p.s0, 'm')} to ${val(p.s1, 'm')}, by ${num(p.s1 - p.s0)} m in ${num(p.t1 - p.t0)} s, so v = ${num(p.s1 - p.s0)} m / ${num(p.t1 - p.t0)} s = ${sval(p.v, 'm/s')}`,
+        `${interval(p.t0, p.t1)}: Die Gerade ${p.v > 0 ? 'steigt' : 'fällt'}, ihre Steigung ist also ${p.v > 0 ? 'positiv' : 'negativ'}: Der Körper bewegt sich ${p.v > 0 ? 'vorwärts' : 'rückwärts'}. Ihre Steilheit: s ändert sich von ${val(p.s0, 'm')} auf ${val(p.s1, 'm')}, um ${num(p.s1 - p.s0)} m in ${num(p.t1 - p.t0)} s, also v = ${num(p.s1 - p.s0)} m / ${num(p.t1 - p.t0)} s = ${sval(p.v, 'm/s')}`));
     return finish('direction', seed, d, {
       data: { pieces, asked: P },
       title: L('Forward and backward', 'Vorwärts und rückwärts'),
@@ -234,7 +258,7 @@
       ],
       steps: [
         ...pieces.map((p, i) => step(L(`Interval ${i + 1}`, `Intervall ${i + 1}`), `${desc(p)}.`, fig({ band: [p.t0, p.t1], dots: [[p.t0, p.s0], [p.t1, p.s1]] }))),
-        step(L('Negative velocity', 'Negative Geschwindigkeit'), L(`v < 0 in ${and(negs.map((p) => interval(p.t0, p.t1)))}: there the graph falls, wherever it lies.`, `v < 0 in ${and(negs.map((p) => interval(p.t0, p.t1)))}: Dort fällt der Graph, egal wo er liegt.`), fig()),
+        step(L('Negative velocity', 'Negative Geschwindigkeit'), L(`v < 0 in ${and(negs.map((p) => interval(p.t0, p.t1)))}: there the slope is negative, the graph falls, wherever it lies (also above the t axis).`, `v < 0 in ${and(negs.map((p) => interval(p.t0, p.t1)))}: Dort ist die Steigung negativ, der Graph fällt, egal wo er liegt (auch über der t-Achse).`), fig()),
       ],
     });
   }
@@ -379,17 +403,16 @@
     const sv = (x, u) => sval(x, u), dif = (x) => `${x > 0 ? '+' : ''}${num(x)}`;
     const known = d === 3 ? [0, 1, 2, 3] : [0, 2, 4], asked = d === 3 ? [4, 5] : [1, 5];
     const row = (o = {}) => ({ name: '', values: times.map((t, k) => (known.includes(k) || o.all ? xs[k] : asked.includes(k) ? null : '')) });
-    const fig = (o = {}) => table(times, o.rows ? [row({ all: true }), ...o.rows] : [row()]);
+    // o.all: the missing positions filled in (once they are found)
+    const fig = (o = {}) => table(times, o.rows ? [row({ all: !!o.all }), ...o.rows] : [row()]);
     const sAt = (k) => `${it('s')}(${num(k)}&nbsp;s)`;
     const questions = [];
     let hints, steps;
     if (d === 3) {
-      const [d1, d2] = [gaps[1], gaps[2]];
-      questions.push(numQ('a', L('The acceleration of the cart:', 'Die Beschleunigung des Wagens:'), L('What is the acceleration of the cart?', 'Wie gross ist die Beschleunigung des Wagens?'), it('a'), 'm/s²', a, [
-        { value: -a, flag: 'sign', why: L(`Take the changes with their signs: from ${sv(gaps[0], 'm')} to ${sv(gaps[1], 'm')} is a change of ${sv(a, 'm')}.`, `Nimm die Änderungen mit Vorzeichen: Von ${sv(gaps[0], 'm')} zu ${sv(gaps[1], 'm')} ist eine Änderung von ${sv(a, 'm')}.`) },
-        { value: d2, flag: null, why: L('That is the change of position in one second, a mean velocity. The acceleration is how much this change of position changes from one second to the next, divided by (1 s)².', 'Das ist die Ortsänderung in einer Sekunde, eine mittlere Geschwindigkeit. Die Beschleunigung ist, um wie viel sich diese Ortsänderung von einer Sekunde zur nächsten ändert, geteilt durch (1 s)².') },
-        { value: a / 2, flag: null, why: L('The changes of position per second change by a · (1 s)² from one second to the next: a is that change itself, not half of it.', 'Die Ortsänderungen pro Sekunde ändern sich von einer Sekunde zur nächsten um a · (1 s)²: a ist diese Änderung selbst, nicht die Hälfte davon.') },
-      ], L('a = (change of Δs from one second to the next) / (1 s)².', 'a = (Änderung von Δs von einer Sekunde zur nächsten) / (1 s)².')));
+      // The strategy: the changes of position per second (Δs, for times one second apart), their
+      // constant change Δ(Δs), the missing Δs, from them the missing positions; only then the
+      // acceleration, a = Δ(Δs) / (1 s)².
+      const d2 = gaps[2];
       const linear = L('That continues with the last change of position per second, as if the velocity stayed the same. But with the acceleration, the change of position per second changes by a · (1 s)² each second.', 'Das setzt mit der letzten Ortsänderung pro Sekunde fort, als bliebe die Geschwindigkeit gleich. Mit der Beschleunigung ändert sich die Ortsänderung pro Sekunde aber jede Sekunde um a · (1 s)².');
       questions.push(numQ('s4', L('The position at 4 s:', 'Der Ort bei 4 s:'), L('Where is the cart at t = 4 s?', 'Wo ist der Wagen bei t = 4 s?'), sAt(4), 'm', xs[4], [
         { value: xs[3] + d2, flag: 'linear', why: linear },
@@ -399,19 +422,34 @@
         { value: xs[3] + 2 * d2, flag: 'linear', why: linear },
         { value: xs[4] + gaps[3], flag: null, why: L('That repeats the change of position of the second before. It changes by a again: add the last change of position plus a.', 'Das wiederholt die Ortsänderung der Sekunde davor. Sie ändert sich nochmals um a: Zähle die letzte Ortsänderung plus a dazu.') },
       ], L('Continue the changes of position per second, each one a larger than the one before.', 'Setze die Ortsänderungen pro Sekunde fort, jede um a grösser als die vorherige.')));
+      questions.push(numQ('a', L('The acceleration of the cart:', 'Die Beschleunigung des Wagens:'), L('What is the acceleration of the cart?', 'Wie gross ist die Beschleunigung des Wagens?'), it('a'), 'm/s²', a, [
+        { value: -a, flag: 'sign', why: L(`Take the changes with their signs: from ${sv(gaps[0], 'm')} to ${sv(gaps[1], 'm')} is a change of ${sv(a, 'm')}.`, `Nimm die Änderungen mit Vorzeichen: Von ${sv(gaps[0], 'm')} zu ${sv(gaps[1], 'm')} ist eine Änderung von ${sv(a, 'm')}.`) },
+        { value: d2, flag: null, why: L('That is the change of position in one second, a mean velocity. The acceleration is how much this change of position changes from one second to the next, divided by (1 s)².', 'Das ist die Ortsänderung in einer Sekunde, eine mittlere Geschwindigkeit. Die Beschleunigung ist, um wie viel sich diese Ortsänderung von einer Sekunde zur nächsten ändert, geteilt durch (1 s)².') },
+        { value: a / 2, flag: null, why: L('The changes of position per second change by a · (1 s)² from one second to the next: a is that change itself, not half of it.', 'Die Ortsänderungen pro Sekunde ändern sich von einer Sekunde zur nächsten um a · (1 s)²: a ist diese Änderung selbst, nicht die Hälfte davon.') },
+      ], L('a = (change of Δs from one second to the next) / (1 s)².', 'a = (Änderung von Δs von einer Sekunde zur nächsten) / (1 s)².')));
       hints = [
-        L('Constant acceleration: the changes of position in successive seconds change by the same amount, a · (1 s)², every second.', 'Konstante Beschleunigung: Die Ortsänderungen in aufeinanderfolgenden Sekunden ändern sich jede Sekunde um gleich viel, a · (1 s)².'),
-        L(`Work out the changes of position per second from the table: ${gaps.slice(0, 3).map(dif).join(', ')} m. How do they change?`, `Bestimme die Ortsänderungen pro Sekunde aus der Tabelle: ${gaps.slice(0, 3).map(dif).join(', ')} m. Wie ändern sie sich?`),
-        L(`They change by ${sv(a, 'm')} each second, so a = ${sv(a, 'm/s²')}. Continue: the next changes of position are ${dif(gaps[3])} m and ${dif(gaps[4])} m.`, `Sie ändern sich jede Sekunde um ${sv(a, 'm')}, also a = ${sv(a, 'm/s²')}. Setze fort: Die nächsten Ortsänderungen sind ${dif(gaps[3])} m und ${dif(gaps[4])} m.`),
+        L('The positions are given one second apart. Work out the changes of position per second, Δs, from one column to the next.', 'Die Orte sind im Abstand von einer Sekunde gegeben. Bestimme die Ortsänderungen pro Sekunde, Δs, von einer Spalte zur nächsten.'),
+        L(`Δs = ${gaps.slice(0, 3).map(dif).join(', ')} m. They change by the same amount each time: Δ(Δs) = ${dif(a)} m. That is what constant acceleration means.`, `Δs = ${gaps.slice(0, 3).map(dif).join(', ')} m. Sie ändern sich jedes Mal um gleich viel: Δ(Δs) = ${dif(a)} m. Das bedeutet konstante Beschleunigung.`),
+        L(`Continue the Δs: ${dif(gaps[3])} m and ${dif(gaps[4])} m. Add them to the last known position. Only then: a = Δ(Δs) / (1 s)².`, `Setze die Δs fort: ${dif(gaps[3])} m und ${dif(gaps[4])} m. Zähle sie zum letzten bekannten Ort dazu. Erst dann: a = Δ(Δs) / (1 s)².`),
       ];
+      const dsRow = (all) => ({ head: 'Δ<i>s</i> in m', values: ['', ...(all ? gaps : gaps.slice(0, 3)).map(dif), ...(all ? [] : ['', ''])] });
+      const ddRow = (all) => ({ head: 'Δ(Δ<i>s</i>) in m', values: ['', '', ...(all ? gaps.slice(1) : gaps.slice(1, 3)).map(() => dif(a)), ...(all ? [] : ['', ''])] });
       steps = [
-        step(L('Changes of position per second', 'Ortsänderungen pro Sekunde'), L('The first row of differences gives how much the position changes in each second, its mean velocity in that second.', 'Die erste Differenzenzeile gibt an, um wie viel sich der Ort in jeder Sekunde ändert, seine mittlere Geschwindigkeit in dieser Sekunde.'),
-          fig({ rows: [{ head: 'Δ<i>s</i> in m', values: ['', ...gaps.slice(0, 3).map(dif), '', ''] }] })),
-        step(L('The acceleration', 'Die Beschleunigung'), L(`These changes of position change by ${sv(a, 'm')} each second (second row), so the acceleration is constant: a = ${sv(a, 'm')} / (1 s)² = ${sv(a, 'm/s²')}.`, `Diese Ortsänderungen ändern sich jede Sekunde um ${sv(a, 'm')} (zweite Zeile), also ist die Beschleunigung konstant: a = ${sv(a, 'm')} / (1 s)² = ${sv(a, 'm/s²')}.`),
-          fig({ rows: [{ head: 'Δ<i>s</i> in m', values: ['', ...gaps.slice(0, 3).map(dif), '', ''] }, { head: 'Δ(Δ<i>s</i>) in m', values: ['', '', dif(a), dif(a), '', ''] }] })),
-        step(L('Continuing', 'Fortsetzen'), L(`The next changes of position per second are ${dif(gaps[3])} m and ${dif(gaps[4])} m: ${sAt(4)} = ${num(xs[3])} m ${gaps[3] < 0 ? '−' : '+'} ${num(Math.abs(gaps[3]))} m = ${val(xs[4], 'm')}, ${sAt(5)} = ${num(xs[4])} m ${gaps[4] < 0 ? '−' : '+'} ${num(Math.abs(gaps[4]))} m = ${val(xs[5], 'm')}.`,
-          `Die nächsten Ortsänderungen pro Sekunde sind ${dif(gaps[3])} m und ${dif(gaps[4])} m: ${sAt(4)} = ${num(xs[3])} m ${gaps[3] < 0 ? '−' : '+'} ${num(Math.abs(gaps[3]))} m = ${val(xs[4], 'm')}, ${sAt(5)} = ${num(xs[4])} m ${gaps[4] < 0 ? '−' : '+'} ${num(Math.abs(gaps[4]))} m = ${val(xs[5], 'm')}.`),
-          fig({ rows: [{ head: 'Δ<i>s</i> in m', values: ['', ...gaps.map(dif)] }, { head: 'Δ(Δ<i>s</i>) in m', values: ['', '', ...gaps.slice(1).map(() => dif(a))] }] })),
+        step(L('Changes of position per second', 'Ortsänderungen pro Sekunde'),
+          L('The positions are given at times one second apart. So first work out how far the cart moves in each second: Δs = s(t + 1 s) − s(t), from one column to the next.', 'Die Orte sind zu Zeiten im Abstand von einer Sekunde gegeben. Bestimme also zuerst, wie weit der Wagen in jeder Sekunde fährt: Δs = s(t + 1 s) − s(t), von einer Spalte zur nächsten.'),
+          fig({ rows: [dsRow(false)] })),
+        step(L('A constant change of Δs', 'Eine konstante Änderung von Δs'),
+          L(`The Δs themselves change by the same amount from one second to the next: Δ(Δs) = ${dif(a)} m each time. That is what constant acceleration means, and it lets us continue the table.`, `Die Δs ändern sich selbst von einer Sekunde zur nächsten um gleich viel: jedes Mal Δ(Δs) = ${dif(a)} m. Das bedeutet konstante Beschleunigung, und damit lässt sich die Tabelle fortsetzen.`),
+          fig({ rows: [dsRow(false), ddRow(false)] })),
+        step(L('The missing Δs', 'Die fehlenden Δs'),
+          L(`Each Δs is the one before plus Δ(Δs) = ${dif(a)} m: ${dif(gaps[2])} m ${a < 0 ? '−' : '+'} ${num(Math.abs(a))} m = ${dif(gaps[3])} m, then ${dif(gaps[3])} m ${a < 0 ? '−' : '+'} ${num(Math.abs(a))} m = ${dif(gaps[4])} m.`, `Jedes Δs ist das vorherige plus Δ(Δs) = ${dif(a)} m: ${dif(gaps[2])} m ${a < 0 ? '−' : '+'} ${num(Math.abs(a))} m = ${dif(gaps[3])} m, dann ${dif(gaps[3])} m ${a < 0 ? '−' : '+'} ${num(Math.abs(a))} m = ${dif(gaps[4])} m.`),
+          fig({ rows: [dsRow(true), ddRow(true)] })),
+        step(L('The missing positions', 'Die fehlenden Orte'),
+          L(`Add the Δs to the last known position: ${sAt(4)} = ${num(xs[3])} m ${gaps[3] < 0 ? '−' : '+'} ${num(Math.abs(gaps[3]))} m = ${val(xs[4], 'm')}, ${sAt(5)} = ${num(xs[4])} m ${gaps[4] < 0 ? '−' : '+'} ${num(Math.abs(gaps[4]))} m = ${val(xs[5], 'm')}.`, `Zähle die Δs zum letzten bekannten Ort dazu: ${sAt(4)} = ${num(xs[3])} m ${gaps[3] < 0 ? '−' : '+'} ${num(Math.abs(gaps[3]))} m = ${val(xs[4], 'm')}, ${sAt(5)} = ${num(xs[4])} m ${gaps[4] < 0 ? '−' : '+'} ${num(Math.abs(gaps[4]))} m = ${val(xs[5], 'm')}.`),
+          fig({ all: true, rows: [dsRow(true), ddRow(true)] })),
+        step(L('The acceleration', 'Die Beschleunigung'),
+          L(`Only now the other quantities. Each Δs is the mean velocity in that second, so Δ(Δs) is how much this velocity grows from one second to the next: Δ(Δs) = a · (1 s)², so a = ${dif(a)} m / (1 s)² = ${sv(a, 'm/s²')}.`, `Erst jetzt die anderen Grössen. Jedes Δs ist die mittlere Geschwindigkeit in dieser Sekunde, also sagt Δ(Δs), um wie viel diese Geschwindigkeit von einer Sekunde zur nächsten zunimmt: Δ(Δs) = a · (1 s)², also a = ${dif(a)} m / (1 s)² = ${sv(a, 'm/s²')}.`),
+          fig({ all: true, rows: [dsRow(true), ddRow(true)] })),
       ];
     } else {
       const D1 = xs[2] - xs[0], D2 = xs[4] - xs[2], v2 = v(2);

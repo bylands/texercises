@@ -18,7 +18,10 @@
   // every `step`. lines: [{ pts: [[t, y], …] (straight between them), name, dash, at: t (where the
   // name goes) }]. opts.areas: [[t0, v0, t1, v1], …] shaded between v and the t axis, by sign;
   // opts.band: [t0, t1] highlighted; opts.marks: times with a dashed vertical line; opts.dots:
-  // [[t, y], …] marked points; opts.label: an aria label.
+  // [[t, y], …] marked points; opts.tris: slope triangles [{ t0, y0, t1, y1, corner: 'end' (the
+  // right angle at (t1, y0)) | 'start' (at (t0, y1)), dt, dy (labels of the legs), dtIn (the Δt
+  // label inside the triangle) }];
+  // opts.label: an aria label.
   const GW = 360, GH = 230, GL = 48, GR = 36, GT = 30, GB = 38;
   function graph(q, axis, T, lines, opts = {}) {
     const { lo, hi, step } = axis;
@@ -46,6 +49,17 @@
         const v = valueAt(ln.pts, at), above = ln.below ? 16 : -8;
         s += `<text class="lname" x="${x(at)}" y="${f1(y(v) + above)}" text-anchor="middle">${ln.name}</text>`;
       }
+    }
+    for (const tr of opts.tris || []) {
+      // the horizontal leg Δt and the vertical leg Δy, labelled outside the triangle
+      const c = tr.corner === 'start' ? [tr.t0, tr.y1] : [tr.t1, tr.y0];
+      const hy = c[1], vx = c[0], up = tr.y1 > tr.y0;
+      s += `<path class="tri" d="M${x(tr.t0)},${y(tr.y0)} L${x(c[0])},${y(c[1])} L${x(tr.t1)},${y(tr.y1)}"/>`;
+      // Δt outside the triangle, by the horizontal leg; Δy inside it, by the vertical leg
+      const above = (tr.corner === 'start' ? up : !up) !== !!tr.dtIn; // dtIn: inside instead (e.g. where another line passes outside)
+      if (tr.dt) s += `<text class="trilab" x="${x((tr.t0 + tr.t1) / 2)}" y="${f1(y(hy) + (above ? -6 : 15))}" text-anchor="middle">${tr.dt}</text>`;
+      const left = tr.corner !== 'start'; // the vertical leg on the right: the label to its left
+      if (tr.dy) s += `<text class="trilab" x="${f1(x(vx) + (left ? -6 : 6))}" y="${f1((y(tr.y0) + y(tr.y1)) / 2 + 4)}" text-anchor="${left ? 'end' : 'start'}">${tr.dy}</text>`;
     }
     for (const [t, v] of opts.dots || []) s += `<circle class="tdot" cx="${x(t)}" cy="${y(v)}" r="3.6"/>`;
     return `<svg class="cgraph" viewBox="0 0 ${GW} ${GH}" role="img" aria-label="${opts.label || ''}"><g class="qc-${q}">${s}</g></svg>`;

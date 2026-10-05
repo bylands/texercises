@@ -29,7 +29,7 @@
   const RS = [10, 20, 30, 40, 50, 60, 80, 100, 120, 150, 200, 300, 400, 500]; // Ω
   const LS = [0.1, 0.2, 0.5, 1, 2];              // H: irrelevant right after switching
   const VS = [3, 4.5, 6, 9, 12, 15, 18, 24, 30, 36, 48]; // V
-  const LEVELS = { easy: { name: () => L('Easy', 'Einfach') }, medium: { name: () => L('Medium', 'Mittel') }, hard: { name: () => L('Hard', 'Schwierig') } };
+  const LEVELS = { easy: { name: () => L('Easy', 'Einfach') }, medium: { name: () => L('Medium', 'Mittel') }, hard: { name: () => L('Hard', 'Schwierig') }, mixed: { name: () => L('Mixed', 'Gemischt') } };
 
   // ---------------------------------------------------------------- random numbers
   function rng(seed) {
@@ -602,9 +602,11 @@
     };
   }
 
+  // Mixed: easy, medium or hard, chosen by the seed (the exercise is named after its level).
   function generate(level, seed) {
-    const { c, st } = build(level, seed);
-    return exercise(c, st, level, `${level}-${seed}`);
+    const lv = level === 'mixed' ? ['easy', 'medium', 'hard'][rng(seed * 7 + 3).int(0, 2)] : level;
+    const { c, st } = build(lv, seed);
+    return exercise(c, st, lv, `${level}-${seed}`);
   }
 
   // ---------------------------------------------------------------- tutorial

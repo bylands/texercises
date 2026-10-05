@@ -274,8 +274,11 @@
     }
     const x = -p.g0 / rate(p), up = p.g1 > p.g0;
     const turn = x > 0 && x < T ? L(` ${g} = 0 at ${fmt(p.t0 + x)} s, where ${G} has a horizontal tangent.`, ` Bei ${fmt(p.t0 + x)} s ist ${g} = 0; dort hat ${G} eine waagrechte Tangente.`) : '';
+    // how strongly it curves: the slope of G is g, so the tangents at the ends have the slopes g0 and g1
+    const bend = L(`How strongly it curves follows from its slope, which is ${g}: the tangent to ${G} at the start of the piece has the slope ${sval(p.g0, ex.from)}, at the end ${sval(p.g1, ex.from)} (the short lines). So the slope of ${G} changes by ${sval(p.g1 - p.g0, ex.from)} in ${T} s; the faster ${g} changes (the steeper its graph), the more ${G} bends. `,
+      `Wie stark sie sich krümmt, folgt aus ihrer Steigung, und die ist ${g}: Die Tangente an ${G} hat am Anfang des Stücks die Steigung ${sval(p.g0, ex.from)}, am Ende ${sval(p.g1, ex.from)} (die kurzen Linien). Die Steigung von ${G} ändert sich also um ${sval(p.g1 - p.g0, ex.from)} in ${T} s; je schneller sich ${g} ändert (je steiler sein Graph), desto stärker krümmt sich ${G}. `);
     return head + L(`${g} changes from ${sval(p.g0, ex.from)} to ${sval(p.g1, ex.from)}, so ${G} is a parabola that curves ${up ? 'upward' : 'downward'}. `,
-      `${g} ändert sich von ${sval(p.g0, ex.from)} auf ${sval(p.g1, ex.from)}, also ist ${G} eine Parabel, die sich nach ${up ? 'oben' : 'unten'} krümmt. `) +
+      `${g} ändert sich von ${sval(p.g0, ex.from)} auf ${sval(p.g1, ex.from)}, also ist ${G} eine Parabel, die sich nach ${up ? 'oben' : 'unten'} krümmt. `) + bend +
       `Δ${G} = (${plus(p.g0, p.g1)})/2 ${UNIT[ex.from]} · ${T} s = ${sval(dG, ex.to)}, ${span}.${turn}`;
   }
 
@@ -602,6 +605,9 @@
     { name: () => L('Value table', 'Wertetabelle'), kind: 'table', d: 2, seed: 1,
       idea: () => L('In a value table, the direction shows in the changes from one time to the next, not in the signs of the positions.',
         'In einer Wertetabelle zeigt sich die Richtung in den Änderungen von einem Zeitpunkt zum nächsten, nicht in den Vorzeichen der Orte.') },
+    { name: () => L('Accelerated table', 'Tabelle mit Beschleunigung'), kind: 'atable', d: 3, seed: 1,
+      idea: () => L('With constant acceleration, the changes of position Δs in equal time steps change by the same amount each step: find the Δs, their constant change, the missing positions, and only then the acceleration.',
+        'Bei konstanter Beschleunigung ändern sich die Ortsänderungen Δs in gleichen Zeitschritten jedes Mal um gleich viel: Bestimme die Δs, ihre konstante Änderung, die fehlenden Orte und erst dann die Beschleunigung.') },
     { name: () => L('Stroboscope', 'Stroboskop'), kind: 'strobe', d: 3, seed: 1,
       idea: () => L('With constant acceleration, the distances between neighbouring dots change by the same amount each second; each is the mean velocity in that second, and v(t) is a straight line.',
         'Bei konstanter Beschleunigung ändern sich die Abstände benachbarter Punkte jede Sekunde um gleich viel; jeder ist die mittlere Geschwindigkeit in dieser Sekunde, und v(t) ist eine Gerade.') },

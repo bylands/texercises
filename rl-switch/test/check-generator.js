@@ -107,7 +107,7 @@ for (const level of Object.keys(LEVELS)) {
     let ex;
     try { ex = generate(level, seed); } catch (e) { fail(`${tag}: ${e.message}`); continue; }
     check(ex, tag);
-    const want = { easy: [1, 2], medium: [3, 3], hard: [4, 5] }[level];
+    const want = { easy: [1, 2], medium: [3, 3], hard: [4, 5], mixed: [1, 5] }[level];
     if (!(ex.difficulty >= want[0] && ex.difficulty <= want[1])) fail(`${tag}: difficulty ${ex.difficulty} for ${level}`);
     const c = ex.circuit, k = `${c.sw.at} ${c.sw.before === 'open' ? 'closing' : 'opening'}`;
     kinds[k] = (kinds[k] || 0) + 1;
