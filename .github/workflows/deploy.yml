@@ -54,6 +54,6 @@ jobs:
           cp .github/known_hosts ~/.ssh/known_hosts
       - name: Deploy
         env:
-          DEPLOY_TARGET: tpdeploy@179.237.97.105:
-          RSYNC_RSH: ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes
+          DEPLOY_TARGET: 'tpdeploy@179.237.97.105:'
+          RSYNC_RSH: 'ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes'
         run: ./deploy.sh
