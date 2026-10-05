@@ -150,34 +150,37 @@ if (Expr.vars(Expr.parse("h'").tree)[0] !== 'hp') fail("h' is not read as h′")
 
 // typed answers to the tutor's examples: the worksheet's results, and wrong ideas
 EC.setLang('en');
+// a tutor example by its situation
+const lesson = (id) => Energy.tutorial(Lessons.EXAMPLES.find((e) => e.scenario === id)).ex;
 const TYPED = [
-  [1, 'sqrt(2/3*g*h)', 'ok'], [1, '√(2gh)', 'trap'], [1, 'sqrt(4/3 g h)', 'trap'], [1, '2/3gh', 'trap'], [1, 'sqrt(2 g h\')', 'unknown'], [1, "v'", 'wanted'], [1, 'sqrt(2gh*m/m)', 'unknown'],
-  [4, '5/9 h', 'ok'], [4, '5h/9', 'ok'], [4, '1/3 h', 'trap'], [4, '4/9*h', 'trap'], [4, 'h', 'wrong'],
-  [5, 'sqrt(1/2 g s)', 'ok'], [5, 'sqrt(g*s/2)', 'ok'], [5, 'sqrt(gs)', 'trap'], [5, '√(0.5gs', 'syntax'], [5, '', 'empty'],
+  ['part-drop', 'sqrt(2/3*g*h)', 'ok'], ['part-drop', '√(2gh)', 'trap'], ['part-drop', 'sqrt(4/3 g h)', 'trap'], ['part-drop', '2/3gh', 'trap'], ['part-drop', 'sqrt(2 g h\')', 'unknown'], ['part-drop', "v'", 'wanted'], ['part-drop', 'sqrt(2gh*m/m)', 'unknown'],
+  ['speed-fraction', '5/9 h', 'ok'], ['speed-fraction', '5h/9', 'ok'], ['speed-fraction', '1/3 h', 'trap'], ['speed-fraction', '4/9*h', 'trap'], ['speed-fraction', 'h', 'wrong'],
+  ['twice', '4h + 2s', 'ok'], ['twice', '2h', 'trap'], ['incline', 'sqrt(2gh)', 'ok'],
+  ['spring-hang', 'sqrt(1/2 g s)', 'ok'], ['spring-hang', 'sqrt(g*s/2)', 'ok'], ['spring-hang', 'sqrt(gs)', 'trap'], ['spring-hang', '√(0.5gs', 'syntax'], ['spring-hang', '', 'empty'],
 ];
 for (const [k, text, key] of TYPED) {
-  const ex = Energy.tutorial(Lessons.EXAMPLES[k]).ex, r = Energy.judgeFormula(ex, text);
-  if (r.key !== key) fail(`lesson ${k + 1}: "${text}" judged ${r.key}, expected ${key}`);
+  const ex = lesson(k), r = Energy.judgeFormula(ex, text);
+  if (r.key !== key) fail(`lesson ${k}: "${text}" judged ${r.key}, expected ${key}`);
 }
 // typed energies of the states, in the tutor's examples
 const ETYPED = [
-  [0, 0, 'mgh', 'ok'], [0, 1, '1/2 m v^2', 'ok'], [0, 1, 'm v²', 'half'], [0, 1, 'mgh', 'wrong'], [0, 0, 'mgh + 1/2 m x^2', 'unknown'],
-  [1, 1, "m g h' + 1/2 m v'^2", 'ok'], [1, 1, "m g 2/3 h + m v'^2/2", 'ok'], [1, 1, "m g h'", 'missing'], [1, 1, "m g h' + m v'^2", 'half'],
-  [2, 0, '1/2 k s^2', 'ok'], [2, 0, 'k s^2', 'half'],
-  [3, 0, 'm g h + 1/2 m v0^2', 'ok'], [3, 0, '1/2 m v0²', 'missing'],
-  [4, 1, "mgh' + 1/2 m (2/3 v0)^2", 'ok'], [4, 2, '1/2 m v_0^2', 'ok'],
-  [5, 1, "m g s/2 + 1/2 m v'^2 + 1/2 k (s/2)^2", 'ok'], [5, 1, "m g s/2 + 1/2 m v'^2", 'missing'], [5, 2, '1/2 k s^2', 'ok'], [5, 0, 'm g s', 'ok'],
+  ['fall', 0, 'mgh', 'ok'], ['fall', 1, '1/2 m v^2', 'ok'], ['fall', 1, 'm v²', 'half'], ['fall', 1, 'mgh', 'wrong'], ['fall', 0, 'mgh + 1/2 m x^2', 'unknown'],
+  ['part-drop', 1, "m g h' + 1/2 m v'^2", 'ok'], ['part-drop', 1, "m g 2/3 h + m v'^2/2", 'ok'], ['part-drop', 1, "m g h'", 'missing'], ['part-drop', 1, "m g h' + m v'^2", 'half'],
+  ['launcher', 0, '1/2 k s^2', 'ok'], ['launcher', 0, 'k s^2', 'half'],
+  ['tower', 0, 'm g h + 1/2 m v0^2', 'ok'], ['tower', 0, '1/2 m v0²', 'missing'],
+  ['speed-fraction', 1, "mgh' + 1/2 m (2/3 v0)^2", 'ok'], ['speed-fraction', 2, '1/2 m v_0^2', 'ok'],
+  ['spring-hang', 1, "m g s/2 + 1/2 m v'^2 + 1/2 k (s/2)^2", 'ok'], ['spring-hang', 1, "m g s/2 + 1/2 m v'^2", 'missing'], ['spring-hang', 2, '1/2 k s^2', 'ok'], ['spring-hang', 0, 'm g s', 'ok'],
 ];
 for (const [k, i, text, key] of ETYPED) {
-  const ex = Energy.tutorial(Lessons.EXAMPLES[k]).ex, r = Energy.judgeEnergy(ex, i, text);
-  if (r.key !== key) fail(`lesson ${k + 1}, E${i + 1}: "${text}" judged ${r.key}, expected ${key}`);
+  const ex = lesson(k), r = Energy.judgeEnergy(ex, i, text);
+  if (r.key !== key) fail(`lesson ${k}, E${i + 1}: "${text}" judged ${r.key}, expected ${key}`);
 }
 
-// the worksheet's results for the tutor's examples 2, 5 and 6
-const SHEET = { 1: (V) => Math.sqrt((2 / 3) * V.g * V.h), 4: (V) => (5 / 9) * V.h, 5: (V) => Math.sqrt(0.5 * V.g * V.s) };
+// the worksheet's results (A, B, C) for the tutor's examples
+const SHEET = { 'part-drop': (V) => Math.sqrt((2 / 3) * V.g * V.h), 'speed-fraction': (V) => (5 / 9) * V.h, 'spring-hang': (V) => Math.sqrt(0.5 * V.g * V.s) };
 for (const [k, f] of Object.entries(SHEET)) {
-  const ex = Energy.tutorial(Lessons.EXAMPLES[k]).ex;
-  if (!Expr.same(f, ex.f, ex.p.V, ex.sampled)) fail(`lesson ${Number(k) + 1}: not the worksheet's result`);
+  const ex = lesson(k);
+  if (!Expr.same(f, ex.f, ex.p.V, ex.sampled)) fail(`lesson ${k}: not the worksheet's result`);
 }
 for (const lang of EC.LANGS) {
   EC.setLang(lang);
