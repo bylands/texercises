@@ -299,8 +299,8 @@
 
     return {
       title: T('Free-body diagrams', 'Kräftediagramme'),
-      situation: T('<p>Each diagram A–E below shows the forces on a body, drawn from its centre; longer arrows mean larger forces. The small arrow at the bottom right shows the direction of motion (“forward”).</p>',
-        '<p>Jedes Diagramm A–E unten zeigt die Kräfte auf einen Körper, vom Mittelpunkt aus gezeichnet; längere Pfeile bedeuten grössere Kräfte. Der kleine Pfeil unten rechts zeigt die Bewegungsrichtung („vorn“).</p>').replace('A–E', `A–${LETTERS[keys.length - 1]}`),
+      situation: T('<p>Each of the diagrams A–E shows the forces on a body, drawn from its centre; longer arrows mean larger forces. The small arrow at the bottom right shows the direction of motion (“forward”).</p>',
+        '<p>Jedes der Diagramme A–E zeigt die Kräfte auf einen Körper, vom Mittelpunkt aus gezeichnet; längere Pfeile bedeuten grössere Kräfte. Der kleine Pfeil unten rechts zeigt die Bewegungsrichtung („vorn“).</p>').replace('A–E', `A–${LETTERS[keys.length - 1]}`),
       figure: legend(),
       questions: [match('diagrams', T('Match each situation with its free-body diagram. A diagram may fit more than one situation, or none.', 'Ordne jeder Situation ihr Kräftediagramm zu. Ein Diagramm kann zu mehreren Situationen passen oder zu keiner.'), items, choices, true)],
       hints: [

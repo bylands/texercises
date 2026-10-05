@@ -266,7 +266,7 @@
       title: e.title,
       // only the quantity asked for: the exercise text lists all its unknowns
       text: `<p>${L('Apply the rules for series and parallel circuits.', 'Wende die Regeln für Serie- und Parallelschaltungen an.')}</p>`,
-      figure: e.figure(false),
+      figure: e.figure(false, f.key),
       ask: L(`Find $${f.sym}$.`, `Wie gross ist $${f.sym}$?`),
       options: options.map((o) => ({ html: `$${num(o.value)}\\,${unitTex}$`, correct: !!o.correct, flag: o.flag, why: o.why })),
       explain: () => `<div class="figs">${e.figure(true)}</div><div class="steps">${e.solution.map((p) => `<p>${p}</p>`).join('')}</div>`,

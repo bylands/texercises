@@ -62,6 +62,8 @@
   const len = (a) => Math.hypot(a[0], a[1]);
   const unit = (a) => mul(a, 1 / len(a));
   const lerp = (a, b, t) => add(a, mul(sub(b, a), t));
+  // ' ask' for the label of the quantity a question asks for, else ''
+  const asked = (label) => (label && typeof label === 'object' && / ask\b/.test(' ' + label.cls) ? ' ask' : '');
 
   function sideVec(side) {
     if (typeof side === 'string') return SIDES[side];
@@ -114,7 +116,8 @@
 
     // Text at point p (units), pushed away from p in direction n. A label is a string, or
     // { t: string, cls: extra classes } to highlight it; class "new" gets a marker background
-    // (<g class="marked">, fitted to the rendered text by fitText).
+    // (<g class="marked">, fitted to the rendered text by fitText), class "ask" (the quantity a
+    // question asks for) colours the arrow of a current or voltage too.
     _text(p, n, label, cls) {
       if (label == null) return;
       let mark = false;
@@ -226,8 +229,9 @@
       const d = unit(sub(q, p));
       const c = lerp(p, q, t);
       const a = sub(c, mul(d, 0.22)), b = add(c, mul(d, 0.22));
-      this._path([a, b], 'cur');
-      this._head(b, d, 'cur-h');
+      const ask = asked(label);
+      this._path([a, b], 'cur' + ask);
+      this._head(b, d, 'cur-h' + ask);
       const n = normalTowards(d, side || this._defaultSide(d));
       this._text(add(c, mul(n, 0.22)), n, label, 'cur-t');
       return this;
@@ -243,8 +247,9 @@
       const arcLen = len(sub(b, a));
       const c = add(lerp(a, b, 0.5), mul(n, Math.min(0.6, 0.35 * arcLen)));
       const [ax, ay] = this.P(a), [bx, by] = this.P(b), [cx, cy] = this.P(c);
-      this.els.push(`<path class="vol" d="M${ax.toFixed(1)} ${ay.toFixed(1)}Q${cx.toFixed(1)} ${cy.toFixed(1)} ${bx.toFixed(1)} ${by.toFixed(1)}"/>`);
-      this._head(b, sub(b, c), 'vol-h');
+      const ask = asked(label);
+      this.els.push(`<path class="vol${ask}" d="M${ax.toFixed(1)} ${ay.toFixed(1)}Q${cx.toFixed(1)} ${cy.toFixed(1)} ${bx.toFixed(1)} ${by.toFixed(1)}"/>`);
+      this._head(b, sub(b, c), 'vol-h' + ask);
       const mid = add(mul(add(a, b), 0.25), mul(c, 0.5));
       this._text(add(mid, mul(n, 0.12)), n, label, 'vol-t');
       return this;

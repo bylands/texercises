@@ -600,7 +600,7 @@
 
   // The diagram as a Sketch. view.known(key): values shown. For the tutorial also
   // view.mark: node id → 'strong' | 'light' (resistors highlighted, groups in a shaded zone) and
-  // view.focus: key → 'new' | 'use' (labels highlighted).
+  // view.focus: key → 'new' | 'use' (labels highlighted); the arcade sets 'ask' for its question.
   function draw(c, nm, prob, view) {
     const s = new Circuit.Sketch();
     s.autoDots = true;
@@ -687,8 +687,8 @@
     throw new Error(`No ${level} exercise found for seed ${seed}`);
   }
 
-  const taskText = (targets, nm) => L(`Applying the rules for series and parallel circuits, find ${listing(targets.map((t) => describeTarget(t, nm)))} in the circuit below.`,
-    `Bestimme mit den Regeln für Serie- und Parallelschaltungen ${listing(targets.map((t) => describeTarget(t, nm)))} in der Schaltung unten.`);
+  const taskText = (targets, nm) => L(`Applying the rules for series and parallel circuits, find ${listing(targets.map((t) => describeTarget(t, nm)))} in the circuit shown.`,
+    `Bestimme mit den Regeln für Serie- und Parallelschaltungen ${listing(targets.map((t) => describeTarget(t, nm)))} in der abgebildeten Schaltung.`);
 
   function generate(level, seed) {
     const { c, prob, nm, lv } = build(level, seed);
@@ -704,7 +704,8 @@
       text: taskText(targets, nm),
       fields: targets.map((t) => ({ key: t, sym: nm.sym(t), unit: UNIT[t[0]], value: fval(nm.valueOf(t)) })),
       tol: 0.01,
-      figure: (sol) => `<div class="fig">${draw(c, nm, prob, { known: sol ? all : givenOnly(prob) }).toSVG()}</div>`,
+      // asked: the key of an unknown to show in its own colour (the arcade's question)
+      figure: (sol, asked) => `<div class="fig">${draw(c, nm, prob, { known: sol ? all : givenOnly(prob), focus: asked ? new Map([[asked, 'ask']]) : undefined }).toSVG()}</div>`,
       hints,
       solution: [`${L('Structure of the circuit', 'Aufbau der Schaltung')}: ${struct.join('; ')}.`, ...steps.map((st) => stepText(st, nm))],
       results: targets.map((t) => `$${nm.sym(t)} = ${nm.qtex(t)}$`).join(', '),

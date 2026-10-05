@@ -54,4 +54,8 @@ svg .mark { fill: var(--mark); }
 .k-new { background: var(--mark); border-radius: 3px; padding: 0 3px; font-weight: 600; }
 
 /* arcade: currents and voltages in manim's colours */
-#arcade { --cur: #58c4dd; --vol: #fc6255; }
+#arcade { --cur: #58c4dd; --vol: #fc6255; --ask: #ffff00; }
+/* the quantity the question asks for, in manim's yellow */
+#arcade svg text.ask { fill: var(--ask); font-weight: 700; }
+#arcade svg .cur.ask, #arcade svg .vol.ask { stroke: var(--ask); stroke-width: 2.4; }
+#arcade svg .cur-h.ask, #arcade svg .vol-h.ask { fill: var(--ask); }

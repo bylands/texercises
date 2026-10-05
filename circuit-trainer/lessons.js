@@ -18,7 +18,7 @@
       path: [['V2:eqV', 'I2:ohm'], ['I1:iratio'], ['I:sumI']],
     },
     {
-      name: { en: 'Mixed', de: 'Gemischt' }, level: 'medium', seed: 35,
+      name: { en: 'Mixed', de: 'Gemischt' }, level: 'medium', seed: 1959,
       idea: { en: 'A resistor in series with a parallel pair. Replace the pair by one resistor, and the voltage divider rule gives the voltage across the pair.',
         de: 'Ein Widerstand in Serie mit einem parallelen Paar. Ersetze das Paar durch einen Widerstand, dann liefert die Spannungsteilerregel die Spannung am Paar.' },
       path: [['R23:invR'], ['V23:vdiv', 'V3:eqV'], ['V1:sumV'], ['I1:ohm', 'I:eqI']],
