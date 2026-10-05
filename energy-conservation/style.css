@@ -1,0 +1,100 @@
+/* Energy Conservation: its colours, drawings, energy table and formula field; the general look is
+   in ui.css (shared by the apps). */
+:root {
+  --e-pot: #1f5fd6;
+  --e-kin: #c0392b;
+  --e-el: #1d7a3e;
+  --vel: #8a3ab9;
+  --box: #e8edf3;
+  --tower: #ece9e1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --e-pot: #74a7ff;
+    --e-kin: #ff8a80;
+    --e-el: #7fd49a;
+    --vel: #d29bff;
+    --box: #2d3540;
+    --tower: #2a2d31;
+  }
+}
+
+#prompt p { margin: 6px 0; }
+.card h3 { margin-top: 18px; }
+#answers > h3:first-child { margin-top: 4px; }
+
+/* drawings, in the manner of the worksheet: fine outlines, tinted bodies, hatched surfaces, dashed
+   heights, labels with a halo of the background so that lines never cut them */
+svg text { font-family: var(--serif); font-size: 15px; }
+svg .w { stroke: var(--ink); stroke-width: 1.3; fill: none; stroke-linecap: round; }
+svg .w.dash { stroke: var(--muted); stroke-dasharray: 4 3; stroke-width: 1; }
+svg .w.zero { stroke: var(--muted); stroke-dasharray: 10 3 2 3; stroke-width: 1; }
+svg .w.rope { stroke-width: 1.2; }
+svg .w.rope.dim { stroke-opacity: 0.55; }
+svg .w.plate { stroke-width: 2.4; }
+svg .w.total { stroke: var(--muted); stroke-dasharray: 3 2; stroke-width: 1; }
+svg .w.axis { stroke-width: 1.2; }
+svg .ground { stroke: var(--ink); stroke-width: 1.5; stroke-linecap: butt; }
+svg .hatch { fill: none; stroke: var(--ink); stroke-width: 0.8; stroke-opacity: 0.55; }
+svg .body { fill: var(--box); stroke: var(--ink); stroke-width: 1.3; }
+svg .tower { fill: var(--tower); stroke: var(--ink); stroke-width: 1.3; }
+svg .track { fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+svg .spring { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-linejoin: round; }
+svg .dot { fill: var(--ink); }
+svg .dimhead { fill: var(--muted); }
+svg .dimarrow line { stroke: var(--muted); stroke-width: 1; }
+svg .dimarrow polygon { fill: var(--muted); }
+svg .vel line { stroke: var(--vel); stroke-width: 1.9; }
+svg .vel polygon { fill: var(--vel); }
+svg .lbl { fill: var(--ink); paint-order: stroke fill; stroke: var(--card); stroke-width: 3.5px; stroke-linejoin: round; }
+svg .lbl.vlbl { fill: var(--vel); }
+svg .lbl.small { font-size: 13px; fill: var(--muted); }
+svg .lbl.tiny { font-size: 12px; fill: var(--muted); }
+svg .lbl.state { font-size: 17px; }
+svg .lbl.state.hl { fill: var(--accent); font-weight: 700; }
+svg .sub { font-size: 72%; }
+svg .bar { stroke: none; }
+svg .e-pot { fill: var(--e-pot); }
+svg .e-kin { fill: var(--e-kin); }
+svg .e-el { fill: var(--e-el); }
+svg .bars-hl { fill: none; stroke: var(--accent); stroke-width: 1.5; rx: 6px; }
+.k-pot { color: var(--e-pot); }
+.k-kin { color: var(--e-kin); }
+.k-el { color: var(--e-el); }
+.note .k-pot, .note .k-kin, .note .k-el { font-weight: 600; }
+
+/* the energy table: a row per state, a box per form of energy */
+.etable { border-collapse: collapse; margin: 10px 0 4px; }
+.etable th, .etable td { padding: 4px 10px; text-align: center; }
+.etable thead th { font-weight: 400; border-bottom: 1px solid var(--line); }
+.etable tbody th { font-family: var(--serif); font-size: 1.2rem; font-weight: 400; padding-right: 14px; }
+.etable .cell { position: relative; display: inline-block; width: 30px; height: 30px; cursor: pointer; }
+.etable .cell input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.etable .cell span { position: absolute; inset: 0; border: 1.5px solid var(--line); border-radius: 6px; background: var(--bg); }
+.etable .cell input:checked + span { background: var(--accent); border-color: var(--accent); }
+.etable .cell input:checked + span::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--accent-ink); font-weight: 700; }
+.etable .cell input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.etable td.ok .cell span { border-color: var(--ok); }
+.etable td.bad .cell span { border-color: var(--bad); box-shadow: 0 0 0 2px var(--bad-bg); }
+.etable td.ok .cell input:checked + span { background: var(--ok); border-color: var(--ok); }
+.table-fb { margin: 2px 0 6px; min-height: 1.4em; font-size: 0.9rem; }
+.table-fb.ok { color: var(--ok); }
+.table-fb.bad { color: var(--bad); }
+
+/* a formula as the result: a wide field, and below it how the formula is read */
+.fields.formula { grid-template-columns: max-content minmax(0, 18em) 1fr; }
+.field.formula input { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: normal; }
+.fields .preview { grid-column: 2 / -1; margin: -4px 0 0; min-height: 1.6em; color: var(--muted); }
+.fields .type-help { grid-column: 2 / -1; margin: 0; font-size: 0.85rem; }
+@media (max-width: 640px) {
+  .fields.formula { grid-template-columns: minmax(0, 1fr); }
+  .fields .preview, .fields .type-help { grid-column: 1 / -1; }
+}
+
+/* arcade: manim's colours */
+#arcade {
+  --e-pot: #58c4dd; --e-kin: #fc6255; --e-el: #83c167; --vel: #ffff00;
+  --box: rgba(88, 196, 221, 0.1); --tower: #141414;
+}
+#arcade .ar-opt .val { font-size: 1.15rem; }
