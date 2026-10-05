@@ -512,7 +512,12 @@
   const canReveal = () => st.solved || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
   const hintsOf = () => (isQuiz() ? ex.hints : ex.dir === 'diff' ? hintsDiff() : hintsInt());
 
+  // Practice comes back more often to the types of exercise that were hard (shared practice.js).
+  const PRACTICE = 'mg', typeOf = (e) => e.kind || e.task;
+  const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
+
   function open(exercise) {
+    finish(); // the student moves on
     ex = exercise;
     ex.hints = hintsOf();
     st = { tries: 0, hints: 0, solved: false, revealed: false, res: null, copied: false, checked: null };
@@ -521,7 +526,7 @@
     render();
   }
 
-  function fresh() { open(generate(level(), newSeed())); }
+  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s), typeOf, ex && typeOf(ex))); }
 
   function updateButtons() {
     const left = ex.hints.length - st.hints;
@@ -557,6 +562,7 @@
         showScore();
       }
       st.solved = true;
+      finish();
     }
     showDrawing();
     showFeedback();
@@ -577,6 +583,7 @@
           showScore();
         }
         st.solved = true;
+        finish();
       }
     }
     showFeedback();
@@ -598,6 +605,7 @@
   function reveal() {
     if (!canReveal()) return;
     st.revealed = true;
+    finish();
     if (!isQuiz()) showDrawing();
     $('#sol-text').innerHTML = solution();
     $('#solution').hidden = false;
@@ -640,8 +648,9 @@
         'Die Geschwindigkeitsänderung ist die Fläche unter dem Beschleunigung-Zeit-Graphen, und die Beschleunigung ist die Steigung des Geschwindigkeit-Zeit-Graphen.') },
   ];
   const bar = (q) => `${q}̄`; // q with a bar: the mean value
-  // A given graph and its answer side by side.
-  const pairFigure = (e, given, answer) => `<div class="tgraphs"><div><h3>${ui().given}: ${qc(e.from)}</h3><div class="plot">${given}</div></div>` +
+  // A given graph and its answer side by side, or (stack: in the tutor) the answer below the given
+  // graph, so that both can be larger.
+  const pairFigure = (e, given, answer, stack) => `<div class="tgraphs${stack ? ' stack' : ''}"><div><h3>${ui().given}: ${qc(e.from)}</h3><div class="plot">${given}</div></div>` +
     `<div><h3>${ui().answer}: ${qc(e.to)}</h3><div class="plot">${answer}</div></div></div>`;
 
   function lesson(def) {
@@ -652,7 +661,7 @@
       const num = (x) => (r2(x) > 0 ? '+' : '') + fmt(x);
       const frames = [{
         text: `<p class="step-rule">${L('The task', 'Die Aufgabe')}</p><p>${statement()}</p><p>${ruleText()} ${L('We go through the graph piece by piece.', 'Wir gehen den Graphen Stück für Stück durch.')}</p>`,
-        figure: pairFigure(e, sourceGraph(e), Plot.answerGraph(e, { upto: 0 })),
+        figure: pairFigure(e, sourceGraph(e), Plot.answerGraph(e, { upto: 0 }), true),
       }];
       ps.forEach((p, i) => {
         const tm = (p.t0 + p.t1) / 2;
@@ -678,7 +687,7 @@
         const text = describe(p, i).replace(/^<b>[^<]*<\/b>: /, '');
         frames.push({
           text: `<p class="step-rule">${L(`Piece ${i + 1} of ${n}`, `Stück ${i + 1} von ${n}`)} (${when(p)})</p><p>${text}</p>`,
-          figure: pairFigure(e, sourceGraph(e, { marks: marks(i), under, overlay: over }), Plot.answerGraph(e, { upto: i + 1, marks: marks(i), overlay: ans })),
+          figure: pairFigure(e, sourceGraph(e, { marks: marks(i), under, overlay: over }), Plot.answerGraph(e, { upto: i + 1, marks: marks(i), overlay: ans }), true),
         });
       });
       const F = Q(f), G = Q(g);
@@ -687,7 +696,7 @@
           `Kontrolle: Wo ${F} eine waagrechte Tangente hat, ist ${G} = 0; wo ${F} steigt, ist ${G} &gt; 0; wo ${F} fällt, ist ${G} &lt; 0.`)
         : L(`Check: where ${F} = 0, the ${G} graph is horizontal; where ${F} &gt; 0, ${G} rises; where ${F} &lt; 0, it falls.`,
           `Kontrolle: Wo ${F} = 0 ist, ist der ${G}-Graph waagrecht; wo ${F} &gt; 0 ist, steigt ${G}; wo ${F} &lt; 0 ist, fällt ${G}.`);
-      frames.push({ text: `<p class="step-rule">${L('The whole graph', 'Der ganze Graph')}</p><p>${ruleText()}</p><p>${check}</p>`, figure: pairFigure(e, sourceGraph(e), Plot.answerGraph(e)) });
+      frames.push({ text: `<p class="step-rule">${L('The whole graph', 'Der ganze Graph')}</p><p>${ruleText()}</p><p>${check}</p>`, figure: pairFigure(e, sourceGraph(e), Plot.answerGraph(e), true) });
       return frames;
     });
   }

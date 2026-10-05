@@ -212,7 +212,7 @@
 
     const where = { bottom: T('at the lowest point, where it moves horizontally and fastest', 'im tiefsten Punkt, wo er sich horizontal und am schnellsten bewegt'),
       mid: T('on its way up, moving up and to the right', 'auf dem Weg nach oben, wenn er sich schräg nach rechts oben bewegt'),
-      top: T('at the right end of the swing, where it is at rest for a moment', 'am rechten Ende der Schwingung, wo er kurz in Ruhe ist') }[pos];
+      top: T('at the right end of the swing, where it turns round (its velocity is zero there)', 'am rechten Ende der Schwingung, wo er umkehrt (seine Geschwindigkeit ist dort null)') }[pos];
     const rule = T('From the moment the string is cut, only gravity acts. The bob keeps the velocity it has at that moment and falls like a thrown ball.', 'Vom Moment an, in dem die Schnur durchgeschnitten wird, wirkt nur die Schwerkraft. Der Körper behält die Geschwindigkeit, die er in diesem Moment hat, und fällt wie ein geworfener Ball.');
     const result = { bottom: T('Its velocity is horizontal: it flies off on a parabola that starts horizontally.', 'Seine Geschwindigkeit ist horizontal: Er fliegt auf einer Parabel davon, die horizontal beginnt.'),
       mid: T('Its velocity points along the circle, up and to the right: it flies off along a parabola that starts in this direction, rises a little and then falls.', 'Seine Geschwindigkeit zeigt entlang des Kreises nach rechts oben: Er fliegt auf einer Parabel in diese Richtung davon, steigt noch etwas und fällt dann.'),
@@ -252,8 +252,8 @@
       ],
       steps: [
         { title: T('At the moment of the cut', 'Im Moment des Schnitts'), figure: figure({ force: true }),
-          text: T(`Before the cut, the string pulls the bob toward the pivot and keeps it on the circle. After the cut, only the weight acts. ${speed > 0.01 ? 'At P the bob moves along the circle (velocity arrow).' : 'At P the bob is at rest for a moment.'}`,
-            `Vor dem Schnitt zieht die Schnur den Körper zum Aufhängepunkt und hält ihn auf dem Kreis. Nach dem Schnitt wirkt nur noch die Gewichtskraft. ${speed > 0.01 ? 'In P bewegt sich der Körper entlang des Kreises (Geschwindigkeitspfeil).' : 'In P ist der Körper kurz in Ruhe.'}`) },
+          text: T(`Before the cut, the string pulls the bob toward the pivot and keeps it on the circle. After the cut, only the weight acts. ${speed > 0.01 ? 'At P the bob moves along the circle (velocity arrow).' : 'At P the bob turns round: its velocity is zero.'}`,
+            `Vor dem Schnitt zieht die Schnur den Körper zum Aufhängepunkt und hält ihn auf dem Kreis. Nach dem Schnitt wirkt nur noch die Gewichtskraft. ${speed > 0.01 ? 'In P bewegt sich der Körper entlang des Kreises (Geschwindigkeitspfeil).' : 'In P kehrt der Körper um: Seine Geschwindigkeit ist null.'}`) },
         { title: T('The path', 'Die Bahn'), figure: figure({ path: okPath, vel: true }), text: `${rule} ${result}` },
       ],
     };
@@ -280,8 +280,8 @@
       }
       return D.svg(400, 230, g, T('A ball on a ramp at the point P', 'Eine Kugel auf einer Rampe im Punkt P'));
     }
-    const motion = { rising: T('rolls up the ramp and gets slower', 'rollt die Rampe hinauf und wird langsamer'), top: T('is at rest for a moment at its highest point', 'ist im höchsten Punkt kurz in Ruhe'), falling: T('rolls back down and gets faster', 'rollt wieder hinunter und wird schneller') }[phase];
-    const deMotion = { rising: 'rollt die Kugel die Rampe hinauf und wird langsamer', top: 'ist die Kugel im höchsten Punkt kurz in Ruhe', falling: 'rollt die Kugel wieder hinunter und wird schneller' }[phase]; // after “Hier” or “Im Punkt P”
+    const motion = { rising: T('rolls up the ramp and gets slower', 'rollt die Rampe hinauf und wird langsamer'), top: T('turns round at its highest point (its velocity is zero there)', 'kehrt im höchsten Punkt um (ihre Geschwindigkeit ist dort null)'), falling: T('rolls back down and gets faster', 'rollt wieder hinunter und wird schneller') }[phase];
+    const deMotion = { rising: 'rollt die Kugel die Rampe hinauf und wird langsamer', top: 'kehrt die Kugel im höchsten Punkt um (ihre Geschwindigkeit ist dort null)', falling: 'rollt die Kugel wieder hinunter und wird schneller' }[phase]; // after “Hier” or “Im Punkt P”
     const rule = T('The ball slows down on the way up and speeds up on the way down: its acceleration points down the ramp all the time — also at the top, where its velocity is changing from up to down. So the net force points down the ramp.',
       'Die Kugel wird auf dem Weg nach oben langsamer und auf dem Weg nach unten schneller: Ihre Beschleunigung zeigt die ganze Zeit die Rampe hinunter — auch oben, wo sich ihre Geschwindigkeit von hinauf nach hinunter ändert. Also zeigt die resultierende Kraft die Rampe hinunter.');
     const parts = T('Weight (straight down) and the push of the ramp (at right angles to it) add up to a net force along the ramp, downward.', 'Gewichtskraft (senkrecht nach unten) und Normalkraft der Rampe (senkrecht zur Rampe) ergeben zusammen eine resultierende Kraft entlang der Rampe nach unten.');

@@ -213,8 +213,8 @@
     const anim = root.Motion ? root.Motion.make(key, ex) : null;
     const watch = anim && {
       text: `<p class="step-rule">${L('Watch the energy', 'Die Energie beobachten')}</p>` +
-        `<p>${L(`The body moves from ① to ${CIRCLED[ex.table.length - 1]} and stops for a moment in each state; ❚❚ pauses it, and the slider moves it back and forth. The bars show how its energy is shared at every moment.`,
-          `Der Körper bewegt sich von ① bis ${CIRCLED[ex.table.length - 1]} und hält in jedem Zustand kurz an; ❚❚ hält ihn an, und mit dem Schieberegler bewegst du ihn vor und zurück. Die Balken zeigen, wie seine Energie in jedem Moment aufgeteilt ist.`)}</p>` +
+        `<p>${L(`The animation runs from ① to ${CIRCLED[ex.table.length - 1]} and pauses briefly in each state; ❚❚ pauses it, and the slider moves it back and forth. The bars show how its energy is shared at every moment.`,
+          `Die Animation läuft von ① bis ${CIRCLED[ex.table.length - 1]} und hält in jedem Zustand kurz inne; ❚❚ hält ihn an, und mit dem Schieberegler bewegst du ihn vor und zurück. Die Balken zeigen, wie seine Energie in jedem Moment aufgeteilt ist.`)}</p>` +
         `<p>${L('The dashed line, the total energy, stays where it is: energy only changes its form.', 'Die gestrichelte Linie, die Gesamtenergie, bleibt, wo sie ist: Die Energie ändert nur ihre Form.')}</p>`,
       figure: anim.markup(key),
     };

@@ -128,7 +128,12 @@
   const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'mixed';
   const formal = () => $('#formal').checked;
 
+  // Practice comes back more often to the types of exercise that were hard (shared practice.js).
+  const PRACTICE = 'ec', typeOf = (e) => e.scenario;
+  const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
+
   function open(exercise) {
+    finish(); // the student moves on
     ex = exercise;
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false };
     const hash = `#${ex.id}`;
@@ -137,11 +142,7 @@
   }
 
   // A new exercise, of another situation than the current one if possible.
-  function fresh() {
-    let next = generate(level(), newSeed(), formal());
-    for (let k = 0; k < 6 && ex && next.scenario === ex.scenario; k++) next = generate(level(), newSeed(), formal());
-    open(next);
-  }
+  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s, formal()), typeOf, ex && typeOf(ex))); }
 
   // The energy table: a row per state, a column per form of energy, a box per cell.
   function tableHtml() {
@@ -293,6 +294,7 @@
         showScore();
       }
       st.solved = true;
+      finish();
       showStatus('ok');
     } else showStatus('bad');
     updateButtons();
@@ -322,6 +324,7 @@
   function reveal() {
     if (!canReveal()) return;
     st.revealed = true;
+    finish();
     showSolution();
     updateButtons();
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });

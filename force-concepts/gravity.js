@@ -364,8 +364,8 @@
       `Die Hand stösst nur, solange sie ${N.acc} berührt. Nach dem Loslassen gibt es keine „Wurfkraft“: ${cap(N.nom)} bewegt sich weiter, weil er schon eine Geschwindigkeit hat (Trägheit), und die Schwerkraft ändert diese Geschwindigkeit.`);
     const noMotionForce = T(`A body does not need a force in the direction it moves. The ${obj} moves ${motion} because it already has that velocity; the only force on it is gravity.`,
       `Ein Körper braucht keine Kraft in Bewegungsrichtung. ${cap(N.nom)} bewegt sich ${motion}, weil er diese Geschwindigkeit schon hat; die einzige Kraft auf ihn ist die Schwerkraft.`);
-    const stillPulled = T(`Gravity does not depend on the motion. At the highest point the ${vertical ? '' : 'vertical '}velocity is zero for a moment, but the ${obj} is still pulled down with ${FG} = <i>m·g</i> — otherwise it would stay up there.`,
-      `Die Schwerkraft hängt nicht von der Bewegung ab. Im höchsten Punkt ist die ${vertical ? '' : 'vertikale '}Geschwindigkeit kurz null, aber ${N.nom} wird weiterhin mit ${FG} = <i>m·g</i> nach unten gezogen — sonst bliebe er dort oben.`);
+    const stillPulled = T(`Gravity does not depend on the motion. At the highest point the ${vertical ? '' : 'vertical '}velocity is zero at that instant, but the ${obj} is still pulled down with ${FG} = <i>m·g</i> — otherwise it would stay up there.`,
+      `Die Schwerkraft hängt nicht von der Bewegung ab. Im höchsten Punkt ist die ${vertical ? '' : 'vertikale '}Geschwindigkeit in diesem Augenblick null, aber ${N.nom} wird weiterhin mit ${FG} = <i>m·g</i> nach unten gezogen — sonst bliebe er dort oben.`);
     const forceOpts = {
       rising: [
         o(T(`Its weight and the force of the throw, which gets smaller as it rises.`, 'Die Gewichtskraft und die Wurfkraft, die beim Steigen kleiner wird.'), 'impetus', noThrowForce),
@@ -374,8 +374,8 @@
           T(`The weight ${FG} = <i>m·g</i> acts all the time, also on the way up: that is what slows the ${obj}'s rise.`, `Die Gewichtskraft ${FG} = <i>m·g</i> wirkt die ganze Zeit, auch auf dem Weg nach oben: Sie bremst den Aufstieg.`)),
       ],
       top: vertical ? [
-        o(T('No force at all, since it is at rest for a moment.', 'Gar keine Kraft, da er kurz in Ruhe ist.'), 'rest-no-force', stillPulled),
-        o(T('Its weight and an upward force just as large, so it stays in place for a moment.', 'Die Gewichtskraft und eine gleich grosse Kraft nach oben, sodass er kurz an Ort bleibt.'), 'rest-no-force',
+        o(T('No force at all, since its velocity is zero there.', 'Gar keine Kraft, da seine Geschwindigkeit dort null ist.'), 'rest-no-force', stillPulled),
+        o(T('Its weight and an upward force just as large, so that its velocity is zero there.', 'Die Gewichtskraft und eine gleich grosse Kraft nach oben, sodass seine Geschwindigkeit dort null ist.'), 'rest-no-force',
           stillPulled + T(' Nothing pushes up on it.', ' Nichts drückt ihn nach oben.')),
         o(T('Its weight and the force of the throw, which is now just as large as the weight.', 'Die Gewichtskraft und die Wurfkraft, die jetzt gerade gleich gross ist wie die Gewichtskraft.'), 'impetus', noThrowForce),
       ] : [
@@ -404,7 +404,7 @@
         o(T('Straight down, but smaller than g, because the throw still pushes up.', 'Senkrecht nach unten, aber kleiner als g, weil der Wurf noch nach oben drückt.'), 'impetus', noThrowForce),
       ],
       'vertical-top': [
-        o(T(`It is zero, because the ${obj} is at rest for a moment.`, `Sie ist null, weil ${N.nom} kurz in Ruhe ist.`), 'rest-no-force', zeroWhy),
+        o(T(`It is zero, because the velocity of the ${obj} is zero there.`, `Sie ist null, weil ${N.nom} dort die Geschwindigkeit null hat.`), 'rest-no-force', zeroWhy),
         o(smallerG, 'impetus', noThrowForce),
       ],
       'vertical-falling': [
@@ -443,16 +443,16 @@
         text: T(`The ${obj} ${top ? (vertical ? 'got up to P' : 'moves on at P') : `moves ${motion} at P`} because it already has a velocity — no force is needed to keep a velocity (inertia). The weight changes the velocity: ${vertical ? `on the way up it makes the ${obj} slower, on the way down faster` : 'it makes the vertical part smaller on the way up and larger on the way down, while the horizontal part stays the same'}.`,
           `${cap(N.nom)} ${top ? (vertical ? 'ist bis P gekommen' : 'bewegt sich in P weiter') : `bewegt sich in P ${motion}`}, weil er schon eine Geschwindigkeit hat — um eine Geschwindigkeit beizubehalten, braucht es keine Kraft (Trägheit). Die Gewichtskraft ändert die Geschwindigkeit: ${vertical ? `Auf dem Weg nach oben macht sie ${N.acc} langsamer, auf dem Weg nach unten schneller` : 'Sie macht den vertikalen Anteil auf dem Weg nach oben kleiner und auf dem Weg nach unten grösser, während der horizontale Anteil gleich bleibt'}.`) },
       { title: T('Acceleration', 'Beschleunigung'), figure: figure({ force: true, acc: true }),
-        text: T(`Newton's second law: <i>a</i> = ${Fnet}/<i>m</i> = ${FG}/<i>m</i> = <i>g</i>, straight down, at every point of the flight. ${top ? `At the highest point the ${vertical ? '' : 'vertical '}velocity is zero for a moment, but it is still changing, from up to down: the acceleration is not zero.` : `It does not matter which way the ${obj} moves.`}`,
-          `Zweites Newtonsches Gesetz: <i>a</i> = ${Fnet}/<i>m</i> = ${FG}/<i>m</i> = <i>g</i>, senkrecht nach unten, in jedem Punkt des Flugs. ${top ? `Im höchsten Punkt ist die ${vertical ? '' : 'vertikale '}Geschwindigkeit kurz null, aber sie ändert sich gerade, von oben nach unten: Die Beschleunigung ist nicht null.` : `Es spielt keine Rolle, in welche Richtung sich ${N.nom} bewegt.`}`) },
+        text: T(`Newton's second law: <i>a</i> = ${Fnet}/<i>m</i> = ${FG}/<i>m</i> = <i>g</i>, straight down, at every point of the flight. ${top ? `At the highest point the ${vertical ? '' : 'vertical '}velocity is zero at that instant, but it is still changing, from up to down: the acceleration is not zero.` : `It does not matter which way the ${obj} moves.`}`,
+          `Zweites Newtonsches Gesetz: <i>a</i> = ${Fnet}/<i>m</i> = ${FG}/<i>m</i> = <i>g</i>, senkrecht nach unten, in jedem Punkt des Flugs. ${top ? `Im höchsten Punkt ist die ${vertical ? '' : 'vertikale '}Geschwindigkeit in diesem Augenblick null, aber sie ändert sich gerade, von oben nach unten: Die Beschleunigung ist nicht null.` : `Es spielt keine Rolle, in welche Richtung sich ${N.nom} bewegt.`}`) },
     ];
 
     const pw = T(PHASE_WORDS[phase][0], PHASE_WORDS[phase][1]);
     return {
       title: vertical ? T('Thrown straight up', 'Senkrecht nach oben geworfen') : T('Thrown at an angle', 'Schräg geworfen'),
       situation: vertical
-        ? T(`<p>A ${obj} is thrown straight up. It rises, stops for a moment at its highest point and falls back down. Air resistance is negligible. We look at the ${obj} at the point P, ${pw}.</p>`,
-          `<p>${cap(N.ein)} wird senkrecht nach oben geworfen. Er steigt, hält im höchsten Punkt kurz an und fällt wieder hinunter. Der Luftwiderstand ist vernachlässigbar. Wir betrachten ${N.acc} im Punkt P, ${pw}.</p>`)
+        ? T(`<p>A ${obj} is thrown straight up. It rises, turns round at its highest point and falls back down. Air resistance is negligible. We look at the ${obj} at the point P, ${pw}.</p>`,
+          `<p>${cap(N.ein)} wird senkrecht nach oben geworfen. Er steigt, kehrt im höchsten Punkt um und fällt wieder hinunter. Der Luftwiderstand ist vernachlässigbar. Wir betrachten ${N.acc} im Punkt P, ${pw}.</p>`)
         : T(`<p>A ${obj} is thrown at an angle and flies along a curved path. Air resistance is negligible. We look at the ${obj} at the point P, ${pw}.</p>`,
           `<p>${cap(N.ein)} wird schräg geworfen und fliegt auf einer gekrümmten Bahn. Der Luftwiderstand ist vernachlässigbar. Wir betrachten ${N.acc} im Punkt P, ${pw}.</p>`),
       figure: figure(),

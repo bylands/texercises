@@ -260,7 +260,12 @@
   const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'easy';
   const canReveal = () => st.solved || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
 
+  // Practice comes back more often to the types of exercise that were hard (shared practice.js).
+  const PRACTICE = 'bb', typeOf = (e) => `${e.packKey}-d${e.difficulty}`;
+  const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
+
   function open(exercise) {
+    finish(); // the student moves on
     ex = exercise;
     ex.hints = hints();
     st = { tries: 0, hints: 0, solved: false, revealed: false, codes: null };
@@ -269,7 +274,7 @@
     render();
   }
 
-  function fresh() { open(generate(level(), newSeed())); }
+  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s), typeOf, ex && typeOf(ex))); }
 
   function updateButtons() {
     const left = ex.hints.length - st.hints;
@@ -331,6 +336,7 @@
         showScore();
       }
       st.solved = true;
+      finish();
     }
     showFeedback();
     updateButtons();
@@ -357,6 +363,7 @@
   function reveal() {
     if (!canReveal()) return;
     st.revealed = true;
+    finish();
     showSolution();
     updateButtons();
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });

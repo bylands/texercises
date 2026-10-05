@@ -594,7 +594,7 @@
       return fig;
     },
     steps: () => [
-      step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('The elastic energy of the spring becomes potential energy; at the top the ball is at rest for a moment:', 'Die Spannenergie der Feder wird zu Lageenergie; im höchsten Punkt ist der Ball einen Moment lang in Ruhe:')}</p>${dm(`${el('s')} = ${pot('h')}`)}`, ALL, [0, 1]),
+      step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('The elastic energy of the spring becomes potential energy; at the top the speed of the ball is zero:', 'Die Spannenergie der Feder wird zu Lageenergie; im höchsten Punkt ist die Geschwindigkeit des Balls null:')}</p>${dm(`${el('s')} = ${pot('h')}`)}`, ALL, [0, 1]),
       step(L('Solve', 'Auflösen'), `<p>${L('Divide both sides by $m\\,g$ to get the height:', 'Teile beide Seiten durch $m\\,g$, um die Höhe zu erhalten:')}</p>` + dm('h = \\frac{k\\,s^2}{2\\,m\\,g}'), ALL),
     ],
     hint: () => m$(`${el('s')} = ${pot('h')}`),
@@ -709,15 +709,15 @@
     title: () => L('A block on a spring', 'Ein Klotz an der Feder'),
     text(p, formal) {
       if (p.ask === 'k') return formal
-        ? L('A block of mass $m$ hangs on a relaxed spring and is released from rest. It drops by $s$ before it comes to rest for a moment at its lowest point. Find the spring constant $k$ in terms of $m$, $s$ and $g$.',
-          'Ein Klotz der Masse $m$ hängt an einer entspannten Feder und wird aus der Ruhe losgelassen. Er sinkt um $s$, bis er im tiefsten Punkt einen Moment lang ruht. Wie gross ist die Federkonstante $k$? Drücke sie durch $m$, $s$ und $g$ aus.')
-        : L(`A block of ${q(p.V.m, 'kg')} hangs on a relaxed spring and is released from rest. It drops by ${q(p.V.s, 'm')} before it comes to rest for a moment at its lowest point. What is the spring constant?`,
-          `Ein Klotz von ${q(p.V.m, 'kg')} hängt an einer entspannten Feder und wird aus der Ruhe losgelassen. Er sinkt um ${q(p.V.s, 'm')}, bis er im tiefsten Punkt einen Moment lang ruht. Wie gross ist die Federkonstante?`);
+        ? L('A block of mass $m$ hangs on a relaxed spring and is released from rest. It drops by $s$ to its lowest point, where its speed is zero and it turns round. Find the spring constant $k$ in terms of $m$, $s$ and $g$.',
+          'Ein Klotz der Masse $m$ hängt an einer entspannten Feder und wird aus der Ruhe losgelassen. Er sinkt um $s$ bis zum tiefsten Punkt, wo seine Geschwindigkeit null ist und er umkehrt. Wie gross ist die Federkonstante $k$? Drücke sie durch $m$, $s$ und $g$ aus.')
+        : L(`A block of ${q(p.V.m, 'kg')} hangs on a relaxed spring and is released from rest. It drops by ${q(p.V.s, 'm')} to its lowest point, where its speed is zero and it turns round. What is the spring constant?`,
+          `Ein Klotz von ${q(p.V.m, 'kg')} hängt an einer entspannten Feder und wird aus der Ruhe losgelassen. Er sinkt um ${q(p.V.s, 'm')} bis zum tiefsten Punkt, wo seine Geschwindigkeit null ist und er umkehrt. Wie gross ist die Federkonstante?`);
       return formal
-        ? L(`A block hangs on a relaxed spring and is released from rest. It drops by $s$ before it comes to rest for a moment at its lowest point. How fast is it when it has dropped by ${fwords(p.fr)} of that distance? Express its speed $v'$ in terms of $s$ and $g$.`,
-          `Ein Klotz hängt an einer entspannten Feder und wird aus der Ruhe losgelassen. Er sinkt um $s$, bis er im tiefsten Punkt einen Moment lang ruht. Wie schnell ist er, wenn er um ${fwords(p.fr)} dieser Strecke gesunken ist? Drücke seine Geschwindigkeit $v'$ durch $s$ und $g$ aus.`)
-        : L(`A block hangs on a relaxed spring and is released from rest. It drops by ${q(p.V.s, 'm')} before it comes to rest for a moment at its lowest point. How fast is it when it has dropped by ${q(p.V.x, 'm')}?`,
-          `Ein Klotz hängt an einer entspannten Feder und wird aus der Ruhe losgelassen. Er sinkt um ${q(p.V.s, 'm')}, bis er im tiefsten Punkt einen Moment lang ruht. Wie schnell ist er, wenn er um ${q(p.V.x, 'm')} gesunken ist?`);
+        ? L(`A block hangs on a relaxed spring and is released from rest. It drops by $s$ to its lowest point, where its speed is zero and it turns round. How fast is it when it has dropped by ${fwords(p.fr)} of that distance? Express its speed $v'$ in terms of $s$ and $g$.`,
+          `Ein Klotz hängt an einer entspannten Feder und wird aus der Ruhe losgelassen. Er sinkt um $s$ bis zum tiefsten Punkt, wo seine Geschwindigkeit null ist und er umkehrt. Wie schnell ist er, wenn er um ${fwords(p.fr)} dieser Strecke gesunken ist? Drücke seine Geschwindigkeit $v'$ durch $s$ und $g$ aus.`)
+        : L(`A block hangs on a relaxed spring and is released from rest. It drops by ${q(p.V.s, 'm')} to its lowest point, where its speed is zero and it turns round. How fast is it when it has dropped by ${q(p.V.x, 'm')}?`,
+          `Ein Klotz hängt an einer entspannten Feder und wird aus der Ruhe losgelassen. Er sinkt um ${q(p.V.s, 'm')} bis zum tiefsten Punkt, wo seine Geschwindigkeit null ist und er umkehrt. Wie schnell ist er, wenn er um ${q(p.V.x, 'm')} gesunken ist?`);
     },
     scene(p, formal, view) {
       const fig = new Fig(this.title()), L0 = 80, S0 = 110, bw = 28, bh = 30, x = fval(p.fr) * S0;
@@ -791,10 +791,10 @@
     zero: () => L('the lowest point of the ball', 'der tiefste Punkt des Balls'),
     title: () => L('Dropped onto a spring', 'Auf eine Feder fallen gelassen'),
     text: (p, formal) => (formal
-      ? L('A ball of mass $m$ is dropped from rest from a height $h$ above the top of a vertical spring. It lands on the spring and compresses it by $s$ before it comes to rest for a moment. Find the spring constant $k$ in terms of $m$, $h$, $s$ and $g$.',
-        'Ein Ball der Masse $m$ wird aus der Höhe $h$ über dem oberen Ende einer senkrechten Feder aus der Ruhe fallen gelassen. Er landet auf der Feder und drückt sie um $s$ zusammen, bis er einen Moment lang ruht. Wie gross ist die Federkonstante $k$? Drücke sie durch $m$, $h$, $s$ und $g$ aus.')
-      : L(`A ball of ${q(p.V.m, 'kg')} is dropped from rest from ${q(p.V.h, 'm')} above the top of a vertical spring. It lands on the spring and compresses it by ${q(p.V.s, 'm')} before it comes to rest for a moment. What is the spring constant?`,
-        `Ein Ball von ${q(p.V.m, 'kg')} wird aus ${q(p.V.h, 'm')} über dem oberen Ende einer senkrechten Feder aus der Ruhe fallen gelassen. Er landet auf der Feder und drückt sie um ${q(p.V.s, 'm')} zusammen, bis er einen Moment lang ruht. Wie gross ist die Federkonstante?`)),
+      ? L('A ball of mass $m$ is dropped from rest from a height $h$ above the top of a vertical spring. It lands on the spring and compresses it by $s$, until its speed is zero. Find the spring constant $k$ in terms of $m$, $h$, $s$ and $g$.',
+        'Ein Ball der Masse $m$ wird aus der Höhe $h$ über dem oberen Ende einer senkrechten Feder aus der Ruhe fallen gelassen. Er landet auf der Feder und drückt sie um $s$ zusammen, bis seine Geschwindigkeit null ist. Wie gross ist die Federkonstante $k$? Drücke sie durch $m$, $h$, $s$ und $g$ aus.')
+      : L(`A ball of ${q(p.V.m, 'kg')} is dropped from rest from ${q(p.V.h, 'm')} above the top of a vertical spring. It lands on the spring and compresses it by ${q(p.V.s, 'm')} , until its speed is zero. What is the spring constant?`,
+        `Ein Ball von ${q(p.V.m, 'kg')} wird aus ${q(p.V.h, 'm')} über dem oberen Ende einer senkrechten Feder aus der Ruhe fallen gelassen. Er landet auf der Feder und drückt sie um ${q(p.V.s, 'm')} zusammen, bis seine Geschwindigkeit null ist. Wie gross ist die Federkonstante?`)),
     scene(p, formal, view) {
       const fig = new Fig(this.title()), L0 = 70, C = 30, H = 100;
       [0, 1, 2].forEach((i) => {
@@ -957,10 +957,10 @@
     zero: () => L('the floor (the potential energy does not change)', 'der Boden (die Lageenergie ändert sich nicht)'),
     title: () => L('Spring buffer', 'Federpuffer'),
     text: (p, formal) => (formal
-      ? L('A cart of mass $m$ rolls with the speed $v$ against a spring buffer with spring constant $k$. How far does it compress the spring before it stops for a moment? Express $s$ in terms of $m$, $v$ and $k$.',
-        'Ein Wagen der Masse $m$ rollt mit der Geschwindigkeit $v$ gegen einen Federpuffer mit der Federkonstanten $k$. Wie stark drückt er die Feder zusammen, bis er einen Moment lang stillsteht? Drücke $s$ durch $m$, $v$ und $k$ aus.')
-      : L(`A cart of ${q(p.V.m, 'kg')} rolls at ${q(p.V.v, 'v')} against a spring buffer with a spring constant of ${q(p.V.k, 'k')}. How far does it compress the spring before it stops for a moment?`,
-        `Ein Wagen von ${q(p.V.m, 'kg')} rollt mit ${q(p.V.v, 'v')} gegen einen Federpuffer mit der Federkonstanten ${q(p.V.k, 'k')}. Wie stark drückt er die Feder zusammen, bis er einen Moment lang stillsteht?`)),
+      ? L('A cart of mass $m$ rolls with the speed $v$ against a spring buffer with spring constant $k$. How far does it compress the spring until its speed is zero? Express $s$ in terms of $m$, $v$ and $k$.',
+        'Ein Wagen der Masse $m$ rollt mit der Geschwindigkeit $v$ gegen einen Federpuffer mit der Federkonstanten $k$. Wie stark drückt er die Feder zusammen, bis seine Geschwindigkeit null ist? Drücke $s$ durch $m$, $v$ und $k$ aus.')
+      : L(`A cart of ${q(p.V.m, 'kg')} rolls at ${q(p.V.v, 'v')} against a spring buffer with a spring constant of ${q(p.V.k, 'k')}. How far does it compress the spring until its speed is zero?`,
+        `Ein Wagen von ${q(p.V.m, 'kg')} rollt mit ${q(p.V.v, 'v')} gegen einen Federpuffer mit der Federkonstanten ${q(p.V.k, 'k')}. Wie stark drückt er die Feder zusammen, bis seine Geschwindigkeit null ist?`)),
     scene(p, formal, view) {
       const fig = new Fig(this.title()), L0 = 96, C = 38, bw = 40, bh = 30, gap = 250;
       [0, 1].forEach((i) => {
@@ -1268,7 +1268,7 @@
       return fig;
     },
     steps: () => [
-      step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('The elastic energy of the spring becomes potential energy; at the highest point the block is at rest for a moment:', 'Die Spannenergie der Feder wird zu Lageenergie; im höchsten Punkt ruht der Klotz einen Moment lang:')}</p>${dm(`${el('s')} = ${pot('h')}`)}`, ALL, [0, 1]),
+      step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('The elastic energy of the spring becomes potential energy; at the highest point the speed of the block is zero:', 'Die Spannenergie der Feder wird zu Lageenergie; im höchsten Punkt ist die Geschwindigkeit des Klotzes null:')}</p>${dm(`${el('s')} = ${pot('h')}`)}`, ALL, [0, 1]),
       step(L('Height and distance', 'Höhe und Strecke'), `<p>${L('Along the slope the block covers $d$ and rises by', 'Entlang der Ebene legt der Klotz $d$ zurück und steigt dabei um')} $h = d\\sin 30^\\circ = \\tfrac{1}{2}\\,d$:</p>` +
         dm('\\tfrac{1}{2}\\,k\\,s^2 = \\tfrac{1}{2}\\,m\\,g\\,d \;\\Rightarrow\; d = \\frac{k\\,s^2}{m\\,g}'), ALL),
     ],

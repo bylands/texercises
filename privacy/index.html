@@ -9,7 +9,7 @@
        /crosswords/ set a session cookie), no analytics, nothing loaded from other servers
        (KaTeX is served with the apps); nginx access logs (IP, time, URL, status, size, referrer,
        user agent), rotated daily and kept 14 days (/etc/logrotate.d/nginx on the server);
-       localStorage keys tp-lang and <app>-* in the apps. Update it when any of these change. -->
+       localStorage keys tp-lang, tp-recent (lang.js), tp-hub-order (hub) and <app>-* in the apps. Update it when any of these change. -->
   <style>
     :root {
       --bg: #f6f5f1;
@@ -101,7 +101,7 @@
   <main class="wrap">
     <article data-lang="de" lang="de">
       <h1>Datenschutz</h1>
-      <p class="date">Stand: 4. Oktober 2026</p>
+      <p class="date">Stand: 5. Oktober 2026</p>
 
       <h2>Verantwortlich</h2>
       <p>Samuel Byland, MNG Rämibühl, Zürich<br>Kontakt: <a href="mailto:samuel.byland@mng.ch">samuel.byland@mng.ch</a></p>
@@ -121,7 +121,7 @@
       <p>Diese Angaben dienen nur dem Betrieb und der Sicherheit des Servers, etwa um Fehler und Angriffe zu erkennen. Sie werden nicht ausgewertet, um Personen zu erkennen, nicht mit anderen Daten zusammengeführt und nach 14 Tagen automatisch gelöscht.</p>
 
       <h2>Daten in deinem Browser</h2>
-      <p>Damit du beim nächsten Besuch weitermachen kannst, speichern die Apps einige Angaben im lokalen Speicher deines Browsers (localStorage): die gewählte Sprache, den Modus und die Schwierigkeitsstufe, die Zahl der gelösten Aufgaben, die Bestpunktzahl im Arcade-Modus und bei «Kraftkonzepte», hinter welchen deiner falschen Antworten welche Fehlvorstellung steckte und welche Aufgabentypen zuletzt kamen und dir schwerfielen (damit diese häufiger drankommen). Diese Angaben bleiben auf deinem Gerät und werden nicht an den Server übertragen. Du kannst sie jederzeit löschen, indem du in den Einstellungen deines Browsers die Websitedaten von teachingphysics.ch löschst.</p>
+      <p>Damit du beim nächsten Besuch weitermachen kannst, speichern die Apps einige Angaben im lokalen Speicher deines Browsers (localStorage): die gewählte Sprache, den Modus und die Schwierigkeitsstufe, die Zahl der gelösten Aufgaben, die Bestpunktzahl im Arcade-Modus, welche Aufgabentypen dir schwerfielen (damit diese im Übungsmodus häufiger drankommen), wann du welche App zuletzt geöffnet hast (für die Reihenfolge «Zuletzt verwendet» auf der Startseite) und bei «Kraftkonzepte», hinter welchen deiner falschen Antworten welche Fehlvorstellung steckte und welche Aufgabentypen zuletzt kamen. Diese Angaben bleiben auf deinem Gerät und werden nicht an den Server übertragen. Du kannst sie jederzeit löschen, indem du in den Einstellungen deines Browsers die Websitedaten von teachingphysics.ch löschst.</p>
 
       <h2>Links</h2>
       <p>Für Websites, auf die verlinkt wird (zum Beispiel mng.ch), gelten deren eigene Datenschutzbestimmungen.</p>
@@ -132,7 +132,7 @@
 
     <article data-lang="en" lang="en" hidden>
       <h1>Privacy</h1>
-      <p class="date">Last updated: 4 October 2026</p>
+      <p class="date">Last updated: 5 October 2026</p>
 
       <h2>Responsible</h2>
       <p>Samuel Byland, MNG Rämibühl, Zurich<br>Contact: <a href="mailto:samuel.byland@mng.ch">samuel.byland@mng.ch</a></p>
@@ -152,7 +152,7 @@
       <p>These records serve only to run and secure the server, for example to find errors and attacks. They are not analysed to identify anyone, not combined with other data, and deleted automatically after 14 days.</p>
 
       <h2>Data in your browser</h2>
-      <p>So that you can carry on where you left off, the apps keep a few settings in your browser's local storage (localStorage): the language, mode and difficulty you chose, how many exercises you solved, your best arcade score and, in Force Concepts, which misconception was behind which of your wrong answers and which exercise types came up last and which you found hard (so that those come up more often). This stays on your device and is never sent to the server. You can delete it at any time by clearing the site data of teachingphysics.ch in your browser's settings.</p>
+      <p>So that you can carry on where you left off, the apps keep a few settings in your browser's local storage (localStorage): the language, mode and difficulty you chose, how many exercises you solved, your best arcade score, which exercise types you found hard (so that those come up more often in practice), when you last opened each app (for the order “Recently used” on the start page) and, in Force Concepts, which misconception was behind which of your wrong answers and which exercise types came up last. This stays on your device and is never sent to the server. You can delete it at any time by clearing the site data of teachingphysics.ch in your browser's settings.</p>
 
       <h2>Links</h2>
       <p>Websites linked from here (for example mng.ch) have their own privacy policies.</p>

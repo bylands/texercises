@@ -86,6 +86,10 @@ svg .val { fill: var(--ink); font-size: 13px; font-family: system-ui, sans-serif
 svg .band.focus { fill: var(--focus-band); }
 .tgraphs svg .val { font-size: 19px; }
 .tgraphs svg .tick, .tgraphs svg .pnum { font-size: 15px; }
+/* stacked (tutor): each graph as wide as the page allows, so the usual label sizes */
+.tgraphs.stack { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+.tgraphs.stack svg .val { font-size: 13px; }
+.tgraphs.stack svg .tick, .tgraphs.stack svg .pnum { font-size: 12px; }
 svg .pnum.focus { fill: var(--ink); }
 svg .chord { stroke: var(--ink); stroke-width: 1.4; stroke-dasharray: 6 4; }
 svg .tangent { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }

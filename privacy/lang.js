@@ -8,6 +8,8 @@
 //                         share (COMMON, e.g. the privacy link in the footer); sets <html lang>
 //                         and the EN/DE switch
 //   Lang.wire(onChange)   connects the EN/DE switch (#langs) to onChange(lang)
+// It also notes when each app was last opened (tp-recent: { folder: time }, e.g. { coe: … }), for
+// the hub's order "Recently used".
 (function (root) {
   'use strict';
 
@@ -50,6 +52,19 @@
       if (el) el.addEventListener('change', (evt) => { Lang.set(evt.target.value); onChange(lang); });
     },
   };
+
+  // the app is the first folder of the address (/coe/ → coe); the hub (at /, or /hub/ when tried
+  // out locally), the privacy page and the admin panel are no app
+  if (typeof location !== 'undefined') {
+    const app = (location.pathname.match(/^\/([a-z0-9-]+)\//) || [])[1];
+    if (app && !['privacy', 'admin', 'hub'].includes(app)) {
+      try {
+        const recent = JSON.parse(localStorage.getItem('tp-recent')) || {};
+        recent[app] = Date.now();
+        localStorage.setItem('tp-recent', JSON.stringify(recent));
+      } catch (e) { /* storage unavailable */ }
+    }
+  }
 
   root.Lang = Lang;
   if (typeof module !== 'undefined') module.exports = Lang;

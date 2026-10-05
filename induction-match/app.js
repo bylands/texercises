@@ -338,7 +338,12 @@
   const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'easy';
   const canReveal = () => st.solved || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
 
+  // Practice comes back more often to the types of exercise that were hard (shared practice.js).
+  const PRACTICE = 'im', typeOf = (e) => e.family;
+  const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
+
   function open(exercise) {
+    finish(); // the student moves on
     ex = exercise;
     ex.hints = hints();
     st = { pairs: new Map(), sel: null, marks: {}, checked: false, tries: 0, hints: 0, solved: false, revealed: false };
@@ -347,7 +352,7 @@
     render();
   }
 
-  function fresh() { open(generate(level(), newSeed())); }
+  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s), typeOf, ex && typeOf(ex))); }
 
   function updateButtons() {
     const left = ex.hints.length - st.hints;
@@ -386,6 +391,7 @@
         showScore();
       }
       st.solved = true;
+      finish();
     }
     showFeedback();
     paint();
@@ -407,6 +413,7 @@
   function reveal() {
     if (!canReveal()) return;
     st.revealed = true;
+    finish();
     st.sel = null;
     st.marks = {};
     st.checked = false;

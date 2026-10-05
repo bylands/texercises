@@ -27,13 +27,13 @@
     const only = T('After release, only the weight acts on the ball.', 'Nach dem Loslassen wirkt nur die Gewichtskraft auf den Ball.');
     const all = [
       stmt(T('At the highest point, the acceleration of the ball is zero.', 'Im höchsten Punkt ist die Beschleunigung des Balls null.'), false,
-        T('Its velocity is zero there for a moment, but it is changing from up to down: the acceleration is <i>g</i>, downward.', 'Die Geschwindigkeit ist dort kurz null, ändert sich aber gerade von oben nach unten: Die Beschleunigung ist <i>g</i>, nach unten.'), 'rest-no-force'),
+        T('Its velocity is zero there, but only at that instant: it is changing from up to down, so the acceleration is <i>g</i>, downward.', 'Die Geschwindigkeit ist dort null, aber nur in diesem Augenblick: Sie ändert sich gerade von oben nach unten, also Die Beschleunigung ist <i>g</i>, nach unten.'), 'rest-no-force'),
       stmt(T('On the way up, a force from the throw pushes the ball upward.', 'Auf dem Weg nach oben drückt eine Wurfkraft den Ball nach oben.'), false,
         T(`The hand pushes only while it touches the ball. ${only} The ball rises because of its velocity.`, `Die Hand stösst nur, solange sie den Ball berührt. ${only} Der Ball steigt wegen seiner Geschwindigkeit.`), 'impetus'),
       stmt(T('The acceleration of the ball is the same at every point of its flight.', 'Die Beschleunigung des Balls ist in jedem Punkt seines Flugs gleich.'), true,
         T(`${only} So <i>a</i> = ${FG}/<i>m</i> = <i>g</i>, downward, all the time.`, `${only} Also ist <i>a</i> = ${FG}/<i>m</i> = <i>g</i>, nach unten, die ganze Zeit.`)),
       stmt(T('At the highest point, the velocity of the ball is zero.', 'Im höchsten Punkt ist die Geschwindigkeit des Balls null.'), true,
-        T('It stops rising and starts falling: for a moment it is at rest.', 'Er hört auf zu steigen und beginnt zu fallen: Einen Moment lang ist er in Ruhe.')),
+        T('There it turns round: at that instant it stops rising and starts falling.', 'Dort kehrt er um: In diesem Augenblick hört er auf zu steigen und beginnt zu fallen.')),
       stmt(T('On the way down, the ball gets faster by about 9.8 m/s every second.', 'Auf dem Weg nach unten wird der Ball jede Sekunde um etwa 9.8 m/s schneller.'), true,
         T('Its acceleration is <i>g</i> ≈ 9.8 m/s², downward.', 'Seine Beschleunigung ist <i>g</i> ≈ 9.8 m/s², nach unten.')),
       stmt(T('The weight of the ball is larger on the way down than on the way up.', 'Die Gewichtskraft des Balls ist auf dem Weg nach unten grösser als auf dem Weg nach oben.'), false,
@@ -52,7 +52,7 @@
       D.ghost(D.ball(100, 140, 8)) + D.arrow(100, 140, 100, 104, 'v', 'v') + D.ghost(D.ball(160, 140, 8)) + D.arrow(160, 140, 160, 176, 'v', 'v'), T('A ball thrown straight up', 'Ein senkrecht hochgeworfener Ball'));
     return {
       title: T('True or false: thrown up', 'Richtig oder falsch: hochgeworfen'),
-      situation: T('<p>A ball is thrown straight up. It rises, stops for a moment at its highest point and falls back down. Air resistance is negligible.</p>', '<p>Ein Ball wird senkrecht nach oben geworfen. Er steigt, hält im höchsten Punkt kurz an und fällt wieder hinunter. Der Luftwiderstand ist vernachlässigbar.</p>'),
+      situation: T('<p>A ball is thrown straight up. It rises, turns round at its highest point and falls back down. Air resistance is negligible.</p>', '<p>Ein Ball wird senkrecht nach oben geworfen. Er steigt, kehrt im höchsten Punkt um und fällt wieder hinunter. Der Luftwiderstand ist vernachlässigbar.</p>'),
       figure: fig,
       questions: [tf(r, 'statements', prompt(), items)],
       hints: [
@@ -100,7 +100,7 @@
         T('Both forces count: they add as arrows to the net force, and the acceleration points along that.', 'Beide Kräfte zählen: Sie addieren sich als Pfeile zur resultierenden Kraft, und die Beschleunigung zeigt in deren Richtung.'), 'largest-force'),
       stmt(T('If the net force is constant, the velocity changes by the same amount every second.', 'Ist die resultierende Kraft konstant, ändert sich die Geschwindigkeit jede Sekunde um gleich viel.'), true,
         T('A constant force gives a constant acceleration.', 'Eine konstante Kraft ergibt eine konstante Beschleunigung.'), 'active-force'),
-      stmt(T('A ball at its highest point, momentarily at rest, has zero acceleration.', 'Ein Ball im höchsten Punkt, kurz in Ruhe, hat die Beschleunigung null.'), false,
+      stmt(T('A ball at its highest point, where its velocity is zero, has zero acceleration.', 'Ein Ball im höchsten Punkt, wo seine Geschwindigkeit null ist, hat die Beschleunigung null.'), false,
         T('Its velocity is changing from up to down: the acceleration is <i>g</i>.', 'Seine Geschwindigkeit ändert sich gerade von oben nach unten: Die Beschleunigung ist <i>g</i>.'), 'rest-no-force'),
     ];
     const items = pickFive(r, pool);

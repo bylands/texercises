@@ -29,6 +29,7 @@ jobs:
         run: shared/sync.sh --check
       - name: Tests of the apps
         run: |
+          node shared/test/check-practice.js
           for t in */test/check-generator.js; do
             echo "::group::$t"
             node "$t"

@@ -102,7 +102,12 @@
   const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'medium';
   const starsOf = (d) => `<span class="stars" role="img" aria-label="${ui().stars(d)}" title="${ui().stars(d)}">${'★'.repeat(d)}${'☆'.repeat(5 - d)}</span>`;
 
+  // Practice comes back more often to the types of exercise that were hard (shared practice.js).
+  const PRACTICE = 'rc', typeOf = (e) => `d${e.difficulty}`;
+  const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
+
   function open(exercise) {
+    finish(); // the student moves on
     ex = exercise;
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null };
     const hash = `#${ex.id}`;
@@ -111,7 +116,7 @@
     $(`#in-${ex.fields[0].key}`).focus({ preventScroll: true });
   }
 
-  function fresh() { open(generate(level(), newSeed())); }
+  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s), typeOf, ex && typeOf(ex))); }
 
   function render() {
     $('#title').innerHTML = `${esc(ex.title)} ${starsOf(ex.difficulty)}`;
@@ -191,6 +196,7 @@
         showScore();
       }
       st.solved = true;
+      finish();
       showStatus('ok');
     } else showStatus('bad');
     updateButtons();
@@ -220,6 +226,7 @@
   function reveal() {
     if (!canReveal()) return;
     st.revealed = true;
+    finish();
     showSolution();
     updateButtons();
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -158,13 +158,30 @@
     .force { fill: none; stroke: #d24a0f; stroke-width: 2.5; }
     .forcehead { fill: #d24a0f; }
     .curve { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-    /* the filter by tag (the tags come from /apps.json, set in the admin panel) */
+    /* the filter by tag (the tags come from /apps.json, set in the admin panel; several can be
+       chosen) and the order of the cards, like the EN/DE switch */
+    .tools {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px 16px;
+      padding-bottom: 20px;
+    }
+
     .filter {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      padding-bottom: 20px;
     }
+
+    .order { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); margin-left: auto; }
+    .order label { position: relative; }
+    .order input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+    .order span { display: block; padding: 5px 12px; font-size: 0.9rem; border-left: 1px solid var(--line); white-space: nowrap; }
+    .order label:first-child span { border-left: 0; }
+    .order input:checked + span { background: var(--accent); color: var(--card); font-weight: 600; }
+    .order input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
 
     .filter button {
       font: inherit;
@@ -218,7 +235,13 @@
     <p data-i18n="tagline">Interactive exercises for physics lessons.</p>
   </header>
 
-  <nav id="filter" class="wrap filter" data-i18n-label="filter" aria-label="Filter by topic" hidden></nav>
+  <div class="wrap tools">
+    <nav id="filter" class="filter" data-i18n-label="filter" aria-label="Filter by topic" hidden></nav>
+    <div id="order" class="order" role="radiogroup" data-i18n-label="order" aria-label="Order of the apps">
+      <label><input type="radio" name="order" value="standard" checked><span data-i18n="standard">Standard</span></label>
+      <label><input type="radio" name="order" value="recent"><span data-i18n="recent">Recently used</span></label>
+    </div>
+  </div>
 
   <main class="wrap apps">
     <a class="app" href="/bulb-brightness/">
@@ -404,8 +427,10 @@
     // The page in English or German (lang.js, shared with the apps: the same language as there),
     // and the order, tags and filter by tag from /apps.json (written by the admin panel at /admin/):
     // { order: [app], tags: { app: [key] }, labels: { key: { en, de } } }. Without it, the cards
-    // stay as they are in this page. The chosen tag is kept in the address (?topic=key), so that a
-    // filtered page can be shared in either language.
+    // stay as they are in this page. The chosen tags are kept in the address (?topic=key,key: the
+    // cards with any of them), so that a filtered page can be shared in either language. The order
+    // is the standard one (the admin panel's) or, if chosen, the most recently used apps first
+    // (tp-recent, noted by lang.js in each app); the choice is remembered (tp-hub-order).
     (function () {
       const main = document.querySelector('main.apps'), nav = document.getElementById('filter');
       const cards = [...main.querySelectorAll('a.app')];
@@ -414,8 +439,8 @@
 
       // the German texts of the page; the English ones are those in it
       const UI = {
-        en: { tagline: 'Interactive exercises for physics lessons.', filter: 'Filter by topic' },
-        de: { tagline: 'Interaktive Übungen für den Physikunterricht.', filter: 'Nach Thema filtern' },
+        en: { tagline: 'Interactive exercises for physics lessons.', filter: 'Filter by topic', order: 'Order of the apps', standard: 'Standard', recent: 'Recently used' },
+        de: { tagline: 'Interaktive Übungen für den Physikunterricht.', filter: 'Nach Thema filtern', order: 'Reihenfolge der Apps', standard: 'Standard', recent: 'Zuletzt verwendet' },
       };
       const DE = {
         'bulb-brightness': ['Helligkeit von Lampen', 'Sage voraus, welche Lampen in Serien- und Parallelschaltungen heller leuchten.', 'Stromkreis mit einer Batterie, einer Lampe in Serie und zwei Lampen parallel'],
@@ -431,7 +456,7 @@
       const parts = (c) => [c.querySelector('h2'), c.querySelector('.text p'), c.querySelector('svg')];
       const EN = new Map(cards.map((c) => { const [h, p, svg] = parts(c); return [c, [h.textContent, p.textContent, svg.getAttribute('aria-label')]]; }));
 
-      let cfg = null, topic = '';
+      let cfg = null, topics = new Set();
       const tagsOf = (c) => (cfg && Array.isArray(cfg.tags && cfg.tags[idOf(c)]) ? cfg.tags[idOf(c)].filter((k) => typeof k === 'string') : []);
       // a tag's name in the page's language (a tag without names is its own name)
       const nameOf = (k) => { const l = cfg.labels && cfg.labels[k]; return l ? (Lang.get() === 'de' && l.de) || l.en || k : k; };
@@ -444,13 +469,23 @@
         });
       }
 
-      function show(t) {
-        topic = t;
-        cards.forEach((c) => { c.hidden = !!topic && !tagsOf(c).includes(topic); });
-        nav.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.topic || '') === topic)));
+      function show() {
+        cards.forEach((c) => { c.hidden = topics.size > 0 && !tagsOf(c).some((k) => topics.has(k)); });
+        nav.querySelectorAll('button').forEach((b) => {
+          const k = b.dataset.topic;
+          b.setAttribute('aria-pressed', String(k ? topics.has(k) : topics.size === 0));
+        });
         const url = new URL(location.href);
-        if (topic) url.searchParams.set('topic', topic); else url.searchParams.delete('topic');
+        if (topics.size) url.searchParams.set('topic', [...topics].join(',')); else url.searchParams.delete('topic');
+        url.search = url.searchParams.toString().replace(/%2C/g, ','); // ?topic=a,b, readable
         history.replaceState(null, '', url);
+      }
+      // a tag on or off; All: no filter
+      function toggle(k) {
+        if (!k) topics.clear();
+        else if (topics.has(k)) topics.delete(k);
+        else topics.add(k);
+        show();
       }
 
       // the tags of the cards and the filter, in the page's language
@@ -473,22 +508,44 @@
           b.type = 'button';
           b.textContent = k ? nameOf(k) : L('All', 'Alle');
           if (k) b.dataset.topic = k;
-          b.addEventListener('click', () => show(k && k !== topic ? k : ''));
+          b.addEventListener('click', () => toggle(k));
           return b;
         }));
-        show(all.includes(topic) ? topic : '');
+        topics = new Set([...topics].filter((k) => all.includes(k)));
+        show();
       }
+
+      // the standard order: the admin panel's, else the page's
+      const page = [...cards];
+      let standard = page;
+      const recentOf = () => { try { return JSON.parse(localStorage.getItem('tp-recent')) || {}; } catch (e) { return {}; } };
+      const orderKey = () => { try { return localStorage.getItem('tp-hub-order') === 'recent' ? 'recent' : 'standard'; } catch (e) { return 'standard'; } };
+      function arrange() {
+        const recent = recentOf(), when = (c) => Number(recent[idOf(c)]) || 0;
+        const list = orderKey() === 'recent'
+          ? [...standard].sort((a, b) => when(b) - when(a)) // stable: the unused ones keep the standard order
+          : standard;
+        main.append(...list);
+        document.querySelector(`input[name="order"][value="${orderKey()}"]`).checked = true;
+      }
+      document.getElementById('order').addEventListener('change', (evt) => {
+        try { localStorage.setItem('tp-hub-order', evt.target.value); } catch (e) { /* storage unavailable */ }
+        arrange();
+      });
+      window.addEventListener('pageshow', (evt) => { if (evt.persisted) arrange(); }); // back from an app
 
       function apply(c) {
         cfg = c;
-        const order = Array.isArray(cfg.order) ? cfg.order : [], byId = new Map(cards.map((x) => [idOf(x), x]));
-        main.append(...order.filter((id) => byId.has(id)).map((id) => byId.get(id)), ...cards.filter((x) => !order.includes(idOf(x))));
-        topic = new URLSearchParams(location.search).get('topic') || '';
+        const order = Array.isArray(cfg.order) ? cfg.order : [], byId = new Map(page.map((x) => [idOf(x), x]));
+        standard = [...order.filter((id) => byId.has(id)).map((id) => byId.get(id)), ...page.filter((x) => !order.includes(idOf(x)))];
+        arrange();
+        topics = new Set((new URLSearchParams(location.search).get('topic') || '').split(',').filter(Boolean));
         tags();
       }
 
       Lang.init();
       texts();
+      arrange();
       Lang.wire(() => { texts(); tags(); });
       fetch('/apps.json', { cache: 'no-cache' })
         .then((r) => (r.ok ? r.json() : null))

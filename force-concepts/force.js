@@ -221,8 +221,9 @@
           g += D.ghost(D.probe(x, y, [1, 0], [0, -s], 0.6));
           if (o.forces) g += D.arrow(x, y, x, y - s * 30, 'f', u === 0.5 ? 'F' : '', { at: [x + 8, y - s * 24 + 4], anchor: 'start' });
         });
-        g += D.dot(Q[0], Q[1], 3.5, 'pt') + D.text(Q[0] + 6, Q[1] + s * 16 + 4, 'Q', 'lbl', 'start');
       }
+      // Q is where the engine is switched off: in every picture, as the text refers to it
+      g += D.dot(Q[0], Q[1], 3.5, 'pt') + D.text(Q[0] + 6, Q[1] + s * 16 + 4, 'Q', 'lbl', 'start');
       if (o.after) {
         g += D.line(Q[0], Q[1], Q[0] + 110 * tu[0], Q[1] + 110 * tu[1], 'trace strong');
         g += D.probe(Q[0] + 60 * tu[0], Q[1] + 60 * tu[1], [1, 0], null, 0.6);

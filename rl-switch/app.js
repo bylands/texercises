@@ -114,7 +114,12 @@
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
   const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'easy';
 
+  // Practice comes back more often to the types of exercise that were hard (shared practice.js).
+  const PRACTICE = 'rl', typeOf = (e) => `${e.circuit.sw.at}-${e.circuit.sw.before}`;
+  const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
+
   function open(exercise) {
+    finish(); // the student moves on
     ex = exercise;
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false };
     const hash = `#${ex.id}`;
@@ -123,7 +128,7 @@
     $(`#in-${ex.fields[0].key}`).focus({ preventScroll: true });
   }
 
-  function fresh() { open(generate(level(), newSeed())); }
+  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s), typeOf, ex && typeOf(ex))); }
 
   function render() {
     $('#title').textContent = ex.title;
@@ -211,6 +216,7 @@
         showScore();
       }
       st.solved = true;
+      finish();
       showStatus('ok');
     } else showStatus('bad');
     updateButtons();
@@ -240,6 +246,7 @@
   function reveal() {
     if (!canReveal()) return;
     st.revealed = true;
+    finish();
     showSolution();
     updateButtons();
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });
