@@ -84,7 +84,8 @@
     } else {
       steps.push({
         rule: L('Insert the values', 'Werte einsetzen'),
-        text: `$$${sym} = ${scn.tex(p, false)} = ${scn.insert(p)} \\approx \\htmlClass{result}{${trq(value, want.unit)}}$$`,
+        text: `<p>${L('Put the given values into the formula and round the result to three digits:', 'Setze die gegebenen Werte in die Formel ein und runde das Resultat auf drei Stellen:')}</p>` +
+          `$$${sym} = ${scn.tex(p, false)} = ${scn.insert(p)} \\approx \\htmlClass{result}{${trq(value, want.unit)}}$$`,
         bars: null, hl: [],
       });
     }

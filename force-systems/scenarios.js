@@ -11,6 +11,8 @@
 //   text(p), scene(p)  the situation, in words and as a drawing (see draw.js)
 //   hints(p, v), steps(p, v)  hints and the worked solution: steps { text, show, hl } that say
 //                      which forces of the drawing to show and highlight
+//   boxes(p)           (two boxes) the names of box 1 and box 2, for the table of forces;
+//                      forceOn { id: box } where a force without index 2 acts on box 2 (index 1)
 // Values come out exact; the texts round them.
 (function (root) {
   'use strict';
@@ -98,7 +100,7 @@
       return sized(b.sc, { G: v.G, N: v.N, F: p.F });
     },
     hints: (p) => [
-      L('Draw all forces on the box: its weight, the force of the floor and the force of the rope or hand.', 'Zeichne alle Kräfte auf die Kiste ein: die Gewichtskraft, die Kraft des Bodens und die Kraft des Seils bzw. der Hand.'),
+      L('Find all forces on the box: its weight, the force of the floor and the force of the rope or hand.', 'Bestimme alle Kräfte auf die Kiste: die Gewichtskraft, die Kraft des Bodens und die Kraft des Seils bzw. der Hand.'),
       L(`The box stands still, so the net force on it is zero: the upward forces balance the downward ones.`, `Die Kiste ruht, also ist die resultierende Kraft null: Die Kräfte nach oben heben die Kräfte nach unten auf.`),
       p.dir === 'up' ? m$(`${T('N')} + ${T('F')} = ${T('G')}`) : m$(`${T('N')} = ${T('G')} + ${T('F')}`),
     ],
@@ -216,7 +218,7 @@
       return sized(b.sc, { G: p.m * G, N: p.m * G, R: v.R, F });
     },
     hints: (p) => [
-      L('Draw all forces on the box. Vertically, weight and normal force balance; horizontally, the pull and friction act.', 'Zeichne alle Kräfte auf die Kiste ein. Senkrecht heben sich Gewichtskraft und Normalkraft auf, waagrecht wirken Zugkraft und Reibung.'),
+      L('Find all forces on the box. Vertically, weight and normal force balance; horizontally, the pull and friction act.', 'Bestimme alle Kräfte auf die Kiste. Senkrecht heben sich Gewichtskraft und Normalkraft auf, waagrecht wirken Zugkraft und Reibung.'),
       L(`Friction: ${m$(`${T('R')} = ${T('mu')}\\,${T('N')}`)}, and here the normal force equals the weight.`, `Reibung: ${m$(`${T('R')} = ${T('mu')}\\,${T('N')}`)}, und hier ist die Normalkraft gleich der Gewichtskraft.`),
       L(`Only what is left of the pull after friction accelerates the box: ${m$(`${T('res')} = ${T('F')} - ${T('R')} = ${T('m')}\\,${T('a')}`)}.`, `Nur was nach Abzug der Reibung von der Zugkraft übrig bleibt, beschleunigt die Kiste: ${m$(`${T('res')} = ${T('F')} - ${T('R')} = ${T('m')}\\,${T('a')}`)}.`),
     ],
@@ -230,6 +232,7 @@
           `<p>${L('The box does not move up or down, so the normal force balances the weight:', 'Die Kiste bewegt sich weder nach oben noch nach unten, also hält die Normalkraft der Gewichtskraft das Gleichgewicht:')} $$${T('N')} = ${T('G')} = ${T('m')}\\,g = ${tq(FG, 'N')}$$</p>`,
           ['G', 'N', 'R', 'F'], ['G', 'N']),
         step(L('Friction', 'Reibung'),
+          `<p>${L('The box slides over the floor, so friction acts against the motion: the friction coefficient times the normal force, which here equals the weight:', 'Die Kiste gleitet über den Boden, also wirkt die Reibung gegen die Bewegung: die Reibungszahl mal die Normalkraft, die hier gleich der Gewichtskraft ist:')}</p>` +
           `$$${T('R')} = ${T('mu')}\\,${T('N')} = ${T('mu')}\\,${T('m')}\\,g = ${FS.texNum(p.mu, 2)}\\cdot${tq(FG, 'N')} = ${res(v.R, 'N')}$$`,
           ['G', 'N', 'R', 'F'], ['R']),
       ];
@@ -242,6 +245,7 @@
         s.push(step(L('Net force', 'Resultierende Kraft'),
           `<p>${L('Pull and friction point in opposite directions:', 'Zugkraft und Reibung zeigen in entgegengesetzte Richtungen:')} $$${T('res')} = ${T('F')} - ${T('R')} = ${tq(p.F, 'N')} - ${tq(v.R, 'N')} = ${res(v.res, 'N')}$$</p>`, all, ['F', 'R']));
         s.push(step(L('Newton’s second law', 'Aktionsprinzip'),
+          `<p>${L('Only the net force accelerates the box: divide it by the mass.', 'Nur die resultierende Kraft beschleunigt die Kiste: Teile sie durch die Masse.')}</p>` +
           `$$${T('a')} = \\frac{${T('res')}}{${T('m')}} = \\frac{${T('F')} - ${T('mu')}\\,${T('m')}\\,g}{${T('m')}} = \\frac{${tq(v.res, 'N')}}{${tq(p.m, 'kg')}} = ${res(v.a, 'a')}$$`, all, ['a']));
       }
       return s;
@@ -269,6 +273,7 @@
 
   const pushPair = {
     id: 'push-pair', difficulty: 3,
+    boxes: (p) => [L(`left box (${kg(p.m1)})`, `linke Kiste (${kg(p.m1)})`), L(`right box (${kg(p.m2)})`, `rechte Kiste (${kg(p.m2)})`)],
     make(r) {
       const m1 = pick(r, [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 1.5, 2, 3, 4]);
       const mu = r() < 0.5 ? 0 : pick(r, [0.1, 0.2, 0.3]);
@@ -320,6 +325,7 @@
       ];
       if (fr) {
         s.push(step(L('Friction', 'Reibung'),
+          `<p>${L('Both boxes slide over the floor. For the two together, the friction is the friction coefficient times their total normal force, which equals their total weight:', 'Beide Kisten gleiten über den Boden. Für beide zusammen ist die Reibung die Reibungszahl mal ihre gesamte Normalkraft, die gleich ihrer gesamten Gewichtskraft ist:')}</p>` +
           `$$${T('R')} = ${T('mu')}\\,(${T('m')}_1 + ${T('m')}_2)\\,g = ${FS.texNum(p.mu, 2)}\\cdot${tq(M, 'kg')}\\cdot${tq(G, 'a')} = ${res(v.R, 'N')}$$`, all.filter((x) => x !== 'a'), ['R1', 'R2']));
       }
       s.push(step(L('Both boxes together', 'Beide Kisten zusammen'),
@@ -338,6 +344,8 @@
 
   const ropePair = {
     id: 'rope-pair', difficulty: 3,
+    boxes: (p) => [L(`left box (${kg(p.m1)})`, `linke Kiste (${kg(p.m1)})`), L(`right box (${kg(p.m2)})`, `rechte Kiste (${kg(p.m2)})`)],
+    forceOn: { F: 1 }, // the pull acts on the right box
     make(r) {
       const m1 = pick(r, [2, 3, 4, 5, 6]), m2 = pick(r, [1, 2, 3, 4]);
       const mu1 = pick(r, [0.1, 0.2, 0.3, 0.4, 0.5]), mu2 = r() < 0.6 ? 0 : pick(r, [0.1, 0.2, 0.3]);
@@ -388,6 +396,7 @@
             `Auf jede Kiste: Gewichtskraft und Normalkraft, die sich aufheben, und die Reibung gegen die Bewegung${f2 ? '' : ' (keine auf die rechte Kiste)'}. Das Seil zieht die linke Kiste mit ${m$(T('S'))} nach vorn und die rechte mit gleich grosser Kraft zurück. Die Zugkraft ${m$(T('F'))} wirkt auf die rechte Kiste.`)}</p>`,
           all.filter((x) => x !== 'a')),
         step(L('Friction', 'Reibung'),
+          `<p>${L('A box sliding over the floor feels friction against its motion: its friction coefficient times its normal force, which here equals its weight:', 'Eine Kiste, die über den Boden gleitet, erfährt Reibung gegen ihre Bewegung: ihre Reibungszahl mal ihre Normalkraft, die hier gleich ihrer Gewichtskraft ist:')}</p>` +
           `$$${T('R', 1)} = ${T('mu', 1)}\\,${T('m')}_1\\,g = ${FS.texNum(p.mu1, 2)}\\cdot${tq(p.m1 * G, 'N')} = ${res(v.R1, 'N')}$$` +
           (f2 ? `$$${T('R', 2)} = ${T('mu', 2)}\\,${T('m')}_2\\,g = ${FS.texNum(p.mu2, 2)}\\cdot${tq(p.m2 * G, 'N')} = ${res(v.R2, 'N')}$$` : ''),
           all.filter((x) => x !== 'a'), ['R1', 'R2']),
@@ -407,6 +416,7 @@
   // ---------------------------------------------------------------- pulleys
   const atwood = {
     id: 'atwood', difficulty: 3,
+    boxes: (p) => [L(`left box (${kg(p.m1)})`, `linke Kiste (${kg(p.m1)})`), L(`right box (${kg(p.m2)})`, `rechte Kiste (${kg(p.m2)})`)],
     make(r) {
       const ms = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 12], m1 = pick(r, ms), m2 = pick(r, ms);
       // at most 6 times heavier, so that both boxes fit the drawing (sizes follow the masses)
@@ -477,6 +487,7 @@
 
   const tablePulley = {
     id: 'table-pulley', difficulty: 4,
+    boxes: (p) => [L(`box on the table (${kg(p.m1)})`, `Kiste auf dem Tisch (${kg(p.m1)})`), L(`hanging box (${kg(p.m2)})`, `hängende Kiste (${kg(p.m2)})`)],
     make(r) {
       const m1 = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8]), m2 = pick(r, [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6]), mu = pick(r, [0.1, 0.2, 0.25, 0.3, 0.4, 0.5]);
       if (Math.max(m1, m2) > 6 * Math.min(m1, m2)) return null; // see atwood
@@ -533,6 +544,7 @@
             `Auf die Kiste auf dem Tisch: Gewichtskraft und Normalkraft, die sich aufheben, die Reibung ${m$(T('R'))} nach hinten und die Seilkraft ${m$(T('S'))} nach vorn. Auf die hängende Kiste: ihre Gewichtskraft nach unten und die Seilkraft nach oben. Die Rolle lenkt das Seil nur um: Es zieht beide Kisten mit derselben Kraft.`)}</p>`,
           all.filter((x) => x[0] !== 'a')),
         step(L('Friction', 'Reibung'),
+          `<p>${L('Only the box on the table rubs: its friction is the friction coefficient times its normal force, which equals its weight, as the table is level:', 'Nur die Kiste auf dem Tisch reibt: Ihre Reibung ist die Reibungszahl mal ihre Normalkraft, die gleich ihrer Gewichtskraft ist, weil der Tisch waagrecht ist:')}</p>` +
           `$$${T('R')} = ${T('mu')}\\,${T('N')} = ${T('mu')}\\,${T('m')}_1\\,g = ${FS.texNum(p.mu, 2)}\\cdot${tq(p.m1 * G, 'N')} = ${res(v.R, 'N')}$$`,
           all.filter((x) => x[0] !== 'a'), ['N', 'R']),
         step(L('Both boxes together', 'Beide Kisten zusammen'),
@@ -630,6 +642,7 @@
           `$$${T('N')} = ${T('G', '⊥')} = ${T('m')}\\,g\\cos\\alpha = ${res(v.N, 'N')}$$`,
           ['Gp', 'Gn', 'N', 'R', 'F'], ['Gn', 'N']),
         step(L('Friction', 'Reibung'),
+          `<p>${L('The box slides up the slope, so friction acts down the slope: the friction coefficient times the normal force found above (not times the weight):', 'Die Kiste gleitet den Hang hinauf, also wirkt die Reibung hangabwärts: die Reibungszahl mal die oben bestimmte Normalkraft (nicht mal die Gewichtskraft):')}</p>` +
           `$$${T('R')} = ${T('mu')}\\,${T('N')} = ${FS.texNum(p.mu, 2)}\\cdot${tq(v.N, 'N')} = ${res(v.R, 'N')}$$`,
           ['Gp', 'Gn', 'N', 'R', 'F'], ['R']),
         step(L('Along the slope', 'Entlang der Unterlage'),
@@ -644,6 +657,7 @@
 
   const inclinePulley = {
     id: 'incline-pulley', difficulty: 5, trig: true,
+    boxes: (p) => [L(`box on the slope (${kg(p.m1)})`, `Kiste auf dem Hang (${kg(p.m1)})`), L(`hanging box (${kg(p.m2)})`, `hängende Kiste (${kg(p.m2)})`)],
     make(r, o = {}) {
       const { alpha, mu } = slopeMake(r, o), m1 = pick(r, [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 2, 3, 4, 5, 6, 8]);
       const a = rad(alpha), drive = m2 * G - m1 * G * (Math.sin(a) + mu * Math.cos(a));
@@ -705,6 +719,7 @@
           `<p>${L(`On the box on the slope: its weight, the normal force, friction down the slope and the rope force up the slope. On the hanging box: its weight and the rope force. The pulley turns the rope around: it pulls both boxes with the same force ${m$(T('S'))}.`, `Auf die Kiste auf der Unterlage: ihre Gewichtskraft, die Normalkraft, die Reibung hangabwärts und die Seilkraft hangaufwärts. Auf die hängende Kiste: ihre Gewichtskraft und die Seilkraft. Die Rolle lenkt das Seil um: Es zieht beide Kisten mit derselben Kraft ${m$(T('S'))}.`)}</p>`,
           base),
         step(L('Components of the weight', 'Komponenten der Gewichtskraft'),
+          `<p>${L('Split the weight of box 1 into a part along the slope, which pulls it down the slope, and a part perpendicular to it, which presses it onto the slope:', 'Zerlege die Gewichtskraft von Kiste 1 in einen Teil entlang der Unterlage, der sie hangabwärts zieht, und einen Teil senkrecht dazu, der sie auf die Unterlage drückt:')}</p>` +
           `$$${T('G', '1∥')} = ${T('m')}_1\\,g\\sin\\alpha = ${tq(F1 * Math.sin(a), 'N')}, \\qquad ${T('G', '1⊥')} = ${T('m')}_1\\,g\\cos\\alpha = ${tq(F1 * Math.cos(a), 'N')}$$`,
           ['G', ...comp], ['G', 'Gp', 'Gn']),
         step(L('Normal force and friction', 'Normalkraft und Reibung'),

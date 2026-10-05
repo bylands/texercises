@@ -31,6 +31,26 @@
   };
   const same = (x, y) => Math.abs(x - y) <= 0.02 * Math.max(Math.abs(y), 0.05);
 
+  // The kinds of force in the table of forces (see draw.js): weight, normal force, friction, a push
+  // or pull from outside, and the rope or contact force between the boxes.
+  const KINDS = ['g', 'n', 'r', 's', 'k'];
+  const KIND_NAMES = {
+    g: () => L('weight', 'Gewichtskraft'), n: () => L('normal force', 'Normalkraft'), r: () => L('friction', 'Reibung'),
+    s: () => L('push or pull from outside', 'Zug- oder Druckkraft von aussen'), k: () => L('rope or contact force', 'Seil- oder Kontaktkraft'),
+  };
+  // Which kinds of force act on which box: { boxes: [name], kinds, table[box][kind] }, from the
+  // forces of the drawing (those ending in 2 act on box 2, the others on box 1; a force of size
+  // zero, e.g. friction without a friction coefficient, does not act).
+  function forceTable(scn, p, v) {
+    const boxes = scn.boxes ? scn.boxes(p) : [L(`the box (${FS.q(p.m, 'kg')})`, `die Kiste (${FS.q(p.m, 'kg')})`)];
+    const table = boxes.map(() => KINDS.map(() => false));
+    scn.scene(p, v, {}).forces.forEach((f) => {
+      const j = KINDS.indexOf(f.kind), i = scn.forceOn && f.id in scn.forceOn ? scn.forceOn[f.id] : /2$/.test(f.id) ? 1 : 0;
+      if (j >= 0 && i < boxes.length && f.mag > 1e-9) table[i][j] = true;
+    });
+    return { boxes, kinds: KINDS.map((k) => ({ kind: k, name: KIND_NAMES[k]() })), table };
+  }
+
   function exercise(scn, p) {
     const v = scn.solve(p);
     const why = (flag) => (scn.why && scn.why[flag] ? scn.why[flag]() : WHY[flag] ? WHY[flag]() : '');
@@ -46,7 +66,10 @@
       scenario: scn.id,
       difficulty: scn.difficulty,
       title: scn.title(p),
-      text: `<p>${scn.text(p)}</p><p class="note">${L('Draw all forces on each box and use Newton’s second law, F = m a. Take g = 10 m/s².', 'Zeichne alle Kräfte auf jede Kiste ein und verwende das Aktionsprinzip, F = m a. Rechne mit g = 10 m/s².')}</p>`,
+      text: `<p>${scn.text(p)}</p><p class="note">${scn.boxes
+        ? L('Find all forces on each box and use Newton’s second law, F = m a. Take g = 10 m/s².', 'Bestimme alle Kräfte auf jede Kiste und verwende das Aktionsprinzip, F = m a. Rechne mit g = 10 m/s².')
+        : L('Find all forces on the box and use Newton’s second law, F = m a. Take g = 10 m/s².', 'Bestimme alle Kräfte auf die Kiste und verwende das Aktionsprinzip, F = m a. Rechne mit g = 10 m/s².')}</p>`,
+      forces: forceTable(scn, p, v),
       fields,
       figure: (view = { task: true }) => scn.scene(p, v, view).render(view),
       solutionFigure: () => scn.scene(p, v, {}).render({ show: all }),

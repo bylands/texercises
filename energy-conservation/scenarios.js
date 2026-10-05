@@ -211,7 +211,7 @@
     },
     steps(p, formal) {
       const out = [
-        step(L('Energy conservation', 'Energieerhaltung'), `<p>$E_1 = E_2$:</p>${dm(`${pot('h')} = ${pot("h'")} + ${kin("v'")}`)}`, ALL, [0, 1]),
+        step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('Without air resistance, the total energy stays the same', 'Ohne Luftwiderstand bleibt die Gesamtenergie gleich')}, $E_1 = E_2$:</p>${dm(`${pot('h')} = ${pot("h'")} + ${kin("v'")}`)}`, ALL, [0, 1]),
         step(L('Solve', 'Auflösen'), `<p>${L('The mass cancels out; the potential energy lost has become kinetic energy:', 'Die Masse kürzt sich weg; die verlorene Lageenergie ist zu kinetischer Energie geworden:')}</p>` +
           dm("\\tfrac{1}{2}\\,v'^2 = g\\,(h - h') \\;\\Rightarrow\\; v' = \\sqrt{2\\,g\\,(h - h')}"), ALL),
       ];
@@ -294,7 +294,7 @@
     },
     steps: (p) => [
       step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('The elastic energy of the spring becomes kinetic energy:', 'Die Spannenergie der Feder wird zu kinetischer Energie:')}</p>${dm(`${el('s')} = ${kin('v')}`)}`, ALL, [0, 1]),
-      step(L('Solve', 'Auflösen'), dm(p.ask === 'v' ? 'k\\,s^2 = m\\,v^2 \\;\\Rightarrow\\; v^2 = \\frac{k\\,s^2}{m} \\;\\Rightarrow\\; v = s\\,\\sqrt{\\frac{k}{m}}' : 'k\\,s^2 = m\\,v^2 \\;\\Rightarrow\\; k = \\frac{m\\,v^2}{s^2}'), ALL),
+      step(L('Solve', 'Auflösen'), `<p>${L(`Multiply by 2 and solve for $${p.ask}$:`, `Multipliziere mit 2 und löse nach $${p.ask}$ auf:`)}</p>` + dm(p.ask === 'v' ? 'k\\,s^2 = m\\,v^2 \\;\\Rightarrow\\; v^2 = \\frac{k\\,s^2}{m} \\;\\Rightarrow\\; v = s\\,\\sqrt{\\frac{k}{m}}' : 'k\\,s^2 = m\\,v^2 \\;\\Rightarrow\\; k = \\frac{m\\,v^2}{s^2}'), ALL),
     ],
     hint: () => m$(`${el('s')} = ${kin('v')}`),
   };
@@ -530,7 +530,7 @@
     steps: (p) => [
       step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('Without air resistance', 'Ohne Luftwiderstand gilt')} $E_1 = E_2$:</p>${dm(`${pot('h')} + ${kin('v_0')} = ${kin('v')}`)}` +
         `<p>${L('The kinetic energy depends only on the speed, not on its direction: whether the ball is thrown up, sideways or down makes no difference to its speed at the ground.', 'Die kinetische Energie hängt nur vom Betrag der Geschwindigkeit ab, nicht von ihrer Richtung: Ob der Ball nach oben, zur Seite oder nach unten geworfen wird, ändert nichts an seiner Geschwindigkeit am Boden.')}</p>`, ALL, [0, 1]),
-      step(L('Solve', 'Auflösen'), dm('v^2 = v_0^2 + 2\\,g\\,h \\;\\Rightarrow\\; v = \\sqrt{v_0^2 + 2\\,g\\,h}'), ALL),
+      step(L('Solve', 'Auflösen'), `<p>${L('The mass cancels out; multiply by 2 and take the square root:', 'Die Masse kürzt sich weg; multipliziere mit 2 und ziehe die Wurzel:')}</p>` + dm('v^2 = v_0^2 + 2\\,g\\,h \\;\\Rightarrow\\; v = \\sqrt{v_0^2 + 2\\,g\\,h}'), ALL),
     ],
     hint: () => m$(`${pot('h')} + ${kin('v_0')} = ${kin('v')}`) + L(' (the direction of the throw does not matter)', ' (die Wurfrichtung spielt keine Rolle)'),
   };
@@ -595,7 +595,7 @@
     },
     steps: () => [
       step(L('Energy conservation', 'Energieerhaltung'), `<p>${L('The elastic energy of the spring becomes potential energy; at the top the ball is at rest for a moment:', 'Die Spannenergie der Feder wird zu Lageenergie; im höchsten Punkt ist der Ball einen Moment lang in Ruhe:')}</p>${dm(`${el('s')} = ${pot('h')}`)}`, ALL, [0, 1]),
-      step(L('Solve', 'Auflösen'), dm('h = \\frac{k\\,s^2}{2\\,m\\,g}'), ALL),
+      step(L('Solve', 'Auflösen'), `<p>${L('Divide both sides by $m\\,g$ to get the height:', 'Teile beide Seiten durch $m\\,g$, um die Höhe zu erhalten:')}</p>` + dm('h = \\frac{k\\,s^2}{2\\,m\\,g}'), ALL),
     ],
     hint: () => m$(`${el('s')} = ${pot('h')}`),
   };
@@ -826,7 +826,7 @@
     steps: () => [
       step(L('Energy conservation ①③', 'Energieerhaltung ①③'), `<p>${L('From the start to the lowest point, the ball drops by $h + s$: by $h$ until it touches the spring (②), then by $s$ while it compresses it. At both ends it is at rest:', 'Vom Start bis zum tiefsten Punkt sinkt der Ball um $h + s$: um $h$, bis er die Feder berührt (②), dann um $s$, während er sie zusammendrückt. An beiden Enden ruht er:')}</p>` +
         dm(`${pot('(h + s)')} = ${el('s')}`), ALL, [0, 2]),
-      step(L('Solve', 'Auflösen'), dm('k = \\frac{2\\,m\\,g\\,(h + s)}{s^2}'), ALL),
+      step(L('Solve', 'Auflösen'), `<p>${L('Multiply by 2 and divide by $s^2$:', 'Multipliziere mit 2 und teile durch $s^2$:')}</p>` + dm('k = \\frac{2\\,m\\,g\\,(h + s)}{s^2}'), ALL),
     ],
     hint: () => m$(`${pot('(h + s)')} = ${el('s')}`),
   };

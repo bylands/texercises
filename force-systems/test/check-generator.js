@@ -62,6 +62,14 @@ function checkExercise(ex, id) {
     for (const t of f.traps) if (!t.why) fail(`${id}: trap for ${f.key} without explanation`);
   });
   POSITIVE(ex).forEach((f) => { if (!(f.value > 0)) fail(`${id}: ${f.key} = ${f.value} is not positive`); });
+  // the table of forces: every box has its weight; friction only where there is a coefficient
+  const t = ex.forces, ki = (k) => t.kinds.findIndex((x) => x.kind === k);
+  if (t.boxes.length !== (ex.p.m1 != null ? 2 : 1)) fail(`${id}: ${t.boxes.length} boxes in the table of forces`);
+  t.table.forEach((row, i) => { if (!row[ki('g')]) fail(`${id}: no weight on box ${i + 1}`); });
+  if (ex.scenario === 'rope-pair' && !t.table[1][ki('s')]) fail(`${id}: the pull does not act on the right box`);
+  if (ex.scenario === 'rope-pair' && t.table[1][ki('r')] !== ex.p.mu2 > 0) fail(`${id}: friction on the right box with mu2 = ${ex.p.mu2}`);
+  if (['atwood'].includes(ex.scenario) && t.table.some((r) => r[ki('n')] || r[ki('r')])) fail(`${id}: normal force or friction on a hanging box`);
+  t.boxes.forEach((b) => checkText(id, 'box name', b));
   checkText(id, 'title', ex.title);
   checkText(id, 'text', ex.text);
   ex.hints.forEach((h, k) => checkText(id, `hint ${k + 1}`, h));

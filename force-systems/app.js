@@ -19,6 +19,8 @@
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
       fill: 'Fill in all fields, then check again.',
+      forcesHead: '1 · Forces on each box', resultsHead: '2 · Results', forcesNote: (n) => (n > 1 ? 'Tick every force that acts on each box.' : 'Tick every force that acts on the box.'), box: 'Box',
+      tableOk: '✓ The forces are right.', tableBad: (n) => `✗ ${n === 1 ? 'One entry is' : `${n} entries are`} not right yet.`,
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
       number: 'Enter a number', correct: 'Correct', sign: 'Give the size of the force (a positive number)', close: 'Close: check your rounding', wrong: 'Not correct',
@@ -32,6 +34,8 @@
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
       fill: 'Fülle alle Felder aus und prüfe dann nochmals.',
+      forcesHead: '1 · Kräfte auf jede Kiste', resultsHead: '2 · Resultate', forcesNote: (n) => (n > 1 ? 'Kreuze jede Kraft an, die auf die jeweilige Kiste wirkt.' : 'Kreuze jede Kraft an, die auf die Kiste wirkt.'), box: 'Kiste',
+      tableOk: '✓ Die Kräfte stimmen.', tableBad: (n) => `✗ ${n === 1 ? 'Ein Feld stimmt' : `${n} Felder stimmen`} noch nicht.`,
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
       number: 'Gib eine Zahl ein', correct: 'Richtig', sign: 'Gib den Betrag der Kraft an (eine positive Zahl)', close: 'Knapp daneben: Prüfe deine Rundung', wrong: 'Nicht richtig',
@@ -122,6 +126,16 @@
         <span class="fb" aria-live="polite"></span>
       </div>`).join('');
 
+  // The table of forces: a row per kind of force, a column per box (at most two, so that it fits
+  // a phone), a box to tick per cell.
+  function forcesHtml() {
+    const t = ex.forces;
+    const head = t.boxes.map((b) => `<th scope="col">${b}</th>`).join('');
+    const rows = t.kinds.map((k, j) => `<tr><th scope="row" class="k-${k.kind}">${k.name}</th>${t.boxes.map((b, i) => `
+      <td><label class="cell"><input type="checkbox" data-i="${i}" data-j="${j}" aria-label="${b}: ${k.name}"><span aria-hidden="true"></span></label></td>`).join('')}</tr>`).join('');
+    return `<table class="ftable"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
   function render() {
     $('#title').textContent = ex.title;
     // the difficulty, as in the arcade: ★★★☆☆
@@ -134,6 +148,10 @@
     $('#title').append(' ', stars);
     $('#prompt').innerHTML = ex.text;
     $('#figure').innerHTML = ex.figure({ task: true });
+    $('#forces-note').textContent = ui().forcesNote(ex.forces.boxes.length);
+    $('#ftable').innerHTML = forcesHtml();
+    $('#ftable-fb').textContent = '';
+    $('#ftable-fb').className = 'table-fb';
     $('#fields').innerHTML = fieldsHtml(ex, 'in');
     $('#hint-list').innerHTML = '';
     $('#hints').hidden = true;
@@ -163,7 +181,15 @@
 
   // Marks every field; true if all are right, null if some are empty.
   function feedback() {
-    let allOk = true, anyEmpty = false;
+    let allOk = true, anyEmpty = false, wrongCells = 0;
+    document.querySelectorAll('#ftable input').forEach((box) => {
+      const right = box.checked === ex.forces.table[box.dataset.i][box.dataset.j];
+      box.closest('td').className = right ? 'ok' : 'bad';
+      if (!right) wrongCells++;
+    });
+    $('#ftable-fb').className = `table-fb ${wrongCells ? 'bad' : 'ok'}`;
+    $('#ftable-fb').textContent = wrongCells ? ui().tableBad(wrongCells) : ui().tableOk;
+    if (wrongCells) allOk = false;
     ex.fields.forEach((f) => {
       const row = $('#fields').querySelector(`.field[data-key="${f.key}"]`);
       const raw = row.querySelector('input').value;
@@ -255,12 +281,13 @@
     applyStatic();
     showScore();
     if (ex) {
-      const values = ex.fields.map((f) => $(`#in-${f.key}`).value);
+      const values = ex.fields.map((f) => $(`#in-${f.key}`).value), ticks = [...document.querySelectorAll('#ftable input')].map((b) => b.checked);
       const keep = { ...st };
       ex = generate(ex.level, ex.seed, ex.calc);
       render();
       st = keep;
       ex.fields.forEach((f, k) => { $(`#in-${f.key}`).value = values[k]; });
+      document.querySelectorAll('#ftable input').forEach((b, k) => { b.checked = ticks[k]; });
       if (st.checked) feedback();
       showStatus(st.status);
       showHints();
