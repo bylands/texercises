@@ -249,10 +249,10 @@
       (rest.length ? ` In ${pieceList(rest, 'in')} ist ${g} = 0, also bleibt ${G} konstant.` : ''));
     const h2 = L(`Start at ${at(ex.to, 0)} = ${val(ex.pieces[0].G0, ex.to)}. In every piece, the change Δ${G} is the area between the ${g} graph and the <i>t</i> axis (area below the axis counts negative). ` +
       `Mark ${G} at the breakpoints piece by piece, then draw the shape: straight where ${g} is constant; where ${g} increases, ${G} curves upward, and where ${g} decreases, ${G} curves downward. ` +
-      `At every instant, the slope of ${G} is ${g}.`,
+      `At every instant, the slope of ${G} is ${g}. For a curved piece, put the diamond in the middle at ${G} at its start plus the area under ${g} over its first half.`,
     `Beginne bei ${at(ex.to, 0)} = ${val(ex.pieces[0].G0, ex.to)}. In jedem Stück ist die Änderung Δ${G} die Fläche zwischen dem ${g}-Graphen und der <i>t</i>-Achse (Fläche unter der Achse zählt negativ). ` +
       `Markiere ${G} an den Übergangsstellen Stück für Stück und zeichne dann die Form: gerade, wo ${g} konstant ist; wo ${g} zunimmt, krümmt sich ${G} nach oben, und wo ${g} abnimmt, nach unten. ` +
-      `In jedem Moment ist die Steigung von ${G} gleich ${g}.`);
+      `In jedem Moment ist die Steigung von ${G} gleich ${g}. Bei einem gekrümmten Stück setzt du die Raute in der Mitte auf ${G} an seinem Anfang plus die Fläche unter ${g} über seine erste Hälfte.`);
     const formulas = ps.map((p, i) => {
       if (!sloped(p)) return `<li>${piece(i + 1)} (${L('rectangle', 'Rechteck')}): Δ${G} = ${g} · Δ<i>t</i> = ${at(ex.from, p.t0)} · ${len(p)} s</li>`;
       const cross = p.g0 * p.g1 < 0 ? L('; the triangles above and below the axis partly cancel', '; die Dreiecke über und unter der Achse heben sich teilweise auf') : '';
@@ -261,6 +261,15 @@
     const h3 = `${L('Formulas, piece by piece:', 'Formeln, Stück für Stück:')}<ul>${formulas.join('')}</ul>`;
     const h4 = `Δ${G} ${L('per piece', 'pro Stück')}: ${and(ps.map((p, i) => `${L('piece', 'Stück')} ${i + 1}: ${sval(area(p), ex.to)}`))}.`;
     return [h1, h2, h3, h4];
+  }
+
+  // The middle of a curved piece of the integral, where the editor's diamond sits: its value is
+  // the start value plus the area under the given graph over the first half of the piece (a
+  // trapezoid of half the width); dev is how far it lies above (+) or below (−) the straight line
+  // between the ends, (g0 − g1)·Δt/8.
+  function midOf(p) {
+    const T = len(p), tm = (p.t0 + p.t1) / 2, gm = (p.g0 + p.g1) / 2, Gm = p.G0 + ((p.g0 + gm) / 2) * (T / 2);
+    return { T, tm, gm, Gm, dev: Gm - (p.G0 + p.G1) / 2 };
   }
 
   function describeInt(p, i) {
@@ -274,9 +283,15 @@
     }
     const x = -p.g0 / rate(p), up = p.g1 > p.g0;
     const turn = x > 0 && x < T ? L(` ${g} = 0 at ${fmt(p.t0 + x)} s, where ${G} has a horizontal tangent.`, ` Bei ${fmt(p.t0 + x)} s ist ${g} = 0; dort hat ${G} eine waagrechte Tangente.`) : '';
-    // how strongly it curves: the slope of G is g, so the tangents at the ends have the slopes g0 and g1
-    const bend = L(`How strongly it curves follows from its slope, which is ${g}: the tangent to ${G} at the start of the piece has the slope ${sval(p.g0, ex.from)}, at the end ${sval(p.g1, ex.from)} (the short lines). So the slope of ${G} changes by ${sval(p.g1 - p.g0, ex.from)} in ${T} s; the faster ${g} changes (the steeper its graph), the more ${G} bends. `,
-      `Wie stark sie sich krümmt, folgt aus ihrer Steigung, und die ist ${g}: Die Tangente an ${G} hat am Anfang des Stücks die Steigung ${sval(p.g0, ex.from)}, am Ende ${sval(p.g1, ex.from)} (die kurzen Linien). Die Steigung von ${G} ändert sich also um ${sval(p.g1 - p.g0, ex.from)} in ${T} s; je schneller sich ${g} ändert (je steiler sein Graph), desto stärker krümmt sich ${G}. `);
+    // how strongly it curves: set by the diamond in the middle of the piece, at the start value
+    // plus the area under g over the first half
+    const mid = midOf(p), half = fmt(mid.T / 2), side = mid.dev < 0 ? L('below', 'unter') : L('above', 'über');
+    const bend = L(`How strongly it curves is set by the diamond in the middle of the piece, at ${fmt(mid.tm)} s. The middle point follows from the area under ${g} over the first half of the piece, a trapezoid of width ${half} s: ` +
+      `${at(ex.to, mid.tm)} = ${val(p.G0, ex.to)} + (${plus(p.g0, mid.gm)})/2 ${UNIT[ex.from]} · ${half} s = ${val(mid.Gm, ex.to)}. That is ${val(Math.abs(mid.dev), ex.to)} ${side} the straight line between the ends of the piece. ` +
+      `(The slope of ${G} is ${g}: the tangents at the ends have the slopes ${sval(p.g0, ex.from)} and ${sval(p.g1, ex.from)}, the short lines.) `,
+    `Wie stark sie sich krümmt, stellst du mit der Raute in der Mitte des Stücks ein, bei ${fmt(mid.tm)} s. Der Mittelpunkt folgt aus der Fläche unter ${g} über die erste Hälfte des Stücks, einem Trapez der Breite ${half} s: ` +
+      `${at(ex.to, mid.tm)} = ${val(p.G0, ex.to)} + (${plus(p.g0, mid.gm)})/2 ${UNIT[ex.from]} · ${half} s = ${val(mid.Gm, ex.to)}. Das ist ${val(Math.abs(mid.dev), ex.to)} ${side} der Geraden zwischen den Enden des Stücks. ` +
+      `(Die Steigung von ${G} ist ${g}: Die Tangenten an den Enden haben die Steigungen ${sval(p.g0, ex.from)} und ${sval(p.g1, ex.from)}, die kurzen Linien.) `);
     return head + L(`${g} changes from ${sval(p.g0, ex.from)} to ${sval(p.g1, ex.from)}, so ${G} is a parabola that curves ${up ? 'upward' : 'downward'}. `,
       `${g} ändert sich von ${sval(p.g0, ex.from)} auf ${sval(p.g1, ex.from)}, also ist ${G} eine Parabel, die sich nach ${up ? 'oben' : 'unten'} krümmt. `) + bend +
       `Δ${G} = (${plus(p.g0, p.g1)})/2 ${UNIT[ex.from]} · ${T} s = ${sval(dG, ex.to)}, ${span}.${turn}`;
@@ -307,8 +322,8 @@
           `${g} nimmt hier zu, also nimmt die Steigung von ${G} zu: ${G} krümmt sich nach oben (die Mitte liegt unter der Geraden zwischen den Enden).`)
         : L(`${g} decreases here, so the slope of ${G} decreases: ${G} curves downward (the middle lies above the straight line between the ends).`,
           `${g} nimmt hier ab, also nimmt die Steigung von ${G} ab: ${G} krümmt sich nach unten (die Mitte liegt über der Geraden zwischen den Enden).`);
-      default: return L(`${G} bends the right way, but too ${code === 'bendMore' ? 'little' : 'much'}. At the start and at the end of the piece, the slope of ${G} must equal ${g} there.`,
-        `${G} krümmt sich in die richtige Richtung, aber zu ${code === 'bendMore' ? 'wenig' : 'stark'}. Am Anfang und am Ende des Stücks muss die Steigung von ${G} gleich dem dortigen Wert von ${g} sein.`);
+      default: return L(`${G} bends the right way, but too ${code === 'bendMore' ? 'little' : 'much'}. The diamond in the middle belongs at ${G} at the start of the piece plus the area under ${g} over the first half of the piece (a trapezoid of half the width).`,
+        `${G} krümmt sich in die richtige Richtung, aber zu ${code === 'bendMore' ? 'wenig' : 'stark'}. Die Raute in der Mitte gehört auf ${G} am Anfang des Stücks plus die Fläche unter ${g} über die erste Hälfte des Stücks (ein Trapez der halben Breite).`);
     }
   }
 
@@ -656,6 +671,7 @@
           // the label just outside the shaded area: above it if the area counts positive, else below
           over = (s) => Tut.tag(s, tm, dG >= 0 ? Math.max(p.g0, p.g1, 0) : Math.min(p.g0, p.g1, 0), `Δ${g} = ${num(dG)} ${UNIT[g]}`, dG >= 0 ? 'above' : 'below');
           ans = (s) => Tut.dot(s, p.t0, p.G0) + Tut.dot(s, p.t1, p.G1) +
+            (sloped(p) ? Tut.dot(s, tm, midOf(p).Gm, 'mean') : '') + // the middle point, where the diamond goes
             Tut.tangent(s, p.t0, p.G0, p.g0) + Tut.tangent(s, p.t1, p.G1, p.g1) +
             Tut.tag(s, p.t1, p.G1, `${num(p.G1)} ${UNIT[g]}`, dG >= 0 ? 'above' : 'below');
         }
