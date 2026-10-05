@@ -93,7 +93,7 @@
     const list = (and) => { const v = [...vars.filter((x) => x !== 'g'), ...vars.filter((x) => x === 'g')].map((x) => `$${T(x)}$`); return v.length > 1 ? `${v.slice(0, -1).join(', ')} ${and} ${v[v.length - 1]}` : v[0]; };
     const note = formal
       ? L(`Neglect friction and air resistance. Give the result as a formula in ${list('and')}.`, `Vernachlässige Reibung und Luftwiderstand. Gib das Resultat als Formel in ${list('und')} an.`)
-      : L('Neglect friction and air resistance. Take g = 9.81 m/s².', 'Vernachlässige Reibung und Luftwiderstand. Rechne mit g = 9,81 m/s².');
+      : L('Neglect friction and air resistance. Take g = 10 m/s².', 'Vernachlässige Reibung und Luftwiderstand. Rechne mit g = 10 m/s².');
 
     return {
       scenario: scn.id,
@@ -181,11 +181,21 @@
       text: `<p class="step-rule">${L('The situation', 'Die Situation')}</p>${ex.text}<p>${L('Wanted', 'Gesucht')}: ${ex.want.what} $${T(ex.want.key)}$.</p>`,
       figure: ex.figure({}),
     };
+    // the motion with its energy bars, played by the app (see motion.js)
+    const key = `${lesson.scenario}-${EC.getLang()}`;
+    const anim = root.Motion ? root.Motion.make(key, ex) : null;
+    const watch = anim && {
+      text: `<p class="step-rule">${L('Watch the energy', 'Die Energie beobachten')}</p>` +
+        `<p>${L(`The body moves from ① to ${CIRCLED[ex.table.length - 1]} and stops for a moment in each state; ❚❚ pauses it, and the slider moves it back and forth. The bars show how its energy is shared at every moment.`,
+          `Der Körper bewegt sich von ① bis ${CIRCLED[ex.table.length - 1]} und hält in jedem Zustand kurz an; ❚❚ hält ihn an, und mit dem Schieberegler bewegst du ihn vor und zurück. Die Balken zeigen, wie seine Energie in jedem Moment aufgeteilt ist.`)}</p>` +
+        `<p>${L('The dashed line, the total energy, stays where it is: energy only changes its form.', 'Die gestrichelte Linie, die Gesamtenergie, bleibt, wo sie ist: Die Energie ändert nur ihre Form.')}</p>`,
+      figure: anim.markup(key),
+    };
     const frames = ex.steps.map((s) => ({
       text: (s.rule ? `<p class="step-rule">${s.rule}</p>` : '') + s.text,
       figure: ex.figure({ bars: s.bars, hl: new Set(s.hl) }),
     }));
-    return { frames: [first, ...frames], ex };
+    return { frames: watch ? [first, watch, ...frames] : [first, ...frames], ex };
   }
 
   root.Energy = { LEVELS, SCENARIOS, WHY, CIRCLED, generate, generateFor, quiz, judgeFormula, judgeNumber, tutorial };

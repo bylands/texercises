@@ -5,7 +5,7 @@
 // stand for ℓ. A prime (h') makes a variable of its own, so that it can be named in a message.
 //   Expr.parse(text)          { tree } or { error: { key, at } }
 //   Expr.vars(tree)           the variables used: ['g', 'h']
-//   Expr.evaluate(tree, V)    the value for the variables V ({ g: 9.81, h: 2 })
+//   Expr.evaluate(tree, V)    the value for the variables V ({ g: 10, h: 2 })
 //   Expr.tex(tree)            KaTeX
 //   Expr.same(tree, f, base, vars)  whether the formula equals f(V) for values around base
 //                             (each variable of vars between 0.6 and 1.4 times its base value)

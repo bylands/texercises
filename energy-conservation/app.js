@@ -31,7 +31,7 @@
       unknown: (v, ok) => `${v} is not given here: use only ${ok}`,
       wanted: (v) => `Express ${v} by the given quantities`,
       typeHelp: (ex) => `For example sqrt(2*g*h) or √(2gh), v0^2 or v0², 1/2 or 0.5.${ex ? ` Type ${ex}.` : ''}`,
-      preview: 'Read as',
+      preview: 'Read as', play: 'Play', pause: 'Pause',
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
     de: {
@@ -53,7 +53,7 @@
       unknown: (v, ok) => `${v} ist hier nicht gegeben: Verwende nur ${ok}`,
       wanted: (v) => `Drücke ${v} durch die gegebenen Grössen aus`,
       typeHelp: (ex) => `Zum Beispiel sqrt(2*g*h) oder √(2gh), v0^2 oder v0², 1/2 oder 0.5.${ex ? ` Tippe ${ex}.` : ''}`,
-      preview: 'Gelesen als',
+      preview: 'Gelesen als', play: 'Abspielen', pause: 'Anhalten',
       tutorBtns: { example: (i, n) => `Beispiel ${i} von ${n}`, back: '← Zurück', prevEx: '← Vorheriges Beispiel', next: 'Weiter →', nextEx: 'Nächstes Beispiel →', done: 'Selbst üben →' },
     },
   };
@@ -289,6 +289,40 @@
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // ---------------------------------------------------------------- the tutor's animation
+  // The animation in a tutor frame (motion.js): it plays when the frame is shown and loops; ▶/❚❚
+  // pauses it and the slider moves through it. With reduced motion, it waits for ▶.
+  let player = null;
+  function startAnim() {
+    if (player) player.stop();
+    player = null;
+    const el = $('#t-figure .anim'), anim = el && window.Motion && window.Motion.get(el.dataset.anim);
+    if (!anim) return;
+    const svg = el.querySelector('svg'), btn = el.querySelector('.anim-play'), seek = el.querySelector('.anim-seek');
+    let t = 0, last = null, raf = 0, playing = false;
+    const show = () => { svg.innerHTML = anim.frame(t).svg; seek.value = Math.round((1000 * t) / anim.duration); };
+    const setPlaying = (on) => {
+      playing = on;
+      last = null;
+      btn.textContent = on ? '❚❚' : '▶';
+      btn.setAttribute('aria-label', on ? ui().pause : ui().play);
+    };
+    function tick(now) {
+      if (!el.isConnected) return;
+      if (playing) {
+        if (last != null) { t += (now - last) / 1000; if (t > anim.duration) t = 0; show(); }
+        last = now;
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    btn.addEventListener('click', () => setPlaying(!playing));
+    seek.addEventListener('input', () => { setPlaying(false); t = (Number(seek.value) / 1000) * anim.duration; show(); });
+    setPlaying(!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    show();
+    raf = requestAnimationFrame(tick);
+    player = { stop: () => cancelAnimationFrame(raf) };
+  }
+
   // ---------------------------------------------------------------- language
   const lessons = () => window.Lessons.EXAMPLES.map((e) => ({
     name: e.name[EC.getLang()], idea: e.idea[EC.getLang()], frames: () => tutorial(e).frames,
@@ -387,7 +421,7 @@
     window.addEventListener('hashchange', fromHash);
     window.addEventListener('resize', markScrollable);
     tutor = window.createTutor(lessons(), {
-      after: () => { math($('#tutor')); markScrollable(); },
+      after: () => { math($('#tutor')); markScrollable(); startAnim(); },
       done: practise,
       t: () => ui().tutorBtns,
     });

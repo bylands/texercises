@@ -10,7 +10,7 @@
   const getLang = () => Lang.get();
   const L = (en, de) => Lang.L(en, de);
 
-  const G = 9.81; // m/s²
+  const G = 10; // m/s², as in class
 
   // Symbols: [letter, subscript, prime]. ℓ is the length of a pendulum.
   const SYM = {

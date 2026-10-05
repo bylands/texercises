@@ -9,8 +9,8 @@
 // B 5/9 h, C √(1/2 g s)), and the arcade's multiple-choice questions.
 'use strict';
 
-['../lang.js', '../core.js', '../expr.js', '../draw.js', '../scenarios.js', '../generator.js', '../lessons.js'].forEach((f) => require(f));
-const { EC, Expr, Energy, Lessons } = globalThis;
+['../lang.js', '../core.js', '../expr.js', '../draw.js', '../scenarios.js', '../generator.js', '../motion.js', '../lessons.js'].forEach((f) => require(f));
+const { EC, Expr, Energy, Lessons, Motion } = globalThis;
 const g = EC.G;
 
 let failures = 0, checked = 0;
@@ -158,6 +158,35 @@ for (const lang of EC.LANGS) {
     frames.forEach((f, j) => { checkText(`lesson ${k + 1}`, `frame ${j + 1} text`, f.text); checkText(`lesson ${k + 1}`, `frame ${j + 1} figure`, f.figure); });
   });
 }
+
+// ---------------------------------------------------------------- the tutor's animations
+// At each state, the animated energies are those of the solution; in between, the total stays the
+// same and no energy is negative; the frames contain no undefined values.
+let anims = 0;
+for (const lang of EC.LANGS) {
+  EC.setLang(lang);
+  for (const scn of Energy.SCENARIOS) {
+    for (let seed = 1; seed <= 40; seed++) {
+      const ex = Energy.generateFor(scn.id, seed, seed % 2 === 0), id = `${lang} animation ${scn.id}-${seed}`, an = Motion.create(ex);
+      anims++;
+      const states = scn.states(ex.p), sum = (e) => (e.pot || 0) + (e.kin || 0) + (e.el || 0), total = sum(states[0]);
+      if (an.states.length !== states.length) fail(`${id}: ${an.states.length} animated states, ${states.length} in the solution`);
+      an.states.forEach((st, i) => ['pot', 'kin', 'el'].forEach((k) => {
+        const a = an.energy(st)[k] || 0, b = states[i][k] || 0;
+        if (Math.abs(a - b) > 1e-6 * total) fail(`${id}: state ${i + 1}: ${k} ${a} in the animation, ${b} in the solution`);
+      }));
+      for (let k = 0; k <= 50; k++) {
+        const e = an.energy(k / 50);
+        if ((e.pot || 0) + (e.el || 0) > total * (1 + 1e-6)) fail(`${id}: at ${k / 50}, potential and elastic energy exceed the total`);
+        if (Math.abs(sum(e) - total) > 1e-6 * total) fail(`${id}: at ${k / 50}, total ${sum(e)} instead of ${total}`);
+      }
+      if (!(an.duration > 3 && an.duration < 20)) fail(`${id}: duration ${an.duration}`);
+      for (let k = 0; k <= 8; k++) checkText(id, `frame at ${k}`, an.frame((k / 8) * an.duration).svg);
+      checkText(id, 'markup', an.markup('x'));
+    }
+  }
+}
+log(`${anims} animations checked`);
 
 // ---------------------------------------------------------------- the arcade
 let quizzes = 0;

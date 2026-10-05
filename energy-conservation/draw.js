@@ -103,8 +103,25 @@
       return this;
     }
 
-    render() {
-      const m = 10, b = this.box0;
+    // One energy bar chart for the current moment, its base at (x0, y0): E = { pot, kin, el } in the
+    // columns forms, scaled so that the total energy is H high (the dashed line).
+    meter(x0, y0, E, forms, total, H = 130) {
+      const cw = 24, gap = 14, gw = forms.length * cw + (forms.length - 1) * gap;
+      this.line(x0 - 8, y0 - H, x0 + gw + 8, y0 - H, 'w total');
+      forms.forEach((k, j) => {
+        const x = x0 + j * (cw + gap), h = Math.max(0, (H * (E[k] || 0)) / total);
+        if (h > 0.3) this.rect(x, y0 - h, cw, h, `bar e-${k}`);
+        this.text(x + cw / 2, y0 + 17, EC.esvg(k), 'lbl small');
+      });
+      this.text(x0 + gw + 12, y0 - H + 5, `<tspan font-style="italic">E</tspan>`, 'lbl small', 'start');
+      return this.line(x0 - 8, y0, x0 + gw + 8, y0, 'w axis');
+    }
+    // the drawing's parts, without the <svg> around them (for animations, see motion.js)
+    inner() { return this.parts.join(''); }
+
+    // box: a fixed [x0, y0, x1, y1] instead of what the drawing contains (animations)
+    render(box) {
+      const m = 10, b = box || this.box0;
       const x = b[0] - m, y = b[1] - m, w = b[2] - b[0] + 2 * m, h = b[3] - b[1] + 2 * m;
       return `<figure class="fig"><svg viewBox="${f(x)} ${f(y)} ${f(w)} ${f(h)}" width="${f(w)}" height="${f(h)}" role="img" aria-label="${this.label}">${this.parts.join('')}</svg></figure>`;
     }

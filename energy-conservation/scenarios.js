@@ -361,6 +361,28 @@
   };
 
   // ---------------------------------------------------------------- 5 a track
+  // The track of the ramp: a smooth curve (Catmull-Rom spline) through the points ① at x = 0 and
+  // ② at x = 260, with a valley between; sc: px per metre.
+  function track(p) {
+    const top = Math.max(p.V.h1, p.V.h2), sc = 140 / top;
+    const y1 = -p.V.h1 * sc, y2 = -p.V.h2 * sc, low = -0.08 * 140;
+    const ctrl = [[-60, y1 - 30], [0, y1], [130, low], [260, y2], [330, y2 - 18]];
+    const pts = [];
+    for (let k = 0; k < ctrl.length - 1; k++) {
+      const p0 = ctrl[Math.max(0, k - 1)], p1 = ctrl[k], p2 = ctrl[k + 1], p3 = ctrl[Math.min(ctrl.length - 1, k + 2)];
+      for (let j = 0; j < 16; j++) {
+        const t = j / 16, t2 = t * t, t3 = t2 * t;
+        pts.push([0, 1].map((c) => 0.5 * (2 * p1[c] + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3)));
+      }
+    }
+    pts.push(ctrl[ctrl.length - 1]);
+    return { pts, sc, y1, y2 };
+  }
+  // the direction of a polyline at x
+  const tangentAt = (pts, x) => { const k = pts.findIndex((q) => q[0] >= x); const a = pts[Math.max(0, k - 1)], b = pts[Math.min(pts.length - 1, k + 1)]; return [b[0] - a[0], b[1] - a[1]]; };
+  // the height of a polyline at x (linear between its points)
+  const heightAt = (pts, x) => { const k = Math.max(1, pts.findIndex((q) => q[0] >= x)); const a = pts[k - 1], b = pts[k]; return a[1] + ((b[1] - a[1]) * (x - a[0])) / (b[0] - a[0] || 1); };
+
   const ramp = {
     id: 'ramp', difficulty: 3,
     make(r) {
@@ -399,24 +421,11 @@
       : L(`A small car rolls along a track without friction. At the point ①, ${q(p.V.h1, 'm')} above the ground, it has a speed of ${q(p.V.v1, 'v')}. How fast is it at the point ②, ${q(p.V.h2, 'm')} above the ground?`,
         `Ein kleiner Wagen rollt reibungsfrei auf einer Bahn. Im Punkt ①, ${q(p.V.h1, 'm')} über dem Boden, hat er die Geschwindigkeit ${q(p.V.v1, 'v')}. Wie schnell ist er im Punkt ②, ${q(p.V.h2, 'm')} über dem Boden?`)),
     scene(p, formal, view) {
-      const fig = new Fig(this.title()), top = Math.max(p.V.h1, p.V.h2), sc = 140 / top;
-      const y1 = -p.V.h1 * sc, y2 = -p.V.h2 * sc, low = -0.08 * 140;
-      // a smooth track through the two points with a valley between (Catmull-Rom spline)
-      const ctrl = [[-60, y1 - 30], [0, y1], [130, low], [260, y2], [330, y2 - 18]];
-      const pts = [];
-      for (let k = 0; k < ctrl.length - 1; k++) {
-        const p0 = ctrl[Math.max(0, k - 1)], p1 = ctrl[k], p2 = ctrl[k + 1], p3 = ctrl[Math.min(ctrl.length - 1, k + 2)];
-        for (let j = 0; j < 16; j++) {
-          const t = j / 16, t2 = t * t, t3 = t2 * t;
-          pts.push([0, 1].map((c) => 0.5 * (2 * p1[c] + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3)));
-        }
-      }
-      pts.push(ctrl[ctrl.length - 1]);
+      const fig = new Fig(this.title()), { pts, y1, y2 } = track(p);
       fig.surface(-70, 340, 0);
       fig.path(`M${pts.map((x) => x.map((y) => y.toFixed(1)).join(' ')).join('L')}`, pts, 'track');
-      const tangent = (x) => { const k = pts.findIndex((q) => q[0] >= x); const a = pts[Math.max(0, k - 1)], b = pts[Math.min(pts.length - 1, k + 1)]; return [b[0] - a[0], b[1] - a[1]]; };
       [[0, y1, 'h1', 'v1'], [260, y2, 'h2', 'v2']].forEach(([x, y, hk, vk], i) => {
-        const t = tangent(x), n = Math.hypot(...t), u = [t[0] / n, t[1] / n], nn = [u[1], -u[0]];
+        const t = tangentAt(pts, x), n = Math.hypot(...t), u = [t[0] / n, t[1] / n], nn = [u[1], -u[0]];
         const c = [x + nn[0] * R, y + nn[1] * R];
         fig.circle(c[0], c[1], R, 'body ball');
         speed(fig, c[0] + u[0] * (R + 4) + nn[0] * 4, c[1] + u[1] * (R + 4) + nn[1] * 4, u, vk === 'v2' ? wanted('v2') : given('v1', formal, p.V.v1, 'v'), 30);
@@ -791,6 +800,8 @@
 
   const SCENARIOS = [fall, partDrop, launcher, pendulum, ramp, tower, springUp, speedFrac, dropSpring, hang];
 
-  root.Scenarios = { SCENARIOS };
+  // helpers for the animations (motion.js)
+  const helpers = { R, PW, ball, groundAt, ceilingAt, zeroLine, track, tangentAt, heightAt, DIRS };
+  root.Scenarios = { SCENARIOS, helpers };
   if (typeof module !== 'undefined') module.exports = root.Scenarios;
 })(typeof window !== 'undefined' ? window : globalThis);
