@@ -7,7 +7,10 @@
   const L = (en, de) => TQ.L(en, de);
 
   // The idea behind each wrong-answer flag.
-  const concept = { arm: 'arm', swap: 'ratio', oneLoad: 'sum', sumMass: 'sum', end: 'pivot', cos: 'angle', noAngle: 'angle', noBeam: 'beam', onlyLoads: 'beam', count: 'length', diam: 'length' };
+  const concept = {
+    arm: 'arm', top: 'arm', swap: 'ratio', oneLoad: 'sum', sumMass: 'sum', lower: 'sum', end: 'pivot', whole: 'pivot', fromHands: 'pivot',
+    cos: 'angle', noAngle: 'angle', noBeam: 'beam', onlyLoads: 'beam', noArm: 'beam', full: 'middle', jointUp: 'forces', count: 'length', diam: 'length',
+  };
   const concepts = () => ({
     arm: L('distance to the point of action instead of the lever arm', 'Abstand zum Angriffspunkt statt Hebelarm'),
     ratio: L('lever arms the wrong way round', 'Hebelarme vertauscht'),
@@ -16,6 +19,8 @@
     angle: L('force at an angle', 'schräge Kraft'),
     beam: L('the beam’s own weight forgotten', 'Gewichtskraft des Balkens vergessen'),
     length: L('parts not weighted by their length', 'Teile nicht nach Länge gewichtet'),
+    middle: L('weight not at the centre of mass', 'Gewichtskraft nicht im Schwerpunkt'),
+    forces: L('forces not balanced', 'Kräfte nicht im Gleichgewicht'),
   });
 
   const ask = (f) => L(`Find the ${f.what.replace(/<[^>]*>/g, '')} $${TQ.tex(...f.sym)}$.`, `Wie gross ist $${TQ.tex(...f.sym)}$ (${f.what})?`);

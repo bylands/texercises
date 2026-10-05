@@ -36,6 +36,11 @@
       idea: { en: 'At rest, both the forces and the torques balance; any point may serve as the axis.', de: 'In Ruhe heben sich sowohl die Kräfte als auch die Drehmomente auf; jeder Punkt kann als Drehachse dienen.' },
     },
     {
+      scenario: 'plank', p: { len: 4, b: 4, x: 1, m: 20, M: 60 },
+      name: { en: 'Two supports', de: 'Zwei Stützen' },
+      idea: { en: 'Two unknown forces: take one support as the axis, so that its force drops out of the torques; the forces give the other.', de: 'Zwei unbekannte Kräfte: Nimm eine Stütze als Drehachse, damit ihre Kraft aus den Drehmomenten herausfällt; die Kräfte liefern die andere.' },
+    },
+    {
       scenario: 'com-L', p: { h: 12, b: 8 },
       name: { en: 'Centre of mass', de: 'Schwerpunkt' },
       idea: { en: 'The centre of mass of a figure of wire is the mean of its parts’ centres, each weighted with its length.', de: 'Der Schwerpunkt einer Drahtfigur ist der Mittelwert der Schwerpunkte ihrer Teile, jeder mit seiner Länge gewichtet.' },
@@ -44,6 +49,16 @@
       scenario: 'com-loop', p: { h: 10, r: 3 },
       name: { en: 'Ring on a stick', de: 'Ring auf Stab' },
       idea: { en: 'A ring counts with its whole circumference, at its centre.', de: 'Ein Ring zählt mit seinem ganzen Umfang, in seinem Mittelpunkt.' },
+    },
+    {
+      scenario: 'tip', p: { w: 60, h: 120, y: 90, m: 30 },
+      name: { en: 'Tipping over', de: 'Kippen' },
+      idea: { en: 'A body tips about an edge: the weight, acting at the centre of mass, holds it back.', de: 'Ein Körper kippt um eine Kante: Die Gewichtskraft, die im Schwerpunkt angreift, hält ihn zurück.' },
+    },
+    {
+      scenario: 'ladder', p: { a: 1.5, h: 2, len: 2.5, m: 12 },
+      name: { en: 'Ladder', de: 'Leiter' },
+      idea: { en: 'Forces at both ends of the ladder: the foot as the axis leaves only the wall’s force in the torques; then friction from the forces.', de: 'Kräfte an beiden Enden der Leiter: Mit dem Fusspunkt als Drehachse bleibt nur die Kraft der Wand in den Drehmomenten; dann die Reibung aus den Kräften.' },
     },
   ];
 

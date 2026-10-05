@@ -130,6 +130,16 @@
       }
       return this;
     }
+    // A fixed surface from a to b (world), hatched on its side: side 1 is to the right of the
+    // direction a → b on screen (below a floor drawn left to right), −1 the other side.
+    surface(a, b, side = 1) {
+      const [p, q] = [this.px(a), this.px(b)], len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      const t = [(q[0] - p[0]) / len, (q[1] - p[1]) / len], n = [-t[1] * side, t[0] * side], d = [(n[0] - t[0]) * 6, (n[1] - t[1]) * 6];
+      let path = '';
+      for (let k = 5; k < len; k += 8) { const r = [p[0] + k * t[0], p[1] + k * t[1]]; path += `M${f(r[0])} ${f(r[1])}l${f(d[0])} ${f(d[1])}`; this.see(r[0] + d[0], r[1] + d[1]); }
+      this.see(...p); this.see(...q);
+      return this.add(`<path class="hatch" d="${path}"/><line class="ground" x1="${f(p[0])}" y1="${f(p[1])}" x2="${f(q[0])}" y2="${f(q[1])}"/>`);
+    }
     // The axis of rotation: a hub with a pin.
     pivot(c) { this.circle(c, 5.5 / this.s, 'hub', true); return this.dot(c, 'dot', 2); }
     // A pointed support under the beam at c (the beam's underside).

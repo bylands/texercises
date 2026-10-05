@@ -9,7 +9,7 @@
 // It also checks the tutor's examples against the answers on the worksheets.
 'use strict';
 
-require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../generator.js'); require('../lessons.js');
+require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../statics.js'); require('../generator.js'); require('../lessons.js');
 const { TQ, Torque, Lessons, Lang } = globalThis;
 const G = TQ.G;
 
@@ -44,6 +44,26 @@ const LAWS = {
   hang: (p, v) => [[(p.F1 || 0) * v.x + p.m * G * (v.x - p.len / 2), p.F2 * (p.len - v.x)], [v.H, p.m * G + (p.F1 || 0) + p.F2]],
 };
 LAWS['plate-axis'] = LAWS.plate;
+// the situations of statics.js
+Object.assign(LAWS, {
+  // torques about A and about B, and the forces
+  plank: (p, v) => [[v.B * p.b, p.m * G * p.len / 2 + p.M * G * p.x], [v.A * p.b, p.m * G * (p.b - p.len / 2) + p.M * G * (p.b - p.x)]],
+  arm: (p, v) => [[v.Fm * p.d, p.mA * G * p.c + p.M * G * p.a], [v.Fm, v.E + (p.mA + p.M) * G]],
+  crowbar: (p, v) => [[v.F * (p.len - p.a), p.FL * p.a]],
+  wheelbarrow: (p, v) => [[v.F * p.b, p.M * G * p.a]],
+  winch: (p, v) => [[v.F * p.R, p.M * G * p.r]],
+  // the lower rod, and the top rod with the whole lower part
+  mobile: (p, v) => [[p.m2 * p.b1, v.m3 * p.b2], [p.m1 * p.a1, (p.m2 + v.m3) * v.x]],
+  // about the edge
+  tip: (p, v) => [[v.F * p.y, p.m * G * p.w / 2]],
+  // the centre of mass straight above the edge: rotate S by θ about the edge
+  tilt: (p, v) => { const t = (v.theta * Math.PI) / 180, x = -p.w / 2, y = p.h / 2; return [[x * Math.cos(t) + y * Math.sin(t), 0]]; },
+  // torques about the hinge (perpendicular component), horizontal forces
+  crane: (p, v) => [[v.T * sin(p.alpha) * p.len, p.m * G * p.len / 2 + p.M * G * p.len], ...(v.Hx != null ? [[v.Hx, v.T * Math.cos((p.alpha * Math.PI) / 180)]] : [])],
+  // torques about the top (wall force has no arm; floor forces do), and friction
+  ladder: (p, v) => { const M = p.M || 0, f = p.f || 0, Nn = (p.m + M) * G; return [[Nn * p.a, v.W * p.h + p.m * G * p.a / 2 + M * G * (1 - f) * p.a], [v.mu * Nn, v.W], [p.a ** 2 + p.h ** 2, p.len ** 2]]; },
+});
+LAWS['ladder-person'] = LAWS.ladder;
 LAWS.hang2 = LAWS.hang;
 
 const bad = /undefined|NaN|Infinity|\[object|\$\$\$/;
@@ -53,7 +73,7 @@ const exactTo = (x, dec) => Math.abs(x * 10 ** dec - Math.round(x * 10 ** dec)) 
 function checkExercise(ex, id, wantExact) {
   checked++;
   const law = LAWS[ex.scenario];
-  if (law) law(ex.p, ex.v).forEach(([a, b], k) => { if (!close(a, b)) fail(`${id} (${ex.scenario}): law ${k + 1}: ${a} ≠ ${b}`); });
+  if (law) law(ex.p, ex.v).forEach(([a, b], k) => { if (!close(a, b, 1e-5)) fail(`${id} (${ex.scenario}): law ${k + 1}: ${a} ≠ ${b}`); });
   else if (ex.family === 'com') {
     const S = Torque.SCENARIOS.find((s) => s.id === ex.scenario), shape = ex.scenario.slice(4);
     const c = comNumeric(globalThis.Scenarios.SHAPES[shape].parts(ex.p));
@@ -63,7 +83,7 @@ function checkExercise(ex, id, wantExact) {
   ex.fields.forEach((f) => {
     if (!Number.isFinite(f.value) || f.value < 0) fail(`${id}: ${f.key} = ${f.value}`);
     if (!f.sense && f.value <= 0) fail(`${id}: ${f.key} = ${f.value} is not positive`);
-    if (f.value > 1000) fail(`${id}: ${f.key} = ${f.value} is implausibly large`);
+    if (f.value > 5000) fail(`${id}: ${f.key} = ${f.value} is implausibly large`);
     if (wantExact && !exactTo(f.value, f.dec)) fail(`${id}: ${f.key} = ${f.value} needs rounding`);
     f.traps.forEach((t) => { if (Math.abs(t.value - f.value) < 1e-9) fail(`${id}: trap ${t.flag} equals the answer`); if (!t.why) fail(`${id}: trap ${t.flag} has no explanation`); });
   });

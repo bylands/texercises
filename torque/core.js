@@ -26,8 +26,18 @@
     xS: { en: ['x', 'S'], de: ['x', 'S'] },
     yS: { en: ['y', 'S'], de: ['y', 'S'] },
     alpha: { en: ['α', ''], de: ['α', ''] },
+    theta: { en: ['θ', ''], de: ['θ', ''] },
+    A: { en: ['F', 'A'], de: ['F', 'A'] },
+    B: { en: ['F', 'B'], de: ['F', 'B'] },
+    Fm: { en: ['F', 'M'], de: ['F', 'M'] },
+    E: { en: ['F', 'E'], de: ['F', 'E'] },
+    T: { en: ['F', 'T'], de: ['F', 'S'] },
+    W: { en: ['F', 'W'], de: ['F', 'W'] },
+    R: { en: ['F', 'f'], de: ['F', 'R'] },
+    N: { en: ['F', 'N'], de: ['F', 'N'] },
+    mu: { en: ['μ', 's'], de: ['μ', 'H'] },
   };
-  const TEX_LETTER = { α: '\\alpha' };
+  const TEX_LETTER = { α: '\\alpha', θ: '\\theta', μ: '\\mu' };
   const parts = (key, i = '') => { const [l, s] = SYM[key][getLang()]; return [l, `${s}${i}`]; };
 
   // KaTeX: M_1, F_\mathrm{G}, x_\mathrm{S}
@@ -50,10 +60,10 @@
   // Results to at most dec decimal places; the decimal point in both languages.
   const round = (x, dec = 2) => (Number.isFinite(x) ? Number(x.toFixed(dec)) + 0 : 0);
   const num = (x, dec = 2) => String(round(x, dec));
-  const UNITS = { N: 'N', kg: 'kg', cm: 'cm', m: 'm', Nm: 'N·m', deg: '°' };
-  const TEX_UNITS = { N: '\\mathrm{N}', kg: '\\mathrm{kg}', cm: '\\mathrm{cm}', m: '\\mathrm{m}', Nm: '\\mathrm{N\\,m}', deg: '^\\circ' };
-  const q = (x, u, dec) => (u === 'deg' ? `${num(x, dec)}°` : `${num(x, dec)} ${UNITS[u]}`);
-  const tq = (x, u, dec) => (u === 'deg' ? `${num(x, dec)}^\\circ` : `${num(x, dec)}\\,${TEX_UNITS[u]}`);
+  const UNITS = { N: 'N', kg: 'kg', g: 'g', cm: 'cm', m: 'm', Nm: 'N·m', deg: '°', '': '' };
+  const TEX_UNITS = { N: '\\mathrm{N}', kg: '\\mathrm{kg}', g: '\\mathrm{g}', cm: '\\mathrm{cm}', m: '\\mathrm{m}', Nm: '\\mathrm{N\\,m}', deg: '^\\circ', '': '' };
+  const q = (x, u, dec) => (u === 'deg' ? `${num(x, dec)}°` : u ? `${num(x, dec)} ${UNITS[u]}` : num(x, dec));
+  const tq = (x, u, dec) => (u === 'deg' ? `${num(x, dec)}^\\circ` : u ? `${num(x, dec)}\\,${TEX_UNITS[u]}` : num(x, dec));
 
   // ---------------------------------------------------------------- random numbers
   function rng(seed) {

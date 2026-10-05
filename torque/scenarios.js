@@ -624,6 +624,8 @@
     com('L'), com('T'), com('U'), com('tri'), com('loop'), com('bell'),
   ];
 
-  root.Scenarios = { SCENARIOS, SHAPES, comOf, armOf, torqueOf, UNIT };
+  // helpers for the situations of statics.js, which adds its own to SCENARIOS
+  const H = { step, res, exact, beamPic, kg, cm, N, senseWord };
+  root.Scenarios = { SCENARIOS, SHAPES, comOf, armOf, torqueOf, UNIT, H };
   if (typeof module !== 'undefined') module.exports = root.Scenarios;
 })(typeof window !== 'undefined' ? window : globalThis);
