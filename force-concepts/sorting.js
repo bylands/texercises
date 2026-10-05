@@ -43,9 +43,12 @@
         if (d && !o.forces) g += D.arrow(x0 + 97, cy + 22 * d, x0 + 97, cy - 22 * d, 'v', 'v', { at: [x0 + 100, d > 0 ? cy - 28 : cy + 36], anchor: 'middle' });
         if (o.acc) g += acc[i] ? D.arrow(x0 + 12, cy + 16 * acc[i], x0 + 12, cy - 16 * acc[i], 'a', '') : D.text(x0 + 12, cy + 4, 'a=0', 'lbl a small');
         if (o.forces) {
-          const lt = 30 + 10 * acc[i];
-          g += D.arrow(x0 + 55, cy, x0 + 55, cy - lt, 'f', FL('T'), { at: [x0 + 62, cy - lt + 8], anchor: 'start' });
-          g += D.arrow(x0 + 55, cy, x0 + 55, cy + 30, 'f', FL('G'), { at: [x0 + 62, cy + 30], anchor: 'start' });
+          // Both forces start at the dot in the middle of the cabin, so their lengths compare
+          // directly: the weight is always 34, the cable force 34 ± 14 with the acceleration.
+          const cx = x0 + 55, lt = 34 + 14 * acc[i];
+          g += D.arrow(cx, cy, cx, cy - lt, 'f', FL('T'), { at: [cx + 7, cy - lt - 1], anchor: 'start' });
+          g += D.arrow(cx, cy, cx, cy + 34, 'f', FL('G'), { at: [cx + 7, cy + 34], anchor: 'start' });
+          g += D.dot(cx, cy, 3, 'pt');
         }
         g += D.words(x0 + 55, 168, moving(d)) + D.words(x0 + 55, 182, change(d, s));
       });
@@ -219,6 +222,7 @@
     const c = [230, 58];
     let g = D.rect(c[0] - 16, c[1] - 12, 32, 24, 'obj', 2);
     g += D.arrow(c[0], c[1], c[0], c[1] + 40, 'f', '') + D.arrow(c[0], c[1], c[0], c[1] - 40, 'f', '') + D.arrow(c[0], c[1], c[0] + 52, c[1], 'f', '') + D.arrow(c[0], c[1], c[0] - 52, c[1], 'f', '');
+    g += D.dot(c[0], c[1], 2.5, 'pt');  // all forces start here, as in the diagrams
     g += D.words(c[0] + 8, c[1] + 44, T('weight', 'Gewichtskraft'), 'start') + D.words(c[0] + 8, c[1] - 34, T('upward force', 'Kraft nach oben'), 'start');
     g += D.words(c[0] + 58, c[1] + 4, T('forward force', 'Kraft nach vorn'), 'start') + D.words(c[0] - 58, c[1] + 4, T('backward force', 'Kraft nach hinten'), 'end');
     g += D.arrow(12, 108, 52, 108, 'm', '', { head: 6 }) + D.words(58, 112, T('direction of motion', 'Bewegungsrichtung'), 'start');
