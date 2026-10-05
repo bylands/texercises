@@ -497,7 +497,7 @@
   // Plain resistors before the first group run along the top wire, those after the last
   // group along the bottom wire. Layout y grows downwards; current flows top → bottom in
   // vertical blocks.
-  const LEAF_H = 2.3, COL_GAP = 0.25;
+  const LEAF_H = 2.3, COL_GAP = 0.25, X0 = 1.1;
 
   function labelWidths(node, c, nm, prob) {
     const w = (k) => Math.max(...[givenOnly(prob), all].map((known) => { const l = labels(c, nm, prob, node, known)[k]; return l ? UNITS(l) : 0; }));
@@ -512,10 +512,12 @@
   }
 
   // Vertical block: terminals at the top and bottom of its attach column, ax from its left edge.
-  // All vertical resistors get the same width so that columns of stacked groups line up.
+  // Each vertical resistor is as wide as its own labels need (col(leaf): { left, right } of its
+  // wire); stacked parts line up on a common wire.
   function measureV(node, col) {
     if (node.t === 'R') {
-      node.vl = { ax: col.left, w: col.left + col.right, h: LEAF_H };
+      const { left, right } = col(node);
+      node.vl = { ax: left, w: left + right, h: LEAF_H };
       return node.vl;
     }
     const kids = node.kids.map((k) => measureV(k, col));
@@ -549,14 +551,10 @@
     }
     [...top, ...bottom].forEach((leaf) => measureH(leaf, c, nm, prob));
     if (middle) {
-      const col = { left: 0, right: 0 };
-      (function widest(node) {
-        if (node.t !== 'R') return node.kids.forEach(widest);
-        const lw = labelWidths(node, c, nm, prob);
-        col.left = Math.max(col.left, 0.85 + lw.v);
-        col.right = Math.max(col.right, 0.4 + Math.max(lw.r, lw.i));
-      })(middle);
-      measureV(middle, col);
+      measureV(middle, (leaf) => {
+        const lw = labelWidths(leaf, c, nm, prob);
+        return { left: 0.85 + lw.v, right: 0.4 + Math.max(lw.r, lw.i) };
+      });
     }
     const topW = top.reduce((sum, l) => sum + l.hw, 0), bottomW = bottom.reduce((sum, l) => sum + l.hw, 0);
     // Bottom-wire resistors start left of the column's labels, and leave room for the battery wire.
@@ -564,8 +562,9 @@
       const col = x0 + topW + (middle ? 0.3 + middle.vl.ax : 0.6);
       return { x0, col, bottomStart: middle ? col - middle.vl.ax - 0.2 : col };
     };
-    let g = place(1.8);
-    if (g.bottomStart - bottomW < 1.2) g = place(1.8 + 1.2 - (g.bottomStart - bottomW));
+    // x0: room for the battery current on the top wire
+    let g = place(X0);
+    if (g.bottomStart - bottomW < 1.2) g = place(X0 + 1.2 - (g.bottomStart - bottomW));
     const bottomY = Math.max(middle ? middle.vl.h : 0, 2.6, top.length && bottom.length ? 2.9 : 0);
     // A parallel group on the right side reaches down to the bottom wire.
     if (middle && middle.t === 'P') middle.vl.h = bottomY;
