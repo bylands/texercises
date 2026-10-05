@@ -284,6 +284,28 @@
       </div>
     </a>
 
+    <a class="app" href="/rl-switch/">
+      <svg viewBox="0 0 240 150" role="img" aria-label="Circuit with a battery, a switch, a resistor and a coil">
+        <path class="wire" d="M30 68 V30 H70 M110 30 H200 V50 M200 98 V120 H30 V82"/>
+        <path class="wire" d="M70 30 L104 14"/>
+        <circle class="node" cx="70" cy="30" r="3"/>
+        <circle class="node" cx="110" cy="30" r="3"/>
+        <line class="plate" x1="16" y1="68" x2="44" y2="68" stroke-width="2.5"/>
+        <line class="plate" x1="23" y1="82" x2="37" y2="82" stroke-width="5"/>
+        <path class="wire" d="M200 50 a6 6 0 0 1 0 12 a6 6 0 0 1 0 12 a6 6 0 0 1 0 12 a6 6 0 0 1 0 12"/>
+        <rect class="res" x="100" y="113" width="36" height="14" rx="1"/>
+        <path class="vel" d="M178 36 V54"/>
+        <path class="velhead" d="M173 52 L178 62 L183 52 Z"/>
+        <text class="label" x="84" y="12">S</text>
+        <text class="label" x="214" y="80">L</text>
+        <text class="label" x="160" y="50">I<tspan dy="3">L</tspan></text>
+      </svg>
+      <div class="text">
+        <h2>Switching RL Circuits</h2>
+        <p>Right after a switch flips in a circuit with coils: the inductor current cannot jump.</p>
+      </div>
+    </a>
+
     <a class="app" href="/coe/">
       <svg viewBox="0 0 240 150" role="img" aria-label="A ball dropped from a height and halfway down, with bars of its potential and kinetic energy">
         <path class="axis" d="M14 112 H100 M124 112 H210"/>
@@ -403,6 +425,7 @@
         'force-concepts': ['Kraftkonzepte', 'Gewichtskraft, Trägheit, resultierende Kraft und Wechselwirkung: Erkenne die Fehlvorstellungen hinter verlockenden Antworten.', 'Ein schräg geworfener Ball: Im höchsten Punkt wirkt nur seine Gewichtskraft, während seine Geschwindigkeit nach vorne zeigt'],
         'force-systems': ['Kräftesysteme', 'Kisten, Seile, Rollen und schiefe Ebenen: Bestimme Kräfte und Beschleunigungen mit dem Aktionsprinzip.', 'Eine Kiste wird einen Hang hinaufgezogen: Ihre Gewichtskraft zeigt nach unten, die Zugkraft hangaufwärts'],
         'induction-match': ['Induktion zuordnen', 'Ordne Flussdiagramme den induzierten Spannungen zu: Es zählt die Steigung, nicht der Wert.', 'Ein Flussdiagramm, das steigt, gleich bleibt und fällt, und die induzierte Spannung: negativ, null, dann positiv'],
+        'rl-switch': ['Schaltvorgänge mit Spulen', 'Unmittelbar nach dem Umlegen eines Schalters in einem Stromkreis mit Spulen: Der Spulenstrom kann nicht springen.', 'Stromkreis mit einer Batterie, einem Schalter, einem Widerstand und einer Spule'],
         'motion-graphs': ['Bewegungsdiagramme', 'Tempo und Richtung, Wertetabellen, Stroboskopbilder, Steigungen und Flächen: vom Ort zur Geschwindigkeit und zurück.', 'Ein Ort-Zeit-Diagramm, das nach oben gekrümmt ist, und seine Geschwindigkeit: eine steigende Gerade'],
       };
       const parts = (c) => [c.querySelector('h2'), c.querySelector('.text p'), c.querySelector('svg')];

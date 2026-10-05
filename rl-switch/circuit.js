@@ -270,8 +270,9 @@
       const d = unit(sub(q, p));
       const c = lerp(p, q, t);
       const a = sub(c, mul(d, 0.22)), b = add(c, mul(d, 0.22));
-      this._path([a, b], 'cur');
-      this._head(b, d, 'cur-h');
+      const ask = label && typeof label === 'object' && / ask\b/.test(' ' + label.cls) ? ' ask' : ''; // the quantity asked for
+      this._path([a, b], 'cur' + ask);
+      this._head(b, d, 'cur-h' + ask);
       const n = normalTowards(d, side || this._defaultSide(d));
       this._text(add(c, mul(n, 0.22)), n, label, 'cur-t');
       return this;
@@ -319,10 +320,10 @@
       const pad = 10;
       const [x0, y0, x1, y1] = box || this.box;
       const w = x1 - x0 + 2 * pad, h = y1 - y0 + 2 * pad;
-      // Shown 1.3× larger than drawn; on narrow screens it shrinks, but not below 75 % so the
-      // labels stay legible (the page then lets the figure scroll horizontally).
-      const display = (w * 1.3).toFixed(0), min = (w * 0.75).toFixed(0);
-      return `<svg class="${cls}" viewBox="${(x0 - pad).toFixed(1)} ${(y0 - pad).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}" width="${display}" style="width:${display}px;max-width:100%;min-width:${min}px;height:auto" role="img">${this.els.join('')}</svg>`;
+      // Shown 1.3× larger than drawn; on narrow screens it shrinks to fit, and fit.js keeps the
+      // labels legible (fitText then lays out the captions and markers again).
+      const display = (w * 1.3).toFixed(0);
+      return `<svg class="${cls}" viewBox="${(x0 - pad).toFixed(1)} ${(y0 - pad).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}" width="${display}" style="width:${display}px;max-width:100%;height:auto" role="img">${this.els.join('')}</svg>`;
     }
   }
 
@@ -342,6 +343,8 @@
     }
   }
 
+  // labels enlarged on a narrow screen (fit.js): captions and markers follow
+  if (root.Fit) root.Fit.after.push(fitText);
   const Circuit = { Sketch, richText, esc, textWidth, fitText, S };
   root.Circuit = Circuit;
   if (typeof module !== 'undefined') module.exports = Circuit;

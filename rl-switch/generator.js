@@ -21,11 +21,15 @@
   'use strict';
 
   const Circuit = root.Circuit || require('./circuit.js');
+  const Lang = root.Lang || require('./lang.js');
+  const L = (en, de) => Lang.L(en, de);
+  // decimals with a comma in German (in KaTeX as {,})
+  const comma = (s, tex) => (Lang.get() === 'de' ? s.replace('.', tex ? '{,}' : ',') : s);
   const M = String.raw;
   const RS = [10, 20, 30, 40, 50, 60, 80, 100, 120, 150, 200, 300, 400, 500]; // Ω
   const LS = [0.1, 0.2, 0.5, 1, 2];              // H: irrelevant right after switching
   const VS = [3, 4.5, 6, 9, 12, 15, 18, 24, 30, 36, 48]; // V
-  const LEVELS = { easy: { name: 'Easy' }, medium: { name: 'Medium' }, hard: { name: 'Hard' } };
+  const LEVELS = { easy: { name: () => L('Easy', 'Einfach') }, medium: { name: () => L('Medium', 'Mittel') }, hard: { name: () => L('Hard', 'Schwierig') } };
 
   // ---------------------------------------------------------------- random numbers
   function rng(seed) {
@@ -69,9 +73,9 @@
     return String(parseFloat(x.toFixed(2)));
   }
   // Decimal if it terminates within two places, otherwise a fraction (LaTeX).
-  const ftex = (f) => (f.d === 1 || 100 % f.d === 0 ? fmt(fval(f)) : `${f.n < 0 ? '-' : ''}\\tfrac{${Math.abs(f.n)}}{${f.d}}`);
+  const ftex = (f) => (f.d === 1 || 100 % f.d === 0 ? comma(fmt(fval(f)), true) : `${f.n < 0 ? '-' : ''}\\tfrac{${Math.abs(f.n)}}{${f.d}}`);
   // The same as plain text (diagram labels): 2/3 instead of \tfrac.
-  const ftxt = (f) => (f.d === 1 || 100 % f.d === 0 ? fmt(fval(f)) : `${f.n}/${f.d}`).replace('-', '−');
+  const ftxt = (f) => (f.d === 1 || 100 % f.d === 0 ? comma(fmt(fval(f))) : `${f.n}/${f.d}`).replace('-', '−');
 
   // ---------------------------------------------------------------- the physics
   // c = { r1: F | null, branches: [{ R: F | null, L: bool, H: henry, sw: bool }],
@@ -140,9 +144,9 @@
       // current through branch j: named after its resistor, or its inductor
       Ib: (j) => (br[j].R ? `I_{${br[j].R}}` : `I_{${Lsub(br[j].L)}}`),
       IL: (j) => `I_{${Lsub(br[j].L)}}`,
-      VL: (j) => `V_{${Lsub(br[j].L)}}`,
-      EMFsvg: (j) => (br[j].L ? `ℰ_{i,${br[j].L}}` : 'ℰ_{i}'),
-      EMF: (j) => (br[j].L ? `\\mathcal{E}_{\\mathrm{i},${br[j].L}}` : '\\mathcal{E}_\\mathrm{i}'),
+      VL: (j) => L(`V_{${Lsub(br[j].L)}}`, `U_{${Lsub(br[j].L)}}`),
+      EMFsvg: (j) => (br[j].L ? L(`ℰ_{i,${br[j].L}}`, `U_{ind,${br[j].L}}`) : L('ℰ_{i}', 'U_{ind}')),
+      EMF: (j) => (br[j].L ? L(`\\mathcal{E}_{\\mathrm{i},${br[j].L}}`, `U_{\\mathrm{ind},${br[j].L}}`) : L('\\mathcal{E}_\\mathrm{i}', 'U_\\mathrm{ind}')),
       IR1: () => `I_{${r1}}`,
       main: () => (r1 ? `I_{${r1}}` : 'I'),
     };
@@ -275,75 +279,100 @@
   }
 
   // ---------------------------------------------------------------- text
+  // English or German (lang.js), with the symbols of each language's textbooks: the battery
+  // voltage V / U₀, the voltage across a coil V_L / U_L, the induced emf 𝓔_i / induzierte
+  // Spannung U_ind. U is the voltage across the branches in both.
   // A value with its unit; currents (u = 'A', given in A) are shown in mA.
   const UNIT_TEX = { A: M`\mathrm{mA}`, mA: M`\mathrm{mA}`, V: M`\mathrm{V}`, O: M`\Omega` };
   const q = (f, u) => `${ftex(u === 'A' ? fmul(f, MA) : f)}\\,${UNIT_TEX[u]}`;
-  const listing = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+  const listing = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} ${L('and', 'und')} ${items[items.length - 1]}`);
   const al = (...lines) => M`$$\begin{aligned}` + lines.join(M` \\ `) + M`\end{aligned}$$`;
-  const verb = (closed) => (closed ? 'closed' : 'opened');
+  const verb = (closed) => (closed ? L('closed', 'geschlossen') : L('opened', 'geöffnet'));
+  const state = (closed) => (closed ? L('closed', 'geschlossen') : L('open', 'offen'));
+  const VB = () => L('V', 'U_0'); // the battery voltage
+  const EMF = () => L(M`\mathcal{E}_\mathrm{i}`, M`U_\mathrm{ind}`);
+  const pl = (n, one, many) => (n > 1 ? many : one);
 
   function where(c, nm) {
-    if (c.sw.at === 'main') return 'in the main line';
-    if (c.sw.at === 'bridge') return `across $${nm.R(nm.r1)}$`;
-    return `in the branch of $${nm.R(nm.br[c.sw.j].R)}$`;
+    if (c.sw.at === 'main') return L('in the main line', 'in der Hauptleitung');
+    if (c.sw.at === 'bridge') return L(`across $${nm.R(nm.r1)}$`, `parallel zu $${nm.R(nm.r1)}$`);
+    return L(`in the branch of $${nm.R(nm.br[c.sw.j].R)}$`, `im Zweig von $${nm.R(nm.br[c.sw.j].R)}$`);
+  }
+
+  // The situation, without the question: what the switch does, and the arrows.
+  function situation(c, nm) {
+    const first = c.sw.before === 'closed';
+    return L(`The switch S ${where(c, nm)} has been ${state(first)} for a long time. At $t = 0$ it is ${verb(!first)}. The arrows show the positive direction of the currents.`,
+      `Der Schalter S ${where(c, nm)} ist seit langer Zeit ${state(first)}. Zur Zeit $t = 0$ wird er ${verb(!first)}. Die Pfeile zeigen die positive Richtung der Ströme.`);
   }
 
   function taskText(c, nm, list) {
     const first = c.sw.before === 'closed';
     const cur = list.filter((t) => t.unit === 'mA').map((t) => `$${t.sym}$`);
     const emf = list.filter((t) => t.unit === 'V').map((t) => `$${t.sym.replace(/\|/g, '')}$`);
-    return `The switch S ${where(c, nm)} has been ${first ? 'closed' : 'open'} for a long time. At $t = 0$ it is ${verb(!first)}. ` +
+    return L(`The switch S ${where(c, nm)} has been ${state(first)} for a long time. At $t = 0$ it is ${verb(!first)}. ` +
       `Find the currents ${listing(cur)} and the size of the emf ${listing(emf)} induced in the inductor${emf.length > 1 ? 's' : ''} immediately after the switch is ${verb(!first)}. ` +
-      'The arrows show the positive direction of the currents.';
+      'The arrows show the positive direction of the currents.',
+    `Der Schalter S ${where(c, nm)} ist seit langer Zeit ${state(first)}. Zur Zeit $t = 0$ wird er ${verb(!first)}. ` +
+      `Bestimme die Ströme ${listing(cur)} und den Betrag der in ${pl(emf.length, 'der Spule', 'den Spulen')} induzierten Spannung ${listing(emf)} unmittelbar nachdem der Schalter ${verb(!first)} wurde. ` +
+      'Die Pfeile zeigen die positive Richtung der Ströme.');
   }
 
   // Before t = 0: the steady currents, in particular the inductor currents.
-  const EMF = M`\mathcal{E}_\mathrm{i}`;
-
   function beforeText(c, nm, st) {
     const { main, r, active, bridged } = config(c, st.first), s = st.s0, V = c.V;
-    const Ls = c.branches.map((b, j) => j).filter((j) => c.branches[j].L);
+    const Ls = c.branches.map((b, j) => j).filter((j) => c.branches[j].L), n = Ls.length;
     const ILs = listing(Ls.map((j) => `$${nm.IL(j)} = ${q(s.Ib[j], 'A')}$`));
-    const out = [`Before $t = 0$, the switch has been ${st.first ? 'closed' : 'open'} for a long time.`];
+    const out = [L(`Before $t = 0$, the switch has been ${state(st.first)} for a long time.`, `Vor $t = 0$ ist der Schalter seit langer Zeit ${state(st.first)}.`)];
     if (!main) {
-      out.push(`The circuit is open, so no current flows: ${ILs}.`);
+      out.push(L(`The circuit is open, so no current flows: ${ILs}.`, `Der Stromkreis ist offen, also fliesst kein Strom: ${ILs}.`));
       return out;
     }
-    out.push(`The currents have become constant, so the self-induced emf $${EMF} = -L\\,\\frac{\\Delta I}{\\Delta t}$ is zero, and so is the voltage across ${Ls.length > 1 ? 'each coil' : 'the coil'}: the inductor${Ls.length > 1 ? 's act like wires' : ' acts like a wire'}.`);
-    if (!active.every(Boolean)) out.push(`The branch of $${nm.R(nm.br[c.sw.j].R)}$ is open, so no current flows through it.`);
-    if (bridged) out.push(`The closed switch bridges $${nm.R(nm.r1)}$: no current flows through $${nm.R(nm.r1)}$.`);
+    out.push(L(`The currents have become constant, so the self-induced emf $${EMF()} = -L\\,\\frac{\\Delta I}{\\Delta t}$ is zero, and so is the voltage across ${pl(n, 'the coil', 'each coil')}: ${pl(n, 'the inductor acts like a wire', 'the inductors act like wires')}.`,
+      `Die Ströme sind konstant geworden, also ist die induzierte Spannung $${EMF()} = -L\\,\\frac{\\Delta I}{\\Delta t}$ null, ebenso die Spannung über ${pl(n, 'der Spule', 'jeder Spule')}: ${pl(n, 'Die Spule wirkt wie ein Draht', 'Die Spulen wirken wie Drähte')}.`));
+    if (!active.every(Boolean)) out.push(L(`The branch of $${nm.R(nm.br[c.sw.j].R)}$ is open, so no current flows through it.`, `Der Zweig von $${nm.R(nm.br[c.sw.j].R)}$ ist offen, also fliesst kein Strom durch ihn.`));
+    if (bridged) out.push(L(`The closed switch bridges $${nm.R(nm.r1)}$: no current flows through $${nm.R(nm.r1)}$.`, `Der geschlossene Schalter überbrückt $${nm.R(nm.r1)}$: Durch $${nm.R(nm.r1)}$ fliesst kein Strom.`));
     const on = c.branches.map((b, j) => j).filter((j) => active[j]);
     const wire = on.find((j) => c.branches[j].L && !c.branches[j].R);
     if (wire !== undefined) {
-      out.push(`The inductor $${nm.L(wire)}$ alone connects the rails like a wire, so there is no voltage across the other branches and no current through them. ` +
-        `All the current flows through $${nm.R(nm.r1)}$ and $${nm.L(wire)}$:` + al(M`${nm.IL(wire)} &= \frac{V}{${nm.R(nm.r1)}} = \frac{${q(V, 'V')}}{${q(c.r1, 'O')}} = ${q(s.I, 'A')}`));
+      out.push(L(`The inductor $${nm.L(wire)}$ alone connects the rails like a wire, so there is no voltage across the other branches and no current through them. All the current flows through $${nm.R(nm.r1)}$ and $${nm.L(wire)}$:`,
+        `Die Spule $${nm.L(wire)}$ allein verbindet die beiden Schienen wie ein Draht, also liegt an den anderen Zweigen keine Spannung, und durch sie fliesst kein Strom. Der ganze Strom fliesst durch $${nm.R(nm.r1)}$ und $${nm.L(wire)}$:`) +
+        al(M`${nm.IL(wire)} &= \frac{${VB()}}{${nm.R(nm.r1)}} = \frac{${q(V, 'V')}}{${q(c.r1, 'O')}} = ${q(s.I, 'A')}`));
       return out;
     }
     const Rs = on.map((j) => nm.R(nm.br[j].R));
     const Rp = fdiv(ONE, s.G);
     if (isZero(r)) {
-      out.push(`The battery is connected directly across the branches, so $U = V = ${q(V, 'V')}$.`);
+      out.push(L(`The battery is connected directly across the branches, so $U = ${VB()} = ${q(V, 'V')}$.`, `Die Batterie liegt direkt an den Zweigen, also ist $U = ${VB()} = ${q(V, 'V')}$.`));
     } else {
       const rp = on.length > 1
         ? M`R_\text{p} &= \left(${Rs.map((x) => M`\frac{1}{${x}}`).join(' + ')}\right)^{-1} = ${q(Rp, 'O')}`
         : M`R_\text{p} &= ${Rs[0]} = ${q(Rp, 'O')}`;
-      out.push(`With the inductor${Ls.length > 1 ? 's' : ''} as ${Ls.length > 1 ? 'wires' : 'a wire'}, ${on.length > 1 ? `the branches ${listing(Rs.map((x) => `$${x}$`))} are in parallel` : `the branch is just $${Rs[0]}$`}, in series with $${nm.R(nm.r1)}$:` +
-        al(rp, M`${nm.main()} &= \frac{V}{${nm.R(nm.r1)} + R_\text{p}} = \frac{${q(V, 'V')}}{${q(c.r1, 'O')} + ${q(Rp, 'O')}} = ${q(s.I, 'A')}`,
+      const parallel = on.length > 1
+        ? L(`the branches ${listing(Rs.map((x) => `$${x}$`))} are in parallel`, `sind die Zweige ${listing(Rs.map((x) => `$${x}$`))} parallel geschaltet`)
+        : L(`the branch is just $${Rs[0]}$`, `besteht der Zweig nur aus $${Rs[0]}$`);
+      out.push(L(`With ${pl(n, 'the inductor as a wire', 'the inductors as wires')}, ${parallel}, in series with $${nm.R(nm.r1)}$:`,
+        `Mit ${pl(n, 'der Spule als Draht', 'den Spulen als Drähten')} ${parallel}, in Serie mit $${nm.R(nm.r1)}$:`) +
+        al(rp, M`${nm.main()} &= \frac{${VB()}}{${nm.R(nm.r1)} + R_\text{p}} = \frac{${q(V, 'V')}}{${q(c.r1, 'O')} + ${q(Rp, 'O')}} = ${q(s.I, 'A')}`,
           M`U &= R_\text{p}\,${nm.main()} = ${q(s.U, 'V')}`));
     }
     const lines = Ls.map((j) => M`${nm.IL(j)} &= \frac{U}{${nm.R(nm.br[j].R)}} = \frac{${q(s.U, 'V')}}{${q(c.branches[j].R, 'O')}} = ${q(s.Ib[j], 'A')}`);
-    out.push(`$U$ is the voltage across the branches. The current through ${Ls.length > 1 ? 'each inductor' : 'the inductor'} is the current through the resistor in its branch:` + al(...lines));
+    out.push(L(`$U$ is the voltage across the branches. The current through ${pl(n, 'the inductor', 'each inductor')} is the current through the resistor in its branch:`,
+      `$U$ ist die Spannung über den Zweigen. Der Strom durch ${pl(n, 'die Spule', 'jede Spule')} ist der Strom durch den Widerstand in ihrem Zweig:`) + al(...lines));
     return out;
   }
 
   // At t = 0: the inductor currents do not jump.
   function jumpText(c, nm, st) {
-    const Ls = c.branches.map((b, j) => j).filter((j) => c.branches[j].L);
+    const Ls = c.branches.map((b, j) => j).filter((j) => c.branches[j].L), n = Ls.length;
     const vals = listing(Ls.map((j) => `$${nm.IL(j)} = ${q(st.IL[j], 'A')}$`));
     const zero = Ls.every((j) => isZero(st.IL[j]));
-    return [`At $t = 0$ the switch is ${verb(st.then)}. The current through an inductor cannot change suddenly: a jump ($\\Delta t \\to 0$) would induce an infinite emf $${EMF} = -L\\,\\frac{\\Delta I}{\\Delta t}$. ` +
-      `So right after switching, ${Ls.length > 1 ? 'the inductors still carry' : 'the inductor still carries'} ${vals}.` +
-      (zero ? ` A branch with an inductor therefore carries no current yet, as if it were cut.` : ` The inductor acts like a current source.`)];
+    return [L(`At $t = 0$ the switch is ${verb(st.then)}. The current through an inductor cannot change suddenly: a jump ($\\Delta t \\to 0$) would induce an infinite emf $${EMF()} = -L\\,\\frac{\\Delta I}{\\Delta t}$. ` +
+      `So right after switching, ${pl(n, 'the inductor still carries', 'the inductors still carry')} ${vals}.` +
+      (zero ? ' A branch with an inductor therefore carries no current yet, as if it were cut.' : ` ${pl(n, 'The inductor acts like a current source.', 'The inductors act like current sources.')}`),
+    `Zur Zeit $t = 0$ wird der Schalter ${verb(st.then)}. Der Strom durch eine Spule kann sich nicht sprunghaft ändern: Ein Sprung ($\\Delta t \\to 0$) würde eine unendlich grosse Spannung $${EMF()} = -L\\,\\frac{\\Delta I}{\\Delta t}$ induzieren. ` +
+      `Unmittelbar nach dem Schalten ${pl(n, 'führt die Spule', 'führen die Spulen')} also noch ${vals}.` +
+      (zero ? ' Ein Zweig mit einer Spule führt deshalb noch keinen Strom, als wäre er unterbrochen.' : ` ${pl(n, 'Die Spule wirkt wie eine Stromquelle.', 'Die Spulen wirken wie Stromquellen.')}`))];
   }
 
   // The voltage across the branches: U, or V_L if an inductor forms a branch on its own (then
@@ -352,57 +381,66 @@
     const j = c.branches.findIndex((b) => b.L && !b.R);
     return j < 0 ? 'U' : nm.VL(j);
   }
+  // U and what it is, after "with" ("mit")
   function uIs(c, nm) {
     const j = c.branches.findIndex((b) => b.L && !b.R);
-    return j < 0 ? '$U$ the voltage across the branches' : `$${nm.VL(j)}$ the voltage across $${nm.L(j)}$, which is the voltage across all branches`;
+    return j < 0 ? L('$U$ the voltage across the branches', '$U$ als Spannung über den Zweigen')
+      : L(`$${nm.VL(j)}$ the voltage across $${nm.L(j)}$, which is the voltage across all branches`, `$${nm.VL(j)}$ als Spannung über $${nm.L(j)}$, die gleich der Spannung über allen Zweigen ist`);
   }
 
   // Right after t = 0: the other currents from Kirchhoff's rules.
   function afterText(c, nm, st) {
     const s = st.s1, V = c.V, out = [], U = uSym(c, nm), Uis = uIs(c, nm);
-    const Ls = c.branches.map((b, j) => j).filter((j) => c.branches[j].L);
+    const Ls = c.branches.map((b, j) => j).filter((j) => c.branches[j].L), n = Ls.length;
     const IL = Ls.map((j) => nm.IL(j)), ILv = Ls.map((j) => q(st.IL[j], 'A'));
     const sumSym = IL.join(' + '), sumNum = ILv.map((x) => (x.startsWith('-') ? `(${x})` : x)).join(' + ');
     const res = s.res, Rs = res.map((j) => nm.R(nm.br[j].R));
     const currents = res.map((j) => M`${nm.Ib(j)} &= \frac{${U}}{${nm.R(nm.br[j].R)}} = \frac{${q(s.U, 'V')}}{${q(c.branches[j].R, 'O')}} = ${q(s.Ib[j], 'A')}`);
-    if (c.sw.at === 'branch' && !config(c, st.then).active[c.sw.j]) out.push(`The branch of $${nm.R(nm.br[c.sw.j].R)}$ is open now: $${nm.Ib(c.sw.j)} = 0$.`);
+    if (c.sw.at === 'branch' && !config(c, st.then).active[c.sw.j]) out.push(L(`The branch of $${nm.R(nm.br[c.sw.j].R)}$ is open now: $${nm.Ib(c.sw.j)} = 0$.`, `Der Zweig von $${nm.R(nm.br[c.sw.j].R)}$ ist jetzt offen: $${nm.Ib(c.sw.j)} = 0$.`));
     if (!s.main) {
-      out.push(`The main line is open now: no current flows through the battery${c.r1 ? ` or $${nm.R(nm.r1)}$ ($${nm.IR1()} = 0$)` : ''}. ` +
-        `The inductor current has to flow back through the other branch${res.length > 1 ? 'es' : ''}. Junction rule at the top rail, with ${Uis}:` +
+      out.push(L(`The main line is open now: no current flows through the battery${c.r1 ? ` or $${nm.R(nm.r1)}$ ($${nm.IR1()} = 0$)` : ''}. ` +
+        `The inductor current has to flow back through the other branch${res.length > 1 ? 'es' : ''}. Junction rule at the top rail, with ${Uis}:`,
+      `Die Hauptleitung ist jetzt offen: Durch die Batterie${c.r1 ? ` und $${nm.R(nm.r1)}$ ($${nm.IR1()} = 0$)` : ''} fliesst kein Strom. ` +
+        `Der Spulenstrom muss durch ${pl(res.length, 'den anderen Zweig', 'die anderen Zweige')} zurückfliessen. Knotenregel an der oberen Schiene, mit ${Uis}:`) +
         al(M`0 &= ${sumSym} + ${Rs.map((x) => M`\frac{${U}}{${x}}`).join(' + ')}`,
           res.length > 1
             ? M`${U} &= -\frac{${sumSym}}{${Rs.map((x) => M`\frac{1}{${x}}`).join(' + ')}} = ${q(s.U, 'V')}`
-            : M`${U} &= -${Rs[0]}\,${Ls.length > 1 ? `(${sumSym})` : sumSym} = -${q(c.branches[res[0]].R, 'O')}\cdot ${Ls.length > 1 ? `(${sumNum})` : sumNum} = ${q(s.U, 'V')}`,
+            : M`${U} &= -${Rs[0]}\,${n > 1 ? `(${sumSym})` : sumSym} = -${q(c.branches[res[0]].R, 'O')}\cdot ${n > 1 ? `(${sumNum})` : sumNum} = ${q(s.U, 'V')}`,
           ...currents) +
-        `The negative sign${res.length > 1 ? 's' : ''}: the current flows upwards, against the arrow.`);
+        L(`The negative sign${res.length > 1 ? 's' : ''}: the current flows upwards, against the arrow.`, `${pl(res.length, 'Das negative Vorzeichen', 'Die negativen Vorzeichen')}: Der Strom fliesst nach oben, gegen den Pfeil.`));
       return out;
     }
     if (isZero(s.r)) {
-      out.push((s.bridged ? `The closed switch bridges $${nm.R(nm.r1)}$ ($${nm.IR1()} = 0$), so the battery` : 'The battery') +
-        ` is connected directly across the branches: $${U} = V = ${q(V, 'V')}$.` + (currents.length ? al(...currents) : ''));
+      out.push(L((s.bridged ? `The closed switch bridges $${nm.R(nm.r1)}$ ($${nm.IR1()} = 0$), so the battery` : 'The battery') + ` is connected directly across the branches: $${U} = ${VB()} = ${q(V, 'V')}$.`,
+        (s.bridged ? `Der geschlossene Schalter überbrückt $${nm.R(nm.r1)}$ ($${nm.IR1()} = 0$), also liegt die Batterie` : 'Die Batterie liegt') + ` direkt an den Zweigen: $${U} = ${VB()} = ${q(V, 'V')}$.`) +
+        (currents.length ? al(...currents) : ''));
       return out;
     }
     const R1 = nm.R(nm.r1), sumIsZero = isZero(s.sumIL);
     if (!res.length) {
-      out.push(`No other branch can take current, so $${nm.IR1()} = ${sumSym} = ${q(s.I, 'A')}$, and the rest of the battery voltage is across the branch${Ls.length > 1 ? 'es' : ''}:` +
-        al(M`${U} &= V - ${R1}\,${nm.IR1()} = ${q(V, 'V')} - ${q(c.r1, 'O')}\cdot${q(s.I, 'A')} = ${q(s.U, 'V')}`));
+      out.push(L(`No other branch can take current, so $${nm.IR1()} = ${sumSym} = ${q(s.I, 'A')}$, and the rest of the battery voltage is across the branch${n > 1 ? 'es' : ''}:`,
+        `Kein anderer Zweig kann Strom aufnehmen, also ist $${nm.IR1()} = ${sumSym} = ${q(s.I, 'A')}$, und der Rest der Batteriespannung liegt über ${pl(n, 'dem Zweig', 'den Zweigen')}:`) +
+        al(M`${U} &= ${VB()} - ${R1}\,${nm.IR1()} = ${q(V, 'V')} - ${q(c.r1, 'O')}\cdot${q(s.I, 'A')} = ${q(s.U, 'V')}`));
       return out;
     }
     if (sumIsZero) {
       const Rp = fdiv(ONE, s.G);
       const rp = res.length > 1 ? M`R_\text{p} &= \left(${Rs.map((x) => M`\frac{1}{${x}}`).join(' + ')}\right)^{-1} = ${q(Rp, 'O')}` : null;
       const wire = c.branches.findIndex((b) => b.L && !b.R);
-      const why = wire < 0 ? '' : ` The inductor $${nm.L(wire)}$ is in parallel with ${listing(Rs.map((x) => `$${x}$`))}, so ${res.length > 1 ? 'they all have' : 'both have'} the same voltage $${U}$.`;
-      out.push(`The inductor branch${Ls.length > 1 ? 'es carry' : ' carries'} no current, so the current flows through $${R1}$ and ${res.length > 1 ? `the parallel branches ${listing(Rs.map((x) => `$${x}$`))}` : `$${Rs[0]}$, in series`}.${why}` +
-        al(...(rp ? [rp] : []), M`${nm.IR1()} &= \frac{V}{${R1} + ${rp ? M`R_\text{p}` : Rs[0]}} = \frac{${q(V, 'V')}}{${q(c.r1, 'O')} + ${q(Rp, 'O')}} = ${q(s.I, 'A')}`,
+      const list = listing(Rs.map((x) => `$${x}$`));
+      const why = wire < 0 ? '' : L(` The inductor $${nm.L(wire)}$ is in parallel with ${list}, so ${res.length > 1 ? 'they all have' : 'both have'} the same voltage $${U}$.`,
+        ` Die Spule $${nm.L(wire)}$ ist parallel zu ${list}, also liegt an ${res.length > 1 ? 'allen' : 'beiden'} dieselbe Spannung $${U}$.`);
+      out.push(L(`The inductor branch${n > 1 ? 'es carry' : ' carries'} no current, so the current flows through $${R1}$ and ${res.length > 1 ? `the parallel branches ${list}` : `$${Rs[0]}$, in series`}.${why}`,
+        `${pl(n, 'Der Spulenzweig führt', 'Die Spulenzweige führen')} keinen Strom, also fliesst der Strom durch $${R1}$ und ${res.length > 1 ? `die parallelen Zweige ${list}` : `$${Rs[0]}$, in Serie`}.${why}`) +
+        al(...(rp ? [rp] : []), M`${nm.IR1()} &= \frac{${VB()}}{${R1} + ${rp ? M`R_\text{p}` : Rs[0]}} = \frac{${q(V, 'V')}}{${q(c.r1, 'O')} + ${q(Rp, 'O')}} = ${q(s.I, 'A')}`,
           M`${U} &= ${rp ? M`R_\text{p}` : Rs[0]}\,${nm.IR1()} = ${q(s.U, 'V')}`, ...currents));
       return out;
     }
-    out.push(`With ${Uis}, the loop rule through the battery and the junction rule at the top rail give` +
-      al(M`V &= ${R1}\,${nm.IR1()} + ${U}`, M`${nm.IR1()} &= ${sumSym} + ${Rs.map((x) => M`\frac{${U}}{${x}}`).join(' + ')}`) +
-      `Put the second equation into the first and solve for $${U}$:` +
-      al(M`${U} &= \frac{V - ${R1}\,${Ls.length > 1 ? `(${sumSym})` : sumSym}}{1 + ${Rs.map((x) => M`\frac{${R1}}{${x}}`).join(' + ')}} = \frac{${q(V, 'V')} - ${q(c.r1, 'O')}\cdot ${sumNum}}{1 + ${res.map((j) => M`\frac{${q(c.r1, 'O')}}{${q(c.branches[j].R, 'O')}}`).join(' + ')}} = ${q(s.U, 'V')}`,
-        ...currents, M`${nm.IR1()} &= \frac{V - ${U}}{${R1}} = \frac{${q(V, 'V')} - ${q(s.U, 'V')}}{${q(c.r1, 'O')}} = ${q(s.I, 'A')}`));
+    out.push(L(`With ${Uis}, the loop rule through the battery and the junction rule at the top rail give`, `Mit ${Uis} ergeben die Maschenregel durch die Batterie und die Knotenregel an der oberen Schiene`) +
+      al(M`${VB()} &= ${R1}\,${nm.IR1()} + ${U}`, M`${nm.IR1()} &= ${sumSym} + ${Rs.map((x) => M`\frac{${U}}{${x}}`).join(' + ')}`) +
+      L(`Put the second equation into the first and solve for $${U}$:`, `Setze die zweite Gleichung in die erste ein und löse nach $${U}$ auf:`) +
+      al(M`${U} &= \frac{${VB()} - ${R1}\,${n > 1 ? `(${sumSym})` : sumSym}}{1 + ${Rs.map((x) => M`\frac{${R1}}{${x}}`).join(' + ')}} = \frac{${q(V, 'V')} - ${q(c.r1, 'O')}\cdot ${sumNum}}{1 + ${res.map((j) => M`\frac{${q(c.r1, 'O')}}{${q(c.branches[j].R, 'O')}}`).join(' + ')}} = ${q(s.U, 'V')}`,
+        ...currents, M`${nm.IR1()} &= \frac{${VB()} - ${U}}{${R1}} = \frac{${q(V, 'V')} - ${q(s.U, 'V')}}{${q(c.r1, 'O')}} = ${q(s.I, 'A')}`));
     return out;
   }
 
@@ -410,34 +448,40 @@
     const s = st.s1, U = uSym(c, nm);
     const Ls = c.branches.map((b, j) => j).filter((j) => c.branches[j].L);
     const wire = Ls.find((j) => !c.branches[j].R), series = Ls.filter((j) => c.branches[j].R);
-    const out = wire !== undefined ? [`The inductor $${nm.L(wire)}$ is a branch on its own, so the voltage across it is the voltage across the branches, found above: $${nm.VL(wire)} = ${q(s.VL[wire], 'V')}$.`] : [];
+    const out = wire !== undefined ? [L(`The inductor $${nm.L(wire)}$ is a branch on its own, so the voltage across it is the voltage across the branches, found above: $${nm.VL(wire)} = ${q(s.VL[wire], 'V')}$.`,
+      `Die Spule $${nm.L(wire)}$ bildet allein einen Zweig, also ist die Spannung über ihr die oben bestimmte Spannung über den Zweigen: $${nm.VL(wire)} = ${q(s.VL[wire], 'V')}$.`)] : [];
     if (series.length) {
-      out.push(`The voltage across ${series.length > 1 ? 'an inductor' : 'the inductor'} in series with a resistor is the voltage $${U}$ across the branch minus the voltage across the resistor:` +
+      out.push(L(`The voltage across ${series.length > 1 ? 'an inductor' : 'the inductor'} in series with a resistor is the voltage $${U}$ across the branch minus the voltage across the resistor:`,
+        `Die Spannung über ${series.length > 1 ? 'einer Spule' : 'der Spule'} in Serie mit einem Widerstand ist die Spannung $${U}$ über dem Zweig minus die Spannung über dem Widerstand:`) +
         al(...series.map((j) => M`${nm.VL(j)} &= ${U} - ${nm.R(nm.br[j].R)}\,${nm.IL(j)} = ${q(s.U, 'V')} - ${q(c.branches[j].R, 'O')}\cdot ${q(st.IL[j], 'A')} = ${q(s.VL[j], 'V')}`)));
     }
-    // The emf and the rate of change: only here does the inductance matter.
+    // The induced emf and the rate of change: only here does the inductance matter.
     for (const j of Ls) {
       const H = c.branches[j].H, vl = fval(s.VL[j]), E = nm.EMF(j);
       const how = vl > 0
-        ? 'the current is growing in the direction of the arrow, and the emf acts against the arrow, against this growth (Lenz\'s rule)'
-        : vl < 0 ? 'the current is falling in the direction of the arrow, and the emf acts along the arrow, against this fall (Lenz\'s rule)'
-          : 'the current does not change at this moment';
-      out.push(`The self-induced emf of $${nm.L(j)}$: ${how}. The inductance decides how fast the current changes; it does not change the values right after switching.` +
+        ? L('the current is growing in the direction of the arrow, and the emf acts against the arrow, against this growth (Lenz\'s rule)', 'Der Strom wächst in Pfeilrichtung, und die induzierte Spannung wirkt gegen den Pfeil, gegen dieses Wachsen (Lenzsche Regel)')
+        : vl < 0 ? L('the current is falling in the direction of the arrow, and the emf acts along the arrow, against this fall (Lenz\'s rule)', 'Der Strom nimmt in Pfeilrichtung ab, und die induzierte Spannung wirkt in Pfeilrichtung, gegen diese Abnahme (Lenzsche Regel)')
+          : L('the current does not change at this moment', 'Der Strom ändert sich in diesem Moment nicht');
+      out.push(L(`The self-induced emf of $${nm.L(j)}$: ${how}. The inductance decides how fast the current changes; it does not change the values right after switching.`,
+        `Die induzierte Spannung der Spule $${nm.L(j)}$: ${how}. Die Induktivität bestimmt, wie schnell sich der Strom ändert; die Werte unmittelbar nach dem Schalten ändert sie nicht.`) +
         al(M`${E} &= -${nm.VL(j)} = ${q(fneg(s.VL[j]), 'V')}, \quad |${E}| = ${q(fabs(s.VL[j]), 'V')}`,
-          M`\frac{\Delta ${nm.IL(j)}}{\Delta t} &= \frac{${nm.VL(j)}}{${nm.L(j)}} = \frac{${q(s.VL[j], 'V')}}{${fmt(H)}\,\mathrm{H}} = ${fmt(vl / H)}\,\mathrm{A/s}`));
+          M`\frac{\Delta ${nm.IL(j)}}{\Delta t} &= \frac{${nm.VL(j)}}{${nm.L(j)}} = \frac{${q(s.VL[j], 'V')}}{${comma(fmt(H), true)}\,\mathrm{H}} = ${comma(fmt(vl / H), true)}\,\mathrm{A/s}`));
     }
     return out;
   }
 
   function hints(c, nm, st) {
     const U = uSym(c, nm), Uis = uIs(c, nm);
-    const Ls = c.branches.map((b, j) => j).filter((j) => c.branches[j].L);
-    const IL = listing(Ls.map((j) => `$${nm.IL(j)}$`));
+    const Ls = c.branches.map((b, j) => j).filter((j) => c.branches[j].L), n = Ls.length;
+    const IL = listing(Ls.map((j) => `$${nm.IL(j)}$`)), vals = listing(Ls.map((j) => `$${nm.IL(j)} = ${q(st.IL[j], 'A')}$`));
     return [
-      `Before $t = 0$, the switch has been ${st.first ? 'closed' : 'open'} for a long time: the currents are constant, so there is no self-induced emf and an inductor acts like a wire. Find ${IL} before $t = 0$.`,
-      `Before $t = 0$: ${listing(Ls.map((j) => `$${nm.IL(j)} = ${q(st.IL[j], 'A')}$`))}. An inductor current cannot jump, so it still has this value right after the switch is ${verb(st.then)}.`,
-      `Right after switching, the inductor${Ls.length > 1 ? 's act like current sources' : ' acts like a current source'}. Use the junction rule and the loop rule, with ${Uis}.`,
-      `Right after switching, the voltage across the branches is $${U} = ${q(st.s1.U, 'V')}$.`,
+      L(`Before $t = 0$, the switch has been ${state(st.first)} for a long time: the currents are constant, so there is no self-induced emf and an inductor acts like a wire. Find ${IL} before $t = 0$.`,
+        `Vor $t = 0$ ist der Schalter seit langer Zeit ${state(st.first)}: Die Ströme sind konstant, also wird keine Spannung induziert, und eine Spule wirkt wie ein Draht. Bestimme ${IL} vor $t = 0$.`),
+      L(`Before $t = 0$: ${vals}. An inductor current cannot jump, so it still has this value right after the switch is ${verb(st.then)}.`,
+        `Vor $t = 0$: ${vals}. Der Strom durch eine Spule kann nicht springen, also hat er unmittelbar nachdem der Schalter ${verb(st.then)} wurde noch denselben Wert.`),
+      L(`Right after switching, ${pl(n, 'the inductor acts like a current source', 'the inductors act like current sources')}. Use the junction rule and the loop rule, with ${Uis}.`,
+        `Unmittelbar nach dem Schalten ${pl(n, 'wirkt die Spule wie eine Stromquelle', 'wirken die Spulen wie Stromquellen')}. Verwende die Knotenregel und die Maschenregel, mit ${Uis}.`),
+      L(`Right after switching, the voltage across the branches is $${U} = ${q(st.s1.U, 'V')}$.`, `Unmittelbar nach dem Schalten ist die Spannung über den Zweigen $${U} = ${q(st.s1.U, 'V')}$.`),
     ];
   }
 
@@ -485,7 +529,7 @@
         const p = [cx, -0.9 - k * seg], q2 = [cx, -0.9 - (k + 1) * seg];
         if (kind === 'S') sw(p, q2, { ls: 'right' });
         if (kind === 'R') s.res(p, q2, { l: `$${nm.R(nm.br[j].R)}$ = ${ftxt(b.R)} Ω`, ls: 'right', hl: hl.has(j) && !b.L });
-        if (kind === 'L') s.ind(p, q2, { l: `$${nm.L(j).replace(/[{}]/g, '')}$ = ${b.H} H`, ls: 'right', hl: hl.has(j), note: view.notes && view.notes[j] });
+        if (kind === 'L') s.ind(p, q2, { l: `$${nm.L(j).replace(/[{}]/g, '')}$ = ${comma(String(b.H))} H`, ls: 'right', hl: hl.has(j), note: view.notes && view.notes[j] });
       });
     });
     s.dim = dim.has('main');
@@ -519,20 +563,35 @@
     return out;
   }
 
+  // the note under the switch in the task
+  const swNote = (closed) => (closed ? L('opens at t = 0', 'öffnet bei t = 0') : L('closes at t = 0', 'schliesst bei t = 0'));
+
+  // Difficulty for the stars and the arcade: easy 1 (switched on from rest, or a single loop) or
+  // 2; medium 3; hard 4, or 5 with three branches, two inductors or the switch across R1.
+  function difficulty(c, level) {
+    if (level === 'easy') return c.sw.before === 'open' || c.branches.length === 1 ? 1 : 2;
+    if (level === 'medium') return 3;
+    const nL = c.branches.filter((b) => b.L).length;
+    return c.branches.length > 2 || nL > 1 || c.sw.at === 'bridge' ? 5 : 4;
+  }
+
   function exercise(c, st, level, id) {
     const nm = namer(c), list = targets(c, nm, st, LEVELS[level] ? LEVELS[level].vl : true);
     const syms = (show) => Object.fromEntries(list.filter((t) => t.unit === 'mA').map((t) => [t.key, show(t)]));
     const emfNote = (j) => `$${nm.EMFsvg(j)}$ = ${label(fneg(st.s1.VL[j]), 'V')}`;
-    const figure = (sol) => {
+    // the solution (sol) or the task, with the quantity asked for (ask: its key) in colour
+    const figure = (sol, ask) => {
       const view = sol
         ? { closed: st.then, dim: dead(c, st.then), cur: syms((t) => label(t.value, 'mA')), notes: Object.fromEntries(c.branches.map((b, j) => [j, b.L ? emfNote(j) : null])) }
-        : { closed: st.first, cur: syms((t) => `$${t.sym}$`), swNote: `${st.first ? 'opens' : 'closes'} at t = 0` };
+        : { closed: st.first, cur: syms((t) => (t.key === ask ? { t: `$${t.sym}$`, cls: 'ask' } : `$${t.sym}$`)), swNote: swNote(st.first) };
       return `<div class="fig">${draw(c, nm, view).toSVG()}</div>`;
     };
     return {
       id, level, circuit: c, st, nm,
-      title: `${LEVELS[level] ? LEVELS[level].name : 'Example'} · switch ${st.first ? 'opened' : 'closed'}`,
+      title: `${LEVELS[level] ? LEVELS[level].name() : L('Example', 'Beispiel')} · ${st.first ? L('switch opened', 'Schalter geöffnet') : L('switch closed', 'Schalter geschlossen')}`,
+      difficulty: difficulty(c, level),
       text: taskText(c, nm, list),
+      situation: situation(c, nm),
       fields: list.map((t) => ({ key: t.key, sym: t.sym, unit: t.unit, value: fval(t.value), abs: !!t.abs })),
       models: models(c, st, list).map((m) => Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v === null ? null : fval(v)]))),
       tol: 0.01,
@@ -573,33 +632,35 @@
     const frame = (title, paras, view) => frames.push({ text: `<p class="step-rule">${title}</p>${paras.map((p) => `<p>${p}</p>`).join('')}`, sketch: draw(c, nm, view) });
     const hlL = new Set(Ls);
 
-    frame('The task', [ex.text], { closed: st.first, cur: symbols(), swNote: `${st.first ? 'opens' : 'closes'} at t = 0` });
-    frame('Before t = 0', beforeText(c, nm, st), {
+    frame(L('The task', 'Die Aufgabe'), [ex.text], { closed: st.first, cur: symbols(), swNote: swNote(st.first) });
+    frame(L('Before t = 0', 'Vor t = 0'), beforeText(c, nm, st), {
       closed: st.first, cur: curs(st.s0), dim: dead(c, st.first), hl: hlL,
       focus: new Map(Ls.map((j) => [`I${j}`, 'new'])),
-      notes: Object.fromEntries(Ls.map((j) => [j, config(c, st.first).main ? 'acts like a wire' : 'no current'])),
+      notes: Object.fromEntries(Ls.map((j) => [j, config(c, st.first).main ? L('acts like a wire', 'wirkt wie ein Draht') : L('no current', 'kein Strom')])),
     });
-    const kept = Object.fromEntries(Ls.map((j) => [j, `keeps ${label(st.IL[j], 'A')}`]));
-    frame('The moment of switching', jumpText(c, nm, st), {
+    const kept = Object.fromEntries(Ls.map((j) => [j, L(`keeps ${label(st.IL[j], 'A')}`, `behält ${label(st.IL[j], 'A')}`)]));
+    frame(L('The moment of switching', 'Der Moment des Schaltens'), jumpText(c, nm, st), {
       closed: st.then, hl: new Set([...hlL, 'S']), dim: dead(c, st.then), notes: kept,
       cur: { ...symbols(), ...Object.fromEntries(Ls.map((j) => [`I${j}`, label(st.IL[j], 'A')])) },
       focus: new Map(Ls.map((j) => [`I${j}`, 'use'])),
     });
-    frame('Right after switching', afterText(c, nm, st), {
+    frame(L('Right after switching', 'Unmittelbar nach dem Schalten'), afterText(c, nm, st), {
       closed: st.then, cur: curs(st.s1), dim: dead(c, st.then), notes: kept,
       focus: new Map([...list.filter((t) => t.unit === 'mA' && !(t.j !== undefined && c.branches[t.j].L)).map((t) => [t.key, 'new']), ...Ls.map((j) => [`I${j}`, 'use'])]),
     });
-    frame('The induced emf', voltText(c, nm, st), {
+    frame(L('The induced emf', 'Die induzierte Spannung'), voltText(c, nm, st), {
       closed: st.then, cur: curs(st.s1), dim: dead(c, st.then), hl: hlL,
       notes: Object.fromEntries(Ls.map((j) => [j, `$${nm.EMFsvg(j)}$ = ${label(fneg(st.s1.VL[j]), 'V')}`])),
     });
     const row = (name, s) => `<tr><th>${name}</th>${list.filter((t) => t.unit === 'mA').map((t) => `<td>${label(t.key === 'IR1' ? s.IR1 : s.Ib[t.j], 'A')}</td>`).join('')}</tr>`;
     const table = `<table class="compare"><tr><th></th>${list.filter((t) => t.unit === 'mA').map((t) => `<th>$${t.sym}$</th>`).join('')}</tr>` +
-      row('before $t = 0$', st.s0) + row('right after', st.s1) + row('long after', st.s2) + '</table>';
-    frame('Before, right after, long after', [
-      `Only the inductor current${Ls.length > 1 ? 's are' : ' is'} the same just before and right after switching; the other currents jump. ` +
-      `Long after switching, the currents are constant again and the inductor${Ls.length > 1 ? 's act' : ' acts'} like a wire once more.` + table,
-    ], { closed: st.then, cur: curs(st.s2), dim: dead(c, st.then), notes: Object.fromEntries(Ls.map((j) => [j, 'long after: a wire'])) });
+      row(L('before $t = 0$', 'vor $t = 0$'), st.s0) + row(L('right after', 'unmittelbar danach'), st.s1) + row(L('long after', 'lange danach'), st.s2) + '</table>';
+    frame(L('Before, right after, long after', 'Vorher, unmittelbar danach, lange danach'), [
+      L(`Only the inductor current${Ls.length > 1 ? 's are' : ' is'} the same just before and right after switching; the other currents jump. ` +
+        `Long after switching, the currents are constant again and the inductor${Ls.length > 1 ? 's act' : ' acts'} like a wire once more.`,
+      `Nur ${Ls.length > 1 ? 'die Spulenströme sind' : 'der Spulenstrom ist'} unmittelbar vor und nach dem Schalten gleich; die anderen Ströme springen. ` +
+        `Lange nach dem Schalten sind die Ströme wieder konstant, und ${Ls.length > 1 ? 'die Spulen wirken' : 'die Spule wirkt'} wieder wie ${Ls.length > 1 ? 'Drähte' : 'ein Draht'}.`) + table,
+    ], { closed: st.then, cur: curs(st.s2), dim: dead(c, st.then), notes: Object.fromEntries(Ls.map((j) => [j, L('long after: a wire', 'lange danach: ein Draht')])) });
 
     // One viewBox for all frames, so that the diagram does not jump while stepping through.
     const box = frames.reduce((b, f) => {
@@ -609,7 +670,7 @@
     return { frames: frames.map((f) => ({ text: f.text, figure: `<div class="fig">${f.sketch.toSVG('circuit', box)}</div>` })), ex };
   }
 
-  const api = { LEVELS, generate, tutorial, solve, fromDef, steady, after, config, F, fval };
+  const api = { LEVELS, generate, tutorial, solve, fromDef, steady, after, config, F, fval, difficulty };
   root.Switching = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -8,11 +8,14 @@
 // It also checks the tutorial examples.
 'use strict';
 
+const Lang = require('../lang.js');
 const { LEVELS, generate, tutorial, config, fval } = require('../generator.js');
 const { EXAMPLES } = require('../lessons.js');
 const { solve } = require('./mna.js');
 
 const SAMPLES = 400;
+// undefined values in a text ("null" is a German word, so only in English)
+const bad = () => (Lang.get() === 'de' ? /undefined|NaN|\[object/ : /undefined|NaN|\[object|null/);
 let failures = 0;
 const fail = (msg) => { failures++; if (failures < 30) console.error('  FAIL ' + msg); };
 const close = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b));
@@ -76,11 +79,26 @@ function check(ex, tag) {
     const step = f.unit === 'mA' ? 1 : 0.1;
     if (!close(f.value / step, Math.round(f.value / step))) fail(`${tag}: ${f.key} = ${f.value} ${f.unit} is not a multiple of ${step}`);
   }
-  for (const t of [ex.text, ...ex.hints, ...ex.solution, ex.results, ex.figure(false), ex.figure(true)]) {
-    if (/undefined|NaN|\[object|null/.test(t)) fail(`${tag}: bad text: ${t.slice(0, 160)}`);
+  for (const t of [ex.text, ex.situation, ex.title, ...ex.hints, ...ex.solution, ex.results, ex.figure(false), ex.figure(true)]) {
+    if (bad().test(t)) fail(`${tag}: bad text: ${t.slice(0, 160)}`);
   }
+  // German texts: no English left over (outside formulas)
+  if (Lang.get() === 'de') {
+    for (const t of [ex.text, ex.situation, ex.title, ...ex.hints, ...ex.solution]) {
+      const words = t.replace(/\$\$[\s\S]*?\$\$/g, '').replace(/\$[^$]*\$/g, '');
+      const m = words.match(/\b(the|and|with|current|switch|inductor|branch|voltage|right after)\b/i);
+      if (m) fail(`${tag}: English "${m[0]}" in a German text: ${words.slice(0, 120)}`);
+    }
+  }
+  // every paragraph of the solution explains in words, not only with a formula
+  ex.solution.forEach((p, k) => {
+    const words = p.replace(/\$\$[\s\S]*?\$\$/g, '').replace(/\$[^$]*\$/g, '').replace(/<[^>]+>/g, '').trim();
+    if (words.length < 15) fail(`${tag}: solution paragraph ${k + 1} is only a formula`);
+  });
 }
 
+for (const lang of ['en', 'de']) {
+Lang.set(lang, true);
 for (const level of Object.keys(LEVELS)) {
   const t0 = Date.now(), kinds = {};
   let rest = 0;
@@ -89,23 +107,26 @@ for (const level of Object.keys(LEVELS)) {
     let ex;
     try { ex = generate(level, seed); } catch (e) { fail(`${tag}: ${e.message}`); continue; }
     check(ex, tag);
+    const want = { easy: [1, 2], medium: [3, 3], hard: [4, 5] }[level];
+    if (!(ex.difficulty >= want[0] && ex.difficulty <= want[1])) fail(`${tag}: difficulty ${ex.difficulty} for ${level}`);
     const c = ex.circuit, k = `${c.sw.at} ${c.sw.before === 'open' ? 'closing' : 'opening'}`;
     kinds[k] = (kinds[k] || 0) + 1;
     if (ex.st.IL.every((x) => x.n === 0)) rest++;
   }
   // Starting with no inductor current should be the exception.
   if (rest > 0.25 * SAMPLES) fail(`${level}: ${rest} of ${SAMPLES} exercises start without inductor current`);
-  console.log(`${level}: ${((Date.now() - t0) / SAMPLES).toFixed(1)} ms/exercise, no inductor current before t = 0: ${Math.round((100 * rest) / SAMPLES)} %, switch ${JSON.stringify(kinds)}`);
+  console.log(`${lang} ${level}: ${((Date.now() - t0) / SAMPLES).toFixed(1)} ms/exercise, no inductor current before t = 0: ${Math.round((100 * rest) / SAMPLES)} %, switch ${JSON.stringify(kinds)}`);
+}
 }
 
-for (const [i, e] of EXAMPLES.entries()) {
-  const tag = `tutor example ${i + 1} (${e.name})`;
+for (const lang of ['en', 'de']) Lang.set(lang, true), EXAMPLES.forEach((e, i) => {
+  const tag = `${lang} tutor example ${i + 1} (${e.name[lang]})`;
   let t;
-  try { t = tutorial(e.circuit); } catch (err) { fail(`${tag}: ${err.message}`); continue; }
+  try { t = tutorial(e.circuit); } catch (err) { fail(`${tag}: ${err.message}`); return; }
   check(t.ex, tag);
-  for (const f of t.frames) if (/undefined|NaN|\[object|null/.test(f.text + f.figure)) fail(`${tag}: bad frame: ${f.text.slice(0, 120)}`);
+  for (const f of t.frames) if (bad().test(f.text + f.figure)) fail(`${tag}: bad frame: ${f.text.slice(0, 120)}`);
   console.log(`${tag}: ${t.frames.length} frames, answers ${t.ex.fields.map((f) => `${f.sym} = ${f.value}`).join(', ')}`);
-}
+});
 
 if (failures) { console.error(`\n${failures} failure(s)`); process.exit(1); }
 console.log('\nGenerator OK');
