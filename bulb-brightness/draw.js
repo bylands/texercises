@@ -33,7 +33,8 @@
         if (caption) labels.push(`<text class="cap" x="${f1(x0 + 0.1)}" y="${f1(y0 - 0.15)}">${caption}</text>`);
       },
       // A bulb from p to q (horizontal or vertical), label beside it. look: { label, glow,
-      // note (a second line under the label), hl (a ring around the bulb) }.
+      // note (a second line under the label), hl (a ring around the bulb), asked (the bulb a
+      // question is about: drawn in another colour) }.
       bulb(p, q, look, side) {
         const cx = (p[0] + q[0]) / 2, cy = (p[1] + q[1]) / 2;
         const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
@@ -43,12 +44,13 @@
         if (look.glow > 0) {
           parts.push(`<circle class="halo" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(R + 0.15 + 0.35 * look.glow)}" style="opacity:${(0.25 + 0.5 * look.glow).toFixed(2)}"/>`);
         }
-        parts.push(`<circle class="bulb${look.glow > 0 ? ' lit' : ''}" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(R)}"${look.glow > 0 ? ` style="fill-opacity:${(0.35 + 0.65 * look.glow).toFixed(2)}"` : ''}/>`);
+        const asked = look.asked ? ' asked' : '';
+        parts.push(`<circle class="bulb${look.glow > 0 ? ' lit' : ''}${asked}" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(R)}"${look.glow > 0 ? ` style="fill-opacity:${(0.35 + 0.65 * look.glow).toFixed(2)}"` : ''}/>`);
         const d = R * Math.SQRT1_2;
-        parts.push(`<path class="w thin" d="M${f1(cx - d)},${f1(cy - d)} L${f1(cx + d)},${f1(cy + d)} M${f1(cx - d)},${f1(cy + d)} L${f1(cx + d)},${f1(cy - d)}"/>`);
+        parts.push(`<path class="w thin${asked}" d="M${f1(cx - d)},${f1(cy - d)} L${f1(cx + d)},${f1(cy + d)} M${f1(cx - d)},${f1(cy + d)} L${f1(cx + d)},${f1(cy - d)}"/>`);
         if (look.hl) parts.push(`<circle class="ring" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(R + 0.14)}"/>`);
         const [lx, ly, anchor] = side === 'right' ? [cx + R + 0.15, cy + 0.18, 'start'] : side === 'below' ? [cx, cy + R + 0.5, 'middle'] : [cx, cy - R - 0.2, 'middle'];
-        labels.push(`<text class="lbl" x="${f1(lx)}" y="${f1(ly)}" text-anchor="${anchor}">${look.label}</text>`);
+        labels.push(`<text class="lbl${asked}" x="${f1(lx)}" y="${f1(ly)}" text-anchor="${anchor}">${look.label}</text>`);
         // The note goes under the label, or above it for a bulb on the top wire.
         if (look.note) labels.push(`<text class="note${look.noteCls ? ' ' + look.noteCls : ''}" x="${f1(lx)}" y="${f1(ly + (side === 'above' ? -0.45 : 0.45))}" text-anchor="${anchor}">${look.note}</text>`);
       },

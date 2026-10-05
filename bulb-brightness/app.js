@@ -13,7 +13,7 @@
     en: {
       title: 'Bulb Brightness', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
       tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
-      tutorNote: 'Use the arrow keys ← → to step through. In the diagram, the part whose voltage is shared is <span class="k-light">shaded</span>, the parts that share it are <span class="k-strong">highlighted</span>, and every bulb shows its voltage once it is known.',
+      tutorNote: 'Use the arrow keys ← → to step through. In the diagram, the <span class="k-light">dashed box</span> marks the part whose voltage is being shared, the <span class="k-strong">highlights</span> mark the parts it is shared among, and each part shows its voltage as soon as it is known.',
       task: 'How bright are the bulbs?',
       introShow: 'Instructions',
       taskText: 'All batteries are identical, and so are all bulbs. Compare each bulb with the reference circuit: one bulb connected to one battery. Is it brighter, equally bright, less bright, or off?',
@@ -33,7 +33,7 @@
     de: {
       title: 'Helligkeit von Lampen', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
       tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
-      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Im Schaltbild ist der Teil, dessen Spannung aufgeteilt wird, <span class="k-light">schattiert</span>, die Teile, die sie sich teilen, sind <span class="k-strong">hervorgehoben</span>, und jede Lampe zeigt ihre Spannung, sobald sie bekannt ist.',
+      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Im Schaltbild markiert der <span class="k-light">gestrichelte Rahmen</span> den Teil, dessen Spannung aufgeteilt wird, die <span class="k-strong">Hervorhebungen</span> markieren die Teile, auf die sie aufgeteilt wird, und jeder Teil zeigt seine Spannung, sobald sie bekannt ist.',
       task: 'Wie hell leuchten die Lampen?',
       introShow: 'Anleitung',
       taskText: 'Alle Batterien sind gleich, ebenso alle Lampen. Vergleiche jede Lampe mit der Vergleichsschaltung: eine Lampe an einer Batterie. Leuchtet sie heller, gleich hell, weniger hell, oder ist sie aus?',
@@ -134,10 +134,10 @@
     if (s.n === 1) return L(`the rest of its chain is bridged by a wire, so ${part} gets all of the voltage`, `der Rest der Serieschaltung ist überbrückt, also bekommt ${part} die ganze Spannung`);
     if (s.why === 'equal') return L(`${part} and ${names(others)} are identical and in series, so they share the voltage equally (voltage divider): ${part} gets 1/${s.n} of it`,
       `${part} und ${names(others)} sind gleich und in Serie, teilen sich die Spannung also gleichmässig (Spannungsteiler): ${part} bekommt 1/${s.n} davon`);
-    if (s.why === 'larger') return L(`${part} (${kind(s.part)}) lets less current through than ${names(others)} (${and(others.map(kind))}), so in series it takes the larger share of the voltage (voltage divider): more than 1/${s.n}`,
-      `${part} (${kind(s.part)}) lässt weniger Strom durch als ${names(others)} (${and(others.map(kind))}), bekommt in Serie also den grösseren Teil der Spannung (Spannungsteiler): mehr als 1/${s.n}`);
-    if (s.why === 'smaller') return L(`${part} (${kind(s.part)}) lets more current through than ${names(others)} (${and(others.map(kind))}), so in series it takes the smaller share of the voltage (voltage divider): less than 1/${s.n}`,
-      `${part} (${kind(s.part)}) lässt mehr Strom durch als ${names(others)} (${and(others.map(kind))}), bekommt in Serie also den kleineren Teil der Spannung (Spannungsteiler): weniger als 1/${s.n}`);
+    if (s.why === 'larger') return L(`${part} (${kind(s.part)}) would let less current through than ${names(others)} (${and(others.map(kind))}) at the same voltage, but in series the same current flows through every part, so ${part} takes the larger share of the voltage (voltage divider): more than 1/${s.n}`,
+      `${part} (${kind(s.part)}) würde bei gleicher Spannung weniger Strom durchlassen als ${names(others)} (${and(others.map(kind))}), in Serie fliesst aber durch jeden Teil derselbe Strom, also bekommt ${part} den grösseren Teil der Spannung (Spannungsteiler): mehr als 1/${s.n}`);
+    if (s.why === 'smaller') return L(`${part} (${kind(s.part)}) would let more current through than ${names(others)} (${and(others.map(kind))}) at the same voltage, but in series the same current flows through every part, so ${part} takes the smaller share of the voltage (voltage divider): less than 1/${s.n}`,
+      `${part} (${kind(s.part)}) würde bei gleicher Spannung mehr Strom durchlassen als ${names(others)} (${and(others.map(kind))}), in Serie fliesst aber durch jeden Teil derselbe Strom, also bekommt ${part} den kleineren Teil der Spannung (Spannungsteiler): weniger als 1/${s.n}`);
     return L(`${part} gets part of the voltage`, `${part} bekommt einen Teil der Spannung`);
   }
 
@@ -227,7 +227,8 @@
   // ---------------------------------------------------------------- rendering
   const ref = (glow) => circuit({ t: 'L', i: 0 }, { t: 'B', dir: 1 }, () => ({ label: 'L₀', glow }));
   // `glows[i]` is the answer shown for bulb i (none: unlit).
-  const taskOf = (e, glows) => circuit(clone(e.load), clone(e.pack), (i) => ({ label: e.bulbs[i].name, glow: GLOW[glows[i]] || 0 }));
+  // asked: the name of a bulb to mark (the one an arcade question is about)
+  const taskOf = (e, glows, asked) => circuit(clone(e.load), clone(e.pack), (i) => ({ label: e.bulbs[i].name, glow: GLOW[glows[i]] || 0, asked: e.bulbs[i].name === asked }));
   const drawAnswers = () => { $('#figure').innerHTML = taskOf(ex, answers()); };
   const starsOf = (d) => `<span class="stars" role="img" aria-label="${ui().stars(d)}" title="${ui().stars(d)}">${'★'.repeat(d)}${'☆'.repeat(5 - d)}</span>`;
 
@@ -372,8 +373,8 @@
     { name: () => L('Parallel', 'Parallel'), pack: '1', load: () => Par(Lb(), Lb()),
       idea: () => L('Bulbs in parallel each get the full voltage of the battery, however many branches there are.', 'Parallele Lampen bekommen je die volle Spannung der Batterie, egal wie viele Zweige es sind.') },
     { name: () => L('Mixed', 'Gemischt'), pack: 'S2', load: () => Ser(Lb(), Par(Lb(), Lb())),
-      idea: () => L('Two batteries in series double the voltage. A bulb in series with a parallel pair takes the larger share, because the pair lets more current through.',
-        'Zwei Batterien in Serie verdoppeln die Spannung. Eine Lampe in Serie mit einem parallelen Paar bekommt den grösseren Teil, weil das Paar mehr Strom durchlässt.') },
+      idea: () => L('Two batteries in series double the voltage. A bulb in series with a parallel pair takes the larger share: at the same voltage the pair would let more current through, but in series both carry the same current.',
+        'Zwei Batterien in Serie verdoppeln die Spannung. Eine Lampe in Serie mit einem parallelen Paar bekommt den grösseren Teil: Bei gleicher Spannung würde das Paar mehr Strom durchlassen, in Serie fliesst aber durch beide derselbe Strom.') },
     { name: () => L('Bridged', 'Überbrückt'), pack: '1', load: () => Ser(Lb(), Par(Lb(), Wire())),
       idea: () => L('A wire across a bulb takes all the current: the bridged bulb goes off, and the rest of the circuit gets the whole voltage.',
         'Ein Draht parallel zu einer Lampe nimmt den ganzen Strom: Die überbrückte Lampe geht aus, und der Rest der Schaltung bekommt die ganze Spannung.') },
@@ -474,7 +475,8 @@
   // Each question asks how bright one bulb is; the four options are the four answers. A wrong
   // option stems from a misconception when that misconception predicts it for this bulb.
   function arcadeQuestion(kind, seed) {
-    const d = Number(kind.slice(1)), lv = d <= 2 ? 'easy' : d === 3 ? 'medium' : 'hard';
+    // easy gives difficulty 1 only, medium mostly 2, hard has the widest choice from 3 on
+    const d = Number(kind.slice(1)), lv = d === 1 ? 'easy' : d === 2 ? 'medium' : 'hard';
     let e = null;
     for (let k = 0; k < 300; k++) {
       e = generate(lv, seed + k);
@@ -487,15 +489,16 @@
     const flagOf = (a) => (b.shorted && a !== 'off' ? 'short' : e.reversed && a === b.models.forward ? 'reversed' : a === b.models.fixedCurrent ? 'fixedCurrent' : null);
     return withEx(e, () => ({
       title: ui().task,
+      key: `${e.packKey} ${canonOf(e.load)}`, // the same circuit counts as a repeat, whichever bulb is asked
       text: introHtml(),
-      figure: `<figure class="fig ref">${ref(GLOW.equal)}<figcaption>${ui().reference}</figcaption></figure><figure class="fig">${taskOf(e, [])}</figure>`,
+      figure: `<figure class="fig ref">${ref(GLOW.equal)}<figcaption>${ui().reference}</figcaption></figure><figure class="fig">${taskOf(e, [], b.name)}</figure>`,
       ask: L(`How bright is ${it(b.name)} compared with the reference bulb?`, `Wie hell leuchtet ${it(b.name)} im Vergleich zur Vergleichslampe?`),
       options: ANSWERS.map((a) => {
         const flag = a === b.answer ? null : flagOf(a);
         return { html: WORDS()[a], correct: a === b.answer, flag, why: flag ? why(flag, b) : why('other', b) };
       }),
       explain: () => withEx(e, () => `<div class="figs"><figure class="fig ref">${ref(GLOW.equal)}<figcaption>${ui().reference}</figcaption></figure>` +
-        `<figure class="fig">${taskOf(e, e.bulbs.map((x) => x.answer))}</figure></div><div class="steps">${solution()}</div>`),
+        `<figure class="fig">${taskOf(e, e.bulbs.map((x) => x.answer), b.name)}</figure></div><div class="steps">${solution()}</div>`),
     }));
   }
   const arcadeSource = {

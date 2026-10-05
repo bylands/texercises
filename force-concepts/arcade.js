@@ -13,7 +13,9 @@
 //                             questions and never asks the same kind twice in a row
 //   src.question(kind, seed)  { title, text, figure, ask (all HTML), options: [{ html, correct,
 //                             flag, why }] (four, one correct; flag: the wrong idea behind it, why:
-//                             what is wrong), explain() (HTML: the worked solution) }
+//                             what is wrong), explain() (HTML: the worked solution), key
+//                             (optional: questions with the same key count as repeats, e.g. the
+//                             same circuit asking about another bulb) }
 //   src.concept               { flag: idea } for the flags that count as misconceptions
 //   src.concepts()            { idea: name }
 //   src.intro()               { tag, rule, example }: the line under the start picture, the first
@@ -168,7 +170,7 @@
       if (list.length > 1) list = list.filter((k) => k !== game.last);
       // a question not asked before in this game (an exercise type with few variants could
       // otherwise come up again and again)
-      const sig = (c) => `${c.q.title}|${c.q.ask}|${c.q.figure}|${c.q.options.map((o) => o.html).join('|')}`;
+      const sig = (c) => c.q.key || `${c.q.title}|${c.q.ask}|${c.q.figure}|${c.q.options.map((o) => o.html).join('|')}`;
       for (let k = 0; k < 12; k++) {
         const kind = list[Math.floor(Math.random() * list.length)];
         cur = question(kind, newSeed(), d);

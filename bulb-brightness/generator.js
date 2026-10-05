@@ -11,7 +11,7 @@
 //   parallel parts have the same voltage, and a part bridged by a wire has none.
 // Every bulb voltage gets lower and upper bounds (in units of V0) from these rules, and only
 // circuits where the bounds decide every bulb (brighter, equally bright, less bright than one
-// bulb on one battery, or off) are used. Which of two parts lets more current through is
+// bulb on one battery, or off) are used. Which of two parts lets more current through (at the same voltage) is
 // decided by comparing them for bulbs with very different characteristics I ∝ V^p.
 //
 // diagnose() compares a student's answers with what typical misconceptions predict: current

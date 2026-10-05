@@ -80,7 +80,10 @@ svg .note.v { fill: var(--vnote); font: italic 600 14px var(--serif); }
 .k-light { background: var(--zone-light); border: 1px dashed var(--zone-light-line); border-radius: 3px; padding: 0 3px; }
 
 /* arcade: lit bulbs in manim's yellow */
-#arcade { --glow: #ffff00; --vnote: #58c4dd; }
+#arcade { --glow: #ffff00; --vnote: #58c4dd; --asked: #58c4dd; }
+/* the bulb the question is about, in manim's blue */
+#arcade svg .bulb.asked, #arcade svg .w.asked { stroke: var(--asked); stroke-width: 2.6; }
+#arcade svg .lbl.asked { fill: var(--asked); font-weight: 700; }
 #arcade .fig.ref svg { width: 160px; }
 #arcade .ar-opt { font-size: 1.15rem; }
 
