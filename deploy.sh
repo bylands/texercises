@@ -21,12 +21,13 @@ APPS="bulb-brightness circuit-trainer force-concepts force-systems impedance ind
 shared/sync.sh --check >/dev/null || { echo "Shared files differ: run shared/sync.sh first." >&2; exit 1; }
 
 # -c: compare by checksum; no times, owners or groups are set (the folders' setgid bit gives new
-# files the group tpweb). With GNU rsync, files are 664 and folders 2775, so that the deploy user
-# and the admin can both update them; macOS's openrsync lacks --chmod (new folders are then only
-# writable by whoever deployed them first).
+# files the group tpweb). Files are 664 and folders 2775, so that the deploy user and the admin can
+# both update them: GNU rsync sets that itself; macOS's openrsync lacks --chmod, so after it the
+# files just sent are fixed over ssh (else the GitHub deploy could not update them).
 RSYNC=(rsync -rlc --omit-dir-times --exclude test/ --exclude .DS_Store --out-format="%n" $DRY)
+OPENRSYNC=""
 if rsync --version 2>/dev/null | grep -q openrsync; then
-  echo "(openrsync: new folders will not be group-writable; GNU rsync sets that)" >&2
+  OPENRSYNC=1
 else
   RSYNC+=(--perms --chmod=D2775,F664)
 fi
@@ -46,4 +47,7 @@ for a in $APPS; do
   send "$src/" "$TARGET$dst/" | sed "s|^|$dst/|"
 done
 send hub/index.html hub/lang.js "$TARGET"
+if [ -n "$OPENRSYNC" ] && [ -z "$DRY" ] && [[ "$TARGET" == *:/* ]]; then
+  ssh "${TARGET%%:*}" "cd '${TARGET#*:}' && find . -path ./hub-data -prune -o -user \$(id -un) \( -type f ! -perm 664 -exec chmod 664 {} + -o -type d ! -perm 2775 -exec chmod 2775 {} + \)"
+fi
 echo "${DRY:+(dry run) }deployed to $TARGET"
