@@ -4,7 +4,8 @@
 //   compare    two motions in one s(t) graph: which is faster, and the velocity of one (★1–2)
 //   direction  a piecewise uniform s(t): when is v negative, and v in one interval (★2)
 //   table      value tables: which vehicles always move backwards, velocities, missing positions (★2–3)
-//   atable     value table of a constantly accelerated cart: acceleration, missing positions (★3–4)
+//   atable     value table of a constantly accelerated cart: missing positions, then the acceleration
+//              (★3: every second; ★4: every 2 s, and the velocity at 2 s)
 //   strobe     a stroboscope picture of a constantly accelerated cart: its s(t) or v(t) graph,
 //              the motion, and (★3) the acceleration (★2–3)
 //   area       v(t): displacement and distance between two times, or who is farther from the start (★3–4)
@@ -391,6 +392,7 @@
   function atable(seed, d) {
     const r = rng(seed);
     d = d || r.pick([3, 4]);
+    if (d === 4) return atable2(r, seed);
     let a, g0, s0, xs;
     for (;;) {
       a = r.pick([-2, -1, 1, 2]); g0 = r.pick([-6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6]); s0 = r.pick([-10, -8, -5, -3, 0, 2, 4, 6, 10]);
@@ -399,9 +401,8 @@
       if (xs.every((x) => Math.abs(x) <= 40) && new Set(xs).size >= 5) break;
     }
     const times = [0, 1, 2, 3, 4, 5], gaps = xs.slice(1).map((x, k) => x - xs[k]);
-    const v = (t) => g0 - a / 2 + a * t; // velocity at t
     const sv = (x, u) => sval(x, u), dif = (x) => `${x > 0 ? '+' : ''}${num(x)}`;
-    const known = d === 3 ? [0, 1, 2, 3] : [0, 2, 4], asked = d === 3 ? [4, 5] : [1, 5];
+    const known = [0, 1, 2, 3], asked = [4, 5]; // ★3: positions every second, the last two missing
     const row = (o = {}) => ({ name: '', values: times.map((t, k) => (known.includes(k) || o.all ? xs[k] : asked.includes(k) ? null : '')) });
     // o.all: the missing positions filled in (once they are found)
     const fig = (o = {}) => table(times, o.rows ? [row({ all: !!o.all }), ...o.rows] : [row()]);
@@ -451,47 +452,91 @@
           L(`Only now the other quantities. Each Δs is the mean velocity in that second, so Δ(Δs) is how much this velocity grows from one second to the next: Δ(Δs) = a · (1 s)², so a = ${dif(a)} m / (1 s)² = ${sv(a, 'm/s²')}.`, `Erst jetzt die anderen Grössen. Jedes Δs ist die mittlere Geschwindigkeit in dieser Sekunde, also sagt Δ(Δs), um wie viel diese Geschwindigkeit von einer Sekunde zur nächsten zunimmt: Δ(Δs) = a · (1 s)², also a = ${dif(a)} m / (1 s)² = ${sv(a, 'm/s²')}.`),
           fig({ all: true, rows: [dsRow(true), ddRow(true)] })),
       ];
-    } else {
-      const D1 = xs[2] - xs[0], D2 = xs[4] - xs[2], v2 = v(2);
-      questions.push(numQ('a', L('The acceleration of the cart:', 'Die Beschleunigung des Wagens:'), L('What is the acceleration of the cart?', 'Wie gross ist die Beschleunigung des Wagens?'), it('a'), 'm/s²', a, [
-        { value: D2 - D1, flag: 'steps', why: L('That is the change of Δs per 2 s. The time step is 2 s, so this change is a · (2 s)²: divide by 4 s².', 'Das ist die Änderung von Δs pro 2 s. Der Zeitschritt ist 2 s, also ist diese Änderung a · (2 s)²: Teile durch 4 s².') },
-        { value: (D2 - D1) / 2, flag: 'steps', why: L('The change of Δs per 2 s is a · (2 s)² = a · 4 s², not a · 2 s².', 'Die Änderung von Δs pro 2 s ist a · (2 s)² = a · 4 s², nicht a · 2 s².') },
-        { value: -a, flag: 'sign', why: L('Take the changes with their signs: from the first change of position per 2 s to the second.', 'Nimm die Änderungen mit Vorzeichen: von der ersten Ortsänderung pro 2 s zur zweiten.') },
-      ], L('a = (change of Δs per 2 s) / (2 s)².', 'a = (Änderung von Δs pro 2 s) / (2 s)².')));
-      questions.push(numQ('v2', L('The velocity at 2 s:', 'Die Geschwindigkeit bei 2 s:'), L('What is the velocity of the cart at t = 2 s?', 'Wie gross ist die Geschwindigkeit des Wagens bei t = 2 s?'), `${it('v')}(2&nbsp;s)`, 'm/s', v2, [
-        { value: D1 / 2, flag: null, why: L('That is the mean velocity from 0 to 2 s, reached at 1 s. At 2 s, use the interval around it: from 0 to 4 s.', 'Das ist die mittlere Geschwindigkeit von 0 bis 2 s, erreicht bei 1 s. Für 2 s nimm das Intervall darum herum: von 0 bis 4 s.') },
-        { value: D2 / 2, flag: null, why: L('That is the mean velocity from 2 to 4 s, reached at 3 s. At 2 s, use the interval around it: from 0 to 4 s.', 'Das ist die mittlere Geschwindigkeit von 2 bis 4 s, erreicht bei 3 s. Für 2 s nimm das Intervall darum herum: von 0 bis 4 s.') },
-        { value: xs[2] / 2, flag: 'origin', why: WHY.origin() },
-      ], L('With constant acceleration, the mean velocity from 0 to 4 s is the velocity in the middle, at 2 s.', 'Bei konstanter Beschleunigung ist die mittlere Geschwindigkeit von 0 bis 4 s die Geschwindigkeit in der Mitte, bei 2 s.')));
-      const linear = L('That fills the gap in a straight line, as if the velocity stayed the same. With the acceleration, the position changes by a different amount in each second.', 'Das füllt die Lücke geradlinig, als bliebe die Geschwindigkeit gleich. Mit der Beschleunigung ändert sich der Ort in jeder Sekunde um einen anderen Betrag.');
-      questions.push(numQ('s1', L('The position at 1 s:', 'Der Ort bei 1 s:'), L('Where is the cart at t = 1 s?', 'Wo ist der Wagen bei t = 1 s?'), sAt(1), 'm', xs[1], [
-        { value: (xs[0] + xs[2]) / 2, flag: 'linear', why: linear },
-      ], L('s(1 s) = s(0) + v(0)·1 s + a·(1 s)²/2, with v(0) = v(2 s) − a·2 s.', 's(1 s) = s(0) + v(0)·1 s + a·(1 s)²/2, mit v(0) = v(2 s) − a·2 s.')));
-      questions.push(numQ('s5', L('The position at 5 s:', 'Der Ort bei 5 s:'), L('Where is the cart at t = 5 s?', 'Wo ist der Wagen bei t = 5 s?'), sAt(5), 'm', xs[5], [
-        { value: xs[4] + D2 / 2, flag: 'linear', why: linear },
-      ], L('s(5 s) = s(4 s) + v(4 s)·1 s + a·(1 s)²/2, with v(4 s) = v(2 s) + a·2 s.', 's(5 s) = s(4 s) + v(4 s)·1 s + a·(1 s)²/2, mit v(4 s) = v(2 s) + a·2 s.')));
-      hints = [
-        L('Here the time step is 2 s. With constant acceleration, the changes of position per 2 s change by a · (2 s)² = a · 4 s² from one step to the next.', 'Hier ist der Zeitschritt 2 s. Bei konstanter Beschleunigung ändern sich die Ortsänderungen pro 2 s von einem Schritt zum nächsten um a · (2 s)² = a · 4 s².'),
-        L(`The changes of position per 2 s: ${dif(D1)} m and ${dif(D2)} m. Their change ${dif(D2 - D1)} m is a · 4 s².`, `Die Ortsänderungen pro 2 s: ${dif(D1)} m und ${dif(D2)} m. Ihre Änderung ${dif(D2 - D1)} m ist a · 4 s².`),
-        L('With constant acceleration, the mean velocity over an interval is the velocity in its middle: v(2 s) = (s(4 s) − s(0)) / 4 s.', 'Bei konstanter Beschleunigung ist die mittlere Geschwindigkeit über ein Intervall gleich der Geschwindigkeit in seiner Mitte: v(2 s) = (s(4 s) − s(0)) / 4 s.'),
-        L('For one second from a known time: Δs = v·1 s + a·(1 s)²/2, with v at the start of that second.', 'Für eine Sekunde ab einem bekannten Zeitpunkt: Δs = v·1 s + a·(1 s)²/2, mit v am Anfang dieser Sekunde.'),
-      ];
-      const v0 = v(0), v4 = v(4);
-      steps = [
-        step(L('Changes of position per 2 s', 'Ortsänderungen pro 2 s'), L(`From 0 to 2 s the position changes by ${dif(D1)} m, from 2 to 4 s by ${dif(D2)} m: a change of ${dif(D2 - D1)} m = a · (2 s)², so a = ${dif(D2 - D1)} m / 4 s² = ${sv(a, 'm/s²')}.`,
-          `Von 0 bis 2 s ändert sich der Ort um ${dif(D1)} m, von 2 bis 4 s um ${dif(D2)} m: eine Änderung von ${dif(D2 - D1)} m = a · (2 s)², also a = ${dif(D2 - D1)} m / 4 s² = ${sv(a, 'm/s²')}.`), fig()),
-        step(L('The velocity at 2 s', 'Die Geschwindigkeit bei 2 s'), L(`The mean velocity from 0 to 4 s is reached in the middle: v(2 s) = (${num(xs[4])} m − ${xs[0] < 0 ? `(${num(xs[0])} m)` : `${num(xs[0])} m`}) / 4 s = ${sv(v2, 'm/s')}. So v(0) = ${sv(v0, 'm/s')} and v(4 s) = ${sv(v4, 'm/s')}.`,
-          `Die mittlere Geschwindigkeit von 0 bis 4 s wird in der Mitte erreicht: v(2 s) = (${num(xs[4])} m − ${xs[0] < 0 ? `(${num(xs[0])} m)` : `${num(xs[0])} m`}) / 4 s = ${sv(v2, 'm/s')}. Also v(0) = ${sv(v0, 'm/s')} und v(4 s) = ${sv(v4, 'm/s')}.`), fig()),
-        step(L('The missing positions', 'Die fehlenden Orte'), L(`${sAt(1)} = ${num(xs[0])} m + (${sv(v0, 'm/s')}) · 1 s + (${sv(a, 'm/s²')}) · (1 s)²/2 = ${val(xs[1], 'm')}; ${sAt(5)} = ${num(xs[4])} m + (${sv(v4, 'm/s')}) · 1 s + (${sv(a, 'm/s²')}) · (1 s)²/2 = ${val(xs[5], 'm')}.`,
-          `${sAt(1)} = ${num(xs[0])} m + (${sv(v0, 'm/s')}) · 1 s + (${sv(a, 'm/s²')}) · (1 s)²/2 = ${val(xs[1], 'm')}; ${sAt(5)} = ${num(xs[4])} m + (${sv(v4, 'm/s')}) · 1 s + (${sv(a, 'm/s²')}) · (1 s)²/2 = ${val(xs[5], 'm')}.`),
-          fig({ rows: [{ head: 'Δ<i>s</i> in m', values: ['', ...gaps.map(dif)] }] })),
-      ];
     }
     return finish('atable', seed, d, {
       data: { xs, a, g0 },
       title: L('Value table with acceleration', 'Wertetabelle mit Beschleunigung'),
       text: L(`<p>A cart moves along a straight track with constant acceleration. The table gives some of its positions; complete it.</p>`,
         `<p>Ein Wagen bewegt sich mit konstanter Beschleunigung auf einer geraden Bahn. Die Tabelle gibt einige seiner Orte an; ergänze sie.</p>`),
+      figure: fig(),
+      questions,
+      hints,
+      steps,
+    });
+  }
+
+  // ★4: positions every 2 s, the first three given, s(6 s) and s(8 s) missing. The same strategy
+  // as with steps of 1 s: the changes of position per 2 s, their constant change Δ(Δs), the
+  // missing Δs and positions; only then a = Δ(Δs) / (2 s)² and v(2 s), the mean velocity over
+  // 0–4 s (the middle of that interval). s(t) = s₀ + v₀·t + a·t²/2 keeps whole metres.
+  function atable2(r, seed) {
+    const d = 4, times = [0, 2, 4, 6, 8];
+    let a, v0, s0, xs;
+    for (;;) {
+      a = r.pick([-2, -1, 1, 2]); v0 = r.pick([-6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6]); s0 = r.pick([-10, -6, -4, -2, 0, 2, 4, 6, 10]);
+      xs = times.map((t) => s0 + v0 * t + (a * t * t) / 2);
+      if (xs.every((x) => Math.abs(x) <= 60) && new Set(xs).size === xs.length && v0 + 2 * a !== 0) break;
+    }
+    const gaps = xs.slice(1).map((x, k) => x - xs[k]), dd = 4 * a, v2 = v0 + 2 * a;
+    const sv = (x, u) => sval(x, u), dif = (x) => `${x > 0 ? '+' : ''}${num(x)}`;
+    const known = [0, 1, 2], asked = [3, 4];
+    const row = (all) => ({ name: '', values: times.map((t, k) => (known.includes(k) || all ? xs[k] : asked.includes(k) ? null : '')) });
+    const fig = (o = {}) => table(times, [row(!!o.all), ...(o.rows || [])]);
+    const sAt = (t) => `${it('s')}(${num(t)}&nbsp;s)`;
+    const dsRow = (all) => ({ head: 'Δ<i>s</i> in m', values: ['', ...(all ? gaps : gaps.slice(0, 2)).map(dif), ...(all ? [] : ['', ''])] });
+    const ddRow = (all) => ({ head: 'Δ(Δ<i>s</i>) in m', values: ['', '', ...(all ? gaps.slice(1) : gaps.slice(1, 2)).map(() => dif(dd)), ...(all ? [] : ['', ''])] });
+    const linear = L('That continues with the last change of position per 2 s, as if the velocity stayed the same. But with the acceleration, Δs changes by the same amount every 2 s.', 'Das setzt mit der letzten Ortsänderung pro 2 s fort, als bliebe die Geschwindigkeit gleich. Mit der Beschleunigung ändert sich Δs aber alle 2 s um gleich viel.');
+    const questions = [
+      numQ('s6', L('The position at 6 s:', 'Der Ort bei 6 s:'), L('Where is the cart at t = 6 s?', 'Wo ist der Wagen bei t = 6 s?'), sAt(6), 'm', xs[3], [
+        { value: xs[2] + gaps[1], flag: 'linear', why: linear },
+        { value: xs[2] + gaps[1] - dd, flag: 'sign', why: L('Δs changes by Δ(Δs) every 2 s, with its sign: the next Δs is the last one plus Δ(Δs).', 'Δs ändert sich alle 2 s um Δ(Δs), mit Vorzeichen: Das nächste Δs ist das letzte plus Δ(Δs).') },
+      ], L('The next Δs is the last one plus Δ(Δs).', 'Das nächste Δs ist das letzte plus Δ(Δs).')),
+      numQ('s8', L('The position at 8 s:', 'Der Ort bei 8 s:'), L('Where is the cart at t = 8 s?', 'Wo ist der Wagen bei t = 8 s?'), sAt(8), 'm', xs[4], [
+        { value: xs[2] + 2 * gaps[1], flag: 'linear', why: linear },
+        { value: xs[3] + gaps[2], flag: null, why: L('That repeats the Δs of the 2 s before. It changes by Δ(Δs) again.', 'Das wiederholt das Δs der 2 s davor. Es ändert sich nochmals um Δ(Δs).') },
+      ], L('Continue the Δs, each one Δ(Δs) more than the one before.', 'Setze die Δs fort, jedes um Δ(Δs) mehr als das vorherige.')),
+      numQ('a', L('The acceleration of the cart:', 'Die Beschleunigung des Wagens:'), L('What is the acceleration of the cart?', 'Wie gross ist die Beschleunigung des Wagens?'), it('a'), 'm/s²', a, [
+        { value: dd, flag: 'steps', why: L('That is Δ(Δs) itself. The time step is 2 s, so Δ(Δs) = a · (2 s)²: divide by 4 s².', 'Das ist Δ(Δs) selbst. Der Zeitschritt ist 2 s, also ist Δ(Δs) = a · (2 s)²: Teile durch 4 s².') },
+        { value: dd / 2, flag: 'steps', why: L('Δ(Δs) = a · (2 s)² = a · 4 s², not a · 2 s².', 'Δ(Δs) = a · (2 s)² = a · 4 s², nicht a · 2 s².') },
+        { value: -a, flag: 'sign', why: L('Take the changes with their signs: from one Δs to the next.', 'Nimm die Änderungen mit Vorzeichen: von einem Δs zum nächsten.') },
+      ], L('a = Δ(Δs) / (2 s)².', 'a = Δ(Δs) / (2 s)².')),
+      numQ('v2', L('The velocity at 2 s:', 'Die Geschwindigkeit bei 2 s:'), L('What is the velocity of the cart at t = 2 s?', 'Wie gross ist die Geschwindigkeit des Wagens bei t = 2 s?'), `${it('v')}(2&nbsp;s)`, 'm/s', v2, [
+        { value: gaps[0] / 2, flag: null, why: L('That is the mean velocity from 0 to 2 s, reached at 1 s. At 2 s, use the interval around it: from 0 to 4 s.', 'Das ist die mittlere Geschwindigkeit von 0 bis 2 s, erreicht bei 1 s. Für 2 s nimm das Intervall darum herum: von 0 bis 4 s.') },
+        { value: gaps[1] / 2, flag: null, why: L('That is the mean velocity from 2 to 4 s, reached at 3 s. At 2 s, use the interval around it: from 0 to 4 s.', 'Das ist die mittlere Geschwindigkeit von 2 bis 4 s, erreicht bei 3 s. Für 2 s nimm das Intervall darum herum: von 0 bis 4 s.') },
+        { value: xs[1] / 2, flag: 'origin', why: WHY.origin() },
+      ], L('With constant acceleration, the mean velocity from 0 to 4 s is the velocity in the middle, at 2 s.', 'Bei konstanter Beschleunigung ist die mittlere Geschwindigkeit von 0 bis 4 s die Geschwindigkeit in der Mitte, bei 2 s.')),
+    ];
+    const hints = [
+      L('The positions are given every 2 s. Work out the changes of position per 2 s, Δs, from one column to the next.', 'Die Orte sind alle 2 s gegeben. Bestimme die Ortsänderungen pro 2 s, Δs, von einer Spalte zur nächsten.'),
+      L(`Δs = ${gaps.slice(0, 2).map(dif).join(' and ')} m: they change by Δ(Δs) = ${dif(dd)} m. With constant acceleration, that change is the same every 2 s.`, `Δs = ${gaps.slice(0, 2).map(dif).join(' und ')} m: Sie ändern sich um Δ(Δs) = ${dif(dd)} m. Bei konstanter Beschleunigung ist diese Änderung alle 2 s gleich.`),
+      L(`Continue the Δs: ${dif(gaps[2])} m and ${dif(gaps[3])} m, and add them to the positions. Only then: Δ(Δs) = a · (2 s)².`, `Setze die Δs fort: ${dif(gaps[2])} m und ${dif(gaps[3])} m, und zähle sie zu den Orten dazu. Erst dann: Δ(Δs) = a · (2 s)².`),
+      L('With constant acceleration, the mean velocity over an interval is the velocity in its middle: v(2 s) = (s(4 s) − s(0)) / 4 s.', 'Bei konstanter Beschleunigung ist die mittlere Geschwindigkeit über ein Intervall gleich der Geschwindigkeit in seiner Mitte: v(2 s) = (s(4 s) − s(0)) / 4 s.'),
+    ];
+    const steps = [
+      step(L('Changes of position per 2 s', 'Ortsänderungen pro 2 s'),
+        L('The positions are given at times 2 s apart. So first work out how far the cart moves in each of these 2 s: Δs = s(t + 2 s) − s(t), from one column to the next.', 'Die Orte sind zu Zeiten im Abstand von 2 s gegeben. Bestimme also zuerst, wie weit der Wagen in diesen 2 s jeweils fährt: Δs = s(t + 2 s) − s(t), von einer Spalte zur nächsten.'),
+        fig({ rows: [dsRow(false)] })),
+      step(L('A constant change of Δs', 'Eine konstante Änderung von Δs'),
+        L(`The two Δs differ by Δ(Δs) = ${dif(dd)} m. With constant acceleration, Δs changes by this same amount every 2 s, and that lets us continue the table.`, `Die beiden Δs unterscheiden sich um Δ(Δs) = ${dif(dd)} m. Bei konstanter Beschleunigung ändert sich Δs alle 2 s um genau so viel, und damit lässt sich die Tabelle fortsetzen.`),
+        fig({ rows: [dsRow(false), ddRow(false)] })),
+      step(L('The missing Δs', 'Die fehlenden Δs'),
+        L(`Each Δs is the one before plus Δ(Δs) = ${dif(dd)} m: ${dif(gaps[1])} m ${dd < 0 ? '−' : '+'} ${num(Math.abs(dd))} m = ${dif(gaps[2])} m, then ${dif(gaps[2])} m ${dd < 0 ? '−' : '+'} ${num(Math.abs(dd))} m = ${dif(gaps[3])} m.`, `Jedes Δs ist das vorherige plus Δ(Δs) = ${dif(dd)} m: ${dif(gaps[1])} m ${dd < 0 ? '−' : '+'} ${num(Math.abs(dd))} m = ${dif(gaps[2])} m, dann ${dif(gaps[2])} m ${dd < 0 ? '−' : '+'} ${num(Math.abs(dd))} m = ${dif(gaps[3])} m.`),
+        fig({ rows: [dsRow(true), ddRow(true)] })),
+      step(L('The missing positions', 'Die fehlenden Orte'),
+        L(`Add the Δs to the last known position: ${sAt(6)} = ${num(xs[2])} m ${gaps[2] < 0 ? '−' : '+'} ${num(Math.abs(gaps[2]))} m = ${val(xs[3], 'm')}, ${sAt(8)} = ${num(xs[3])} m ${gaps[3] < 0 ? '−' : '+'} ${num(Math.abs(gaps[3]))} m = ${val(xs[4], 'm')}.`, `Zähle die Δs zum letzten bekannten Ort dazu: ${sAt(6)} = ${num(xs[2])} m ${gaps[2] < 0 ? '−' : '+'} ${num(Math.abs(gaps[2]))} m = ${val(xs[3], 'm')}, ${sAt(8)} = ${num(xs[3])} m ${gaps[3] < 0 ? '−' : '+'} ${num(Math.abs(gaps[3]))} m = ${val(xs[4], 'm')}.`),
+        fig({ all: true, rows: [dsRow(true), ddRow(true)] })),
+      step(L('The acceleration', 'Die Beschleunigung'),
+        L(`Only now the other quantities. Each Δs is the mean velocity in its 2 s times 2 s, so Δ(Δs) = a · (2 s)² = a · 4 s²: a = ${dif(dd)} m / 4 s² = ${sv(a, 'm/s²')}. Careful: with steps of 2 s, Δ(Δs) is four times a · (1 s)².`, `Erst jetzt die anderen Grössen. Jedes Δs ist die mittlere Geschwindigkeit in seinen 2 s mal 2 s, also ist Δ(Δs) = a · (2 s)² = a · 4 s²: a = ${dif(dd)} m / 4 s² = ${sv(a, 'm/s²')}. Achtung: Bei Schritten von 2 s ist Δ(Δs) viermal a · (1 s)².`),
+        fig({ all: true, rows: [dsRow(true), ddRow(true)] })),
+      step(L('The velocity at 2 s', 'Die Geschwindigkeit bei 2 s'),
+        L(`With constant acceleration, the mean velocity over an interval is reached in its middle. 2 s is the middle of 0–4 s: v(2 s) = (${num(xs[2])} m − ${xs[0] < 0 ? `(${num(xs[0])} m)` : `${num(xs[0])} m`}) / 4 s = ${sv(v2, 'm/s')}.`, `Bei konstanter Beschleunigung wird die mittlere Geschwindigkeit eines Intervalls in seiner Mitte erreicht. 2 s ist die Mitte von 0–4 s: v(2 s) = (${num(xs[2])} m − ${xs[0] < 0 ? `(${num(xs[0])} m)` : `${num(xs[0])} m`}) / 4 s = ${sv(v2, 'm/s')}.`),
+        fig({ all: true, rows: [dsRow(true), ddRow(true)] })),
+    ];
+    return finish('atable', seed, d, {
+      data: { times, xs, a, step: 2 },
+      title: L('Value table with acceleration', 'Wertetabelle mit Beschleunigung'),
+      text: L('<p>A cart moves along a straight track with constant acceleration. The table gives some of its positions; complete it.</p>',
+        '<p>Ein Wagen bewegt sich mit konstanter Beschleunigung auf einer geraden Bahn. Die Tabelle gibt einige seiner Orte an; ergänze sie.</p>'),
       figure: fig(),
       questions,
       hints,

@@ -241,14 +241,18 @@ for (const lang of ['en', 'de']) {
           if (Math.abs(D.v0) > 6 || Math.abs(D.v0 + D.acc * D.gaps.length) > 6) fail(`${tag}: v off the axis`);
         }
         if (kind === 'atable') {
-          const g = D.xs.slice(1).map((x, k) => x - D.xs[k]);
-          if (g.slice(1).some((x, k) => !near(x - g[k], D.a))) fail(`${tag}: acceleration not constant`);
+          // the changes of position per time step change by a · (step)² each step
+          const g = D.xs.slice(1).map((x, k) => x - D.xs[k]), st = D.step || 1;
+          if (g.slice(1).some((x, k) => !near(x - g[k], D.a * st * st))) fail(`${tag}: acceleration not constant`);
           if (!near(qOf('a').value, D.a)) fail(`${tag}: wrong acceleration`);
           if (d === 3 && (!near(qOf('s4').value, D.xs[4]) || !near(qOf('s5').value, D.xs[5]))) fail(`${tag}: wrong positions`);
           if (d === 4) {
-            if (!near(qOf('s1').value, D.xs[1]) || !near(qOf('s5').value, D.xs[5])) fail(`${tag}: wrong positions`);
-            if (!near(qOf('v2').value, (D.xs[4] - D.xs[0]) / 4)) fail(`${tag}: wrong velocity at 2 s`);
+            if (!near(qOf('s6').value, D.xs[3]) || !near(qOf('s8').value, D.xs[4])) fail(`${tag}: wrong positions`);
+            if (!near(qOf('v2').value, (D.xs[2] - D.xs[0]) / 4)) fail(`${tag}: wrong velocity at 2 s`);
           }
+          // the strategy: the missing positions are asked before the acceleration
+          const keys = ex.questions.map((q) => q.key);
+          if (keys.indexOf('a') < Math.max(keys.indexOf(d === 3 ? 's5' : 's8'), 0)) fail(`${tag}: the acceleration is asked before the positions`);
         }
         if (kind === 'area' && D.pts) {
           const ds = C.integrate(D.pts, D.a, D.b, false), dist = C.integrate(D.pts, D.a, D.b, true);
