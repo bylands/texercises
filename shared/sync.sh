@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copies the shared files (ui.css, lang.js, fit.js, sign.js, tutor.js, arcade.js) into every app, so that
-# each app stays a folder of its own for deployment; pages that are no app (the privacy page) get
-# lang.js only. Edit the files here, never an app's copy.
+# each app stays a folder of its own for deployment; pages that are no app (the privacy page and the
+# hub, whose lang.js is served as /lang.js) get lang.js only. Edit the files here, never an app's copy.
 #   shared/sync.sh          copy
 #   shared/sync.sh --check  only report copies that differ (exit 1 if any)
 # KaTeX is not copied: the apps share one copy, katex/ at the top of the repository, served as
@@ -12,7 +12,7 @@ set -e
 cd "$(dirname "$0")/.."
 APPS="energy-conservation force-systems bulb-brightness circuit-trainer impedance induction-match motion-graphs force-concepts"
 FILES="ui.css lang.js fit.js sign.js tutor.js arcade.js"
-PAGES="privacy"
+PAGES="privacy hub"
 status=0
 copy() { # copy shared/$1 to $2/$1, or with --check report a difference
   if [ "$MODE" = "--check" ]; then

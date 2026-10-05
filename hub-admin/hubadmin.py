@@ -9,7 +9,8 @@ cards in its order, shows their tags, and lets visitors filter by tag. This serv
     /admin/login         POST password=...          sets the session cookie
     /admin/logout        POST                       ends the session
     /admin/api/config    GET  the apps of the hub page with their order and tags
-                         POST {"order": [id, ...], "tags": {id: [tag, ...]}}   saves apps.json
+                         POST {"order": [id, ...], "tags": {id: [key, ...]},
+                               "labels": {key: {"en": name, "de": name}}}      saves apps.json
     /admin/static/...    the panel's script and styles
 
 The apps and their names come from the hub page itself (its <a class="app" href="/id/"> cards),
@@ -109,26 +110,63 @@ def clean_tag(tag: object) -> str:
     return re.sub(r"\s+", " ", tag).strip()[:MAX_TAG_LEN].strip()
 
 
+KEY = re.compile(r"[a-z0-9][a-z0-9-]{0,39}")
+FOLD = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss", "à": "a", "á": "a", "â": "a", "è": "e", "é": "e", "ê": "e", "ì": "i", "í": "i", "ò": "o", "ó": "o", "ù": "u", "ú": "u", "ç": "c", "ñ": "n"})
+
+
+def slug(name: str) -> str:
+    """A key for a tag from its name: mechanics, ac-circuits, kraefte."""
+    s = re.sub(r"[^a-z0-9]+", "-", name.lower().translate(FOLD)).strip("-")[:40].strip("-")
+    return s or "tag-" + hashlib.sha1(name.encode()).hexdigest()[:6]
+
+
 def normalize(config: object, app_ids: List[str]) -> Dict[str, object]:
     """A valid configuration for the given apps: every app once in the order (those the config
-    leaves out at the end, in the hub's order), and for each app its distinct tags. Unknown apps
-    and anything malformed are dropped."""
+    leaves out at the end, in the hub's order); for each app the keys of its tags, distinct and at
+    most MAX_TAGS; and for each tag in use its names, {"en": ..., "de": ...} (German as English if
+    missing). A tag given as plain text (no key) becomes a tag of that name in both languages; two
+    tags with the same English name are one. Unknown apps, unused tags and anything malformed are
+    dropped."""
     config = config if isinstance(config, dict) else {}
     order_in = config.get("order") if isinstance(config.get("order"), list) else []
     order = [a for i, a in enumerate(order_in) if a in app_ids and a not in order_in[:i]]
     order += [a for a in app_ids if a not in order]
     tags_in = config.get("tags") if isinstance(config.get("tags"), dict) else {}
+    labels_in = config.get("labels") if isinstance(config.get("labels"), dict) else {}
+    labels: Dict[str, Dict[str, str]] = {}
+    by_name: Dict[str, str] = {}  # English name (folded) → key
+
+    def tag(raw: object) -> Optional[str]:
+        lab = labels_in.get(raw) if isinstance(raw, str) and KEY.fullmatch(raw) else None
+        if isinstance(lab, dict) and clean_tag(lab.get("en")):
+            key, en = raw, clean_tag(lab.get("en"))
+            de = clean_tag(lab.get("de")) or en
+        elif isinstance(raw, str) and clean_tag(raw):  # plain text
+            en = de = clean_tag(raw)
+            key = slug(en)
+        else:
+            return None
+        known = by_name.get(en.casefold())
+        if known:
+            return known
+        while key in labels:  # another tag already has this key
+            key = f"{key[:36]}-{len(labels)}"
+        labels[key] = {"en": en, "de": de}
+        by_name[en.casefold()] = key
+        return key
+
     tags: Dict[str, List[str]] = {}
     for app in order:
-        seen: List[str] = []
         raw = tags_in.get(app) if isinstance(tags_in.get(app), list) else []
+        keys: List[str] = []
         for t in raw:
-            t = clean_tag(t)
-            if t and t.casefold() not in (s.casefold() for s in seen):
-                seen.append(t)
-        if seen:
-            tags[app] = seen[:MAX_TAGS]
-    return {"order": order, "tags": tags}
+            k = tag(t)
+            if k and k not in keys:
+                keys.append(k)
+        if keys:
+            tags[app] = keys[:MAX_TAGS]
+    used = {k for ks in tags.values() for k in ks}
+    return {"order": order, "tags": tags, "labels": {k: v for k, v in labels.items() if k in used}}
 
 
 def read_config(path: Path) -> object:
@@ -378,7 +416,7 @@ def login_page(ready: bool, error: str = "") -> str:
 
 def panel_page() -> str:
     return page("Apps on the hub page", """
-    <p class="lead">Put the apps in order and give them tags, e.g. physics topics. On the hub page, visitors can filter the apps by tag.</p>
+    <p class="lead">Put the apps in order and give them tags, e.g. physics topics. On the hub page, visitors can filter the apps by tag, in English or German.</p>
     <div class="bar">
       <button type="button" id="save" class="primary" disabled>Save</button>
       <span id="status" class="status" aria-live="polite"></span>
@@ -387,7 +425,10 @@ def panel_page() -> str:
     </div>
     <ol id="apps" class="apps"></ol>
     <datalist id="known-tags"></datalist>
-    <p class="note">Tags: at most 8 per app, 32 characters each. A tag used by no app disappears from the filter.</p>""", script=True)
+    <h2 class="section">Tags</h2>
+    <p class="note">The names of the tags in English and German. Edit them here; a tag used by no app disappears. At most 8 tags per app, 32 characters per name.</p>
+    <table id="tags" class="tagtable"><thead><tr><th scope="col">English</th><th scope="col">German</th><th scope="col">Apps</th></tr></thead><tbody></tbody></table>
+    <p id="no-tags" class="note" hidden>No tags yet: add one to an app above.</p>""", script=True)
 
 
 ADMIN_CSS = """
@@ -431,22 +472,42 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .tag button { border: 0; background: transparent; padding: 0 6px; font-size: 1rem; line-height: 1; color: var(--muted); }
 .tag button:hover { color: var(--bad); }
 .add { display: inline-flex; gap: 4px; }
-.add input { width: 12em; padding: 3px 8px; font-size: 0.9rem; }
+.add input { width: 15em; padding: 3px 8px; font-size: 0.9rem; }
 .add button { padding: 3px 10px; font-size: 0.9rem; }
+.tag .de { color: var(--muted); }
+h2.section { font-size: 1.15rem; margin: 28px 0 4px; }
+.tagtable { border-collapse: collapse; width: 100%; margin: 8px 0 24px; }
+.tagtable th { text-align: left; font-size: 0.85rem; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+.tagtable td { padding: 4px 6px; }
+.tagtable td.n { color: var(--muted); font-size: 0.9rem; white-space: nowrap; }
+.tagtable input.same { border-color: var(--bad); }
+.tagtable tr.new input { outline: 2px solid var(--accent); }
 @media (max-width: 560px) { .view { margin-left: 0; } .add input { width: 9em; } }
 """
 
 ADMIN_JS = r"""
 // The admin panel: loads the apps with their order and tags, edits them here, saves them on Save.
+// Tags are { key: { en, de } }; an app lists the keys of its tags.
 (function () {
   'use strict';
   const $ = (s) => document.querySelector(s);
   const MAX_TAGS = 8, MAX_LEN = 32;
-  let apps = [], order = [], tags = {}, dirty = false;
+  let apps = [], order = [], tags = {}, labels = {}, dirty = false, fresh = null;
 
   const nameOf = (id) => (apps.find((a) => a.id === id) || { name: id }).name;
   const status = (text, cls) => { const el = $('#status'); el.textContent = text; el.className = `status ${cls || ''}`; };
   function changed() { dirty = true; $('#save').disabled = false; status('Unsaved changes'); }
+  const fold = (t) => t.trim().toLowerCase();
+  const FOLD = { ä: 'ae', ö: 'oe', ü: 'ue', ß: 'ss', à: 'a', á: 'a', â: 'a', è: 'e', é: 'e', ê: 'e', ì: 'i', í: 'i', ò: 'o', ó: 'o', ù: 'u', ú: 'u', ç: 'c', ñ: 'n' };
+  // a new key from a name, as the server does: Kräfte → kraefte
+  function newKey(name) {
+    let k = name.toLowerCase().replace(/./g, (c) => FOLD[c] || c).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '') || 'tag';
+    const base = k;
+    for (let n = 2; labels[k]; n++) k = `${base.slice(0, 36)}-${n}`;
+    return k;
+  }
+  const used = () => [...new Set(order.flatMap((id) => tags[id] || []))].filter((k) => labels[k]);
+  const label = (k) => (labels[k].de && labels[k].de !== labels[k].en ? `${labels[k].en} · ${labels[k].de}` : labels[k].en);
 
   function el(tag, attrs, ...kids) {
     const e = document.createElement(tag);
@@ -455,19 +516,23 @@ ADMIN_JS = r"""
     return e;
   }
 
-  function render(focus) {
+  function renderApps(focus) {
     const list = $('#apps');
     list.replaceChildren(...order.map((id, i) => {
-      const own = tags[id] || [];
-      const input = el('input', { type: 'text', list: 'known-tags', maxlength: String(MAX_LEN), placeholder: 'New tag', 'aria-label': `New tag for ${nameOf(id)}` });
+      const own = (tags[id] || []).filter((k) => labels[k]);
+      const input = el('input', { type: 'text', list: 'known-tags', maxlength: String(MAX_LEN), placeholder: 'Tag (English or German)', 'aria-label': `New tag for ${nameOf(id)}` });
       const add = () => {
         const t = input.value.replace(/\s+/g, ' ').trim();
         if (!t) return;
-        if (own.some((x) => x.toLowerCase() === t.toLowerCase())) { input.value = ''; return; }
+        // an existing tag, by its English or German name, or a new one
+        let k = Object.keys(labels).find((x) => fold(labels[x].en) === fold(t) || fold(labels[x].de) === fold(t));
+        if (!k) { k = newKey(t); labels[k] = { en: t, de: t }; fresh = k; }
+        if (own.includes(k)) { input.value = ''; return; }
         if (own.length >= MAX_TAGS) { status(`At most ${MAX_TAGS} tags per app`, 'bad'); return; }
-        tags[id] = [...own, t];
+        tags[id] = [...own, k];
         changed();
-        render({ id, what: 'input' });
+        renderApps({ id, what: 'input' });
+        renderTags();
       };
       input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
       return el('li', { class: 'app', 'data-id': id },
@@ -477,13 +542,12 @@ ADMIN_JS = r"""
         el('div', {},
           el('h2', {}, nameOf(id), el('span', { class: 'id' }, `/${id}/`)),
           el('div', { class: 'tags' },
-            ...own.map((t) => el('span', { class: 'tag' }, t,
-              el('button', { type: 'button', 'aria-label': `Remove tag ${t} from ${nameOf(id)}`, onclick: () => { tags[id] = own.filter((x) => x !== t); changed(); render(); } }, '×'))),
+            ...own.map((k) => el('span', { class: 'tag' }, label(k),
+              el('button', { type: 'button', 'aria-label': `Remove tag ${labels[k].en} from ${nameOf(id)}`, onclick: () => { tags[id] = own.filter((x) => x !== k); changed(); renderApps(); renderTags(); } }, '×'))),
             el('span', { class: 'add' }, input, el('button', { type: 'button', onclick: add }, 'Add')))));
     }));
-    // suggestions: every tag in use
-    const all = [...new Set(Object.values(tags).flat())].sort((a, b) => a.localeCompare(b));
-    $('#known-tags').replaceChildren(...all.map((t) => el('option', { value: t })));
+    // suggestions: every tag, by both names
+    $('#known-tags').replaceChildren(...used().flatMap((k) => [...new Set([labels[k].en, labels[k].de])].map((t) => el('option', { value: t }))));
     if (focus) {
       const li = list.querySelector(`li[data-id="${focus.id}"]`);
       if (li) {
@@ -493,15 +557,41 @@ ADMIN_JS = r"""
     }
   }
 
+  // the names of every tag in use, English and German, to edit
+  function renderTags() {
+    const keys = used().sort((a, b) => labels[a].en.localeCompare(labels[b].en));
+    $('#no-tags').hidden = keys.length > 0;
+    $('#tags').hidden = !keys.length;
+    $('#tags tbody').replaceChildren(...keys.map((k) => {
+      const n = order.filter((id) => (tags[id] || []).includes(k)).length;
+      const field = (lang) => {
+        const i = el('input', { type: 'text', maxlength: String(MAX_LEN), value: labels[k][lang], 'aria-label': `${lang === 'en' ? 'English' : 'German'} name of ${labels[k].en}` });
+        const mark = () => { const de = i.closest('tr').querySelector('input[data-lang="de"]'); if (de) de.classList.toggle('same', labels[k].de === labels[k].en); };
+        i.dataset.lang = lang;
+        i.addEventListener('input', () => { labels[k][lang] = i.value.replace(/\s+/g, ' ').trim() || labels[k][lang]; changed(); mark(); renderApps(); });
+        i.addEventListener('blur', () => { i.value = labels[k][lang]; });
+        return i;
+      };
+      const en = field('en'), de = field('de');
+      if (labels[k].de === labels[k].en) { de.classList.add('same'); de.title = 'Same as English: translate?'; }
+      return el('tr', { class: k === fresh ? 'new' : '' }, el('td', {}, en), el('td', {}, de), el('td', { class: 'n' }, `${n} app${n === 1 ? '' : 's'}`));
+    }));
+    fresh = null;
+  }
+
   function move(i, d) {
     const j = i + d;
     if (j < 0 || j >= order.length) return;
     [order[i], order[j]] = [order[j], order[i]];
     changed();
-    render({ id: order[j], what: d < 0 ? 'up' : 'down' });
+    renderApps({ id: order[j], what: d < 0 ? 'up' : 'down' });
   }
 
-  function apply(cfg) { apps = cfg.apps; order = cfg.order; tags = cfg.tags || {}; dirty = false; $('#save').disabled = true; render(); }
+  function apply(cfg) {
+    apps = cfg.apps; order = cfg.order; tags = cfg.tags || {}; labels = cfg.labels || {};
+    dirty = false; $('#save').disabled = true;
+    renderApps(); renderTags();
+  }
 
   async function load() {
     const r = await fetch('/admin/api/config', { credentials: 'same-origin' });
@@ -514,7 +604,8 @@ ADMIN_JS = r"""
     $('#save').disabled = true;
     status('Saving…');
     try {
-      const r = await fetch('/admin/api/config', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order, tags }) });
+      const keys = used(), body = { order, tags, labels: Object.fromEntries(keys.map((k) => [k, labels[k]])) };
+      const r = await fetch('/admin/api/config', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (r.status === 403) { status('Logged out: log in again (your changes are lost on reload)', 'bad'); $('#save').disabled = false; return; }
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
       apply(await r.json());

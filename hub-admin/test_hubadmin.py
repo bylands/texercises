@@ -41,13 +41,28 @@ class Unit(unittest.TestCase):
 
     def test_normalize(self):
         ids = ["a", "b", "c"]
-        cfg = H.normalize({"order": ["c", "x", "a", "c"], "tags": {"a": [" Mechanics ", "mechanics", "<b>Energy</b>", 3, ""], "x": ["y"], "b": "no list"}}, ids)
+        cfg = H.normalize({
+            "order": ["c", "x", "a", "c"],
+            "tags": {"a": ["mech", "mech", "Energie", 3, ""], "b": ["mech2", "ac"], "c": ["<b>Waves</b>"], "x": ["mech"]},
+            "labels": {"mech": {"en": " Mechanics ", "de": "Mechanik"}, "mech2": {"en": "mechanics", "de": "x"},
+                       "ac": {"en": "AC circuits"}, "unused": {"en": "Optics", "de": "Optik"}, "Bad Key": {"en": "y"}},
+        }, ids)
         self.assertEqual(cfg["order"], ["c", "a", "b"])
-        self.assertEqual(cfg["tags"], {"a": ["Mechanics", "bEnergy/b"]})
-        self.assertEqual(H.normalize(None, ids), {"order": ids, "tags": {}})
+        # plain text becomes a tag of that name; two tags of the same English name are one
+        self.assertEqual(cfg["tags"], {"c": ["bwaves-b"], "a": ["mech", "energie"], "b": ["mech", "ac"]})
+        self.assertEqual(cfg["labels"], {
+            "bwaves-b": {"en": "bWaves/b", "de": "bWaves/b"},
+            "mech": {"en": "Mechanics", "de": "Mechanik"},
+            "energie": {"en": "Energie", "de": "Energie"},
+            "ac": {"en": "AC circuits", "de": "AC circuits"},  # German as English if missing
+        })
+        self.assertEqual(H.normalize(None, ids), {"order": ids, "tags": {}, "labels": {}})
         many = H.normalize({"tags": {"a": [f"t{i}" for i in range(20)]}}, ids)
         self.assertEqual(len(many["tags"]["a"]), H.MAX_TAGS)
+        self.assertEqual(len(many["labels"]), H.MAX_TAGS)  # the names of dropped tags go too
         self.assertEqual(len(H.clean_tag("x" * 100)), H.MAX_TAG_LEN)
+        self.assertEqual(H.slug("Kräfte & Bewegung"), "kraefte-bewegung")
+        self.assertTrue(H.slug("…").startswith("tag-"))
 
     def test_write(self):
         with tempfile.TemporaryDirectory() as d:
@@ -129,13 +144,15 @@ class Service(unittest.TestCase):
         ids = [a["id"] for a in cfg["apps"]]
         self.assertEqual(cfg["order"], ids)
         # a save: reordered, tagged, cleaned
-        new = {"order": list(reversed(ids)), "tags": {"coe": ["Mechanics", "Energy", "energy"], "nope": ["x"]}}
+        new = {"order": list(reversed(ids)), "tags": {"coe": ["mechanics", "energy", "Energy"], "nope": ["x"]},
+               "labels": {"mechanics": {"en": "Mechanics", "de": "Mechanik"}, "energy": {"en": "Energy", "de": "Energie"}}}
         self.assertEqual(self.req("/api/config", json.dumps(new).encode(), "text/plain", cookie)[0], 415)
         self.assertEqual(self.req("/api/config", json.dumps(new).encode(), "application/json")[0], 403)
         st, _, body = self.req("/api/config", json.dumps(new).encode(), "application/json", cookie)
         self.assertEqual(st, 200)
         saved = json.loads(self.config.read_text())
-        self.assertEqual(saved, {"order": list(reversed(ids)), "tags": {"coe": ["Mechanics", "Energy"]}})
+        self.assertEqual(saved, {"order": list(reversed(ids)), "tags": {"coe": ["mechanics", "energy"]},
+                                 "labels": {"mechanics": {"en": "Mechanics", "de": "Mechanik"}, "energy": {"en": "Energy", "de": "Energie"}}})
         self.assertEqual(self.req("/api/config", b"{not json", "application/json", cookie)[0], 400)
         self.assertEqual(self.req("/api/config", b"x" * (H.MAX_BODY + 1), "application/json", cookie)[0], 413)
         # logging out clears the cookie

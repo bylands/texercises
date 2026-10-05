@@ -33,6 +33,16 @@
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
 
+    /* the title with the EN/DE switch (lang.js, shared with the apps) */
+    .head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+    .langs { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
+    .langs label { position: relative; }
+    .langs input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+    .langs span { display: block; padding: 3px 10px; font-size: 0.85rem; border-left: 1px solid var(--line); }
+    .langs label:first-child span { border-left: 0; }
+    .langs input:checked + span { background: var(--accent); color: var(--card); font-weight: 600; }
+    .langs input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
+
     body {
       margin: 0;
       background: var(--bg);
@@ -198,11 +208,17 @@
 </head>
 <body>
   <header class="wrap">
-    <h1>Teaching Physics</h1>
-    <p>Interactive exercises for physics lessons.</p>
+    <div class="head">
+      <h1>Teaching Physics</h1>
+      <div id="langs" class="langs" role="radiogroup" aria-label="Language">
+        <label><input type="radio" name="lang" value="en" checked><span title="English">EN</span></label>
+        <label><input type="radio" name="lang" value="de"><span title="Deutsch">DE</span></label>
+      </div>
+    </div>
+    <p data-i18n="tagline">Interactive exercises for physics lessons.</p>
   </header>
 
-  <nav id="filter" class="wrap filter" aria-label="Filter by topic" hidden></nav>
+  <nav id="filter" class="wrap filter" data-i18n-label="filter" aria-label="Filter by topic" hidden></nav>
 
   <main class="wrap apps">
     <a class="app" href="/bulb-brightness/">
@@ -359,58 +375,101 @@
   </main>
 
   <footer class="wrap">
-    © Samuel Byland · <a href="https://mng.ch" target="_blank" rel="noopener">MNG Rämibühl</a> · 2026 · <a href="/privacy/">Privacy</a>
+    © Samuel Byland · <a href="https://mng.ch" target="_blank" rel="noopener">MNG Rämibühl</a> · 2026 · <a href="/privacy/" data-i18n-common="privacy">Privacy</a>
   </footer>
+  <script src="/lang.js"></script>
   <script>
-    // Order, tags and the filter by tag, from /apps.json (written by the admin panel at /admin/).
-    // Without it, the cards stay as they are in this page. The chosen tag is kept in the address
-    // (?topic=…), so that a filtered page can be shared.
+    // The page in English or German (lang.js, shared with the apps: the same language as there),
+    // and the order, tags and filter by tag from /apps.json (written by the admin panel at /admin/):
+    // { order: [app], tags: { app: [key] }, labels: { key: { en, de } } }. Without it, the cards
+    // stay as they are in this page. The chosen tag is kept in the address (?topic=key), so that a
+    // filtered page can be shared in either language.
     (function () {
       const main = document.querySelector('main.apps'), nav = document.getElementById('filter');
       const cards = [...main.querySelectorAll('a.app')];
       const idOf = (a) => (a.getAttribute('href').match(/^\/([a-z0-9-]+)\/?$/) || [])[1];
-      const tagsOf = new Map();
+      const L = (en, de) => Lang.L(en, de);
 
-      function show(topic) {
-        cards.forEach((c) => { c.hidden = !!topic && !tagsOf.get(c).includes(topic); });
-        nav.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.topic || '') === (topic || ''))));
+      // the German texts of the page; the English ones are those in it
+      const UI = {
+        en: { tagline: 'Interactive exercises for physics lessons.', filter: 'Filter by topic' },
+        de: { tagline: 'Interaktive Übungen für den Physikunterricht.', filter: 'Nach Thema filtern' },
+      };
+      const DE = {
+        'bulb-brightness': ['Helligkeit von Lampen', 'Sage voraus, welche Lampen in Serien- und Parallelschaltungen heller leuchten.', 'Stromkreis mit einer Batterie, einer Lampe in Serie und zwei Lampen parallel'],
+        'circuit-trainer': ['Widerstandsschaltungen', 'Bestimme Ersatzwiderstände, Ströme und Spannungen Schritt für Schritt.', 'Stromkreis mit einer Batterie, einem Widerstand in Serie und zwei Widerständen parallel'],
+        impedance: ['Impedanzkurven', 'Lies R, L und C aus der Impedanzkurve von RL-, RC- und RLC-Schaltungen ab.', 'Impedanzkurve einer RLC-Serienschaltung mit ihrem Minimum R bei der Resonanzfrequenz'],
+        coe: ['Energieerhaltung', 'Fallen, Würfe, Pendel und Federn: von der Energie in jedem Zustand zu Geschwindigkeiten und Höhen, mit Zahlen oder Formeln.', 'Ein Ball, aus einer Höhe fallen gelassen und auf halbem Weg, mit Balken seiner Lage- und kinetischen Energie'],
+        'force-concepts': ['Kraftkonzepte', 'Gewichtskraft, Trägheit, resultierende Kraft und Wechselwirkung: Erkenne die Fehlvorstellungen hinter verlockenden Antworten.', 'Ein schräg geworfener Ball: Im höchsten Punkt wirkt nur seine Gewichtskraft, während seine Geschwindigkeit nach vorne zeigt'],
+        'force-systems': ['Kräftesysteme', 'Kisten, Seile, Rollen und schiefe Ebenen: Bestimme Kräfte und Beschleunigungen mit dem Aktionsprinzip.', 'Eine Kiste wird einen Hang hinaufgezogen: Ihre Gewichtskraft zeigt nach unten, die Zugkraft hangaufwärts'],
+        'induction-match': ['Induktion zuordnen', 'Ordne Flussdiagramme den induzierten Spannungen zu: Es zählt die Steigung, nicht der Wert.', 'Ein Flussdiagramm, das steigt, gleich bleibt und fällt, und die induzierte Spannung: negativ, null, dann positiv'],
+        'motion-graphs': ['Bewegungsdiagramme', 'Tempo und Richtung, Wertetabellen, Stroboskopbilder, Steigungen und Flächen: vom Ort zur Geschwindigkeit und zurück.', 'Ein Ort-Zeit-Diagramm, das nach oben gekrümmt ist, und seine Geschwindigkeit: eine steigende Gerade'],
+      };
+      const parts = (c) => [c.querySelector('h2'), c.querySelector('.text p'), c.querySelector('svg')];
+      const EN = new Map(cards.map((c) => { const [h, p, svg] = parts(c); return [c, [h.textContent, p.textContent, svg.getAttribute('aria-label')]]; }));
+
+      let cfg = null, topic = '';
+      const tagsOf = (c) => (cfg && Array.isArray(cfg.tags && cfg.tags[idOf(c)]) ? cfg.tags[idOf(c)].filter((k) => typeof k === 'string') : []);
+      // a tag's name in the page's language (a tag without names is its own name)
+      const nameOf = (k) => { const l = cfg.labels && cfg.labels[k]; return l ? (Lang.get() === 'de' && l.de) || l.en || k : k; };
+
+      function texts() {
+        Lang.apply(UI[Lang.get()]);
+        cards.forEach((c) => {
+          const t = Lang.get() === 'de' && DE[idOf(c)] ? DE[idOf(c)] : EN.get(c), [h, p, svg] = parts(c);
+          h.textContent = t[0]; p.textContent = t[1]; svg.setAttribute('aria-label', t[2]);
+        });
+      }
+
+      function show(t) {
+        topic = t;
+        cards.forEach((c) => { c.hidden = !!topic && !tagsOf(c).includes(topic); });
+        nav.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.topic || '') === topic)));
         const url = new URL(location.href);
         if (topic) url.searchParams.set('topic', topic); else url.searchParams.delete('topic');
         history.replaceState(null, '', url);
       }
 
-      function apply(cfg) {
-        const order = Array.isArray(cfg.order) ? cfg.order : [], tags = cfg.tags && typeof cfg.tags === 'object' ? cfg.tags : {};
-        const byId = new Map(cards.map((c) => [idOf(c), c]));
-        main.append(...order.filter((id) => byId.has(id)).map((id) => byId.get(id)), ...cards.filter((c) => !order.includes(idOf(c))));
+      // the tags of the cards and the filter, in the page's language
+      function tags() {
+        if (!cfg) return;
         cards.forEach((c) => {
-          const t = Array.isArray(tags[idOf(c)]) ? tags[idOf(c)].filter((x) => typeof x === 'string') : [];
-          tagsOf.set(c, t);
+          c.querySelectorAll('ul.tags').forEach((u) => u.remove());
+          const t = tagsOf(c);
           if (!t.length) return;
           const ul = document.createElement('ul');
           ul.className = 'tags';
-          ul.setAttribute('aria-label', 'Topics');
-          t.forEach((x) => { const li = document.createElement('li'); li.textContent = x; ul.append(li); });
+          ul.setAttribute('aria-label', L('Topics', 'Themen'));
+          t.forEach((k) => { const li = document.createElement('li'); li.textContent = nameOf(k); ul.append(li); });
           c.querySelector('.text').append(ul);
         });
-        const all = [...new Set([...tagsOf.values()].flat())].sort((a, b) => a.localeCompare(b));
-        if (!all.length) return;
-        nav.replaceChildren(...['', ...all].map((t) => {
+        const all = [...new Set(cards.flatMap(tagsOf))].sort((a, b) => nameOf(a).localeCompare(nameOf(b), Lang.get()));
+        nav.hidden = !all.length;
+        nav.replaceChildren(...['', ...all].map((k) => {
           const b = document.createElement('button');
           b.type = 'button';
-          b.textContent = t || 'All';
-          if (t) b.dataset.topic = t;
-          b.addEventListener('click', () => show(t && b.getAttribute('aria-pressed') !== 'true' ? t : ''));
+          b.textContent = k ? nameOf(k) : L('All', 'Alle');
+          if (k) b.dataset.topic = k;
+          b.addEventListener('click', () => show(k && k !== topic ? k : ''));
           return b;
         }));
-        nav.hidden = false;
-        const asked = new URLSearchParams(location.search).get('topic');
-        show(all.includes(asked) ? asked : '');
+        show(all.includes(topic) ? topic : '');
       }
 
+      function apply(c) {
+        cfg = c;
+        const order = Array.isArray(cfg.order) ? cfg.order : [], byId = new Map(cards.map((x) => [idOf(x), x]));
+        main.append(...order.filter((id) => byId.has(id)).map((id) => byId.get(id)), ...cards.filter((x) => !order.includes(idOf(x))));
+        topic = new URLSearchParams(location.search).get('topic') || '';
+        tags();
+      }
+
+      Lang.init();
+      texts();
+      Lang.wire(() => { texts(); tags(); });
       fetch('/apps.json', { cache: 'no-cache' })
         .then((r) => (r.ok ? r.json() : null))
-        .then((cfg) => { if (cfg) apply(cfg); })
+        .then((c) => { if (c && typeof c === 'object') apply(c); })
         .catch(() => { /* no configuration yet: the page as it is */ });
     })();
   </script>
