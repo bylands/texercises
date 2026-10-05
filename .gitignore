@@ -14,3 +14,6 @@ wheels/
 
 # Source worksheets (Pages/PDF), kept locally
 models/
+
+# Screenshots for feedback, kept locally
+screenshots/

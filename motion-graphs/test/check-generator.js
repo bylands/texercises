@@ -18,6 +18,8 @@
 require('../lang.js');
 const M = require('../generator.js');
 const P = require('../plot.js');
+// the other kinds of exercise register with the generator; the levels need them
+const C = require('../concepts.js');
 
 const SAMPLES = 2000;
 let failures = 0;
@@ -177,7 +179,6 @@ for (let d = 1; d <= 5; d++) {
 // every wrong one, traps different from the answer, numbers in steps of 0.05, and answers that
 // agree with the motion behind the exercise (data), worked out again here; four valid arcade
 // options; the same in German, without ß.
-const C = require('../concepts.js');
 const Lang = require('../lang.js');
 const near = (a, b) => Math.abs(a - b) < 1e-6;
 const nice = (x) => near(Math.round(x * 20), x * 20);
