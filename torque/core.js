@@ -27,6 +27,7 @@
     yS: { en: ['y', 'S'], de: ['y', 'S'] },
     alpha: { en: ['α', ''], de: ['α', ''] },
     theta: { en: ['θ', ''], de: ['θ', ''] },
+    tanTheta: { en: ['tan θ', ''], de: ['tan θ', ''] },
     A: { en: ['F', 'A'], de: ['F', 'A'] },
     B: { en: ['F', 'B'], de: ['F', 'B'] },
     Fm: { en: ['F', 'M'], de: ['F', 'M'] },
@@ -37,7 +38,7 @@
     N: { en: ['F', 'N'], de: ['F', 'N'] },
     mu: { en: ['μ', 's'], de: ['μ', 'H'] },
   };
-  const TEX_LETTER = { α: '\\alpha', θ: '\\theta', μ: '\\mu' };
+  const TEX_LETTER = { α: '\\alpha', θ: '\\theta', μ: '\\mu', 'tan θ': '\\tan\\theta' };
   const parts = (key, i = '') => { const [l, s] = SYM[key][getLang()]; return [l, `${s}${i}`]; };
 
   // KaTeX: M_1, F_\mathrm{G}, x_\mathrm{S}

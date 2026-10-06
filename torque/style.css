@@ -87,7 +87,7 @@ svg .lbl.com-lbl { fill: var(--com); font-weight: 600; }
 
 /* a torque's field: its size and its sense of rotation (↺, ↻ or none) */
 .field .after { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
-.senses span { font-size: 1.05rem; padding: 2px 10px; }
+.senses > label > span { font-size: 1.05rem; padding: 2px 10px; }
 .field.torque .what .katex { font-size: 1em; }
 
 /* arcade: manim's colours */

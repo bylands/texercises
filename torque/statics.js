@@ -10,6 +10,7 @@
   const m_ = (x) => q(x, 'm', 2);
   const g_ = (x) => q(x, 'g', 1);
   const deg = (x) => (x * 180) / Math.PI;
+  const A345 = deg(Math.atan2(3, 4));
   // a field: key, symbol, unit, decimals, what
   const field = (key, sym, unit, dec, what) => ({ key, sym, unit, dec, what });
   // a box standing on the beam at x (world units), w × h px, with a label
@@ -365,18 +366,22 @@
   // A cabinet (w × h) tilted on one edge: it falls over by itself once its centre of mass is beyond
   // the edge, i.e. at the tilt θ with tan θ = w/h (from the vertical).
   const tilt = {
-    id: 'tilt', family: 'tipping', difficulty: 4, calc: 'always',
-    make(r) { const w = pick(r, [30, 40, 50, 60, 80]), h = pick(r, [100, 120, 150, 180, 200]); return { w, h }; },
-    solve(p, o = {}) { return { theta: exact(deg(Math.atan(o.swap ? p.h / p.w : o.full ? (2 * p.w) / p.h : p.w / p.h))) }; },
+    id: 'tilt', family: 'tipping', difficulty: 4,
+    make(r) { const w = pick(r, [30, 40, 50, 60, 80]), h = pick(r, [100, 120, 150, 160, 180, 200]); return { w, h }; },
+    solve(p, o = {}) {
+      const t = o.swap ? p.h / p.w : o.full ? (2 * p.w) / p.h : p.w / p.h;
+      return { tan: exact(t), theta: exact(deg(Math.atan(t))) };
+    },
     traps: ['swap', 'full'],
     why: {
       swap: () => L('That is the angle measured the other way: from the floor, not from the vertical.', 'Das ist der Winkel von der anderen Seite gemessen: vom Boden aus, nicht von der Senkrechten.'),
       full: () => L('The centre of mass is in the middle: what counts is half the width against half the height.', 'Der Schwerpunkt liegt in der Mitte: Es zählt die halbe Breite gegen die halbe Höhe.'),
     },
-    fields: () => [field('theta', ['theta'], 'deg', 1, L('tilt from the vertical', 'Neigung gegen die Senkrechte'))],
+    // tan θ, which needs no calculator; the angle itself is in the solution
+    fields: () => [field('tan', ['tanTheta'], '', 2, L('at the tilt θ where it falls:', 'bei der Neigung θ, bei der er fällt:'))],
     title: () => L('How far can it lean?', 'Wie weit kann er sich neigen?'),
-    text: (p) => L(`A cabinet ${cm(p.w)} wide and ${cm(p.h)} high, with its centre of mass in its middle, is tilted on one of its bottom edges. From which tilt angle θ against the vertical does it fall over by itself?`,
-      `Ein Schrank von ${cm(p.w)} Breite und ${cm(p.h)} Höhe, mit dem Schwerpunkt in seiner Mitte, wird über eine seiner unteren Kanten gekippt. Ab welchem Neigungswinkel θ gegen die Senkrechte fällt er von selbst um?`),
+    text: (p) => L(`A cabinet ${cm(p.w)} wide and ${cm(p.h)} high, with its centre of mass in its middle, is tilted on one of its bottom edges. From which tilt angle θ against the vertical does it fall over by itself? Give tan θ.`,
+      `Ein Schrank von ${cm(p.w)} Breite und ${cm(p.h)} Höhe, mit dem Schwerpunkt in seiner Mitte, wird über eine seiner unteren Kanten gekippt. Ab welchem Neigungswinkel θ gegen die Senkrechte fällt er von selbst um? Gib tan θ an.`),
     figure(p, v, view = {}) {
       const P = new Pic(1.2, L('A cabinet tilted on its edge', 'Ein über seine Kante gekippter Schrank')), show = view.show || new Set();
       // the edge at the origin; the cabinet extends to the left of it, tilted clockwise by th
@@ -406,7 +411,7 @@
     steps: (p, v) => [
       step(L('Tipping point', 'Kipppunkt'), `<p>${L('The weight acts at S. While S is on the inner side of the edge, its torque turns the cabinet back; once S is straight above the edge, the torque is zero, and beyond that the cabinet falls.', 'Die Gewichtskraft greift in S an. Solange S innerhalb der Kante liegt, dreht ihr Drehmoment den Schrank zurück; liegt S senkrecht über der Kante, ist das Drehmoment null, und darüber hinaus fällt der Schrank.')}</p>`, ['S']),
       step(L('The angle', 'Der Winkel'), `<p>${L('The line from the edge to S is then vertical. In the cabinet, it runs w/2 across and h/2 up, so it leans by θ with', 'Die Linie von der Kante zu S ist dann senkrecht. Im Schrank läuft sie w/2 quer und h/2 hoch, sie ist also um θ geneigt mit')}</p>` +
-        `$$\\tan\\theta = \\frac{w/2}{h/2} = \\frac{w}{h} = \\frac{${tq(p.w, 'cm')}}{${tq(p.h, 'cm')}}\\;\\Rightarrow\\; \\theta = ${res(v.theta, 'deg', 1)}$$` +
+        `$$\\tan\\theta = \\frac{w/2}{h/2} = \\frac{w}{h} = \\frac{${tq(p.w, 'cm')}}{${tq(p.h, 'cm')}} = ${res(v.tan, '', 2)}\\;\\Rightarrow\\; \\theta = ${tq(v.theta, 'deg', 1)}$$` +
         `<p>${L('A low, wide body is stable: its centre of mass must be lifted far before it is above the edge.', 'Ein niedriger, breiter Körper ist stabil: Sein Schwerpunkt muss weit angehoben werden, bis er über der Kante liegt.')}</p>`, ['S']),
     ],
   };
@@ -418,7 +423,8 @@
   const crane = {
     id: 'crane', family: 'supports', difficulty: 5, calc: 'trig',
     make(r, o = {}) {
-      return { len: pick(r, [1, 1.5, 2, 2.5, 3]), m: pick(r, [10, 20, 30, 40]), M: pick(r, [20, 30, 40, 50, 60, 80, 100]), alpha: o.nice ? 30 : pick(r, [25, 30, 35, 40, 45, 50, 60]) };
+      const alpha = o.nice ? 30 : o.pyth ? pick(r, [A345, 90 - A345]) : pick(r, [25, 30, 35, 40, 45, 50, 60]);
+      return { len: pick(r, [1, 1.5, 2, 2.5, 3]), m: pick(r, [10, 20, 30, 40]), M: pick(r, [20, 30, 40, 50, 60, 80, 100]), alpha };
     },
     solve(p, o = {}) {
       const s = o.cos ? Math.cos(rad(p.alpha)) : o.noAngle ? 1 : Math.sin(rad(p.alpha));
@@ -431,17 +437,22 @@
       cos: () => L('Cosine instead of sine? Only the cable’s component perpendicular to the boom turns it.', 'Kosinus statt Sinus? Nur die Komponente der Seilkraft senkrecht zum Ausleger dreht ihn.'),
       noAngle: () => L('The cable pulls at an angle: only its vertical component F sin α holds the boom up.', 'Das Seil zieht schräg: Nur seine senkrechte Komponente F sin α hält den Ausleger.'),
     },
+    comps: (p) => [
+      { key: 'd', what: L('The lever arm of the cable force about the hinge:', 'Der Hebelarm der Seilkraft bezüglich des Gelenks:'), sym: 'd', base: '\\ell', baseVal: p.len, fn: 'sin', unit: '\\mathrm{m}',
+        why: { whole: L('ℓ is the distance to where the cable pulls, not to its line of action.', 'ℓ ist der Abstand zum Angriffspunkt des Seils, nicht zu seiner Wirkungslinie.') } },
+      { key: 'h', what: L('The horizontal part of the cable force:', 'Der horizontale Anteil der Seilkraft:'), sym: T('T').replace(/\}$/, ',x}'), base: T('T'), baseVal: null, fn: 'cos' },
+    ],
     fields: (p) => [field('T', ['T'], 'N', 1, L('cable force', 'Seilkraft')), ...(p.alpha === 30 && p.nice ? [] : [field('Hx', ['H'], 'N', 1, L('horizontal force of the hinge', 'horizontale Kraft des Gelenks'))])],
     title: () => L('A crane boom', 'Ein Kranausleger'),
-    text: (p) => L(`A uniform boom ${m_(p.len)} long with a mass of ${kg(p.m)} is fixed to a wall by a hinge at its left end. A cable from its right end to the wall holds it level; the cable makes an angle of ${q(p.alpha, 'deg')} with the boom. A load of ${kg(p.M)} hangs at the right end. Find the force in the cable and the horizontal force with which the hinge pushes on the boom. Take g = 10 m/s².`,
-      `Ein gleichmässiger Ausleger von ${m_(p.len)} Länge und ${kg(p.m)} Masse ist mit seinem linken Ende über ein Gelenk an einer Wand befestigt. Ein Seil von seinem rechten Ende zur Wand hält ihn waagrecht; das Seil bildet mit dem Ausleger einen Winkel von ${q(p.alpha, 'deg')}. Am rechten Ende hängt eine Last von ${kg(p.M)}. Bestimme die Kraft im Seil und die horizontale Kraft, mit der das Gelenk auf den Ausleger drückt. Rechne mit g = 10 m/s².`),
+    text: (p) => L(`A uniform boom ${m_(p.len)} long with a mass of ${kg(p.m)} is fixed to a wall by a hinge at its left end. A cable from its right end to the wall holds it level; the cable makes an angle of ${q(p.alpha, 'deg', 1)} with the boom. A load of ${kg(p.M)} hangs at the right end. Find the force in the cable and the horizontal force with which the hinge pushes on the boom. Take g = 10 m/s².`,
+      `Ein gleichmässiger Ausleger von ${m_(p.len)} Länge und ${kg(p.m)} Masse ist mit seinem linken Ende über ein Gelenk an einer Wand befestigt. Ein Seil von seinem rechten Ende zur Wand hält ihn waagrecht; das Seil bildet mit dem Ausleger einen Winkel von ${q(p.alpha, 'deg', 1)}. Am rechten Ende hängt eine Last von ${kg(p.M)}. Bestimme die Kraft im Seil und die horizontale Kraft, mit der das Gelenk auf den Ausleger drückt. Rechne mit g = 10 m/s².`),
     figure(p, v, view = {}) {
       const B = beamPic(p.len, L('A boom hinged to a wall, held by a cable, with a load at its end', 'Ein an einer Wand angelenkter Ausleger, von einem Seil gehalten, mit einer Last am Ende')), P = B.P, show = view.show || new Set();
       const top = p.len * Math.tan(rad(p.alpha)) + B.h;
       P.surface([0, -50 / P.s], [0, top + 20 / P.s], -1);
       P.pivot(B.mid(0));
       P.line(B.top(p.len), [0, top], 'w rope', true);
-      P.arc(B.top(p.len), 34, 180 - p.alpha, 180, q(p.alpha, 'deg'), 12);
+      P.arc(B.top(p.len), 34, 180 - p.alpha, 180, q(p.alpha, 'deg', 1), 12);
       P.mass(B.bottom(p.len), 30, kg(p.M));
       if (!show.has('G')) P.text(B.bottom(p.len / 2), `m = ${kg(p.m)}`, 'lbl mass', 'middle', [0, 16]);
       P.dim(B.bottom(0), B.bottom(p.len), m_(p.len), -88);
@@ -462,12 +473,12 @@
       const out = [
         step(L('Torques about the hinge', 'Drehmomente bezüglich des Gelenks'),
           `<p>${L('The hinge’s force has no lever arm. The weights turn the boom down (clockwise); the cable, with its component perpendicular to the boom, turns it up:', 'Die Kraft des Gelenks hat keinen Hebelarm. Die Gewichtskräfte drehen den Ausleger nach unten (im Uhrzeigersinn), das Seil mit seiner Komponente senkrecht zum Ausleger nach oben:')}</p>` +
-          `$$${T('T')}\\sin\\alpha\\cdot\\ell = m\\,g\\cdot\\frac{\\ell}{2} + M\\,g\\cdot\\ell\\;\\Rightarrow\\; ${T('T')} = \\frac{(m/2 + M)\\,g}{\\sin\\alpha} = \\frac{${tq((p.m / 2 + p.M) * G, 'N')}}{\\sin${tq(p.alpha, 'deg')}} = ${res(v.T, 'N', 1)}$$` +
+          `$$${T('T')}\\sin\\alpha\\cdot\\ell = m\\,g\\cdot\\frac{\\ell}{2} + M\\,g\\cdot\\ell\\;\\Rightarrow\\; ${T('T')} = \\frac{(m/2 + M)\\,g}{\\sin\\alpha} = \\frac{${tq((p.m / 2 + p.M) * G, 'N')}}{\\sin${tq(p.alpha, 'deg', 1)}} = ${res(v.T, 'N', 1)}$$` +
           `<p>${L('ℓ cancels: the length of the boom does not matter.', 'ℓ kürzt sich weg: Die Länge des Auslegers spielt keine Rolle.')}</p>`, ['G', 'T'], ['T']),
       ];
       if (crane.fields(p).length > 1) out.push(step(L('Horizontal forces', 'Horizontale Kräfte'),
         `<p>${L('The cable also pulls the boom toward the wall with F_S cos α; the hinge pushes back just as hard:', 'Das Seil zieht den Ausleger auch mit F_S cos α zur Wand hin; das Gelenk drückt gleich stark zurück:')}</p>` +
-        `$$${T('H')} = ${T('T')}\\cos\\alpha = ${tq(v.T, 'N', 1)}\\cdot\\cos${tq(p.alpha, 'deg')} = ${res(v.Hx, 'N', 1)}$$`, ['G', 'T', 'H'], ['H']));
+        `$$${T('H')} = ${T('T')}\\cos\\alpha = ${tq(v.T, 'N', 1)}\\cdot\\cos${tq(p.alpha, 'deg', 1)} = ${res(v.Hx, 'N', 1)}$$`, ['G', 'T', 'H'], ['H']));
       return out;
     },
   };

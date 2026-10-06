@@ -14,6 +14,9 @@
 //   figure(p, v, view) the drawing: view.task (the situation only) or view.show (a Set of the
 //                      parts of the solution to draw in) and view.hl (those to highlight)
 //   hints(p, v), steps(p, v)  hints and the worked solution: steps { text, show, hl }
+//   comps(p)           what the student identifies first in practice (identify.js), whose value
+//                      the app then gives: a component { key, what, sym, base, baseVal, fn, unit,
+//                      why } or a ready item { key, what, options, value }
 (function (root) {
   'use strict';
 
@@ -21,6 +24,11 @@
   const { L, G, tex: T, tq, q, num, svgSym, pick, rad } = TQ;
   const res = (x, u, dec) => `\\htmlClass{result}{${tq(x, u, dec)}}`;
   const m$ = (s) => `$${s}$`;
+  // Angles of right triangles with whole sides (3-4-5, 5-12-13, …): with a length that is a multiple
+  // of the hypotenuse, the lever arm is a whole number.
+  const TRIANGLES = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
+  const PYTH = TRIANGLES.flatMap(([a, b]) => [Math.atan2(a, b), Math.atan2(b, a)].map((x) => (x * 180) / Math.PI));
+  const A345 = (Math.atan2(3, 4) * 180) / Math.PI;
   const step = (rule, text, show = [], hl) => ({ text: (rule ? `<p class="step-rule">${rule}</p>` : '') + text, show, hl: hl || show });
   const exact = (x) => Math.round(x * 1e6) / 1e6;
   const CCW = () => L('counterclockwise', 'im Gegenuhrzeigersinn'), CW = () => L('clockwise', 'im Uhrzeigersinn');
@@ -368,9 +376,9 @@
     id: 'angle', family: 'lever', difficulty: 4, calc: 'trig',
     make(r, o = {}) {
       const m = pick(r, [1, 2, 3, 4, 5]), len = pick(r, [40, 60, 80, 100, 120]);
-      const a = pick(r, [5, 10, 15, 20, 25, 30].filter((x) => x <= len / 2 - 5)), b = pick(r, [10, 20, 30, 40, 50, 60].filter((x) => x <= len / 2 + a && x > a));
+      const a = pick(r, [5, 10, 15, 20, 25, 30].filter((x) => x <= len / 2 - 5)), b = pick(r, (o.pyth ? [10, 13, 15, 17, 20, 25, 26, 29, 30, 34, 39, 40, 50, 51, 52] : [10, 20, 30, 40, 50, 60]).filter((x) => x <= len / 2 + a && x > a));
       if (!a || !b) return null;
-      const alpha = o.nice ? pick(r, [30, 90, 150]) : pick(r, [30, 40, 45, 50, 60, 70, 110, 120, 135, 150]);
+      const alpha = o.nice ? pick(r, [30, 90, 150]) : o.pyth ? pick(r, [...PYTH, ...PYTH.map((x) => 180 - x)]) : pick(r, [30, 40, 45, 50, 60, 70, 110, 120, 135, 150]);
       return { m, len, a, b, alpha };
     },
     solve(p, o = {}) {
@@ -383,9 +391,14 @@
       noAngle: () => L('F pulls at an angle: its lever arm is b · sin α, not b.', 'F zieht schräg: Ihr Hebelarm ist b · sin α, nicht b.'),
     },
     fields: () => [{ key: 'F', sym: ['F'], unit: 'N', dec: 1, what: L('force', 'Kraft') }],
+    comps: (p) => [{ key: 'd', what: L('The lever arm of F about D:', 'Der Hebelarm von F bezüglich D:'), sym: 'd', base: 'b', baseVal: p.b, fn: 'sin', unit: '\\mathrm{cm}',
+      why: {
+        sc: L('The lever arm is the distance from D to the line of action of F; in the right triangle with the hypotenuse b, it lies opposite the angle α.', 'Der Hebelarm ist der Abstand von D zur Wirkungslinie von F; im rechtwinkligen Dreieck mit der Hypotenuse b liegt er dem Winkel α gegenüber.'),
+        whole: L('b is the distance to the point where F acts, not to its line of action.', 'b ist der Abstand zum Angriffspunkt von F, nicht zu seiner Wirkungslinie.'),
+      } }],
     title: () => L('Held at an angle', 'Schräg gehalten'),
-    text: (p) => L(`A uniform beam with a mass of ${kg(p.m)} can turn about an axis through D. Its middle is ${cm(p.a)} to the left of D. A rope pulls on the beam ${cm(p.b)} to the left of D, at an angle of ${q(p.alpha, 'deg')} to the beam, and holds it level. How large is the force F of the rope? Take g = 10 m/s².`,
-      `Ein gleichmässiger Balken mit der Masse ${kg(p.m)} ist um eine Achse durch D drehbar. Seine Mitte liegt ${cm(p.a)} links von D. Ein Seil zieht ${cm(p.b)} links von D unter einem Winkel von ${q(p.alpha, 'deg')} zum Balken am Balken und hält ihn waagrecht. Wie gross ist die Kraft F des Seils? Rechne mit g = 10 m/s².`),
+    text: (p) => L(`A uniform beam with a mass of ${kg(p.m)} can turn about an axis through D. Its middle is ${cm(p.a)} to the left of D. A rope pulls on the beam ${cm(p.b)} to the left of D, at an angle of ${q(p.alpha, 'deg', 1)} to the beam, and holds it level. How large is the force F of the rope? Take g = 10 m/s².`,
+      `Ein gleichmässiger Balken mit der Masse ${kg(p.m)} ist um eine Achse durch D drehbar. Seine Mitte liegt ${cm(p.a)} links von D. Ein Seil zieht ${cm(p.b)} links von D unter einem Winkel von ${q(p.alpha, 'deg', 1)} zum Balken am Balken und hält ihn waagrecht. Wie gross ist die Kraft F des Seils? Rechne mit g = 10 m/s².`),
     figure(p, v, view = {}) {
       const D = p.len / 2 + p.a; // the axis, from the left end
       const B = beamPic(p.len, L('A beam on an axis D, held by a force at an angle', 'Ein Balken auf einer Achse D, schräg gehalten von einer Kraft')), P = B.P;
@@ -397,7 +410,7 @@
       // direction toward D (to the right) — the rope pulls up
       const dir = [Math.cos(rad(180 - p.alpha)), Math.sin(rad(180 - p.alpha))];
       P.arrow(B.mid(xF), dir, 70, `force k-s${show.has('perp') ? ' dim' : ''}`, view.task ? `${svgSym('F')} = ?` : svgSym('F'), [dir[0] * 10 - 4, -dir[1] * 10 - 4]);
-      P.arc(B.mid(xF), 24, 180 - p.alpha, 180, q(p.alpha, 'deg'), 12);
+      P.arc(B.mid(xF), 24, 180 - p.alpha, 180, q(p.alpha, 'deg', 1), 12);
       P.dim(B.top(xF), B.top(D), cm(p.b), 40);
       P.dim(B.top(c), B.top(D), cm(p.a), 16);
       if (show.has('G')) P.arrow(B.mid(c), [0, -1], 50, 'force k-g hl', svgSym('G'), [8, 0]);
@@ -419,7 +432,7 @@
         step(L('Torque of the rope', 'Drehmoment der Seilkraft'),
           `<p>${L('Only the component of F perpendicular to the beam turns it (the other pulls along the beam, through D):', 'Nur die Komponente von F senkrecht zum Balken dreht ihn (die andere zieht entlang des Balkens, durch D):')}</p>$$F_\\perp = F\\sin\\alpha,\\qquad M_F = F\\sin\\alpha\\cdot b$$<p>${L('It turns the beam clockwise.', 'Sie dreht den Balken im Uhrzeigersinn.')}</p>`, ['G', 'perp'], ['perp']),
         step(L('Balance', 'Gleichgewicht'),
-          `$$F\\sin\\alpha\\cdot b = m\\,g\\,a\\;\\Rightarrow\\; F = \\frac{m\\,g\\,a}{b\\,\\sin\\alpha} = \\frac{${tq(p.m * G, 'N')}\\cdot ${tq(p.a, 'cm')}}{${tq(p.b, 'cm')}\\cdot\\sin${tq(p.alpha, 'deg')}} = ${res(v.F, 'N', 1)}$$`, ['G', 'perp'], []),
+          `$$F\\sin\\alpha\\cdot b = m\\,g\\,a\\;\\Rightarrow\\; F = \\frac{m\\,g\\,a}{b\\,\\sin\\alpha} = \\frac{${tq(p.m * G, 'N')}\\cdot ${tq(p.a, 'cm')}}{${tq(p.b, 'cm')}\\cdot\\sin${tq(p.alpha, 'deg', 1)}} = ${res(v.F, 'N', 1)}$$`, ['G', 'perp'], []),
       ];
     },
   };
@@ -615,6 +628,17 @@
       make: (r) => S.make(r),
       solve(p, o = {}) { const c = comOf(S.parts(p), o); return { x: c[0], y: c[1], S: c }; },
       traps: S.calc ? ['count', 'diam'] : ['count'],
+      // a ring's wire is as long as its circumference: identified first, the app gives its length
+      comps: (p) => S.parts(p).map((pt, i) => [pt, i]).filter(([pt]) => pt.kind === 'ring').map(([pt, i]) => ({
+        key: `ring${i}`, what: L(`The length of the wire of the ring with r = ${cm(pt.r)}:`, `Die Länge des Drahts des Rings mit r = ${cm(pt.r)}:`),
+        options: [
+          { html: '$2\\pi r$', right: true },
+          { html: '$\\pi r$', why: L('That is half the circumference.', 'Das ist der halbe Umfang.') },
+          { html: '$2r$', why: L('That is the diameter: the wire runs all the way round.', 'Das ist der Durchmesser: Der Draht läuft ganz herum.') },
+          { html: '$\\pi r^2$', why: L('That is the area of the disc, not a length.', 'Das ist die Fläche der Scheibe, keine Länge.') },
+        ],
+        value: `$\\ell = 2\\pi r = 2\\pi\\cdot ${tq(pt.r, 'cm')} \\approx ${tq(lengthOf(pt), 'cm', 1)}$`,
+      })),
       why: {
         count: () => L('Each part counts with its mass, which is proportional to its length, not each part the same.', 'Jedes Teil zählt mit seiner Masse, und die ist proportional zu seiner Länge; nicht jedes Teil gleich viel.'),
         diam: () => L('A ring’s wire is as long as its circumference, 2πr.', 'Der Draht eines Rings ist so lang wie sein Umfang, 2πr.'),

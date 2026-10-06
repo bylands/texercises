@@ -78,11 +78,11 @@ input, button, select { font: inherit; color: inherit; }
 .levels { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
 .levels label { position: relative; }
 .levels input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.levels span { display: block; padding: 7px 16px; border-left: 1px solid var(--line); white-space: nowrap; }
-.levels label:first-child span { border-left: 0; }
+.levels > label > span { display: block; padding: 7px 16px; border-left: 1px solid var(--line); white-space: nowrap; }
+.levels label:first-child > span { border-left: 0; }
 .levels input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .levels input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -3px; }
-.levels.small span { padding: 3px 10px; font-size: 0.85rem; }
+.levels.small > label > span { padding: 3px 10px; font-size: 0.85rem; }
 /* the EN/DE switch keeps its two buttons side by side; a long score wraps instead */
 .levels.small { flex-wrap: nowrap; flex-shrink: 0; }
 .top-right .score { min-width: 0; }
@@ -195,7 +195,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   .fields { grid-template-columns: minmax(0, 1fr) 3.2em; gap: 4px 8px; }
   .field .sym { grid-column: 1 / -1; text-align: left; margin-top: 8px; }
   .field .fb { grid-column: 1 / -1; }
-  .levels span { padding: 7px 10px; }
+  .levels > label > span { padding: 7px 10px; }
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -324,8 +324,18 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .topic-pick { display: inline-flex; align-items: center; gap: 8px; }
 .topic-pick span { color: var(--muted); font-size: 0.9rem; }
 .topic-pick select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); max-width: 100%; }
-.topics .stages span { padding: 5px 12px; font-size: 0.88rem; white-space: normal; }
+.topics .stages > label > span { padding: 5px 12px; font-size: 0.88rem; white-space: normal; }
 .linklike { border: 0; background: none; padding: 2px 0; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; font-size: 0.9rem; }
 .linklike:hover { color: var(--ink); }
 .tutor-nav #t-practise { margin-left: auto; margin-right: 8px; }
 .note.also { margin-top: -2px; }
+
+/* identifying a quantity before calculating (identify.js): the options, then its value */
+.ident { margin: 10px 0 14px; }
+.ident-what { margin: 0 0 6px; }
+.ident-opts > label > span { padding: 6px 14px; }
+.ident-opts input:disabled + span { cursor: default; }
+.ident.done .ident-opts input:checked + span { background: var(--ok); }
+.ident-fb { margin: 6px 0 0; font-size: 0.95rem; }
+.ident-fb.ok { color: var(--ok); }
+.ident-fb.bad { color: var(--bad); }

@@ -22,6 +22,7 @@
   <script defer src="arcade.js"></script>
   <script defer src="practice.js"></script>
   <script defer src="topics.js"></script>
+  <script defer src="identify.js"></script>
   <script defer src="arcade-src.js"></script>
   <script defer src="app.js"></script>
 </head>
@@ -50,7 +51,6 @@
         <label><input type="radio" name="mode" value="arcade"><span data-i18n="arcade">Arcade</span></label>
       </div>
       <div id="levels" class="levels practice" role="radiogroup" data-i18n-label="difficulty" aria-label="Difficulty" hidden></div>
-      <label class="switch practice" hidden><input type="checkbox" id="calc" role="switch" checked><span class="track" aria-hidden="true"></span><span data-i18n="calc">Calculator</span></label>
       <button id="new" type="button" class="new-btn practice" data-i18n="new" hidden>New exercise</button>
     </div>
 
@@ -75,6 +75,12 @@
       <div id="figure" class="figs"></div>
 
       <form id="answers" novalidate>
+        <div id="comps-part" hidden>
+          <h3 data-i18n="compsHead">1 · First identify</h3>
+          <p class="note" data-i18n="compsNote">Choose the right expression; its value is then given.</p>
+          <div id="comps"></div>
+          <h3 data-i18n="calcHead">2 · Then calculate</h3>
+        </div>
         <div id="fields" class="fields"></div>
         <div class="actions">
           <button type="submit" id="check" class="primary">Check</button>

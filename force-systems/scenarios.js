@@ -3,6 +3,9 @@
 // difficulty from 1 to 5 (for practice levels and the arcade), trig if its results need sine or
 // cosine, and:
 //   make(r, o)         random parameters (null if they do not fit); with o.nice, angles are
+//                      the 3-4-5 angle (stated as sin α and cos α); with o.pyth, angles of right
+//                      triangles with whole sides (3-4-5, 5-12-13, …), given in degrees: the
+//                      student identifies each component and the app gives its value (comps)
 //                      the 3-4-5 angle, so that no calculator is needed
 //   solve(p, o)        the wanted quantities; o switches on a typical wrong idea (see WHY in
 //                      generator.js) or g = 9.81 m/s², so that wrong answers can be recognised
@@ -11,6 +14,8 @@
 //   text(p), scene(p)  the situation, in words and as a drawing (see draw.js)
 //   hints(p, v), steps(p, v)  hints and the worked solution: steps { text, show, hl } that say
 //                      which forces of the drawing to show and highlight
+//   comps(p)           the components the student identifies first (see identify.js): { key, what,
+//                      sym, base, baseVal, fn }, with the angle p.alpha
 //   boxes(p)           (two boxes) the names of box 1 and box 2, for the table of forces;
 //                      forceOn { id: box } where a force without index 2 acts on box 2 (index 1)
 // Values come out exact; the texts round them.
@@ -42,7 +47,15 @@
   // The 3-4-5 angle (sin α = 0.6, cos α = 0.8): with it, components need no calculator. Exercises
   // that use it state sin α and cos α instead of the angle.
   const A345 = (Math.asin(0.6) * 180) / Math.PI;
-  const is345 = (p) => Math.abs(p.alpha - A345) < 1e-9;
+  const is345 = (p) => !p.pyth && Math.abs(p.alpha - A345) < 1e-9;
+  // Angles of right triangles with whole sides: with a force that is a multiple of the hypotenuse,
+  // both components are whole numbers (e.g. 26 N at 22.6°: 10 N and 24 N).
+  const TRIANGLES = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
+  const PYTH = TRIANGLES.flatMap(([a, b]) => [Math.atan2(a, b), Math.atan2(b, a)].map((x) => (x * 180) / Math.PI));
+  // forces and masses that fit them: multiples of 5, 13, 17, 25 and 29 (N), of 0.5, 1.3, 1.7, 2.5
+  // and 2.9 kg (m g)
+  const PYTH_F = [5, 10, 13, 15, 17, 20, 25, 26, 29, 30, 34, 39, 40, 50, 51, 52, 58];
+  const PYTH_M = [1, 1.3, 1.5, 1.7, 2, 2.5, 2.6, 2.9, 3, 3.4, 3.9, 4, 5, 5.1, 5.2, 5.8, 6];
   const angleLabel = (p) => (is345(p) ? '<tspan font-style="italic">α</tspan>' : q(p.alpha, 'deg'));
   const trig = (fn, p) => (is345(p) ? FS.texNum(fn === 'sin' ? 0.6 : 0.8) : `\\${fn}${tq(p.alpha, 'deg')}`);
   const sinCos = () => L('sin α = 0.6 and cos α = 0.8', 'sin α = 0.6 und cos α = 0.8');
@@ -126,11 +139,11 @@
   const restAngle = {
     id: 'rest-angle', difficulty: 2, trig: true,
     make(r, o = {}) {
-      const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5]), ref = pick(r, ['v', 'h']), alpha = o.nice ? A345 : pick(r, [20, 25, 30, 35, 40, 45, 50, 60]);
-      const F = pick(r, o.nice ? [5, 10, 15, 20, 25, 30, 40] : [4, 5, 6, 8, 10, 12, 14, 15, 16, 18, 20, 25, 30, 40]);
+      const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6]), ref = pick(r, ['v', 'h']), alpha = o.nice ? A345 : o.pyth ? pick(r, PYTH) : pick(r, [20, 25, 30, 35, 40, 45, 50, 60]);
+      const F = pick(r, o.nice ? [5, 10, 15, 20, 25, 30, 40] : o.pyth ? PYTH_F : [4, 5, 6, 8, 10, 12, 14, 15, 16, 18, 20, 25, 30, 40]);
       const up = F * (ref === 'v' ? Math.cos(rad(alpha)) : Math.sin(rad(alpha)));
       if (up > 0.8 * m * G || F * Math.min(Math.sin(rad(alpha)), Math.cos(rad(alpha))) < 1.5) return null;
-      return { m, F, alpha, ref };
+      return o.pyth ? { m, F, alpha, ref, pyth: true } : { m, F, alpha, ref };
     },
     solve(p, o = {}) {
       const g = o.g || G, a = rad(p.alpha);
@@ -144,6 +157,10 @@
       whole: () => L('Only a component of the pull acts in this direction: split it into a vertical and a horizontal part.', 'In diese Richtung wirkt nur eine Komponente der Zugkraft: Zerlege sie in einen senkrechten und einen waagrechten Teil.'),
     },
     fields: () => [field('N'), field('R', '', L('static friction force', 'Haftreibungskraft'))],
+    comps: (p) => [
+      { key: 'up', what: L('The vertical component of the pull:', 'Die senkrechte Komponente der Zugkraft:'), sym: 'F_\\uparrow', base: T('F'), baseVal: p.F, fn: p.ref === 'v' ? 'cos' : 'sin' },
+      { key: 'side', what: L('The horizontal component of the pull:', 'Die waagrechte Komponente der Zugkraft:'), sym: 'F_\\rightarrow', base: T('F'), baseVal: p.F, fn: p.ref === 'v' ? 'sin' : 'cos' },
+    ],
     title: () => L('Pulled at an angle', 'Schräg gezogen'),
     text: (p) => L(`A box with a mass of ${kg(p.m)} stands still on the floor, although a rope pulls on it with a force of ${q(p.F, 'N')}, at an angle ${is345(p) ? 'α' : `of ${q(p.alpha, 'deg')}`} to the ${p.ref === 'v' ? 'vertical' : 'horizontal'}${is345(p) ? `, where ${sinCos()}` : ''}.`,
       `Eine Kiste mit der Masse ${kg(p.m)} steht still auf dem Boden, obwohl ein Seil mit einer Kraft von ${q(p.F, 'N')} unter einem Winkel ${is345(p) ? 'α' : `von ${q(p.alpha, 'deg')}`} zur ${p.ref === 'v' ? 'Senkrechten' : 'Waagrechten'} an ihr zieht${is345(p) ? `, wobei ${sinCos()}` : ''}.`),
@@ -588,13 +605,20 @@
     sc.force({ id: 'R', kind: 'r', at: at(0.3 * bw, 0), dir: [-u[0], -u[1]], sym: ['R'], lab: [-8, -6] });
     return { at, bw, bh, c, mags: { G: m * G, Gp: m * G * Math.sin(a), Gn: m * G * Math.cos(a), N: m * G * Math.cos(a) } };
   }
-  const slopeMake = (r, o = {}) => ({ alpha: o.nice ? A345 : pick(r, [15, 20, 25, 30, 35, 40, 45]), mu: pick(r, o.nice ? [0.1, 0.2, 0.25, 0.5] : [0.1, 0.2, 0.3, 0.4, 0.5]) });
+  // a slope: steeper than 50° is no slope to pull a box up; with o.pyth, a flag for the texts
+  const slopeMake = (r, o = {}) => ({
+    alpha: o.nice ? A345 : o.pyth ? pick(r, PYTH.filter((x) => x < 50)) : pick(r, [15, 20, 25, 30, 35, 40, 45]),
+    mu: pick(r, o.nice ? [0.1, 0.2, 0.25, 0.5] : [0.1, 0.2, 0.3, 0.4, 0.5]), ...(o.pyth ? { pyth: true } : {}),
+  });
+  const slopeComps = (p, i = '') => [
+    { key: 'Gp', what: L(`The component of the weight${i ? ' of box 1' : ''} along the slope:`, `Die Komponente der Gewichtskraft${i ? ' von Kiste 1' : ''} entlang der Unterlage:`), sym: T('G', `${i}∥`), base: `${T('m')}${i ? `_${i}` : ''}\\,g`, baseVal: (i ? p.m1 : p.m) * G, fn: 'sin' },
+    { key: 'Gn', what: L(`The component of the weight${i ? ' of box 1' : ''} perpendicular to the slope:`, `Die Komponente der Gewichtskraft${i ? ' von Kiste 1' : ''} senkrecht zur Unterlage:`), sym: T('G', `${i}⊥`), base: `${T('m')}${i ? `_${i}` : ''}\\,g`, baseVal: (i ? p.m1 : p.m) * G, fn: 'cos' },
+  ];
 
   const inclinePull = {
     id: 'incline-pull', difficulty: 4, trig: true,
     make(r, o = {}) {
-      const { alpha, mu } = slopeMake(r, o);
-      return { m: pick(r, [1, 2, 3, 4, 5, 6, 8]), alpha, mu, a: r() < 0.2 ? 0 : pick(r, [0.5, 1, 1.5, 2, 3]) };
+      return { ...slopeMake(r, o), m: pick(r, o.pyth ? PYTH_M : [1, 2, 3, 4, 5, 6, 8]), a: r() < 0.2 ? 0 : pick(r, [0.5, 1, 1.5, 2, 3]) };
     },
     solve(p, o = {}) {
       const g = o.g || G, a = rad(p.alpha);
@@ -610,6 +634,7 @@
       noFric: () => L('Friction is missing: it acts down the slope, against the motion.', 'Die Reibung fehlt: Sie wirkt hangabwärts, gegen die Bewegung.'),
     },
     fields: () => [field('res', '', L('net force on the box', 'resultierende Kraft auf die Kiste')), field('N'), field('R'), field('F')],
+    comps: (p) => slopeComps(p),
     title: () => L('Pulled up a slope', 'Den Hang hinauf gezogen'),
     text: (p) => L(`A box with a mass of ${kg(p.m)} is pulled up a slope ${is345(p) ? `with ${sinCos()}` : `of ${q(p.alpha, 'deg')}`} by a rope parallel to the slope${p.a ? `, with an acceleration of ${q(p.a, 'a')}` : ', at constant speed'}. The coefficient of kinetic friction is ${num(p.mu, 2)}.`,
       `Eine Kiste mit der Masse ${kg(p.m)} wird von einem Seil parallel zur Unterlage ${p.a ? `mit einer Beschleunigung von ${q(p.a, 'a')} ` : 'mit konstanter Geschwindigkeit '}einen Hang ${is345(p) ? `mit ${sinCos()}` : `mit ${q(p.alpha, 'deg')} Neigung`} hinaufgezogen. Die Gleitreibungszahl beträgt ${num(p.mu, 2)}.`),
@@ -659,9 +684,9 @@
     id: 'incline-pulley', difficulty: 5, trig: true,
     boxes: (p) => [L(`box on the slope (${kg(p.m1)})`, `Kiste auf dem Hang (${kg(p.m1)})`), L(`hanging box (${kg(p.m2)})`, `hängende Kiste (${kg(p.m2)})`)],
     make(r, o = {}) {
-      const { alpha, mu } = slopeMake(r, o), m1 = pick(r, [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 2, 3, 4, 5, 6, 8]);
+      const sl = slopeMake(r, o), { alpha, mu } = sl, m1 = pick(r, o.pyth ? PYTH_M : [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 2, 3, 4, 5, 6, 8]);
       const a = rad(alpha), drive = m2 * G - m1 * G * (Math.sin(a) + mu * Math.cos(a));
-      return drive > 0.3 * (m1 + m2) ? { alpha, mu, m1, m2 } : null;
+      return drive > 0.3 * (m1 + m2) ? { ...sl, m1, m2 } : null;
     },
     solve(p, o = {}) {
       const g = o.g || G, a = rad(p.alpha);
@@ -680,6 +705,7 @@
       oneMass: () => L('The net force accelerates both boxes: divide by the total mass.', 'Die resultierende Kraft beschleunigt beide Kisten: Teile durch die gesamte Masse.'),
       hangW: () => L('The hanging box accelerates downwards, so the rope holds it with less than its weight.', 'Die hängende Kiste wird nach unten beschleunigt, darum hält das Seil sie mit weniger als ihrer Gewichtskraft.'),
     },
+    comps: (p) => slopeComps(p, 1),
     fields: () => [field('N', '', L('normal force on the box on the slope', 'Normalkraft auf die Kiste auf der Unterlage')), field('R', '', L('friction on the box on the slope', 'Reibung auf die Kiste auf der Unterlage')), field('res'), field('a'), field('S')],
     title: () => L('Pulled up by a hanging box', 'Von einer hängenden Kiste hinaufgezogen'),
     text: (p) => L(`A box with a mass of ${kg(p.m1)} lies on a slope ${is345(p) ? `with ${sinCos()}` : `of ${q(p.alpha, 'deg')}`}. A rope parallel to the slope runs from it over a pulley at the top to a hanging box with a mass of ${kg(p.m2)}, which goes down and pulls the first box up the slope. The coefficient of kinetic friction on the slope is ${num(p.mu, 2)}.`,

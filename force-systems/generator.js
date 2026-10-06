@@ -8,7 +8,7 @@
   'use strict';
 
   const FS = root.FS, { SCENARIOS } = root.Scenarios;
-  const { L, tex, tq, rng } = FS;
+  const { L, tex, tq, rng, rad } = FS;
 
   // Practice levels by difficulty (see the scenarios): easy ★–★★, medium ★★★, hard ★★★★–★★★★★.
   const LEVELS = {
@@ -120,6 +120,8 @@
       // the task with the ticked forces (Set of 'box:kind') drawn in
       taskFigure: (ticked) => taskFigure(scn, p, v, forceTable(scn, p, v), ticked),
       solutionFigure: () => scn.scene(p, v, {}).render({ show: all }),
+      // the components to identify before the calculation (practice only: angles given in degrees)
+      comps: scn.comps && p.pyth ? scn.comps(p) : [],
       hints: scn.hints(p, v),
       solution: steps.map((s) => s.text),
       results: fields.map((f) => `$${tex(...f.sym)} = ${tq(f.value, f.unit)}$`).join(', '),
@@ -157,11 +159,13 @@
   const half = (x) => Math.abs(2 * x - Math.round(2 * x)) < 1e-9;
   const nice = (scn, p) => Object.values(scn.solve(p)).every((x) => half(x) && x >= 0 && x < 1000);
 
-  // A practice exercise of the given situation, as generate() makes them: without a calculator,
-  // the 3-4-5 angle and results that are multiples of 0.5.
-  function practiceOf(scenario, seed, calc = true) {
+  // A practice exercise of the given situation: angles of right triangles with whole sides, so that
+  // the components the student identifies (and the app works out) are whole numbers, and the
+  // results need no rounding.
+  function practiceOf(scenario, seed) {
     const scn = byId(scenario);
-    return { ...exercise(scn, make(scn, rng(seed), calc ? neat(scn) : (p) => nice(scn, p), { nice: !calc })), seed, calc };
+    const whole = (p) => !scn.comps || scn.comps(p).every((c) => Math.abs(c.baseVal * Math[c.fn](rad(p.alpha)) - Math.round(c.baseVal * Math[c.fn](rad(p.alpha)))) < 1e-9);
+    return { ...exercise(scn, make(scn, rng(seed), (p) => whole(p) && Object.values(scn.solve(p)).every(tenth), { pyth: true })), seed };
   }
 
   // An exercise of the given situation (for the arcade); with o.nice, one that needs no calculator.

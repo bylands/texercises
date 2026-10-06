@@ -19,7 +19,7 @@
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
       fill: 'Fill in all fields, then check again.',
-      forcesHead: '1 · Forces on each box', resultsHead: '2 · Results', forcesNote: (n) => (n > 1 ? 'Tick every force that acts on each box. Each force you tick appears in the drawing.' : 'Tick every force that acts on the box. Each force you tick appears in the drawing.'), box: 'Box',
+      forcesHead: '1 · Forces on each box', compsHead: '2 · Components', compsNote: 'Choose the right expression for each component; its value is then given.', idFirst: 'First choose the right expression for each component.', resultsHead: (n) => `${n} · Results`, forcesNote: (n) => (n > 1 ? 'Tick every force that acts on each box. Each force you tick appears in the drawing.' : 'Tick every force that acts on the box. Each force you tick appears in the drawing.'), box: 'Box',
       tableOk: '✓ The forces are right.', tableBad: (n) => `✗ ${n === 1 ? 'One entry is' : `${n} entries are`} not right yet.`,
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
@@ -34,7 +34,7 @@
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
       fill: 'Fülle alle Felder aus und prüfe dann nochmals.',
-      forcesHead: '1 · Kräfte auf jede Kiste', resultsHead: '2 · Resultate', forcesNote: (n) => (n > 1 ? 'Kreuze jede Kraft an, die auf die jeweilige Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.' : 'Kreuze jede Kraft an, die auf die Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.'), box: 'Kiste',
+      forcesHead: '1 · Kräfte auf jede Kiste', compsHead: '2 · Komponenten', compsNote: 'Wähle für jede Komponente den richtigen Ausdruck; ihr Wert wird dann angegeben.', idFirst: 'Wähle zuerst für jede Komponente den richtigen Ausdruck.', resultsHead: (n) => `${n} · Resultate`, forcesNote: (n) => (n > 1 ? 'Kreuze jede Kraft an, die auf die jeweilige Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.' : 'Kreuze jede Kraft an, die auf die Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.'), box: 'Kiste',
       tableOk: '✓ Die Kräfte stimmen.', tableBad: (n) => `✗ ${n === 1 ? 'Ein Feld stimmt' : `${n} Felder stimmen`} noch nicht.`,
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
@@ -97,8 +97,6 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  // with a calculator, or without: then no sine or cosine, and results that are multiples of 0.5
-  const calc = () => $('#calc').checked;
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
   const PRACTICE = 'fs', typeOf = (e) => e.scenario;
@@ -107,7 +105,7 @@
   function open(exercise) {
     finish(); // the student moves on
     ex = exercise;
-    st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false };
+    st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, ident: {} };
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
@@ -171,6 +169,7 @@
     $('#ftable-fb').textContent = '';
     $('#ftable-fb').className = 'table-fb';
     $('#fields').innerHTML = fieldsHtml(ex, 'in');
+    showComps();
     $('#hint-list').innerHTML = '';
     $('#hints').hidden = true;
     $('#solution').hidden = true;
@@ -178,6 +177,15 @@
     math($('#task'));
     markScrollable();
     updateButtons();
+  }
+
+  // The components to identify first (angled forces, see identify.js): the app gives their values.
+  const identItems = () => ex.comps.map((c) => Identify.trig({ ...c, alpha: ex.p.alpha, num: (x) => FS.num(x), unit: '\\mathrm{N}' }));
+  function showComps() {
+    $('#comps-part').hidden = !ex.comps.length;
+    $('#results-head').textContent = ui().resultsHead(ex.comps.length ? 3 : 2);
+    $('#comps').innerHTML = Identify.html(identItems(), st ? st.ident || {} : {}, st && st.revealed);
+    math($('#comps'));
   }
 
   const canReveal = () => st.solved || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
@@ -225,7 +233,7 @@
     const el = $('#status');
     st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
-    el.textContent = !kind ? '' : kind === 'fill' ? ui().fill
+    el.textContent = !kind ? '' : kind === 'fill' ? ui().fill : kind === 'ident' ? ui().idFirst
       : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (st.tries < MAX_TRIES && !canReveal() ? ui().tryAgain : ui().canReveal);
   }
@@ -233,6 +241,7 @@
   function check(evt) {
     evt.preventDefault();
     if (st.solved) { fresh(); return; } // the button reads New exercise
+    if (!Identify.ok(identItems(), st.ident)) { showStatus('ident'); return; }
     const r = feedback();
     st.checked = true;
     if (r === null) { showStatus('fill'); return; }
@@ -267,6 +276,7 @@
   }
 
   function showSolution() {
+    showComps();
     $('#sol-figure').innerHTML = ex.solutionFigure();
     $('#sol-steps').innerHTML = ex.solution.join('');
     $('#sol-short').innerHTML = `${ui().results}: ${ex.results}`;
@@ -359,7 +369,6 @@
     m = h.match(/^(easy|medium|hard|mixed)(-nocalc)?-(\d+)$/);
     if (m) {
       setMode('practice');
-      $('#calc').checked = !m[2];
       if (!ex || ex.id !== h) open(generate(m[1], Number(m[3]), !m[2]));
       return true;
     }
@@ -373,13 +382,15 @@
     applyStatic();
     topics = window.Topics.create({
       app: PRACTICE, topics: topicList(),
-      make: (type, seed) => practiceOf(type, seed, calc()), typeOf,
+      make: (type, seed) => practiceOf(type, seed), typeOf,
       onChange: fresh,
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    $('#calc').checked = stored('fs-calc', true);
-    $('#calc').addEventListener('change', () => { store('fs-calc', calc()); fresh(); });
+    Identify.attach($('#comps'), identItems, () => st.ident, (right) => {
+      math($('#comps'));
+      if (!right) { st.tries++; updateButtons(); } // a wrong choice counts as an attempt
+    });
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);

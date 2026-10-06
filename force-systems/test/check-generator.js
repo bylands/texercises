@@ -160,6 +160,27 @@ for (const lang of FS.LANGS) {
 }
 log(`${quizzes} arcade questions checked`);
 
+// Practice (no calculator): angles of right triangles with whole sides, so that the components the
+// student identifies are whole numbers (the app gives them) and the results need no rounding.
+let practised = 0;
+for (const lang of ['en', 'de']) {
+  FS.setLang(lang);
+  for (const scn of Forces.SCENARIOS) {
+    for (let seed = 1; seed <= 60; seed++) {
+      const ex = Forces.practiceOf(scn.id, seed), id = `${lang} practice ${scn.id}-${seed}`;
+      practised++;
+      checkExercise(ex, id);
+      ex.fields.forEach((f) => { if (Math.abs(10 * f.value - Math.round(10 * f.value)) > 1e-9) fail(`${id}: ${f.key} = ${f.value} needs rounding`); });
+      if (scn.trig && !ex.comps.length) fail(`${id}: no components to identify`);
+      ex.comps.forEach((c) => {
+        const x = c.baseVal * Math[c.fn]((ex.p.alpha * Math.PI) / 180);
+        if (Math.abs(x - Math.round(x)) > 1e-9) fail(`${id}: component ${c.key} = ${x} is not a whole number`);
+      });
+    }
+  }
+}
+log(`${practised} practice exercises checked`);
+
 log(`${checked} exercises checked, ${Object.keys(seen).length} situations: ${JSON.stringify(seen)}`);
 log(failures ? `${failures} failures` : 'all checks passed');
 if (typeof process !== 'undefined' && failures) process.exit(1);

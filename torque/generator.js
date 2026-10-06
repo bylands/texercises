@@ -47,6 +47,7 @@
       solution: steps.map((s) => s.text),
       results: fields.map((f) => `$${tex(...f.sym)} = ${tq(f.value, f.unit, f.dec)}$${f.sense ? arrow(f.senseValue) : ''}`).join(', '),
       steps,
+      comps: [],
       p, v,
     };
   }
@@ -75,11 +76,16 @@
     return { ...exercise(scn, make(scn, r, ok, o)), id: `${level}${calc ? '' : '-nocalc'}-${seed}`, level, seed, calc };
   }
 
-  // A practice exercise of the given situation, as generate() makes them.
-  function practiceOf(scenario, seed, calc = true) {
+  // A practice exercise of the given situation: angles of right triangles with whole sides, so
+  // that what the student identifies first (comps, with values the app gives) comes out in round
+  // numbers, and results that need no rounding (except with π).
+  function practiceOf(scenario, seed) {
     const scn = byId(scenario), r = rng(seed);
-    const ok = scn.calc === 'always' || (scn.calc === 'trig' && calc) ? null : neat(scn);
-    return { ...exercise(scn, make(scn, r, ok, { nice: !calc })), seed, calc };
+    const comps = (p) => (scn.comps ? scn.comps(p) : []);
+    const round = (p) => comps(p).every((c) => c.options || c.baseVal == null || Math.abs(100 * c.baseVal * Math[c.fn]((p.alpha * Math.PI) / 180) % 1) < 1e-6 || Math.abs(100 * c.baseVal * Math[c.fn]((p.alpha * Math.PI) / 180) % 1 - 1) < 1e-6);
+    const ok = scn.calc === 'always' ? null : (p) => round(p) && neat(scn)(p);
+    const ex = exercise(scn, make(scn, r, ok, { pyth: true }));
+    return { ...ex, comps: comps(ex.p), seed };
   }
 
   // An exercise of the given situation (for the arcade); with o.nice, one that needs no calculator.

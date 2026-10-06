@@ -133,6 +133,25 @@ const b = lesson('angle'), c = lesson('hang');
 if (TQ.round(b.v.F, 1) !== 11.5) fail(`worksheet b: F = ${b.v.F}, the worksheet says 11.5 N`);
 if (c.v.x !== 16 || c.v.H !== 30) fail(`worksheet c: x = ${c.v.x}, F_H = ${c.v.H}; the worksheet says 16 cm, 30 N`);
 
+// Practice (no calculator): what the student identifies first comes out in round numbers (two
+// decimals at most), and the results need no rounding, except where π comes in.
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  for (const s of Torque.SCENARIOS) {
+    for (let seed = 1; seed <= 40; seed++) {
+      const ex = Torque.practiceOf(s.id, seed), id = `${lang} practice ${s.id}-${seed}`;
+      checkExercise(ex, id, s.calc !== 'always');
+      if (/^(angle|crane)$/.test(s.id) && !ex.comps.length) fail(`${id}: nothing to identify`);
+      ex.comps.forEach((c) => {
+        if (c.options) { if (c.options.filter((o) => o.right).length !== 1) fail(`${id}: ${c.key} has not exactly one right option`); return; }
+        if (c.baseVal == null) return;
+        const x = c.baseVal * Math[c.fn]((ex.p.alpha * Math.PI) / 180);
+        if (Math.abs(100 * x - Math.round(100 * x)) > 1e-6) fail(`${id}: ${c.key} = ${x} is not round`);
+      });
+    }
+  }
+}
+
 console.log(`${checked} exercises checked, ${Torque.SCENARIOS.length} situations.`);
 console.log(failures ? `${failures} failures.` : 'All checks passed.');
 process.exitCode = failures ? 1 : 0;

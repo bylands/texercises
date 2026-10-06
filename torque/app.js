@@ -18,6 +18,7 @@
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
       number: 'Enter a number', correct: 'Correct', sign: 'Give the size (a positive number)', close: 'Close: check your rounding', wrong: 'Not correct',
+      compsHead: '1 · First identify', compsNote: 'Choose the right expression; its value is then given, so that no calculator is needed.', calcHead: '2 · Then calculate', idFirst: 'First choose the right expression above.',
       sense: 'Sense of rotation', ccw: 'counterclockwise', cw: 'clockwise', none: 'no rotation', badSense: 'The size is right, but not the sense of rotation',
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
@@ -32,6 +33,7 @@
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
       number: 'Gib eine Zahl ein', correct: 'Richtig', sign: 'Gib den Betrag an (eine positive Zahl)', close: 'Knapp daneben: Prüfe deine Rundung', wrong: 'Nicht richtig',
+      compsHead: '1 · Zuerst bestimmen', compsNote: 'Wähle den richtigen Ausdruck; sein Wert wird dann angegeben, sodass kein Taschenrechner nötig ist.', calcHead: '2 · Dann berechnen', idFirst: 'Wähle zuerst oben den richtigen Ausdruck.',
       sense: 'Drehsinn', ccw: 'im Gegenuhrzeigersinn', cw: 'im Uhrzeigersinn', none: 'keine Drehung', badSense: 'Der Betrag stimmt, aber nicht der Drehsinn',
       tutorBtns: { example: (i, n) => `Beispiel ${i} von ${n}`, back: '← Zurück', prevEx: '← Vorheriges Beispiel', next: 'Weiter →', nextEx: 'Nächstes Beispiel →', done: 'Selbst üben →' },
     },
@@ -93,8 +95,6 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  // with a calculator, or without: then no sine or cosine, and results that are multiples of 0.5
-  const calc = () => $('#calc').checked;
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
   const PRACTICE = 'tq', typeOf = (e) => e.scenario;
@@ -103,7 +103,7 @@
   function open(exercise) {
     finish(); // the student moves on
     ex = exercise;
-    st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false };
+    st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, ident: {} };
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
@@ -149,6 +149,7 @@
     $('#prompt').innerHTML = ex.text;
     $('#figure').innerHTML = ex.figure({ task: true });
     $('#fields').innerHTML = fieldsHtml(ex, 'in');
+    showComps();
     $('#hint-list').innerHTML = '';
     $('#hints').hidden = true;
     $('#solution').hidden = true;
@@ -156,6 +157,15 @@
     math($('#task'));
     markScrollable();
     updateButtons();
+  }
+
+  // What to identify first (lever arms at an angle, a ring's wire, see identify.js): the app gives
+  // the values, so that no calculator is needed.
+  const identItems = () => (ex.comps || []).map((c) => (c.options ? c : Identify.trig({ ...c, alpha: ex.p.alpha, num: (x) => TQ.num(x, 2) })));
+  function showComps() {
+    $('#comps-part').hidden = !(ex.comps || []).length;
+    $('#comps').innerHTML = Identify.html(identItems(), st ? st.ident || {} : {}, st && st.revealed);
+    math($('#comps'));
   }
 
   const canReveal = () => st.solved || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
@@ -195,7 +205,7 @@
     const el = $('#status');
     st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
-    el.textContent = !kind ? '' : kind === 'fill' ? ui().fill
+    el.textContent = !kind ? '' : kind === 'fill' ? ui().fill : kind === 'ident' ? ui().idFirst
       : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (st.tries < MAX_TRIES && !canReveal() ? ui().tryAgain : ui().canReveal);
   }
@@ -203,6 +213,7 @@
   function check(evt) {
     evt.preventDefault();
     if (st.solved) { fresh(); return; } // the button reads New exercise
+    if (!Identify.ok(identItems(), st.ident)) { showStatus('ident'); return; }
     const r = feedback();
     st.checked = true;
     if (r === null) { showStatus('fill'); return; }
@@ -237,6 +248,7 @@
   }
 
   function showSolution() {
+    showComps();
     $('#sol-figure').innerHTML = ex.solutionFigure();
     $('#sol-steps').innerHTML = ex.solution.join('');
     $('#sol-short').innerHTML = `${ui().results}: ${ex.results}`;
@@ -330,7 +342,6 @@
     m = h.match(/^(easy|medium|hard|mixed)(-nocalc)?-(\d+)$/);
     if (m) {
       setMode('practice');
-      $('#calc').checked = !m[2];
       if (!ex || ex.id !== h) open(generate(m[1], Number(m[3]), !m[2]));
       return true;
     }
@@ -343,14 +354,16 @@
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     topics = window.Topics.create({
       app: PRACTICE, topics: topicList(),
-      make: (type, seed) => practiceOf(type, seed, calc()), typeOf,
+      make: (type, seed) => practiceOf(type, seed), typeOf,
       onChange: fresh,
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
     applyStatic();
-    $('#calc').checked = stored('tq-calc', true);
-    $('#calc').addEventListener('change', () => { store('tq-calc', calc()); fresh(); });
+    Identify.attach($('#comps'), identItems, () => st.ident, (right) => {
+      math($('#comps'));
+      if (!right) { st.tries++; updateButtons(); } // a wrong choice counts as an attempt
+    });
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
