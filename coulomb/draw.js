@@ -11,7 +11,8 @@
 //   P.turn(c, rPx, sense, cls)       a curved arrow around c: ↺ (sense 1) or ↻ (sense −1)
 //   P.dim(a, b, label, off)          a dimension line, off px to the left of a → b
 //   P.pivot(c), P.support(c), P.mass(a, len, label), P.com(c, label)
-//   P.charge(c, sign, label, cls, off)  a point charge: ⊕ (sign 1), ⊖ (−1) or ? (0), labelled
+//   P.charge(c, sign, label, cls, off)  a point charge: ⊕ (sign 1), ⊖ (−1) or ? (0), labelled; with
+//                                    cls 'hl' in a ring (the charge the question is about)
 //   P.svg()                          the picture, cropped, in a <div class="fig">
 (function (root) {
   'use strict';
@@ -177,7 +178,11 @@
       const p = this.px(c), r = 10, k = sign > 0 ? 'pos' : sign < 0 ? 'neg' : 'unk';
       this.see(p[0] - r, p[1] - r); this.see(p[0] + r, p[1] + r);
       const mark = sign > 0 ? `M${f(p[0] - 5.5)} ${f(p[1])}H${f(p[0] + 5.5)}M${f(p[0])} ${f(p[1] - 5.5)}V${f(p[1] + 5.5)}` : sign < 0 ? `M${f(p[0] - 5.5)} ${f(p[1])}H${f(p[0] + 5.5)}` : '';
-      this.add(`<g class="chg ${k} ${cls}"><circle cx="${f(p[0])}" cy="${f(p[1])}" r="${r}"/>${mark ? `<path d="${mark}"/>` : `<text x="${f(p[0])}" y="${f(p[1] + 5)}" text-anchor="middle">?</text>`}</g>`, true);
+      // the charge a question is about: a ring around it
+      const hl = /\bhl\b/.test(cls) ? `<circle class="ring" cx="${f(p[0])}" cy="${f(p[1])}" r="${r + 6}"/>` : '';
+      if (hl) { this.see(p[0] - r - 8, p[1] - r - 8); this.see(p[0] + r + 8, p[1] + r + 8); }
+      this.add(`<g class="chg ${k} ${cls}">${hl}<circle cx="${f(p[0])}" cy="${f(p[1])}" r="${r}"/>${mark ? `<path d="${mark}"/>` : `<text x="${f(p[0])}" y="${f(p[1] + 5)}" text-anchor="middle">?</text>`}</g>`, true);
+      if (hl && off[0] === 0 && off[1] === -21) off = [0, -27]; // above the ring
       if (label) this.text(c, label, `lbl qlbl ${k}${/\bhidden\b/.test(cls) ? ' hidden' : ''}`, off[0] > 3 ? 'start' : off[0] < -3 ? 'end' : 'middle', off);
       return this;
     }

@@ -336,10 +336,10 @@
         [...v.Fs.map((F, i) => `F${i + 1}`), 'F'], ['F']),
     ];
   }
-  const whichText = (p) => L(`The ${p.pts.length} point charges shown all have the same size; ${p.shape === 'tri' ? 'they sit at the corners of an equilateral triangle' : p.shape === 'square' ? 'they sit at the corners of a square' : 'the grid squares have the side d'}. In which direction does the net force on the highlighted charge point?`,
-    `Die ${p.pts.length} abgebildeten Punktladungen haben alle den gleichen Betrag; ${p.shape === 'tri' ? 'sie sitzen an den Ecken eines gleichseitigen Dreiecks' : p.shape === 'square' ? 'sie sitzen an den Ecken eines Quadrats' : 'die Gitterquadrate haben die Seitenlänge d'}. In welche Richtung zeigt die resultierende Kraft auf die hervorgehobene Ladung?`);
+  const whichText = (p) => L(`The ${p.pts.length} point charges shown all have the same size; ${p.shape === 'tri' ? 'they sit at the corners of an equilateral triangle' : p.shape === 'square' ? 'they sit at the corners of a square' : 'the grid squares have the side d'}. In which direction does the net force on the charge in the ring point?`,
+    `Die ${p.pts.length} abgebildeten Punktladungen haben alle den gleichen Betrag; ${p.shape === 'tri' ? 'sie sitzen an den Ecken eines gleichseitigen Dreiecks' : p.shape === 'square' ? 'sie sitzen an den Ecken eines Quadrats' : 'die Gitterquadrate haben die Seitenlänge d'}. In welche Richtung zeigt die resultierende Kraft auf die Ladung im Ring?`);
   const whichHints = () => [
-    L('Draw each force on the highlighted charge: along the line to the other charge, towards it (opposite signs) or away from it (like signs).', 'Zeichne jede Kraft auf die hervorgehobene Ladung: entlang der Geraden zur anderen Ladung, zu ihr hin (entgegengesetzte Vorzeichen) oder von ihr weg (gleiche Vorzeichen).'),
+    L('Draw each force on the charge in the ring: along the line to the other charge, towards it (opposite signs) or away from it (like signs).', 'Zeichne jede Kraft auf die Ladung im Ring: entlang der Geraden zur anderen Ladung, zu ihr hin (entgegengesetzte Vorzeichen) oder von ihr weg (gleiche Vorzeichen).'),
     L('Equal charges at equal distances give forces of equal size: look for what cancels by symmetry.', 'Gleiche Ladungen in gleichen Abständen geben gleich grosse Kräfte: Suche, was sich aus Symmetriegründen aufhebt.'),
   ];
   const which = {
@@ -443,8 +443,8 @@
     fields: (p) => [{ key: 'rk', type: 'rank', what: L('rank (1 = largest net force)', 'Rang (1 = grösste resultierende Kraft)'), want: L('the ranking of the arrangements', 'die Rangfolge der Anordnungen'), items: p.keys.map((k, i) => LETTERS[i]) }],
     text: (p) => {
       const others = p.s[0] !== p.s[1] ? L('of the other two, one is positive and one negative', 'von den anderen beiden ist eine positiv und eine negativ') : p.s[0] > 0 ? L('so are the other two', 'die anderen beiden auch') : L('the other two are negative', 'die anderen beiden sind negativ');
-      return L(`The drawing shows three point charges arranged in ${word(p.keys.length)} different ways. The charges have the same size q: the highlighted one is positive, ${others}. In each arrangement the distance d is the same. Rank the arrangements by the size of the net force on the highlighted charge (1 = largest).`,
-        `Die Abbildung zeigt drei Punktladungen in ${word(p.keys.length)} verschiedenen Anordnungen. Die Ladungen haben den gleichen Betrag q: Die hervorgehobene ist positiv, ${others}. In jeder Anordnung ist der Abstand d derselbe. Ordne die Anordnungen nach dem Betrag der resultierenden Kraft auf die hervorgehobene Ladung (1 = grösste).`);
+      return L(`The drawing shows three point charges arranged in ${word(p.keys.length)} different ways. The charges have the same size q: the one in the ring is positive, ${others}. In each arrangement the distance d is the same. Rank the arrangements by the size of the net force on the charge in the ring (1 = largest).`,
+        `Die Abbildung zeigt drei Punktladungen in ${word(p.keys.length)} verschiedenen Anordnungen. Die Ladungen haben den gleichen Betrag q: Die im Ring ist positiv, ${others}. In jeder Anordnung ist der Abstand d derselbe. Ordne die Anordnungen nach dem Betrag der resultierenden Kraft auf die Ladung im Ring (1 = grösste).`);
     },
     hints: () => [
       L('Measure every force in units of F₀ = k q²/d², the force of one charge at the distance d. At 2d it is F₀/4.', 'Miss jede Kraft in Einheiten von F₀ = k q²/d², der Kraft einer Ladung im Abstand d. In 2d ist sie F₀/4.'),

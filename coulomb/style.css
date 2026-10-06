@@ -106,7 +106,8 @@ svg .chg.neg { color: var(--neg); }
 svg .chg.unk { color: var(--muted); }
 svg .chg circle, svg .chg path { stroke: currentColor; }
 svg .chg text { fill: currentColor; font-size: 13px; font-weight: 700; }
-svg .chg.hl circle { stroke-width: 2.6; fill: color-mix(in srgb, currentColor 14%, var(--card)); }
+svg .chg.hl circle { stroke-width: 2.2; fill: color-mix(in srgb, currentColor 14%, var(--card)); }
+svg .chg.hl circle.ring { fill: none; stroke: var(--ink); stroke-width: 1.6; }
 svg .chg.ghost { opacity: 0.35; }
 svg .chg.ghost circle { stroke-dasharray: 3 2; }
 svg .lbl.qlbl { font-size: 14px; }
