@@ -114,8 +114,8 @@
       difficulty: scn.difficulty,
       title: scn.title(p),
       text: `<p>${scn.text(p)}</p><p class="note">${scn.boxes
-        ? L('Find all forces on each box and use Newton’s second law, F = m a. Take g = 10 m/s².', 'Bestimme alle Kräfte auf jede Kiste und verwende das Aktionsprinzip, F = m a. Rechne mit g = 10 m/s².')
-        : L('Find all forces on the box and use Newton’s second law, F = m a. Take g = 10 m/s².', 'Bestimme alle Kräfte auf die Kiste und verwende das Aktionsprinzip, F = m a. Rechne mit g = 10 m/s².')}</p>`,
+        ? L(`Find all forces on each box and use Newton’s second law, $${tex('res')} = m\\,a$ (the net force: all forces together). Take g = 10 m/s².`, `Bestimme alle Kräfte auf jede Kiste und verwende das Aktionsprinzip, $${tex('res')} = m\\,a$ (die resultierende Kraft: alle Kräfte zusammen). Rechne mit g = 10 m/s².`)
+        : L(`Find all forces on the box and use Newton’s second law, $${tex('res')} = m\\,a$ (the net force: all forces together). Take g = 10 m/s².`, `Bestimme alle Kräfte auf die Kiste und verwende das Aktionsprinzip, $${tex('res')} = m\\,a$ (die resultierende Kraft: alle Kräfte zusammen). Rechne mit g = 10 m/s².`)}</p>`,
       forces: forceTable(scn, p, v),
       fields,
       figure: (view = { task: true }) => scn.scene(p, v, view).render(view),

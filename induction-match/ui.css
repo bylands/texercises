@@ -327,6 +327,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .topics .stages > label > span { padding: 5px 12px; font-size: 0.88rem; white-space: normal; }
 .linklike { border: 0; background: none; padding: 2px 0; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; font-size: 0.9rem; }
 .linklike:hover { color: var(--ink); }
+.topic-note { flex-basis: 100%; margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 0.92rem; }
 .tutor-nav #t-practise { margin-left: auto; margin-right: 8px; }
 .note.also { margin-top: -2px; }
 

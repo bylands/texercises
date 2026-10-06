@@ -11,7 +11,11 @@
 //     typeOf(ex),             the type of an exercise
 //     onChange(),             the student chose another topic or stage (start a new exercise)
 //     tutor(i),               show worked example i (the link next to the stages)
+//     keyOf(ex),              (optional) what makes an exercise new to the student; by default
+//                             its title and text. Exercises without either never run out.
 //   })
+// When a step has no new exercises left (e.g. exercises with symbols only, which do not vary with
+// numbers), a note says so and suggests moving on; the exercises then come round again.
 //   T.mount(el)               the topic menu, the stages and the link to the worked example, in el
 //   T.relabel()               the texts in the current language
 //   T.next(last)              a new exercise of the current topic and stage, its id 'p3.2-seed'
@@ -29,9 +33,9 @@
   const WINS = 2;
   const TX = {
     en: { topic: 'Topic', mixed: 'All topics (mixed)', stage: 'Step', worked: (i, n) => `Worked example ${i} · ${n}`, like: 'like the example',
-      done: (n) => `Well done! Next step: ${n}.`, last: 'Well done! You have reached the last step of this topic; practise on, or choose another topic.', also: 'Practice:' },
+      done: (n) => `Well done! Next step: ${n}.`, none: 'You have seen all the exercises of this step: move on to the next step or to another topic.', noneLast: 'You have seen all the exercises of this step: move on to another topic.', last: 'Well done! You have reached the last step of this topic; practise on, or choose another topic.', also: 'Practice:' },
     de: { topic: 'Thema', mixed: 'Alle Themen (gemischt)', stage: 'Schritt', worked: (i, n) => `Beispiel ${i} · ${n}`, like: 'wie im Beispiel',
-      done: (n) => `Gut gemacht! Nächster Schritt: ${n}.`, last: 'Gut gemacht! Du hast den letzten Schritt dieses Themas erreicht; übe weiter oder wähle ein anderes Thema.', also: 'Üben:' },
+      done: (n) => `Gut gemacht! Nächster Schritt: ${n}.`, none: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit dem nächsten Schritt oder einem anderen Thema weiter.', noneLast: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit einem anderen Thema weiter.', last: 'Gut gemacht! Du hast den letzten Schritt dieses Themas erreicht; übe weiter oder wähle ein anderes Thema.', also: 'Üben:' },
   };
   const tx = () => TX[root.Lang && root.Lang.get() === 'de' ? 'de' : 'en'];
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -44,6 +48,12 @@
     const topicOfType = (type) => o.topics.findIndex((t) => t.stages.some((s) => s.types.includes(type)));
     // the current choice { topic (−1: mixed), stage }, and per topic the stage reached and the wins in it
     let cur = read('topic', { topic: 0, stage: 0 }), progress = read('progress', {}), el = null, shownTopic = 0;
+    // the exercises seen in this session, per step ('topic.stage': Set of keys), and whether the
+    // current step has run out of new ones
+    const seen = new Map();
+    let runOut = false;
+    const keyOf = (ex) => (o.keyOf ? o.keyOf(ex) : (ex.title || ex.text || ex.situation) ? `${ex.title || ''}|${ex.text || ex.situation || ''}` : null);
+    const seenHere = () => { const k = `${cur.topic}.${cur.stage}`; if (!seen.has(k)) seen.set(k, new Set()); return seen.get(k); };
     if (!(cur.topic >= -1 && cur.topic < o.topics.length)) cur = { topic: 0, stage: 0 };
     const stagesOf = (t) => (t < 0 ? [] : o.topics[t].stages);
     const reached = (t) => Math.min((progress[t] || {}).stage || 0, stagesOf(t).length - 1);
@@ -66,12 +76,15 @@
       const stages = stagesOf(t).length > 1 ? `<div class="levels small stages" role="radiogroup" aria-label="${X.stage}">${stagesOf(t).map((s, i) =>
         `<label><input type="radio" name="stage" value="${i}"${i === cur.stage ? ' checked' : ''}><span>${i < reached(t) ? '✓ ' : ''}${i + 1} · ${esc(stageName(t, i))}</span></label>`).join('')}</div>` : '';
       const w = t < 0 ? shownTopic : t;
+      const last = t < 0 || cur.stage >= stagesOf(t).length - 1;
       el.innerHTML = `<label class="topic-pick"><span>${X.topic}</span><select id="topic-pick">${opts}</select></label>${stages}` +
-        (w >= 0 && o.tutor ? `<button type="button" class="linklike worked">📖 ${esc(X.worked(w + 1, o.topics[w].name()))}</button>` : '');
+        (w >= 0 && o.tutor ? `<button type="button" class="linklike worked">📖 ${esc(X.worked(w + 1, o.topics[w].name()))}</button>` : '') +
+        (runOut ? `<p class="topic-note">${last ? X.noneLast : X.none}</p>` : '');
     }
 
     function choose(t, s) {
       cur = { topic: t, stage: t < 0 ? 0 : Math.max(0, Math.min(s, stagesOf(t).length - 1)) };
+      runOut = false;
       write('topic', cur);
       render();
     }
@@ -91,9 +104,21 @@
       },
       relabel: render,
       state: () => ({ ...cur }),
+      // a new exercise, one not seen yet in this session if there is one
       next(last) {
-        const t = cur.topic, s = cur.stage;
-        return Practice.next(o.app, (seed) => exercise(t, s, seed), (ex) => o.typeOf(ex), last ? o.typeOf(last) : null);
+        const t = cur.topic, s = cur.stage, was = runOut, here = seenHere();
+        let ex = null, fresh = false;
+        for (let k = 0; k < 25 && !fresh; k++) {
+          ex = Practice.next(o.app, (seed) => exercise(t, s, seed), (e) => o.typeOf(e), last ? o.typeOf(last) : null);
+          const key = keyOf(ex);
+          fresh = key == null || !here.has(key);
+        }
+        if (!fresh) here.clear(); // all seen: they come round again
+        const key = keyOf(ex);
+        if (key != null) here.add(key);
+        runOut = runOut || !fresh; // the note stays until another topic or step is chosen
+        if (runOut !== was) render();
+        return ex;
       },
       parse(id) {
         let m = /^p(\d+)\.(\d+)-(\d+)$/.exec(id);
