@@ -565,3 +565,32 @@ svg .rp-tframe { fill: #3f78c8; stroke: var(--rp-outline); stroke-width: 1; }
 }
 /* text on light objects (a meter's dial): dark in both modes */
 svg .rp-ink { fill: #2b3138; font-size: 12px; }
+
+/* pictures of atoms, ions and nuclei (Coulomb Force's problems) */
+svg .rp-part { stroke: rgba(0, 0, 0, 0.35); stroke-width: 1; }
+svg .rp-part.proton, svg .rp-part.cation, svg .rp-part.alpha { fill: #e2574c; }
+svg .rp-part.neutron { fill: #b9c0c7; }
+svg .rp-part.electron, svg .rp-part.anion { fill: #4f9be8; }
+svg .rp-part.up { fill: #f2b632; }
+svg .rp-part.down { fill: #4f9be8; }
+svg .rp-glow.proton, svg .rp-glow.cation, svg .rp-glow.alpha { fill: #ff8a7a; opacity: 0.25; }
+svg .rp-glow.neutron { fill: #c8cdd2; opacity: 0.15; }
+svg .rp-glow.electron, svg .rp-glow.anion, svg .rp-glow.down { fill: #7cc4ff; opacity: 0.3; }
+svg .rp-glow.up { fill: #ffd76a; opacity: 0.3; }
+svg .rp-partlbl { fill: #ffffff; font-size: 15px; font-weight: 700; text-anchor: middle; }
+svg .rp-caption { fill: #dfe7ef; font-size: 13px; text-anchor: middle; }
+svg .rp-caption-dark { fill: #3b4148; font-size: 12px; text-anchor: middle; }
+svg .rp-orbit { fill: none; stroke: #9fb4cc; stroke-width: 1.2; stroke-dasharray: 4 5; opacity: 0.7; }
+svg .rp-alphapath { fill: none; stroke: #ff8a7a; stroke-width: 1.6; stroke-dasharray: 5 4; }
+svg .rp-cloud-e { fill: #4f9be8; opacity: 0.18; }
+svg .rp-speedline { fill: none; stroke: #9fb4cc; stroke-width: 2.5; stroke-linecap: round; }
+svg .rp-protonblob { fill: #f2b632; opacity: 0.12; stroke: #f2b632; stroke-opacity: 0.4; }
+svg .rp-glasscyl { fill: #e6f0f8; fill-opacity: 0.55; stroke: #8f979f; stroke-width: 1.2; }
+svg .rp-fibre { stroke: #3b3f45; stroke-width: 1; }
+svg .rp-rodline { stroke: #5d6670; stroke-width: 3; stroke-linecap: round; }
+svg .rp-ball-metal { fill: #c8cdd2; stroke: #5d6670; stroke-width: 1.2; }
+svg .rp-scaleline { fill: none; stroke: #5d6670; stroke-width: 1; stroke-dasharray: 2 6; }
+@media (prefers-color-scheme: dark) {
+  svg .rp-fibre { stroke: #b4bcc4; }
+  svg .rp-caption-dark { fill: #dfe7ef; }
+}
