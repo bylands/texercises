@@ -156,9 +156,10 @@
   // ---------------------------------------------------------------- 2 factors
   const DIST = { 2: L.bind(null, 'doubled', 'verdoppelt'), 3: L.bind(null, 'tripled', 'verdreifacht'), 4: L.bind(null, 'made four times as large', 'vervierfacht'), 0.5: L.bind(null, 'halved', 'halbiert'), [1 / 3]: L.bind(null, 'reduced to a third', 'auf einen Drittel verkleinert') };
   const CHG = { 2: L.bind(null, 'doubled', 'verdoppelt'), 3: L.bind(null, 'tripled', 'verdreifacht'), 0.5: L.bind(null, 'halved', 'halbiert'), 1: null };
-  // a power of the factor: 2^2, but (\tfrac{1}{2})^2
+  // a power of the factor: 2^2, but (\dfrac{1}{2})^2
   const sq = (x) => (Number.isInteger(x) ? `${x}^2` : `\\left(${ft(x)}\\right)^2`);
-  const ft = (x) => { const fr = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [9, 1], [1, 9], [16, 1], [1, 16], [3, 2], [2, 3], [9, 4], [4, 9], [3, 4], [4, 3], [1, 8], [8, 1], [6, 1], [1, 6], [12, 1], [1, 12], [27, 4], [4, 27], [9, 8], [8, 9], [2, 9], [9, 2], [3, 8], [8, 3], [1, 18], [18, 1], [1, 36], [36, 1], [1, 27], [27, 1], [3, 16], [16, 3], [1, 24], [24, 1], [2, 27], [27, 2], [4, 3], [3, 4]].find(([a, b]) => Math.abs(a / b - x) < 1e-9); return fr ? (fr[1] === 1 ? String(fr[0]) : `\\tfrac{${fr[0]}}{${fr[1]}}`) : tnum(x); };
+  // a factor as a number or a fraction: \dfrac in an equation, \tfrac inside another fraction (inner)
+  const ft = (x, inner) => { const fr = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [9, 1], [1, 9], [16, 1], [1, 16], [3, 2], [2, 3], [9, 4], [4, 9], [3, 4], [4, 3], [1, 8], [8, 1], [6, 1], [1, 6], [12, 1], [1, 12], [27, 4], [4, 27], [9, 8], [8, 9], [2, 9], [9, 2], [3, 8], [8, 3], [1, 18], [18, 1], [1, 36], [36, 1], [1, 27], [27, 1], [3, 16], [16, 3], [1, 24], [24, 1], [2, 27], [27, 2], [4, 3], [3, 4]].find(([a, b]) => Math.abs(a / b - x) < 1e-9); return fr ? (fr[1] === 1 ? String(fr[0]) : `\\${inner ? 't' : 'd'}frac{${fr[0]}}{${fr[1]}}`) : tnum(x); };
   function factorFigure(p, v, view) {
     const P = new Pic(1, L('The two charges before and after', 'Die beiden Ladungen vorher und nachher'));
     const row = (y, d, l1, l2, s1, s2, title, rl) => {
@@ -190,7 +191,7 @@
       L('Write the new force with the new values and divide by the old one: k and everything that stays the same cancels.', 'Schreibe die neue Kraft mit den neuen Werten und teile durch die alte: k und alles Gleichbleibende kürzt sich.'),
     ],
     steps: (p, v) => {
-      const n = ft(p.n), a = ft(p.a);
+      const n = ft(p.n, true), a = ft(p.a, true);
       return [step(L('Compare', 'Vergleichen'), p$(L("Let $F$ be the old force and $F'$ the new one. Only what changes is left in the ratio:", "Sei $F$ die alte und $F'$ die neue Kraft. Im Verhältnis bleibt nur, was sich ändert:")) +
         (p.what === 'r'
           ? `$$\\frac{F'}{F} = \\frac{k\\,|q_1|\\,|q_2| / (${n}\\,r)^2}{k\\,|q_1|\\,|q_2| / r^2} = \\frac{1}{${sq(p.n)}} = ${res(ft(v.f))}$$` + p$(L('The force falls with the square of the distance.', 'Die Kraft nimmt mit dem Quadrat des Abstands ab.'))
