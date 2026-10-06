@@ -21,6 +21,8 @@ const sin = (d) => Math.sin((d * Math.PI) / 180);
 // the centre of mass of a wire figure, from 20000 small pieces
 function comNumeric(parts) {
   let m = 0, mx = 0, my = 0;
+  // a square: its four sides
+  parts = parts.flatMap((pt) => { if (pt.kind !== 'square') return [pt]; const q = pt.s / 2, [x, y] = pt.c, c = [[x - q, y - q], [x + q, y - q], [x + q, y + q], [x - q, y + q]]; return c.map((a, i) => ({ kind: 'seg', a, b: c[(i + 1) % 4] })); });
   for (const pt of parts) {
     const n = 20000;
     for (let k = 0; k < n; k++) {

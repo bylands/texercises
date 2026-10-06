@@ -458,9 +458,9 @@
       noAngle: () => L('The cable pulls at an angle: only its vertical component F sin α holds the boom up.', 'Das Seil zieht schräg: Nur seine senkrechte Komponente F sin α hält den Ausleger.'),
     },
     comps: (p) => [
-      { key: 'd', what: L('The lever arm of the cable force about the hinge:', 'Der Hebelarm der Seilkraft bezüglich des Gelenks:'), sym: 'd', base: '\\ell', baseVal: p.len, fn: 'sin', unit: '\\mathrm{m}',
+      { key: 'd', what: L('The lever arm of the cable force about the hinge:', 'Der Hebelarm der Seilkraft bezüglich des Gelenks:'), sym: 'd', base: '\\ell', baseVal: p.len, fn: 'sin', unit: '\\mathrm{m}', fig: 'arm',
         why: { whole: L('ℓ is the distance to where the cable pulls, not to its line of action.', 'ℓ ist der Abstand zum Angriffspunkt des Seils, nicht zu seiner Wirkungslinie.') } },
-      { key: 'h', what: L('The horizontal part of the cable force:', 'Der horizontale Anteil der Seilkraft:'), sym: T('T').replace(/\}$/, ',x}'), base: T('T'), baseVal: null, fn: 'cos', frac: fracOf(p.alpha, 'cos') },
+      { key: 'h', what: L('The horizontal part of the cable force:', 'Der horizontale Anteil der Seilkraft:'), sym: T('T').replace(/\}$/, ',x}'), base: T('T'), baseVal: null, fn: 'cos', frac: fracOf(p.alpha, 'cos'), fig: 'Tx' },
     ],
     fields: (p) => [field('T', ['T'], 'N', 1, L('cable force', 'Seilkraft')), ...(p.alpha === 30 && p.nice ? [] : [field('Hx', ['H'], 'N', 1, L('horizontal force of the hinge', 'horizontale Kraft des Gelenks'))])],
     title: () => L('A crane boom', 'Ein Kranausleger'),
@@ -480,6 +480,18 @@
       if (show.has('T')) {
         const u = [-Math.cos(rad(p.alpha)), Math.sin(rad(p.alpha))];
         P.arrow(B.top(p.len), u, 60, `force k-h${view.hl && view.hl.has('T') ? ' hl' : ''}`, svgSym('T'), [u[0] * 12 - 6, -u[1] * 12]);
+      }
+      // the lever arm of the cable about the hinge, and its horizontal part (once identified)
+      const u = [-Math.cos(rad(p.alpha)), Math.sin(rad(p.alpha))];
+      if (show.has('arm')) {
+        const A = B.top(p.len), Hg = B.mid(0), t = (Hg[0] - A[0]) * u[0] + (Hg[1] - A[1]) * u[1], foot = [A[0] + t * u[0], A[1] + t * u[1]];
+        P.line(Hg, foot, 'arm hl', true);
+        P.dot(foot, 'dot small', 2);
+        P.text([(Hg[0] + foot[0]) / 2, (Hg[1] + foot[1]) / 2], '<tspan font-style="italic">d</tspan>', 'lbl arm-lbl', 'start', [6, 10]);
+      }
+      if (show.has('Tx')) {
+        P.arrow(B.top(p.len), u, 70, 'force k-h', svgSym('T'), [u[0] * 12 - 6, -u[1] * 12]);
+        P.arrow(B.top(p.len), [-1, 0], 70 * Math.cos(rad(p.alpha)), 'force k-h comp', `${svgSym('T')}<tspan class="sub" dy="4">,x</tspan><tspan dy="-4">\u200b</tspan>`, [-6, 16]);
       }
       if (show.has('H')) P.arrow(B.mid(0), [1, 0], 50, `force k-s${view.hl && view.hl.has('H') ? ' hl' : ''}`, svgSym('H'), [6, -12]);
       return P.svg();

@@ -162,6 +162,12 @@
   // What to identify first (lever arms at an angle, a ring's wire, see identify.js): the app gives
   // the values, so that no calculator is needed.
   const identItems = () => (ex.comps || []).map((c) => (c.options ? c : Identify.trig({ ...c, alpha: ex.p.alpha, num: (x) => TQ.num(x, 2) })));
+  // the task's drawing, with what has been identified drawn in (all once the solution is shown)
+  function drawTask() {
+    const items = identItems(), shown = (ex.comps || []).filter((c, i) => c.fig && (st.revealed || Identify.right(items[i], st.ident))).map((c) => c.fig);
+    $('#figure').innerHTML = ex.figure({ task: true, show: new Set(shown) });
+    markScrollable();
+  }
   function showComps() {
     $('#comps-part').hidden = !(ex.comps || []).length;
     $('#comps').innerHTML = Identify.html(identItems(), st ? st.ident || {} : {}, st && st.revealed);
@@ -249,6 +255,7 @@
 
   function showSolution() {
     showComps();
+    drawTask();
     $('#sol-figure').innerHTML = ex.solutionFigure();
     $('#sol-steps').innerHTML = ex.solution.join('');
     $('#sol-short').innerHTML = `${ui().results}: ${ex.results}`;
@@ -286,6 +293,8 @@
       ex = again(ex);
       render();
       st = keep;
+      showComps();
+      drawTask();
       ex.fields.forEach((f, k) => {
         $(`#in-${f.key}`).value = values[k];
         if (senses[k] !== null) document.querySelector(`input[name="in-${f.key}-s"][value="${senses[k]}"]`).checked = true;
@@ -362,7 +371,8 @@
     applyStatic();
     Identify.attach($('#comps'), identItems, () => st.ident, (right) => {
       math($('#comps'));
-      if (!right) { st.tries++; updateButtons(); } // a wrong choice counts as an attempt
+      if (right) drawTask(); // the lever arm or component appears in the drawing
+      else { st.tries++; updateButtons(); } // a wrong choice counts as an attempt
     });
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);

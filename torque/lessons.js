@@ -50,15 +50,15 @@
     },
     {
       scenario: 'com-L', p: { h: 12, b: 8 },
-      practice: [{ types: ['com-L'] }, { en: 'T and gate', de: 'T und Tor', types: ['com-T', 'com-U'] }, { en: 'triangle', de: 'Dreieck', types: ['com-tri'] }],
+      practice: [{ types: ['com-L'] }, { en: 'T, gate and E', de: 'T, Tor und E', types: ['com-T', 'com-U', 'com-E'] }, { en: 'slanted sides: triangles, house', de: 'schräge Seiten: Dreiecke, Haus', types: ['com-tri', 'com-iso', 'com-house'] }],
       name: { en: 'Centre of mass', de: 'Schwerpunkt' },
       idea: { en: 'Split the figure into simple parts, find the centre of mass of each, then combine them two at a time: the common centre divides the line between them so that m₁ · a₁ = m₂ · a₂.', de: 'Zerlege die Figur in einfache Teile, bestimme den Schwerpunkt jedes Teils und fasse sie dann schrittweise zu zweit zusammen: Der gemeinsame Schwerpunkt teilt die Verbindungslinie so, dass m₁ · a₁ = m₂ · a₂.' },
     },
     {
-      scenario: 'com-loop', p: { h: 10, r: 3 },
-      practice: [{ types: ['com-loop'] }, { en: 'two rings', de: 'zwei Ringe', types: ['com-bell'] }],
-      name: { en: 'Ring on a stick', de: 'Ring auf Stab' },
-      idea: { en: 'A ring counts with its whole circumference, at its centre.', de: 'Ein Ring zählt mit seinem ganzen Umfang, in seinem Mittelpunkt.' },
+      scenario: 'com-sqstick', p: { h: 10, s: 5 },
+      practice: [{ types: ['com-sqstick'] }, { en: 'triangle on a stick, dumbbell', de: 'Dreieck auf einem Stab, Hantel', types: ['com-tristick', 'com-bell'] }],
+      name: { en: 'Square on a stick', de: 'Quadrat auf Stab' },
+      idea: { en: 'A closed figure first: opposite sides of equal length meet in the middle, so a square’s centre of mass is its centre. Then combine it with the stick.', de: 'Zuerst die geschlossene Figur: Gegenüberliegende gleich lange Seiten treffen sich in der Mitte, also ist der Schwerpunkt eines Quadrats sein Mittelpunkt. Dann mit dem Stab zusammenfassen.' },
     },
     {
       scenario: 'tip', p: { w: 60, h: 120, y: 90, m: 30 },

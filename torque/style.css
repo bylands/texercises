@@ -71,6 +71,7 @@ svg .k-h { color: var(--f-h); }
 svg .force.hl line { stroke-width: 3; }
 svg .force.hl text { font-weight: 700; }
 svg .force.dim { opacity: 0.3; }
+svg .force.comp line { stroke-dasharray: 5 3; stroke-width: 1.5; }
 svg .turn { color: var(--arm); }
 svg .turn path { fill: none; stroke: currentColor; stroke-width: 1.8; }
 svg .join { stroke: var(--com); stroke-width: 1.2; stroke-dasharray: 5 4; }

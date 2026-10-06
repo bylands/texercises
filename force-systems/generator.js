@@ -84,7 +84,8 @@
   }
 
   // The task with the forces ticked in the table drawn in: ticked { 'box:kind' } (see app.js).
-  function taskFigure(scn, p, v, t, ticked) {
+  // extra: ids of forces to draw as well (the components identified, see comps)
+  function taskFigure(scn, p, v, t, ticked, extra = []) {
     const sc = scn.scene(p, v, { task: true });
     sc.forces.push(...phantoms(scn, sc, t)); // always there, so that the drawing keeps its size
     const ids = new Set();
@@ -93,6 +94,7 @@
       if (t.cells[i][j].length) t.cells[i][j].forEach((id) => ids.add(id));
       else ids.add(`ph${i}${k}`);
     }));
+    extra.forEach((id) => ids.add(id));
     return sc.render({ task: true, ticked: ids });
   }
 
@@ -117,8 +119,8 @@
       forces: forceTable(scn, p, v),
       fields,
       figure: (view = { task: true }) => scn.scene(p, v, view).render(view),
-      // the task with the ticked forces (Set of 'box:kind') drawn in
-      taskFigure: (ticked) => taskFigure(scn, p, v, forceTable(scn, p, v), ticked),
+      // the task with the ticked forces (Set of 'box:kind') and the forces of extra (ids) drawn in
+      taskFigure: (ticked, extra) => taskFigure(scn, p, v, forceTable(scn, p, v), ticked, extra),
       solutionFigure: () => scn.scene(p, v, {}).render({ show: all }),
       // the components to identify before the calculation (practice only: angles given in degrees)
       comps: scn.comps && p.pyth ? scn.comps(p) : [],

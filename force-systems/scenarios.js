@@ -158,8 +158,8 @@
     },
     fields: () => [field('N'), field('R', '', L('static friction force', 'Haftreibungskraft'))],
     comps: (p) => [
-      { key: 'up', what: L('The vertical component of the pull:', 'Die senkrechte Komponente der Zugkraft:'), sym: 'F_\\uparrow', base: T('F'), baseVal: p.F, fn: p.ref === 'v' ? 'cos' : 'sin' },
-      { key: 'side', what: L('The horizontal component of the pull:', 'Die waagrechte Komponente der Zugkraft:'), sym: 'F_\\rightarrow', base: T('F'), baseVal: p.F, fn: p.ref === 'v' ? 'sin' : 'cos' },
+      { key: 'up', what: L('The vertical component of the pull:', 'Die senkrechte Komponente der Zugkraft:'), sym: 'F_\\uparrow', base: T('F'), baseVal: p.F, fn: p.ref === 'v' ? 'cos' : 'sin', fig: 'Fv' },
+      { key: 'side', what: L('The horizontal component of the pull:', 'Die waagrechte Komponente der Zugkraft:'), sym: 'F_\\rightarrow', base: T('F'), baseVal: p.F, fn: p.ref === 'v' ? 'sin' : 'cos', fig: 'Fh' },
     ],
     title: () => L('Pulled at an angle', 'Schräg gezogen'),
     text: (p) => L(`A box with a mass of ${kg(p.m)} stands still on the floor, although a rope pulls on it with a force of ${q(p.F, 'N')}, at an angle ${is345(p) ? 'α' : `of ${q(p.alpha, 'deg')}`} to the ${p.ref === 'v' ? 'vertical' : 'horizontal'}${is345(p) ? `, where ${sinCos()}` : ''}.`,
@@ -172,7 +172,11 @@
       if (p.ref === 'v') { b.sc.line(top[0], top[1], top[0], top[1] - 62, 'w dash'); b.sc.angle(top, 34, 90 - p.alpha, 90, angleLabel(p), 16); }
       else { b.sc.line(top[0], top[1], top[0] + 70, top[1], 'w dash'); b.sc.angle(top, 34, 0, p.alpha, angleLabel(p), 16); }
       b.sc.force({ id: 'F', kind: 's', at: top, dir, sym: ['F'], value: q(p.F, 'N'), task: 'value', lab: [8, -6] });
-      return sized(b.sc, { G: p.m * G, N: v.N, R: v.R, F: p.F });
+      // its components, drawn once identified (and in the solution)
+      const [cu, cs] = p.ref === 'v' ? [Math.cos(a), Math.sin(a)] : [Math.sin(a), Math.cos(a)];
+      b.sc.force({ id: 'Fv', kind: 'comp', at: top, dir: [0, -1], sym: ['F', '↑'], value: q(p.F * cu, 'N'), lab: [-8, 2] });
+      b.sc.force({ id: 'Fh', kind: 'comp', at: top, dir: [1, 0], sym: ['F', '→'], value: q(p.F * cs, 'N'), lab: [4, 14] });
+      return sized(b.sc, { G: p.m * G, N: v.N, R: v.R, F: p.F, Fv: p.F * cu, Fh: p.F * cs });
     },
     hints: (p) => [
       L('Split the pull into a vertical and a horizontal component.', 'Zerlege die Zugkraft in eine senkrechte und eine waagrechte Komponente.'),
@@ -192,7 +196,7 @@
           `<p>${L(`The angle is measured from the ${p.ref === 'v' ? 'vertical' : 'horizontal'}, so`, `Der Winkel ist von der ${p.ref === 'v' ? 'Senkrechten' : 'Waagrechten'} aus gemessen, also`)}</p>` +
           `$$F_\\uparrow = ${T('F')}${up}\\alpha = ${tq(p.F, 'N')}\\cdot ${trig(up.slice(1), p)} = ${tq(FG - v.N, 'N')}$$` +
           `$$F_\\rightarrow = ${T('F')}${sd}\\alpha = ${tq(p.F, 'N')}\\cdot ${trig(sd.slice(1), p)} = ${tq(v.R, 'N')}$$`,
-          ['F'], ['F']),
+          ['F', 'Fv', 'Fh'], ['Fv', 'Fh']),
         step(L('Vertical: balance', 'Senkrecht: Gleichgewicht'),
           `<p>${L('The box stands still, so up equals down:', 'Die Kiste ruht, also sind die Kräfte nach oben und unten gleich gross:')}</p>` +
           `$$${T('N')} + F_\\uparrow = ${T('G')} \\;\\Rightarrow\\; ${T('N')} = ${T('m')}\\,g - ${T('F')}${up}\\alpha = ${tq(FG, 'N')} - ${tq(FG - v.N, 'N')} = ${res(v.N, 'N')}$$`,
@@ -611,8 +615,8 @@
     mu: pick(r, o.nice ? [0.1, 0.2, 0.25, 0.5] : [0.1, 0.2, 0.3, 0.4, 0.5]), ...(o.pyth ? { pyth: true } : {}),
   });
   const slopeComps = (p, i = '') => [
-    { key: 'Gp', what: L(`The component of the weight${i ? ' of box 1' : ''} along the slope:`, `Die Komponente der Gewichtskraft${i ? ' von Kiste 1' : ''} entlang der Unterlage:`), sym: T('G', `${i}∥`), base: `${T('m')}${i ? `_${i}` : ''}\\,g`, baseVal: (i ? p.m1 : p.m) * G, fn: 'sin' },
-    { key: 'Gn', what: L(`The component of the weight${i ? ' of box 1' : ''} perpendicular to the slope:`, `Die Komponente der Gewichtskraft${i ? ' von Kiste 1' : ''} senkrecht zur Unterlage:`), sym: T('G', `${i}⊥`), base: `${T('m')}${i ? `_${i}` : ''}\\,g`, baseVal: (i ? p.m1 : p.m) * G, fn: 'cos' },
+    { key: 'Gp', what: L(`The component of the weight${i ? ' of box 1' : ''} along the slope:`, `Die Komponente der Gewichtskraft${i ? ' von Kiste 1' : ''} entlang der Unterlage:`), sym: T('G', `${i}∥`), base: `${T('m')}${i ? `_${i}` : ''}\\,g`, baseVal: (i ? p.m1 : p.m) * G, fn: 'sin', fig: 'Gp' },
+    { key: 'Gn', what: L(`The component of the weight${i ? ' of box 1' : ''} perpendicular to the slope:`, `Die Komponente der Gewichtskraft${i ? ' von Kiste 1' : ''} senkrecht zur Unterlage:`), sym: T('G', `${i}⊥`), base: `${T('m')}${i ? `_${i}` : ''}\\,g`, baseVal: (i ? p.m1 : p.m) * G, fn: 'cos', fig: 'Gn' },
   ];
 
   const inclinePull = {

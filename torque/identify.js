@@ -7,7 +7,7 @@
 //   Identify.html(items, state, done)   the questions; state { key: index chosen }, done: all
 //                                       shown as solved (e.g. once the solution is shown)
 //   Identify.attach(el, items, state, onPick(right))  a choice re-draws its question
-//   Identify.ok(items, state)           all identified
+//   Identify.ok(items, state)           all identified; Identify.right(item, state) this one
 //   Identify.trig(c)                    the usual item for a component: c = { key, what, sym (TeX),
 //                                       base (TeX, e.g. m\,g), baseVal (or null if unknown), fn: sin
 //                                       or cos, alpha (degrees), num(x) and unit (TeX) for the values,
@@ -50,6 +50,7 @@
       });
     },
     ok: (items, state) => items.every((it) => isRight(it, state)),
+    right: isRight,
     trig(c) {
       const t = { ...tx(), ...(c.why || {}) }, f = c.fn === 'sin' ? Math.sin : Math.cos, a = (c.alpha * Math.PI) / 180;
       const opt = (fn, why) => ({ html: `$${c.base}${fn ? `\\${fn}\\alpha` : ''}$`, right: fn === c.fn, why });

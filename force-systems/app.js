@@ -148,7 +148,7 @@
   // the drawing shows what the student claims.
   function drawTicked() {
     const ticked = new Set([...document.querySelectorAll('#ftable input:checked')].map((b) => `${b.dataset.i}:${b.dataset.j}`));
-    $('#figure').innerHTML = ex.taskFigure(ticked);
+    $('#figure').innerHTML = ex.taskFigure(ticked, identified());
     markScrollable();
   }
 
@@ -181,6 +181,8 @@
 
   // The components to identify first (angled forces, see identify.js): the app gives their values.
   const identItems = () => ex.comps.map((c) => Identify.trig({ ...c, alpha: ex.p.alpha, num: (x) => FS.num(x), unit: '\\mathrm{N}' }));
+  // the forces of the components identified so far (drawn in), all once the solution is shown
+  const identified = () => ex.comps.filter((c) => (st && st.revealed) || (st && Identify.right(identItems().find((it) => it.key === c.key), st.ident))).map((c) => c.fig);
   function showComps() {
     $('#comps-part').hidden = !ex.comps.length;
     $('#results-head').textContent = ui().resultsHead(ex.comps.length ? 3 : 2);
@@ -389,7 +391,8 @@
     topics.mount($('#levels'));
     Identify.attach($('#comps'), identItems, () => st.ident, (right) => {
       math($('#comps'));
-      if (!right) { st.tries++; updateButtons(); } // a wrong choice counts as an attempt
+      if (right) drawTicked(); // the component appears in the drawing
+      else { st.tries++; updateButtons(); } // a wrong choice counts as an attempt
     });
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);

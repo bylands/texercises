@@ -391,7 +391,7 @@
       noAngle: () => L('F pulls at an angle: its lever arm is b · sin α, not b.', 'F zieht schräg: Ihr Hebelarm ist b · sin α, nicht b.'),
     },
     fields: () => [{ key: 'F', sym: ['F'], unit: 'N', dec: 1, what: L('force', 'Kraft') }],
-    comps: (p) => [{ key: 'd', what: L('The lever arm of F about D:', 'Der Hebelarm von F bezüglich D:'), sym: 'd', base: 'b', baseVal: p.b, fn: 'sin', unit: '\\mathrm{cm}',
+    comps: (p) => [{ key: 'd', what: L('The lever arm of F about D:', 'Der Hebelarm von F bezüglich D:'), sym: 'd', base: 'b', baseVal: p.b, fn: 'sin', unit: '\\mathrm{cm}', fig: 'arm',
       why: {
         sc: L('The lever arm is the distance from D to the line of action of F; in the right triangle with the hypotenuse b, it lies opposite the angle α.', 'Der Hebelarm ist der Abstand von D zur Wirkungslinie von F; im rechtwinkligen Dreieck mit der Hypotenuse b liegt er dem Winkel α gegenüber.'),
         whole: L('b is the distance to the point where F acts, not to its line of action.', 'b ist der Abstand zum Angriffspunkt von F, nicht zu seiner Wirkungslinie.'),
@@ -414,6 +414,15 @@
       P.dim(B.top(xF), B.top(D), cm(p.b), 40);
       P.dim(B.top(c), B.top(D), cm(p.a), 16);
       if (show.has('G')) P.arrow(B.mid(c), [0, -1], 50, 'force k-g hl', svgSym('G'), [8, 0]);
+      // the lever arm of F: from D perpendicular to the line of action (once identified)
+      if (show.has('arm')) {
+        const A = B.mid(xF), Dp = B.mid(D), t = (Dp[0] - A[0]) * dir[0] + (Dp[1] - A[1]) * dir[1], foot = [A[0] + t * dir[0], A[1] + t * dir[1]];
+        const back = Math.min(0, t) - 20 / P.s, ahead = Math.max(0, t) + 20 / P.s;
+        P.line([A[0] + back * dir[0], A[1] + back * dir[1]], [A[0] + ahead * dir[0], A[1] + ahead * dir[1]], 'action', true);
+        P.line(Dp, foot, 'arm hl', true);
+        P.dot(foot, 'dot small', 2);
+        P.text([(Dp[0] + foot[0]) / 2, (Dp[1] + foot[1]) / 2], '<tspan font-style="italic">d</tspan>', 'lbl arm-lbl', 'start', [8, 4]);
+      }
       if (show.has('perp')) {
         const s = Math.sin(rad(p.alpha));
         P.arrow(B.mid(xF), [0, 1], 70 * s, 'force k-s hl', `${svgSym('F')}<tspan class="sub" dy="4">⊥</tspan><tspan dy="-4">​</tspan>`, [-10, 0]);
@@ -513,7 +522,10 @@
   // mass is the length-weighted mean: x_S = Σ ℓ_i x_i / Σ ℓ_i. Coordinates in cm from the
   // origin O, x to the right and y up.
   // A part: { kind: 'seg', a, b } or { kind: 'ring', c, r }.
-  const lengthOf = (pt) => (pt.kind === 'seg' ? Math.hypot(pt.b[0] - pt.a[0], pt.b[1] - pt.a[1]) : 2 * Math.PI * pt.r);
+  // a part: a straight piece { kind: 'seg', a, b }, a ring { kind: 'ring', c, r } or a square
+  // { kind: 'square', c, s } (its four sides as one part: opposite sides meet in the middle, so its
+  // centre of mass is its centre)
+  const lengthOf = (pt) => (pt.kind === 'seg' ? Math.hypot(pt.b[0] - pt.a[0], pt.b[1] - pt.a[1]) : pt.kind === 'square' ? 4 * pt.s : 2 * Math.PI * pt.r);
   const centreOf = (pt) => (pt.kind === 'seg' ? [(pt.a[0] + pt.b[0]) / 2, (pt.a[1] + pt.b[1]) / 2] : pt.c);
   function comOf(parts, o = {}) {
     const w = parts.map((pt) => (o.count ? 1 : o.diam && pt.kind === 'ring' ? 2 * pt.r : lengthOf(pt)));
@@ -521,6 +533,14 @@
     return [0, 1].map((k) => exact(parts.reduce((s, pt, i) => s + w[i] * centreOf(pt)[k], 0) / W));
   }
 
+  const seg = (a, b) => ({ kind: 'seg', a, b });
+  // a right triangle with whole sides [base, height, slant], in either orientation, scaled so that
+  // the slant is at most max (cm); with div, the base and height are multiples of div
+  function triangle(r, max, div = 1) {
+    const list = [];
+    for (const [x, y, z] of TRIANGLES) for (const k of [1, 2, 3, 4]) if (k * z <= max) for (const [b, h] of [[x, y], [y, x]]) if ((k * b) % div === 0 && (k * h) % div === 0) list.push([k * b, k * h, k * z]);
+    return pick(r, list);
+  }
   // two sides of different lengths: with equal ones, weighting by length would make no difference
   const differ = (p) => (p.h === p.b ? null : p);
   // Step by step, as in class: combine two parts (or groups) at a time. Their common centre lies on
@@ -530,7 +550,8 @@
   // Gives [{ A, B, D, aA, aB, S }] with A, B, S = { m, c, name } (name: the parts' numbers, '' for
   // the whole figure).
   function combos(parts) {
-    let items = parts.map((pt, i) => ({ m: lengthOf(pt), c: centreOf(pt), name: `${i + 1}` }));
+    const dirOf = (pt) => { if (pt.kind !== 'seg') return null; const d = [pt.b[0] - pt.a[0], pt.b[1] - pt.a[1]], n = Math.hypot(...d); return [d[0] / n, d[1] / n]; };
+    let items = parts.map((pt, i) => ({ m: lengthOf(pt), c: centreOf(pt), name: `${i + 1}`, dir: dirOf(pt) }));
     const out = [];
     while (items.length > 1) {
       // the pair to combine: equal masses first, then a pair whose distance and common centre
@@ -541,7 +562,10 @@
         for (let b = a + 1; b < items.length; b++) {
           const A = items[a], B = items[b], M = A.m + B.m, D = Math.hypot(B.c[0] - A.c[0], B.c[1] - A.c[1]);
           const c = [A.c[0] + ((B.c[0] - A.c[0]) * B.m) / M, A.c[1] + ((B.c[1] - A.c[1]) * B.m) / M];
-          const score = Math.abs(A.m - B.m) < 1e-9 ? 2 : tenth(D) && c.every(tenth) ? 1 : 0;
+          const parallel = A.dir && B.dir && Math.abs(Math.abs(A.dir[0] * B.dir[0] + A.dir[1] * B.dir[1]) - 1) < 1e-9;
+          // centres at the same point first, then mirror images (equal, parallel, the farthest apart),
+          // then equal masses, then round numbers
+          const score = D < 1e-9 ? 4 : Math.abs(A.m - B.m) < 1e-9 ? (parallel ? 3 + D / 1e4 : 2) : tenth(D) && c.every(tenth) ? 1 : 0;
           if (!best || score > best.score) best = { score, a, b };
         }
       }
@@ -569,18 +593,36 @@
       // a right triangle with the right angle at the bottom right, legs (base, height) and hypotenuse
       parts: (p) => { const [bx, hy] = [p.t[1] * p.k, p.t[0] * p.k]; return [{ kind: 'seg', a: [0, 0], b: [bx, 0] }, { kind: 'seg', a: [bx, 0], b: [bx, hy] }, { kind: 'seg', a: [bx, hy], b: [0, 0] }]; },
       title: () => L('A triangle of wire', 'Ein Drahtdreieck'), ask: ['x', 'y'], offWire: true },
-    loop: { difficulty: 4, calc: 'always', make: (r) => ({ h: pick(r, [6, 8, 10, 12, 15]), r: pick(r, [2, 3, 4, 5]) }),
-      parts: (p) => [{ kind: 'seg', a: [0, 0], b: [0, p.h] }, { kind: 'ring', c: [0, p.h + p.r], r: p.r }],
-      title: () => L('A ring on a stick', 'Ein Ring auf einem Stab'), ask: ['y'] },
-    bell: { difficulty: 5, calc: 'always', make: (r) => { const r1 = pick(r, [2, 3, 4]), r2 = r1 + pick(r, [1, 2, 3]); return { r1, r2, c: pick(r, [4, 6, 8, 10]) }; },
-      // the origin at the centre of the small ring, the bar along the x axis
-      parts: (p) => [{ kind: 'ring', c: [0, 0], r: p.r1 }, { kind: 'seg', a: [p.r1, 0], b: [p.r1 + p.c, 0] }, { kind: 'ring', c: [p.r1 + p.c + p.r2, 0], r: p.r2 }],
-      title: () => L('Two rings and a bar', 'Zwei Ringe und ein Stab'), ask: ['x'] },
+    // E: a vertical bar and three equal bars to the right, at the bottom, middle and top
+    E: { difficulty: 3, make: (r) => ({ a: pick(r, [4, 5, 6, 8, 10]), b: pick(r, [4, 6, 8, 10, 12]) }),
+      parts: (p) => [seg([0, 0], [0, 2 * p.a]), seg([0, 0], [p.b, 0]), seg([0, p.a], [p.b, p.a]), seg([0, 2 * p.a], [p.b, 2 * p.a])],
+      title: () => L('An E of wire', 'Ein E aus Draht'), ask: ['x', 'y'] },
+    // an isosceles triangle: base 2b, slanted sides c, height h (b, h, c a right triangle)
+    iso: { difficulty: 3, make: (r) => { const [b, h, c] = triangle(r, 17); return { b, h, c }; },
+      parts: (p) => [seg([0, 0], [2 * p.b, 0]), seg([0, 0], [p.b, p.h]), seg([2 * p.b, 0], [p.b, p.h])],
+      title: () => L('A gable of wire', 'Ein Giebel aus Draht'), ask: ['x', 'y'], offWire: true },
+    // a house: floor 2b, walls w, a gable roof (b, h, c a right triangle)
+    house: { difficulty: 4, make: (r) => { const [b, h, c] = triangle(r, 12); return { b, h, c, w: pick(r, [4, 6, 8, 10, 12]) }; },
+      parts: (p) => [seg([0, 0], [2 * p.b, 0]), seg([0, 0], [0, p.w]), seg([2 * p.b, 0], [2 * p.b, p.w]), seg([0, p.w], [p.b, p.w + p.h]), seg([2 * p.b, p.w], [p.b, p.w + p.h])],
+      title: () => L('A house of wire', 'Ein Haus aus Draht'), ask: ['x', 'y'], offWire: true },
+    // a square on a stick: the origin at the foot of the stick
+    sqstick: { difficulty: 4, make: (r) => ({ h: pick(r, [6, 8, 10, 12, 15, 16, 20]), s: pick(r, [2, 3, 4, 5, 6, 8]) }),
+      parts: (p) => [seg([0, 0], [0, p.h]), { kind: 'square', c: [0, p.h + p.s / 2], s: p.s }],
+      title: () => L('A square on a stick', 'Ein Quadrat auf einem Stab'), ask: ['y'] },
+    // an isosceles triangle on a stick (b, t, c a right triangle), apex up
+    tristick: { difficulty: 4, make: (r) => { const [b, t, c] = triangle(r, 10); return { h: pick(r, [6, 8, 10, 12, 15, 16, 20]), b, t, c }; },
+      parts: (p) => [seg([0, 0], [0, p.h]), seg([-p.b, p.h], [p.b, p.h]), seg([-p.b, p.h], [0, p.h + p.t]), seg([p.b, p.h], [0, p.h + p.t])],
+      title: () => L('A triangle on a stick', 'Ein Dreieck auf einem Stab'), ask: ['y'] },
+    // a dumbbell: two squares of different sizes joined by a bar; the origin at the left end
+    bell: { difficulty: 5, make: (r) => { const s1 = pick(r, [2, 3, 4, 5]), s2 = s1 + pick(r, [1, 2, 3, 4]); return { s1, s2, c: pick(r, [4, 5, 6, 8, 10, 12]) }; },
+      parts: (p) => [{ kind: 'square', c: [p.s1 / 2, 0], s: p.s1 }, seg([p.s1, 0], [p.s1 + p.c, 0]), { kind: 'square', c: [p.s1 + p.c + p.s2 / 2, 0], s: p.s2 }],
+      title: () => L('A dumbbell of wire', 'Eine Hantel aus Draht'), ask: ['x'] },
   };
 
   function comFigure(shape, p, v, view = {}) {
     const S = SHAPES[shape], parts = S.parts(p), show = view.show || new Set();
-    const ext = parts.flatMap((pt) => (pt.kind === 'seg' ? [pt.a, pt.b] : [[pt.c[0] - pt.r, pt.c[1] - pt.r], [pt.c[0] + pt.r, pt.c[1] + pt.r]]));
+    const half = (pt) => (pt.kind === 'square' ? pt.s / 2 : pt.r);
+    const ext = parts.flatMap((pt) => (pt.kind === 'seg' ? [pt.a, pt.b] : [[pt.c[0] - half(pt), pt.c[1] - half(pt)], [pt.c[0] + half(pt), pt.c[1] + half(pt)]]));
     const W = Math.max(...ext.map((e) => e[0])) - Math.min(...ext.map((e) => e[0])), H = Math.max(...ext.map((e) => e[1])) - Math.min(...ext.map((e) => e[1]));
     const P = new Pic(Math.min(230 / Math.max(W, H, 1), 26), L('A figure of wire with the origin O', 'Eine Figur aus Draht mit dem Ursprung O'));
     const s = P.s, xMin = Math.min(...ext.map((e) => e[0])), yMin = Math.min(...ext.map((e) => e[1]));
@@ -589,18 +631,31 @@
     P.arrow([0, Math.min(0, yMin) - 12 / s], [0, 1], (Math.max(...ext.map((e) => e[1])) - Math.min(0, yMin)) * s + 40, 'axis', svgSym('y'), [-12, 2]);
     parts.forEach((pt, i) => {
       const cls = `wire${show.has(`part${i}`) ? ' hl' : ''}`;
-      if (pt.kind === 'seg') P.path([pt.a, pt.b], cls); else P.circle(pt.c, pt.r, cls);
+      if (pt.kind === 'seg') P.path([pt.a, pt.b], cls);
+      else if (pt.kind === 'square') { const q = pt.s / 2, [x, y] = pt.c; P.path([[x - q, y - q], [x + q, y - q], [x + q, y + q], [x - q, y + q], [x - q, y - q]], cls); } else P.circle(pt.c, pt.r, cls);
     });
-    // dimensions: each straight side's length, the rings' radii
+    // dimensions: each length once, next to a side of that length, outside the figure (away from
+    // its middle); the rings' radii
+    const cx = (Math.max(...ext.map((e) => e[0])) + xMin) / 2, cy = (Math.max(...ext.map((e) => e[1])) + yMin) / 2, labelled = new Set();
+    // the side of a straight piece away from the middle of the figure (for its length); its centre's
+    // label goes on the other side
+    const outward = (pt) => {
+      const len = lengthOf(pt), m = centreOf(pt);
+      let n = [-(pt.b[1] - pt.a[1]) / len, (pt.b[0] - pt.a[0]) / len];
+      const dot = n[0] * (m[0] - cx) + n[1] * (m[1] - cy);
+      if (dot < -1e-9 || (Math.abs(dot) <= 1e-9 && (n[0] < -1e-9 || (Math.abs(n[0]) <= 1e-9 && n[1] < 0)))) n = [-n[0], -n[1]];
+      return n;
+    };
     parts.forEach((pt) => {
+      if (pt.kind === 'square') { P.text([pt.c[0], pt.c[1] + pt.s / 2], cm(pt.s), 'lbl small dimtext', 'middle', [0, -12]); return; }
       if (pt.kind === 'seg') {
-        const len = lengthOf(pt), horiz = Math.abs(pt.a[1] - pt.b[1]) < 1e-9, vert = Math.abs(pt.a[0] - pt.b[0]) < 1e-9;
-        // the label outside the figure: left of vertical sides on the left, above top bars, …
-        const mid = centreOf(pt), cx = (Math.max(...ext.map((e) => e[0])) + xMin) / 2, cy = (Math.max(...ext.map((e) => e[1])) + yMin) / 2;
-        const off = horiz ? [0, mid[1] >= cy ? -14 : 16] : vert ? [mid[0] <= cx ? -10 : 10, 0] : [-12, -10];
-        if (shape === 'bell') off[1] = -14;
-        if (shape === 'T' && vert) off[0] = 10;
-        P.text(mid, cm(len), 'lbl small dimtext', horiz ? 'middle' : off[0] < 0 ? 'end' : 'start', off);
+        // each length once per direction (the bars of an E, the walls of a house: one label)
+        const len = lengthOf(pt), mid = centreOf(pt), d0 = [(pt.b[0] - pt.a[0]) / len, (pt.b[1] - pt.a[1]) / len];
+        const tag = `${num(len, 2)}:${num(Math.abs(d0[0]), 2)}:${num(d0[0] * d0[1] >= 0 ? 1 : -1, 0)}`;
+        if (labelled.has(tag)) return;
+        labelled.add(tag);
+        const n = outward(pt), off = [14 * n[0], -14 * n[1]];
+        P.text(mid, cm(len), 'lbl small dimtext', Math.abs(off[0]) < 5 ? 'middle' : off[0] > 0 ? 'start' : 'end', [off[0], off[1] + (off[1] > 0 ? 2 : 0)]);
       } else {
         P.line(pt.c, [pt.c[0] + pt.r * Math.cos(rad(45)), pt.c[1] + pt.r * Math.sin(rad(45))], 'w thin', true);
         P.dot(pt.c, 'dot', 1.8);
@@ -610,7 +665,13 @@
     P.dot([0, 0], 'dot', 2.4);
     P.text([0, 0], 'O', 'lbl', 'end', [-6, 12]);
     const sName = (n) => `S<tspan class="sub" dy="4">${n}</tspan><tspan dy="-4">\u200b</tspan>`;
-    if (show.has('mids')) parts.forEach((pt, i) => { P.dot(centreOf(pt), `dot mid${show.has(`part${i}`) ? ' hl' : ''}`, 3); P.text(centreOf(pt), sName(i + 1), 'lbl small com-lbl', 'start', [6, 12]); });
+    if (show.has('mids')) {
+      parts.forEach((pt, i) => {
+        const n = pt.kind === 'seg' ? outward(pt) : [0.7, -0.7], off = [-12 * n[0], 12 * n[1] + 4];
+        P.dot(centreOf(pt), `dot mid${show.has(`part${i}`) ? ' hl' : ''}`, 3);
+        P.text(centreOf(pt), sName(i + 1), 'lbl small com-lbl', Math.abs(off[0]) < 4 ? 'middle' : off[0] > 0 ? 'start' : 'end', off);
+      });
+    }
     combos(parts).forEach((k, i) => {
       if (!show.has(`comb${i}`)) return;
       P.line(k.A.c, k.B.c, `join${view.hl && view.hl.has(`comb${i}`) ? ' hl' : ''}`, true);
@@ -656,9 +717,9 @@
       ],
       steps(p, v) {
         const parts = S.parts(p), lens = parts.map(lengthOf), cs = parts.map(centreOf), total = lens.reduce((a, b) => a + b, 0);
-        const lenTex = (pt) => (pt.kind === 'ring' ? `2\\pi\\cdot ${tq(pt.r, 'cm')} = ${tq(lengthOf(pt), 'cm', 1)}` : tq(lengthOf(pt), 'cm'));
+        const lenTex = (pt) => (pt.kind === 'ring' ? `2\\pi\\cdot ${tq(pt.r, 'cm')} = ${tq(lengthOf(pt), 'cm', 1)}` : pt.kind === 'square' ? `4\\cdot ${tq(pt.s, 'cm')} = ${tq(lengthOf(pt), 'cm')}` : tq(lengthOf(pt), 'cm'));
         const pt$ = (c) => `(${num(c[0], 1)}\\,|\\,${num(c[1], 1)})`;
-        const rows = parts.map((pt, i) => `<li>${pt.kind === 'ring' ? L('ring', 'Ring') : L('straight piece', 'gerades Stück')} ${i + 1}: ${L('length', 'Länge')} $${lenTex(pt)}$, ${L('centre of mass', 'Schwerpunkt')} $S_${i + 1} = ${pt$(cs[i])}$</li>`).join('');
+        const rows = parts.map((pt, i) => `<li>${pt.kind === 'ring' ? L('ring', 'Ring') : pt.kind === 'square' ? L('square (its centre: opposite sides meet in the middle)', 'Quadrat (sein Mittelpunkt: gegenüberliegende Seiten treffen sich in der Mitte)') : L('straight piece', 'gerades Stück')} ${i + 1}: ${L('length', 'Länge')} $${lenTex(pt)}$, ${L('centre of mass', 'Schwerpunkt')} $S_${i + 1} = ${pt$(cs[i])}$</li>`).join('');
         void lens; void total;
         const out = [step(L('1 · Split into parts', '1 · In Teile zerlegen'),
           `<p>${L('The figure consists of these parts. Each part’s mass is proportional to its length, so the lengths can stand for the masses. A straight piece has its centre of mass in its middle, a ring in its centre:', 'Die Figur besteht aus diesen Teilen. Die Masse jedes Teils ist proportional zu seiner Länge, also können die Längen für die Massen stehen. Ein gerades Stück hat seinen Schwerpunkt in seiner Mitte, ein Ring in seinem Mittelpunkt:')}</p><ul>${rows}</ul>`,
@@ -675,7 +736,10 @@
             `Die Massen in $${sTex(A)}$ und $${sTex(B)}$ stehen im Verhältnis der Längen, $${mTex(A)} : ${mTex(B)} = ${num(k.A.m, 1)} : ${num(k.B.m, 1)}$. Ihr gemeinsamer Schwerpunkt liegt auf ihrer Verbindungslinie, näher beim schwereren Teil, mit $${mTex(A)}\\cdot a_{${A}} = ${mTex(B)}\\cdot a_{${B}}$: Er liegt beim Bruchteil $\\frac{${mTex(B)}}{${mTex(A)} + ${mTex(B)}} = \\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}}$ des Wegs von $${sTex(A)}$ nach $${sTex(B)}$. Die Linie verläuft ${q(Math.abs(dx), 'cm', 1)} nach ${dx > 0 ? 'rechts' : 'links'} und ${q(Math.abs(dy), 'cm', 1)} nach ${dy > 0 ? 'oben' : 'unten'}; beides wird im gleichen Verhältnis geteilt:`) +
             `$$\\Delta x = ${tq(dx, 'cm', 1)}\\cdot\\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}} = ${tq(dx * f, 'cm', 2)},\\qquad \\Delta y = ${tq(dy, 'cm', 1)}\\cdot\\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}} = ${tq(dy * f, 'cm', 2)}$$` +
             L(`from $${sTex(A)}$: `, `von $${sTex(A)}$ aus: `);
-          const body = equal
+          const body = k.D < 1e-9
+            ? L(`$${sTex(A)}$ and $${sTex(B)}$ are at the same point, so their common centre of mass is there too: ${where}.`,
+              `$${sTex(A)}$ und $${sTex(B)}$ liegen im selben Punkt, also liegt auch ihr gemeinsamer Schwerpunkt dort: ${where}.`)
+            : equal
             ? L(`$${sTex(A)}$ and $${sTex(B)}$ belong to parts of equal mass, so their common centre of mass lies in the middle between them: ${where}.`,
               `$${sTex(A)}$ und $${sTex(B)}$ gehören zu Teilen gleicher Masse, also liegt ihr gemeinsamer Schwerpunkt in der Mitte dazwischen: ${where}.`)
             : !straight ? `${oblique}${where}.` : L(`The masses at $${sTex(A)}$ and $${sTex(B)}$ are in the ratio of the lengths, $${mTex(A)} : ${mTex(B)} = ${num(k.A.m, 1)} : ${num(k.B.m, 1)}$. Their common centre of mass lies on the line between them, ${q(k.D, 'cm', 2)} long, closer to the heavier part:`,
@@ -702,7 +766,7 @@
     angled,
     hang('hang', 3, false),
     hang('hang2', 4, true),
-    com('L'), com('T'), com('U'), com('tri'), com('loop'), com('bell'),
+    com('L'), com('T'), com('U'), com('E'), com('tri'), com('iso'), com('house'), com('sqstick'), com('tristick'), com('bell'),
   ];
 
   // helpers for the situations of statics.js, which adds its own to SCENARIOS
