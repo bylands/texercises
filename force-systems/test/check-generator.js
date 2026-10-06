@@ -9,7 +9,7 @@
 'use strict';
 
 const load = typeof require === 'function'
-  ? () => { require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../generator.js'); require('../realproblems.js'); require('../lessons.js'); }
+  ? () => { require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../generator.js'); require('../realproblems.js'); require('../realpictures.js'); require('../lessons.js'); }
   : () => {};
 load();
 const { FS, Forces, Lessons } = globalThis;
@@ -196,7 +196,9 @@ for (const lang of ['en', 'de']) {
         if (f.exact !== false && Math.abs(f.value * 10 ** f.dec - Math.round(f.value * 10 ** f.dec)) > 1e-6) fail(`${id}: ${f.key} = ${f.value} needs rounding`);
         f.traps.forEach((t) => { if (Math.abs(t.value - f.value) < 1e-9) fail(`${id}: trap ${t.flag} equals the answer`); });
       });
-      [ex.text, ...ex.hints, ...ex.solution, ex.results].forEach((x, k) => { if (/undefined|NaN|Infinity|\[object/.test(x)) fail(`${id}: text ${k} has an undefined value`); });
+      const pics = [ex.taskFigure(), ex.solutionFigure()];
+      if (pics.some((x) => !x.includes('<svg'))) fail(`${id}: a picture or force diagram is missing`);
+      [ex.text, ...ex.hints, ...ex.solution, ex.results, ...pics].forEach((x, k) => { if (/undefined|NaN|Infinity|\[object/.test(x)) fail(`${id}: text ${k} has an undefined value`); });
     }
   });
 }

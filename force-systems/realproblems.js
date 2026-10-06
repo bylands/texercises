@@ -394,7 +394,10 @@
     return {
       id: `real${i + 1}-${seed}`, real: i, seed, scenario: `real-${pb.id}`, difficulty: pb.difficulty,
       title: pb.title(), text: `<p>${pb.text(p)}</p><p class="note">${L('Take g = 10 m/s².', 'Rechne mit g = 10 m/s².')}</p>`,
-      fields, forces: null, comps: [], taskFigure: () => '', solutionFigure: () => '',
+      // the picture of the situation and the force diagrams (realpictures.js)
+      fields, forces: null, comps: [],
+      taskFigure: () => (root.RealPictures && root.RealPictures[pb.id] ? root.RealPictures[pb.id].pic(p, v) : ''),
+      solutionFigure: () => (root.RealPictures && root.RealPictures[pb.id] ? root.RealPictures[pb.id].fbd(p, v) : ''),
       hints: pb.hints(p, v), solution: pb.steps(p, v),
       results: fields.map((f) => `$${T(...f.sym)} = ${tq(f.value, f.unit)}$`).join(', '),
       p, v,

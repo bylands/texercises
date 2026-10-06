@@ -29,6 +29,7 @@
     alpha: { en: ['α', ''], de: ['α', ''] },
     // for the real problems: static friction coefficient, air resistance, thrust, a scale's reading
     mus: { en: ['μ', 's'], de: ['μ', 'H'] },
+    v: { en: ['v', ''], de: ['v', ''] },
     D: { en: ['F', 'd'], de: ['F', 'L'] },
     Th: { en: ['F', 'th'], de: ['F', 'Sch'] },
     mS: { en: ['m', 'scale'], de: ['m', 'Waage'] },

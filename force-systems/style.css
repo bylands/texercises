@@ -91,3 +91,38 @@ svg .force.dim { opacity: 0.25; }
 .table-fb { margin: 2px 0 6px; min-height: 1.4em; font-size: 0.9rem; }
 .table-fb.ok { color: var(--ok); }
 .table-fb.bad { color: var(--bad); }
+
+/* the pictures of the real problems (realpictures.js) */
+:root { --pic-car: #d9534f; --pic-car2: #5b8def; --pic-truck: #e8a33d; --pic-glass: #cfe6f5; --pic-wheel: #2d3136; --pic-crate: #c8995f; --pic-container: #2f7fb8;
+  --pic-cabin: #eef0f2; --pic-device: #9aa4ad; --pic-crane: #e0a526; --pic-wagon: #7c8b99; --pic-canopy: #e85d75; --pic-rocket: #f4f6f8; --pic-flame: #ffb43d; --pic-weight: #59636d; --pic-skin: #f3d2b3; }
+@media (prefers-color-scheme: dark) {
+  :root { --pic-glass: #34506a; --pic-cabin: #2a2f35; --pic-rocket: #d9dde2; --pic-skin: #c9a27f; }
+}
+svg :is(.pic-car, .pic-truck, .pic-crate, .pic-container, .pic-cabin, .pic-device, .pic-wagon, .pic-rocket, .pic-weight, .pic-glass, .pic-canopy, .pic-fin, .pic-shaft) { stroke: var(--ink); stroke-width: 1.2; stroke-linejoin: round; }
+svg .pic-car { fill: var(--pic-car); }
+svg .pic-car.alt { fill: var(--pic-car2); }
+svg .pic-truck { fill: var(--pic-truck); }
+svg .pic-glass { fill: var(--pic-glass); }
+svg .pic-wheel { fill: var(--pic-wheel); }
+svg .pic-hub { fill: var(--card); }
+svg .pic-crate { fill: var(--pic-crate); }
+svg .pic-container { fill: var(--pic-container); }
+svg .pic-ribs { stroke: rgba(255, 255, 255, 0.45); stroke-width: 2; fill: none; }
+svg .pic-cabin { fill: var(--pic-cabin); }
+svg .pic-shaft { fill: none; stroke-dasharray: 6 4; stroke: var(--muted); }
+svg .pic-device { fill: var(--pic-device); }
+svg .pic-crane { fill: none; stroke: var(--pic-crane); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+svg .pic-wagon { fill: var(--pic-wagon); }
+svg .pic-coupling { stroke: var(--ink); stroke-width: 3; }
+svg .pic-canopy { fill: var(--pic-canopy); }
+svg .pic-lines { fill: none; stroke: var(--muted); stroke-width: 1; }
+svg .pic-rocket { fill: var(--pic-rocket); }
+svg .pic-fin { fill: var(--pic-car); }
+svg .pic-flame { fill: var(--pic-flame); stroke: #e8742c; stroke-width: 1.2; }
+svg .pic-weight { fill: var(--pic-weight); }
+svg .pic-head { fill: var(--pic-skin); stroke: var(--ink); stroke-width: 1.4; }
+svg .pic-limbs { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+svg .pic-ski { stroke: var(--pic-car2); stroke-width: 4; stroke-linecap: round; }
+svg .pic-runner { fill: none; stroke: var(--ink); stroke-width: 2.5; }
+svg .pic-speed { stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }
+.fig-note { flex-basis: 100%; text-align: center; margin: 0; }
