@@ -4,6 +4,9 @@
 // switches the sign of its value (shown on touch screens only, see ui.css). The button does not
 // take the focus, so the number pad stays open, and the field reports the change like typing.
 // It finds the fields by itself, also those drawn later.
+// Also: Enter checks the answers from any answer, not only from a text field (where the browser
+// submits the form by itself): from a radio button or a checkbox of the exercise (a sense of
+// rotation, a choice, the table of forces) and from a select, as if Check were pressed.
 (function (root) {
   'use strict';
 
@@ -41,7 +44,19 @@
     node.querySelectorAll('input[inputmode="decimal"]').forEach(equip);
   }
 
+  function enter(evt) {
+    if (evt.key !== 'Enter' || evt.isComposing || evt.altKey || evt.ctrlKey || evt.metaKey || evt.shiftKey) return;
+    const el = evt.target;
+    if (!el.matches || !el.matches('input[type="radio"], input[type="checkbox"], select')) return;
+    const check = document.getElementById('check');
+    if (!check || check.disabled || !check.offsetParent || !el.closest('#task')) return;
+    evt.preventDefault();
+    if (check.form && el.form === check.form && check.form.requestSubmit) check.form.requestSubmit(check);
+    else check.click();
+  }
+
   function start() {
+    document.addEventListener('keydown', enter);
     scan(document.body);
     new MutationObserver((records) => records.forEach((r) => r.addedNodes.forEach(scan))).observe(document.body, { childList: true, subtree: true });
   }
