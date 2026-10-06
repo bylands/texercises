@@ -127,7 +127,7 @@
         const m = [(A[0] + B[0]) / 2 + n[0] * 11, (A[1] + B[1]) / 2 + n[1] * 11 + 5];
         const anchor = Math.abs(n[0]) > 0.7 ? (n[0] > 0 ? 'start' : 'end') : 'middle';
         this.seeText(m[0], m[1], label, anchor);
-        this.add(`<text class="lbl small${cls.includes('hl') ? ' hl' : ''}" x="${f(m[0] + (anchor === 'start' ? -6 : anchor === 'end' ? 6 : 0))}" y="${f(m[1])}" text-anchor="${anchor}">${label}</text>`, true);
+        this.add(`<text class="lbl small${cls.includes('hl') ? ' hl' : ''}${cls.includes('hidden') ? ' hidden' : ''}" x="${f(m[0] + (anchor === 'start' ? -6 : anchor === 'end' ? 6 : 0))}" y="${f(m[1])}" text-anchor="${anchor}">${label}</text>`, true);
       }
       return this;
     }
@@ -178,7 +178,7 @@
       this.see(p[0] - r, p[1] - r); this.see(p[0] + r, p[1] + r);
       const mark = sign > 0 ? `M${f(p[0] - 5.5)} ${f(p[1])}H${f(p[0] + 5.5)}M${f(p[0])} ${f(p[1] - 5.5)}V${f(p[1] + 5.5)}` : sign < 0 ? `M${f(p[0] - 5.5)} ${f(p[1])}H${f(p[0] + 5.5)}` : '';
       this.add(`<g class="chg ${k} ${cls}"><circle cx="${f(p[0])}" cy="${f(p[1])}" r="${r}"/>${mark ? `<path d="${mark}"/>` : `<text x="${f(p[0])}" y="${f(p[1] + 5)}" text-anchor="middle">?</text>`}</g>`, true);
-      if (label) this.text(c, label, `lbl qlbl ${k}`, off[0] > 3 ? 'start' : off[0] < -3 ? 'end' : 'middle', off);
+      if (label) this.text(c, label, `lbl qlbl ${k}${/\bhidden\b/.test(cls) ? ' hidden' : ''}`, off[0] > 3 ? 'start' : off[0] < -3 ? 'end' : 'middle', off);
       return this;
     }
 

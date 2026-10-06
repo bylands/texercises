@@ -21,7 +21,7 @@
   const res = (x) => `\\htmlClass{result}{${x}}`;
   const rt = (x) => `<span class="result">${x}</span>`; // a result in the text
   const num$ = (key, sym, unit, what) => ({ key, type: 'num', sym, unit, what });
-  const choice = (key, what, options) => ({ key, type: 'choice', what, options });
+  const choice = (key, what, options, want) => ({ key, type: 'choice', what, options, want });
   const dirField = (key, what, dirs) => ({ key, type: 'dir', what, dirs });
   // SVG labels: an italic letter with an upright subscript
   const sv = (l, s = '') => `<tspan font-style="italic">${l}</tspan>${s ? `<tspan class="sub" dy="4">${s}</tspan><tspan dy="-4">\u200b</tspan>` : ''}`;
@@ -40,16 +40,19 @@
   function drawing(o, view = {}) {
     const P = new Pic(o.scale, o.label || '');
     if (o.before) o.before(P);
-    (o.dims || []).forEach(([a, b, l, off]) => P.dim(a, b, l, off));
+    (o.dims || []).forEach(([a, b, l, off, cls]) => P.dim(a, b, l, off, `dimline${cls ? ` ${cls}` : ''}`));
     o.pts.forEach((pt) => P.charge(pt.c, pt.q, pt.lab, pt.cls || '', pt.off));
-    const shown = Object.entries(o.forces || {}).filter(([k]) => view.show && view.show.has(k));
-    const big = Math.max(...shown.map(([, f]) => len(f.F)), 1e-300);
-    shown.forEach(([k, f]) => {
+    // all forces, those not shown hidden: every frame of a worked example has the same size, and an
+    // arrow the same length in every frame
+    const all = Object.entries(o.forces || {});
+    const big = Math.max(...all.map(([, f]) => len(f.F)), 1e-300);
+    all.forEach(([k, f]) => {
+      const hidden = !(view.show && view.show.has(k)) ? ' hidden' : '';
       const L0 = len(f.F);
       if (L0 < 1e-12 * big) return;
       const u = unit(f.F), l = Math.max(16, (o.arrow || 85) * (L0 / big));
       const off = [u[0] > 0.35 ? 8 : u[0] < -0.35 ? -8 : 9, u[1] > 0.35 ? -8 : u[1] < -0.35 ? 14 : 0];
-      P.arrow(f.at, u, l, `force ${f.cls || ''}${view.hl && view.hl.has(k) ? ' hl' : ''}`, f.lab, f.off || off);
+      P.arrow(f.at, u, l, `force ${f.cls || ''}${view.hl && view.hl.has(k) ? ' hl' : ''}${hidden}`, f.lab, f.off || off);
     });
     if (o.after) o.after(P, view);
     return P.svg();
@@ -86,7 +89,7 @@
     solve: (p, o = {}) => ({ F: o.noSquare ? (K * Math.abs(p.q1 * p.q2)) / p.r : o.cm ? (K * Math.abs(p.q1 * p.q2)) / (100 * p.r) ** 2 : pairF(p), kind: kind(p) }),
     traps: ['noSquare'],
     why: { noSquare: () => L('The distance counts squared: r² in the denominator.', 'Der Abstand zählt im Quadrat: r² im Nenner.') },
-    fields: (p) => [num$('F', 'F', forceUnit(pairF(p)), L('force', 'Kraft')), choice('kind', L('The charges …', 'Die Ladungen …'), attractRepel())],
+    fields: (p) => [num$('F', 'F', forceUnit(pairF(p)), L('force', 'Kraft')), choice('kind', L('The charges …', 'Die Ladungen …'), attractRepel(), L('whether they attract or repel each other', 'ob sie sich anziehen oder abstossen'))],
     text: (p) => L(`Two small charged spheres carry charges of ${qs(p.q1, 'μC')} and ${qs(p.q2, 'μC')}; their centres are ${q(p.r, 'cm')} apart. How large is the force between them? Do they attract or repel each other?`,
       `Zwei kleine geladene Kugeln tragen die Ladungen ${qs(p.q1, 'μC')} und ${qs(p.q2, 'μC')}; ihre Mittelpunkte sind ${q(p.r, 'cm')} voneinander entfernt. Wie gross ist die Kraft zwischen ihnen? Ziehen sie sich an oder stossen sie sich ab?`),
     hints: () => [
@@ -153,6 +156,8 @@
   // ---------------------------------------------------------------- 2 factors
   const DIST = { 2: L.bind(null, 'doubled', 'verdoppelt'), 3: L.bind(null, 'tripled', 'verdreifacht'), 4: L.bind(null, 'made four times as large', 'vervierfacht'), 0.5: L.bind(null, 'halved', 'halbiert'), [1 / 3]: L.bind(null, 'reduced to a third', 'auf einen Drittel verkleinert') };
   const CHG = { 2: L.bind(null, 'doubled', 'verdoppelt'), 3: L.bind(null, 'tripled', 'verdreifacht'), 0.5: L.bind(null, 'halved', 'halbiert'), 1: null };
+  // a power of the factor: 2^2, but (\tfrac{1}{2})^2
+  const sq = (x) => (Number.isInteger(x) ? `${x}^2` : `\\left(${ft(x)}\\right)^2`);
   const ft = (x) => { const fr = [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [1, 4], [9, 1], [1, 9], [16, 1], [1, 16], [3, 2], [2, 3], [9, 4], [4, 9], [3, 4], [4, 3], [1, 8], [8, 1], [6, 1], [1, 6], [12, 1], [1, 12], [27, 4], [4, 27], [9, 8], [8, 9], [2, 9], [9, 2], [3, 8], [8, 3], [1, 18], [18, 1], [1, 36], [36, 1], [1, 27], [27, 1], [3, 16], [16, 3], [1, 24], [24, 1], [2, 27], [27, 2], [4, 3], [3, 4]].find(([a, b]) => Math.abs(a / b - x) < 1e-9); return fr ? (fr[1] === 1 ? String(fr[0]) : `\\tfrac{${fr[0]}}{${fr[1]}}`) : tnum(x); };
   function factorFigure(p, v, view) {
     const P = new Pic(1, L('The two charges before and after', 'Die beiden Ladungen vorher und nachher'));
@@ -188,7 +193,7 @@
       const n = ft(p.n), a = ft(p.a);
       return [step(L('Compare', 'Vergleichen'), p$(L("Let $F$ be the old force and $F'$ the new one. Only what changes is left in the ratio:", "Sei $F$ die alte und $F'$ die neue Kraft. Im Verhältnis bleibt nur, was sich ändert:")) +
         (p.what === 'r'
-          ? `$$\\frac{F'}{F} = \\frac{k\\,|q_1|\\,|q_2| / (${n}\\,r)^2}{k\\,|q_1|\\,|q_2| / r^2} = \\frac{1}{(${n})^2} = ${res(ft(v.f))}$$` + p$(L('The force falls with the square of the distance.', 'Die Kraft nimmt mit dem Quadrat des Abstands ab.'))
+          ? `$$\\frac{F'}{F} = \\frac{k\\,|q_1|\\,|q_2| / (${n}\\,r)^2}{k\\,|q_1|\\,|q_2| / r^2} = \\frac{1}{${sq(p.n)}} = ${res(ft(v.f))}$$` + p$(L('The force falls with the square of the distance.', 'Die Kraft nimmt mit dem Quadrat des Abstands ab.'))
           : `$$\\frac{F'}{F} = \\frac{k\\,${a}\\,|q_1|\\,|q_2| / r^2}{k\\,|q_1|\\,|q_2| / r^2} = ${res(ft(v.f))}$$` + p$(L('The force is proportional to each charge.', 'Die Kraft ist proportional zu jeder Ladung.'))))];
     },
     figure: factorFigure,
@@ -212,7 +217,7 @@
     ],
     steps: (p, v) => [
       step(L('Compare', 'Vergleichen'), p$(L("Let $F$ be the old force and $F'$ the new one. In the ratio, k cancels and only the factors are left:", "Sei $F$ die alte und $F'$ die neue Kraft. Im Verhältnis kürzt sich k, und nur die Faktoren bleiben:")) +
-        `$$\\frac{F'}{F} = \\frac{${ft(p.a)}\\cdot ${ft(p.b)}}{(${ft(p.n)})^2} = ${res(ft(v.f))}$$`),
+        `$$\\frac{F'}{F} = \\frac{${ft(p.a)}\\cdot ${ft(p.b)}}{${sq(p.n)}} = ${res(ft(v.f))}$$`),
       step(L('The new force', 'Die neue Kraft'), p$(L('The old force times the factor:', 'Die alte Kraft mal den Faktor:')) + `$$F' = ${ft(v.f)}\\cdot ${tq(p.F, 'N')} = ${res(tq(v.F2, forceUnit(v.F2)))}$$`),
     ],
     figure: factorFigure,
@@ -272,9 +277,10 @@
     return drawing({
       scale: s,
       pts: pts.map(([x, qq, name], i) => ({ c: [x, 0], q: Math.sign(qq), lab: `${i ? `${name}: ` : ''}${qs(qq, 'μC')}`, cls: i ? '' : 'hl' })),
-      dims: [[[xs[0], 0], [xs[1], 0], q(xs[1] - xs[0], 'cm'), -28], [[xs[1], 0], [xs[2], 0], q(xs[2] - xs[1], 'cm'), -28]],
-      // the two forces just above and below the line, the net force on it
-      forces: { FA: { at: [0, 13 / s], F: [v.Fa, 0], lab: sv('F', 'A'), cls: 'k-1', off: [0, -14] }, FB: { at: [0, -13 / s], F: [v.Fb, 0], lab: sv('F', 'B'), cls: 'k-2', off: [0, 22] }, F: { at: [0, 0], F: [v.net, 0], lab: sv('F'), cls: 'k-net', off: [v.net >= 0 ? 10 : -10, 0] } },
+      dims: [[[xs[0], 0], [xs[1], 0], q(xs[1] - xs[0], 'cm'), -58], [[xs[1], 0], [xs[2], 0], q(xs[2] - xs[1], 'cm'), -58]],
+      // the net force on the line, the two forces stacked below it (the labels of the charges are
+      // above), each labelled beside its tip
+      forces: { FA: { at: [0, -15 / s], F: [v.Fa, 0], lab: sv('F', 'A'), cls: 'k-1', off: [v.Fa >= 0 ? 8 : -8, 0] }, FB: { at: [0, -30 / s], F: [v.Fb, 0], lab: sv('F', 'B'), cls: 'k-2', off: [v.Fb >= 0 ? 8 : -8, 0] }, F: { at: [0, 0], F: [v.net, 0], lab: sv('F'), cls: 'k-net', off: [v.net >= 0 ? 10 : -10, 0] } },
       arrow: 90,
     }, view);
   }
@@ -400,11 +406,9 @@
       pts.forEach((c, j) => P.charge(at(c), p.s[j], sl(p.s[j])));
       P.charge(at([0, 0]), 1, sl(1), 'hl');
       P.text([(minX + maxX) / 2 + dx, -0.9], `<tspan font-weight="700">${LETTERS[i]}</tspan>`, 'lbl');
-      if (view.show && (view.show.has(`F${i}`) || view.show.has('all'))) {
-        const n = v.nets[i], l = len(n);
-        if (l > 1e-9) P.arrow(at([0, 0]), unit(n), 22 + 40 * l, 'force k-net', `${sig(l, 3)}${sv('F', '0')}`, [n[0] >= 0 ? 8 : -8, n[1] > 0.3 ? -8 : 14]);
-        else P.text(at([0, -0.45]), `${sv('F')} = 0`, 'lbl small');
-      }
+      const hidden = view.show && (view.show.has(`F${i}`) || view.show.has('all')) ? '' : ' hidden', n = v.nets[i], l = len(n);
+      if (l > 1e-9) P.arrow(at([0, 0]), unit(n), 22 + 40 * l, `force k-net${hidden}`, `${sig(l, 3)}${sv('F', '0')}`, [n[0] >= 0 ? 8 : -8, n[1] > 0.3 ? -8 : 14]);
+      else P.text(at([0, -0.45]), `${sv('F')} = 0`, `lbl small${hidden}`);
       x0 += maxX - minX + 1.7;
     });
     return P.svg();
@@ -435,7 +439,7 @@
     make: (r) => rankMake(r, 3),
     solve: (p) => { const v = rankSolve(p); return { ...v, rk: v.rank }; },
     traps: [], why: {},
-    fields: (p) => [{ key: 'rk', type: 'rank', what: L('rank (1 = largest net force)', 'Rang (1 = grösste resultierende Kraft)'), items: p.keys.map((k, i) => LETTERS[i]) }],
+    fields: (p) => [{ key: 'rk', type: 'rank', what: L('rank (1 = largest net force)', 'Rang (1 = grösste resultierende Kraft)'), want: L('the ranking of the arrangements', 'die Rangfolge der Anordnungen'), items: p.keys.map((k, i) => LETTERS[i]) }],
     text: (p) => {
       const others = p.s[0] !== p.s[1] ? L('of the other two, one is positive and one negative', 'von den anderen beiden ist eine positiv und eine negativ') : p.s[0] > 0 ? L('so are the other two', 'die anderen beiden auch') : L('the other two are negative', 'die anderen beiden sind negativ');
       return L(`The drawing shows three point charges arranged in ${word(p.keys.length)} different ways. The charges have the same size q: the highlighted one is positive, ${others}. In each arrangement the distance d is the same. Rank the arrangements by the size of the net force on the highlighted charge (1 = largest).`,
@@ -534,11 +538,11 @@
     return { region: small === 1 ? 'left' : 'right', x: s, pos: small === 1 ? -s : p.d + s, small };
   }
   function zeroFigure(p, v, view) {
-    const pos = view.show && view.show.size ? v.pos : null, xs = [0, p.d, pos == null ? 0 : pos], minX = Math.min(...xs), maxX = Math.max(...xs), s = 360 / (maxX - minX);
+    const pos = v.pos, hide = view.show && view.show.size ? '' : 'hidden', xs = [0, p.d, pos], minX = Math.min(...xs), maxX = Math.max(...xs), s = 360 / (maxX - minX);
     return drawing({
       scale: s,
-      pts: [{ c: [0, 0], q: Math.sign(p.q1), lab: `${sv('q', '1')} = ${qs(p.q1, 'μC')}` }, { c: [p.d, 0], q: Math.sign(p.q2), lab: `${sv('q', '2')} = ${qs(p.q2, 'μC')}` }, ...(pos == null ? [] : [{ c: [pos, 0], q: 0, lab: L('here', 'hier'), cls: 'hl' }])],
-      dims: [[[0, 0], [p.d, 0], q(p.d, 'cm'), -26], ...(pos == null ? [] : [[[Math.min(pos, p.like || v.small === 1 ? 0 : p.d), 0], [Math.max(pos, p.like || v.small === 1 ? 0 : p.d), 0], q(v.x, 'cm'), -56]])],
+      pts: [{ c: [0, 0], q: Math.sign(p.q1), lab: `${sv('q', '1')} = ${qs(p.q1, 'μC')}` }, { c: [p.d, 0], q: Math.sign(p.q2), lab: `${sv('q', '2')} = ${qs(p.q2, 'μC')}` }, { c: [pos, 0], q: 0, lab: L('here', 'hier'), cls: `hl ${hide}` }],
+      dims: [[[0, 0], [p.d, 0], q(p.d, 'cm'), -26], [[Math.min(pos, p.like || v.small === 1 ? 0 : p.d), 0], [Math.max(pos, p.like || v.small === 1 ? 0 : p.d), 0], q(v.x, 'cm'), -56, hide]],
       before: (P) => { P.line([minX - 0.1 * (maxX - minX), 0], [maxX + 0.1 * (maxX - minX), 0], 'w thin dashed'); },
     }, view);
   }
@@ -550,7 +554,7 @@
     solve: zeroSolve,
     traps: ['noRoot', 'other'],
     why: { noRoot: () => L('The forces go with 1/r²: the distances are in the ratio of the square roots of the charges.', 'Die Kräfte gehen mit 1/r²: Die Abstände stehen im Verhältnis der Wurzeln der Ladungen.'), other: () => L('That is the distance from q₂; the question asks for the distance from q₁.', 'Das ist der Abstand von q₂; gefragt ist der Abstand von q₁.') },
-    fields: () => [choice('region', L('The point lies …', 'Der Punkt liegt …'), zeroRegions()), num$('x', 'x', 'cm', L('distance from q₁', 'Abstand von q₁'))],
+    fields: () => [choice('region', L('The point lies …', 'Der Punkt liegt …'), zeroRegions(), L('where the point lies', 'wo der Punkt liegt')), num$('x', 'x', 'cm', L('distance from q₁', 'Abstand von q₁'))],
     text: (p) => L(`Two point charges of ${qs(p.q1, 'μC')} (q₁) and ${qs(p.q2, 'μC')} (q₂) are ${q(p.d, 'cm')} apart. At which point on the line through them does a third charge feel no net force? Give the region and the distance from q₁.`,
       `Zwei Punktladungen von ${qs(p.q1, 'μC')} (q₁) und ${qs(p.q2, 'μC')} (q₂) sind ${q(p.d, 'cm')} voneinander entfernt. An welchem Punkt auf der Geraden durch sie spürt eine dritte Ladung keine resultierende Kraft? Gib den Bereich und den Abstand von q₁ an.`),
     hints: () => [
@@ -574,7 +578,7 @@
     make: (r) => zeroMake(r, false),
     traps: ['noRoot', 'between'],
     why: { noRoot: () => L('The forces go with 1/r²: the distances are in the ratio of the square roots of the charges.', 'Die Kräfte gehen mit 1/r²: Die Abstände stehen im Verhältnis der Wurzeln der Ladungen.'), between: () => L('Between unlike charges, both forces point the same way: the point lies outside.', 'Zwischen ungleichnamigen Ladungen zeigen beide Kräfte in dieselbe Richtung: Der Punkt liegt ausserhalb.') },
-    fields: () => [choice('region', L('The point lies …', 'Der Punkt liegt …'), zeroRegions()), num$('x', 'x', 'cm', L('distance from the nearer charge', 'Abstand von der näheren Ladung'))],
+    fields: () => [choice('region', L('The point lies …', 'Der Punkt liegt …'), zeroRegions(), L('where the point lies', 'wo der Punkt liegt')), num$('x', 'x', 'cm', L('distance from the nearer charge', 'Abstand von der näheren Ladung'))],
     text: (p) => L(`Two point charges of ${qs(p.q1, 'μC')} (q₁) and ${qs(p.q2, 'μC')} (q₂) are ${q(p.d, 'cm')} apart. At which point on the line through them does a third charge feel no net force? Give the region and the distance from the nearer of the two charges.`,
       `Zwei Punktladungen von ${qs(p.q1, 'μC')} (q₁) und ${qs(p.q2, 'μC')} (q₂) sind ${q(p.d, 'cm')} voneinander entfernt. An welchem Punkt auf der Geraden durch sie spürt eine dritte Ladung keine resultierende Kraft? Gib den Bereich und den Abstand von der näheren der beiden Ladungen an.`),
     steps: (p, v) => {
@@ -617,7 +621,7 @@
     }, view);
   }
   const nudgeFields = () => [dirField('d', L('direction of the net force', 'Richtung der resultierenden Kraft'), ['N', 'E', 'S', 'W', '0']),
-    choice('stab', L('The net force …', 'Die resultierende Kraft …'), [['back', L('pushes the charge back to the middle', 'treibt die Ladung zur Mitte zurück')], ['away', L('pushes it further away from the middle', 'treibt sie weiter von der Mitte weg')]])];
+    choice('stab', L('The net force …', 'Die resultierende Kraft …'), [['back', L('pushes the charge back to the middle', 'treibt die Ladung zur Mitte zurück')], ['away', L('pushes it further away from the middle', 'treibt sie weiter von der Mitte weg')]], L('whether it pushes the charge back to the middle', 'ob sie die Ladung zur Mitte zurücktreibt'))];
   const nudgeText = (p) => {
     const like = p.so === p.sm, side = p.across ? L('away from the line, across it', 'quer zur Geraden') : L('along the line, towards one of the outer charges', 'entlang der Geraden, zu einer der äusseren Ladungen hin');
     return L(`Three point charges of the same size lie on a line, the middle one exactly halfway between the others. There the forces on it cancel. Now the middle charge is moved slightly ${side} (the drawing exaggerates it). In which direction does the net force on it point? Does it push the charge back to the middle?`,

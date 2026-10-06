@@ -93,7 +93,7 @@
   // The tutor: the situation with what is wanted, then the steps of the solution.
   function tutorial(lesson) {
     const ex = exercise(byId(lesson.scenario), lesson.p);
-    const wanted = ex.fields.map((f) => (f.type === 'num' ? `${f.what} $${f.sym}$` : f.what.replace(/ …$/, ''))).join(', ');
+    const wanted = ex.fields.map((f) => (f.type === 'num' ? `${f.what} $${f.sym}$` : f.want || f.what)).join(', ');
     const first = {
       text: `<p class="step-rule">${L('The situation', 'Die Situation')}</p>${ex.text}<p>${L('Wanted', 'Gesucht')}: ${wanted}.</p>`,
       figure: ex.figure({ task: true }),

@@ -141,3 +141,6 @@ svg .k-move { color: var(--muted); }
 
 /* a result in the text of a step (in formulas, KaTeX marks it: see ui.css) */
 span.result { background: var(--ok-bg); border-radius: 3px; padding: 0.05em 0.25em; }
+
+/* what a worked example shows only later: it keeps its room, so that the drawing stays put */
+svg .hidden { visibility: hidden; }
