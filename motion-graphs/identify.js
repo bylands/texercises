@@ -11,7 +11,8 @@
 //   Identify.trig(c)                    the usual item for a component: c = { key, what, sym (TeX),
 //                                       base (TeX, e.g. m\,g), baseVal (or null if unknown), fn: sin
 //                                       or cos, alpha (degrees), num(x) and unit (TeX) for the values,
-//                                       why: other explanations { sc, tan, whole } }
+//                                       why: other explanations { sc, tan, whole }, frac: the factor
+//                                       as a fraction (TeX) when the base is unknown }
 (function (root) {
   'use strict';
 
@@ -52,7 +53,7 @@
     trig(c) {
       const t = { ...tx(), ...(c.why || {}) }, f = c.fn === 'sin' ? Math.sin : Math.cos, a = (c.alpha * Math.PI) / 180;
       const opt = (fn, why) => ({ html: `$${c.base}${fn ? `\\${fn}\\alpha` : ''}$`, right: fn === c.fn, why });
-      const factor = c.num(f(a));
+      const factor = c.frac || c.num(f(a)); // a fraction (e.g. \\tfrac{12}{13}) where the decimal would not end
       const value = c.baseVal == null
         ? `$${c.sym} = ${c.base}\\${c.fn}\\alpha = ${factor}\\,${c.base}$`
         : `$${c.sym} = ${c.base}\\${c.fn}\\alpha = ${c.num(c.baseVal)}\\,${c.unit}\\cdot\\${c.fn}${Math.round(c.alpha * 10) / 10}^\\circ = ${c.num(c.baseVal * f(a))}\\,${c.unit}$`;

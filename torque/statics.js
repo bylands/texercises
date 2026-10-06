@@ -10,7 +10,16 @@
   const m_ = (x) => q(x, 'm', 2);
   const g_ = (x) => q(x, 'g', 1);
   const deg = (x) => (x * 180) / Math.PI;
-  const A345 = deg(Math.atan2(3, 4));
+  // Right triangles with whole sides, and their angles (as in scenarios.js): sin α and cos α of
+  // such an angle as a fraction, e.g. \tfrac{12}{13}
+  const TRIANGLES = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
+  const PYTH = TRIANGLES.flatMap(([a, b]) => [deg(Math.atan2(a, b)), deg(Math.atan2(b, a))]);
+  function fracOf(alpha, fn) {
+    for (const [a, b, c] of TRIANGLES) {
+      for (const [opp, adj] of [[a, b], [b, a]]) if (Math.abs(deg(Math.atan2(opp, adj)) - alpha) < 1e-9) return `\\tfrac{${fn === 'sin' ? opp : adj}}{${c}}`;
+    }
+    return null;
+  }
   // a field: key, symbol, unit, decimals, what
   const field = (key, sym, unit, dec, what) => ({ key, sym, unit, dec, what });
   // a box standing on the beam at x (world units), w × h px, with a label
@@ -423,8 +432,19 @@
   const crane = {
     id: 'crane', family: 'supports', difficulty: 5, calc: 'trig',
     make(r, o = {}) {
-      const alpha = o.nice ? 30 : o.pyth ? pick(r, [A345, 90 - A345]) : pick(r, [25, 30, 35, 40, 45, 50, 60]);
-      return { len: pick(r, [1, 1.5, 2, 2.5, 3]), m: pick(r, [10, 20, 30, 40]), M: pick(r, [20, 30, 40, 50, 60, 80, 100]), alpha };
+      // in practice, the angles of right triangles with whole sides (not steeper than 62°, so that
+      // the cable fits the picture), and boom lengths that are multiples of their hypotenuses
+      const alpha = o.nice ? 30 : o.pyth ? pick(r, PYTH.filter((x) => x < 62)) : pick(r, [25, 30, 35, 40, 45, 50, 60]);
+      const one = () => ({ len: pick(r, o.pyth ? [1, 1.3, 1.5, 1.7, 2, 2.5, 2.6, 2.9, 3, 3.4] : [1, 1.5, 2, 2.5, 3]), m: pick(r, [10, 20, 30, 40]), M: pick(r, [20, 30, 40, 50, 60, 80, 100]), alpha });
+      if (!o.pyth) return one();
+      // the angle first, then lengths and masses that fit it (so that every angle comes up about
+      // equally often): lever arm in cm, cable and hinge force to 0.1 N
+      const whole = (x, k) => Math.abs(k * x - Math.round(k * x)) < 1e-6;
+      for (let k = 0; k < 200; k++) {
+        const p = one(), v = crane.solve(p);
+        if (whole(p.len * Math.sin(rad(alpha)), 100) && whole(v.T, 10) && whole(v.Hx, 10)) return p;
+      }
+      return null;
     },
     solve(p, o = {}) {
       const s = o.cos ? Math.cos(rad(p.alpha)) : o.noAngle ? 1 : Math.sin(rad(p.alpha));
@@ -440,7 +460,7 @@
     comps: (p) => [
       { key: 'd', what: L('The lever arm of the cable force about the hinge:', 'Der Hebelarm der Seilkraft bezüglich des Gelenks:'), sym: 'd', base: '\\ell', baseVal: p.len, fn: 'sin', unit: '\\mathrm{m}',
         why: { whole: L('ℓ is the distance to where the cable pulls, not to its line of action.', 'ℓ ist der Abstand zum Angriffspunkt des Seils, nicht zu seiner Wirkungslinie.') } },
-      { key: 'h', what: L('The horizontal part of the cable force:', 'Der horizontale Anteil der Seilkraft:'), sym: T('T').replace(/\}$/, ',x}'), base: T('T'), baseVal: null, fn: 'cos' },
+      { key: 'h', what: L('The horizontal part of the cable force:', 'Der horizontale Anteil der Seilkraft:'), sym: T('T').replace(/\}$/, ',x}'), base: T('T'), baseVal: null, fn: 'cos', frac: fracOf(p.alpha, 'cos') },
     ],
     fields: (p) => [field('T', ['T'], 'N', 1, L('cable force', 'Seilkraft')), ...(p.alpha === 30 && p.nice ? [] : [field('Hx', ['H'], 'N', 1, L('horizontal force of the hinge', 'horizontale Kraft des Gelenks'))])],
     title: () => L('A crane boom', 'Ein Kranausleger'),
