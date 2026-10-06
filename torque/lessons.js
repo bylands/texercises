@@ -43,7 +43,7 @@
     {
       scenario: 'com-L', p: { h: 12, b: 8 },
       name: { en: 'Centre of mass', de: 'Schwerpunkt' },
-      idea: { en: 'The centre of mass of a figure of wire is the mean of its parts’ centres, each weighted with its length.', de: 'Der Schwerpunkt einer Drahtfigur ist der Mittelwert der Schwerpunkte ihrer Teile, jeder mit seiner Länge gewichtet.' },
+      idea: { en: 'Split the figure into simple parts, find the centre of mass of each, then combine them two at a time: the common centre divides the line between them so that m₁ · a₁ = m₂ · a₂.', de: 'Zerlege die Figur in einfache Teile, bestimme den Schwerpunkt jedes Teils und fasse sie dann schrittweise zu zweit zusammen: Der gemeinsame Schwerpunkt teilt die Verbindungslinie so, dass m₁ · a₁ = m₂ · a₂.' },
     },
     {
       scenario: 'com-loop', p: { h: 10, r: 3 },

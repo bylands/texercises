@@ -73,6 +73,8 @@ svg .force.hl text { font-weight: 700; }
 svg .force.dim { opacity: 0.3; }
 svg .turn { color: var(--arm); }
 svg .turn path { fill: none; stroke: currentColor; stroke-width: 1.8; }
+svg .join { stroke: var(--com); stroke-width: 1.2; stroke-dasharray: 5 4; }
+svg .join.hl { stroke-width: 2; }
 svg .action { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
 svg .arm { stroke: var(--arm); stroke-width: 2.4; }
 svg .arm.hl { stroke-width: 3.2; }

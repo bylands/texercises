@@ -510,21 +510,52 @@
 
   // two sides of different lengths: with equal ones, weighting by length would make no difference
   const differ = (p) => (p.h === p.b ? null : p);
+  // Step by step, as in class: combine two parts (or groups) at a time. Their common centre lies on
+  // the line between their centres, closer to the heavier one: m_A a_A = m_B a_B, where a_A, a_B are
+  // the distances from the common centre to each, and a_A + a_B = D. Two parts of equal mass are
+  // combined first (they meet in their middle). Masses are the lengths (proportional to them).
+  // Gives [{ A, B, D, aA, aB, S }] with A, B, S = { m, c, name } (name: the parts' numbers, '' for
+  // the whole figure).
+  function combos(parts) {
+    let items = parts.map((pt, i) => ({ m: lengthOf(pt), c: centreOf(pt), name: `${i + 1}` }));
+    const out = [];
+    while (items.length > 1) {
+      // the pair to combine: equal masses first, then a pair whose distance and common centre
+      // come out in round numbers, else the first two
+      const tenth = (x) => Math.abs(10 * x - Math.round(10 * x)) < 1e-9;
+      let best = null;
+      for (let a = 0; a < items.length; a++) {
+        for (let b = a + 1; b < items.length; b++) {
+          const A = items[a], B = items[b], M = A.m + B.m, D = Math.hypot(B.c[0] - A.c[0], B.c[1] - A.c[1]);
+          const c = [A.c[0] + ((B.c[0] - A.c[0]) * B.m) / M, A.c[1] + ((B.c[1] - A.c[1]) * B.m) / M];
+          const score = Math.abs(A.m - B.m) < 1e-9 ? 2 : tenth(D) && c.every(tenth) ? 1 : 0;
+          if (!best || score > best.score) best = { score, a, b };
+        }
+      }
+      const i = best.a, j = best.b;
+      const A = items[i], B = items[j], M = A.m + B.m, D = Math.hypot(B.c[0] - A.c[0], B.c[1] - A.c[1]);
+      const S = { m: M, c: [A.c[0] + ((B.c[0] - A.c[0]) * B.m) / M, A.c[1] + ((B.c[1] - A.c[1]) * B.m) / M], name: items.length === 2 ? '' : [...(A.name + B.name)].sort().join('') };
+      out.push({ A, B, D, aA: (D * B.m) / M, aB: (D * A.m) / M, S });
+      items = [S, ...items.filter((x, k) => k !== i && k !== j)];
+    }
+    return out;
+  }
+
   const SHAPES = {
     // the worksheet's a): a vertical side and a top bar to the right, as Γ
     L: { difficulty: 2, make: (r) => differ({ h: pick(r, [6, 8, 10, 12, 16, 20]), b: pick(r, [4, 6, 8, 10, 12]) }),
       parts: (p) => [{ kind: 'seg', a: [0, 0], b: [0, p.h], name: 'a' }, { kind: 'seg', a: [0, p.h], b: [p.b, p.h], name: 'b' }],
-      title: () => L('An angle of wire', 'Ein Drahtwinkel'), ask: ['x', 'y'] },
+      title: () => L('An angle of wire', 'Ein Drahtwinkel'), ask: ['x', 'y'], offWire: true },
     U: { difficulty: 3, make: (r) => differ({ h: pick(r, [6, 8, 10, 12, 16]), b: pick(r, [6, 8, 10, 12, 16]) }),
       parts: (p) => [{ kind: 'seg', a: [0, 0], b: [0, p.h] }, { kind: 'seg', a: [0, p.h], b: [p.b, p.h] }, { kind: 'seg', a: [p.b, p.h], b: [p.b, 0] }],
-      title: () => L('A gate of wire', 'Ein Drahttor'), ask: ['x', 'y'] },
+      title: () => L('A gate of wire', 'Ein Drahttor'), ask: ['x', 'y'], offWire: true },
     T: { difficulty: 2, make: (r) => differ({ h: pick(r, [6, 8, 10, 12, 16]), b: pick(r, [6, 8, 10, 12, 16]) }),
       parts: (p) => [{ kind: 'seg', a: [0, p.h], b: [p.b, p.h] }, { kind: 'seg', a: [p.b / 2, 0], b: [p.b / 2, p.h] }],
       title: () => L('A T of wire', 'Ein T aus Draht'), ask: ['x', 'y'] },
     tri: { difficulty: 3, make: (r) => ({ k: pick(r, [1, 2, 3, 4]), t: pick(r, [[3, 4, 5], [4, 3, 5]]) }),
       // a right triangle with the right angle at the bottom right, legs (base, height) and hypotenuse
       parts: (p) => { const [bx, hy] = [p.t[1] * p.k, p.t[0] * p.k]; return [{ kind: 'seg', a: [0, 0], b: [bx, 0] }, { kind: 'seg', a: [bx, 0], b: [bx, hy] }, { kind: 'seg', a: [bx, hy], b: [0, 0] }]; },
-      title: () => L('A triangle of wire', 'Ein Drahtdreieck'), ask: ['x', 'y'] },
+      title: () => L('A triangle of wire', 'Ein Drahtdreieck'), ask: ['x', 'y'], offWire: true },
     loop: { difficulty: 4, calc: 'always', make: (r) => ({ h: pick(r, [6, 8, 10, 12, 15]), r: pick(r, [2, 3, 4, 5]) }),
       parts: (p) => [{ kind: 'seg', a: [0, 0], b: [0, p.h] }, { kind: 'ring', c: [0, p.h + p.r], r: p.r }],
       title: () => L('A ring on a stick', 'Ein Ring auf einem Stab'), ask: ['y'] },
@@ -565,7 +596,13 @@
     });
     P.dot([0, 0], 'dot', 2.4);
     P.text([0, 0], 'O', 'lbl', 'end', [-6, 12]);
-    if (show.has('mids')) parts.forEach((pt, i) => { P.dot(centreOf(pt), `dot mid${show.has(`part${i}`) ? ' hl' : ''}`, 3); });
+    const sName = (n) => `S<tspan class="sub" dy="4">${n}</tspan><tspan dy="-4">\u200b</tspan>`;
+    if (show.has('mids')) parts.forEach((pt, i) => { P.dot(centreOf(pt), `dot mid${show.has(`part${i}`) ? ' hl' : ''}`, 3); P.text(centreOf(pt), sName(i + 1), 'lbl small com-lbl', 'start', [6, 12]); });
+    combos(parts).forEach((k, i) => {
+      if (!show.has(`comb${i}`)) return;
+      P.line(k.A.c, k.B.c, `join${view.hl && view.hl.has(`comb${i}`) ? ' hl' : ''}`, true);
+      if (k.S.name) { P.dot(k.S.c, 'dot mid', 3.4); P.text(k.S.c, sName(k.S.name), 'lbl small com-lbl', 'end', [-6, -9]); }
+    });
     if (show.has('S')) P.com(v.S, 'S');
     return P.svg();
   }
@@ -588,25 +625,45 @@
         `Eine Figur ist aus einem gleichmässigen Draht gebogen. Bestimme ihren Schwerpunkt S: seine Koordinaten im eingezeichneten System mit dem Ursprung O.${S.ask.length === 1 ? ` (Aus Symmetriegründen ist ${S.ask[0] === 'x' ? 'y' : 'x'}<sub>S</sub> = 0.)` : ''}`),
       figure: (p, v, view) => comFigure(shape, p, v, view),
       hints: () => [
-        L('The mass of each part of the wire is proportional to its length. Split the figure into straight pieces (and rings).', 'Die Masse jedes Drahtstücks ist proportional zu seiner Länge. Zerlege die Figur in gerade Stücke (und Ringe).'),
-        L('The centre of mass of a straight piece is its middle; that of a ring is its centre, and its wire is 2πr long.', 'Der Schwerpunkt eines geraden Stücks ist seine Mitte, der eines Rings sein Mittelpunkt; sein Draht ist 2πr lang.'),
-        L('Weighted mean: x_S = (ℓ₁ x₁ + ℓ₂ x₂ + …) / (ℓ₁ + ℓ₂ + …), the same for y.', 'Gewichteter Mittelwert: x_S = (ℓ₁ x₁ + ℓ₂ x₂ + …) / (ℓ₁ + ℓ₂ + …), ebenso für y.'),
+        L('Split the figure into simple parts: straight pieces (and rings). The mass of each part is proportional to its length.', 'Zerlege die Figur in einfache Teile: gerade Stücke (und Ringe). Die Masse jedes Teils ist proportional zu seiner Länge.'),
+        L('Find the centre of mass of each part: the middle of a straight piece, the centre of a ring (whose wire is 2πr long).', 'Bestimme den Schwerpunkt jedes Teils: die Mitte eines geraden Stücks, den Mittelpunkt eines Rings (dessen Draht 2πr lang ist).'),
+        L('Combine the parts two at a time. The common centre of mass lies on the line between their centres, closer to the heavier part: m₁ · a₁ = m₂ · a₂, where a₁ and a₂ are its distances from the two centres. Then combine the result with the next part.',
+          'Fasse die Teile schrittweise zu zweit zusammen. Der gemeinsame Schwerpunkt liegt auf der Verbindungslinie ihrer Schwerpunkte, näher beim schwereren Teil: m₁ · a₁ = m₂ · a₂, wobei a₁ und a₂ seine Abstände von den beiden Schwerpunkten sind. Fasse das Ergebnis dann mit dem nächsten Teil zusammen.'),
       ],
       steps(p, v) {
         const parts = S.parts(p), lens = parts.map(lengthOf), cs = parts.map(centreOf), total = lens.reduce((a, b) => a + b, 0);
         const lenTex = (pt) => (pt.kind === 'ring' ? `2\\pi\\cdot ${tq(pt.r, 'cm')} = ${tq(lengthOf(pt), 'cm', 1)}` : tq(lengthOf(pt), 'cm'));
-        const rows = parts.map((pt, i) => `<li>${pt.kind === 'ring' ? L('ring', 'Ring') : L('straight piece', 'gerades Stück')}: $\\ell_${i + 1} = ${lenTex(pt)}$, ${L('centre', 'Schwerpunkt')} $(${num(cs[i][0], 1)}\\,|\\,${num(cs[i][1], 1)})$</li>`).join('');
-        const out = [step(L('The parts', 'Die Teile'),
-          `<p>${L('Each part’s mass is proportional to its length; its own centre of mass is its middle (a ring’s, its centre):', 'Die Masse jedes Teils ist proportional zu seiner Länge; sein eigener Schwerpunkt ist seine Mitte (beim Ring sein Mittelpunkt):')}</p><ul>${rows}</ul>`,
+        const pt$ = (c) => `(${num(c[0], 1)}\\,|\\,${num(c[1], 1)})`;
+        const rows = parts.map((pt, i) => `<li>${pt.kind === 'ring' ? L('ring', 'Ring') : L('straight piece', 'gerades Stück')} ${i + 1}: ${L('length', 'Länge')} $${lenTex(pt)}$, ${L('centre of mass', 'Schwerpunkt')} $S_${i + 1} = ${pt$(cs[i])}$</li>`).join('');
+        void lens; void total;
+        const out = [step(L('1 · Split into parts', '1 · In Teile zerlegen'),
+          `<p>${L('The figure consists of these parts. Each part’s mass is proportional to its length, so the lengths can stand for the masses. A straight piece has its centre of mass in its middle, a ring in its centre:', 'Die Figur besteht aus diesen Teilen. Die Masse jedes Teils ist proportional zu seiner Länge, also können die Längen für die Massen stehen. Ein gerades Stück hat seinen Schwerpunkt in seiner Mitte, ein Ring in seinem Mittelpunkt:')}</p><ul>${rows}</ul>`,
           ['mids', ...parts.map((x, i) => `part${i}`)], ['mids'])];
-        const coord = (k, name) => {
-          const sum = parts.map((pt, i) => `${num(lens[i], 1)}\\cdot ${num(cs[i][k], 1)}`).join(' + ');
-          return `$$${name} = \\frac{\\ell_1 ${name[0]}_1 + ${parts.length > 2 ? `\\ell_2 ${name[0]}_2 + \\ell_3 ${name[0]}_3` : `\\ell_2 ${name[0]}_2`}}{${parts.length > 2 ? '\\ell_1 + \\ell_2 + \\ell_3' : '\\ell_1 + \\ell_2'}} = \\frac{${sum}}{${num(total, 1)}}\\,\\mathrm{cm} = ${res(v[k === 0 ? 'x' : 'y'], 'cm', 1)}$$`;
-        };
-        out.push(step(L('Weighted mean', 'Gewichteter Mittelwert'),
-          `<p>${L('The centre of mass is the mean of the parts’ centres, each weighted with its length:', 'Der Schwerpunkt ist der Mittelwert der Schwerpunkte der Teile, jeder mit seiner Länge gewichtet:')}</p>` +
-          S.ask.map((k) => coord(k === 'x' ? 0 : 1, k === 'x' ? 'x_\\mathrm{S}' : 'y_\\mathrm{S}')).join(' ') +
-          `<p>${L('S need not lie on the wire.', 'S muss nicht auf dem Draht liegen.')}</p>`, ['mids', 'S'], ['S']));
+        const ks = combos(parts), sTex = (n) => (n ? `S_{${n}}` : 'S'), mTex = (n) => `m_{${n}}`;
+        ks.forEach((k, i) => {
+          const A = k.A.name, B = k.B.name, equal = Math.abs(k.A.m - k.B.m) < 1e-9;
+          const shown = ['mids', ...ks.slice(0, i + 1).map((x, j) => `comb${j}`), ...(k.S.name ? [] : ['S'])];
+          const where = `$${sTex(k.S.name)} = ${k.S.name ? pt$(k.S.c) : `(${res(k.S.c[0], 'cm', 1)}\\,|\\,${res(k.S.c[1], 'cm', 1)})`}$`;
+          const straight = Math.abs(k.A.c[0] - k.B.c[0]) < 1e-9 || Math.abs(k.A.c[1] - k.B.c[1]) < 1e-9;
+          const f = k.B.m / (k.A.m + k.B.m), dx = k.B.c[0] - k.A.c[0], dy = k.B.c[1] - k.A.c[1];
+          // an oblique line: the lever rule divides its horizontal and vertical extents alike
+          const oblique = L(`The masses at $${sTex(A)}$ and $${sTex(B)}$ are in the ratio of the lengths, $${mTex(A)} : ${mTex(B)} = ${num(k.A.m, 1)} : ${num(k.B.m, 1)}$. Their common centre of mass lies on the line between them, closer to the heavier part, with $${mTex(A)}\\cdot a_{${A}} = ${mTex(B)}\\cdot a_{${B}}$: it is the fraction $\\frac{${mTex(B)}}{${mTex(A)} + ${mTex(B)}} = \\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}}$ of the way from $${sTex(A)}$ to $${sTex(B)}$. The line runs ${q(Math.abs(dx), 'cm', 1)} ${dx > 0 ? 'to the right' : 'to the left'} and ${q(Math.abs(dy), 'cm', 1)} ${dy > 0 ? 'up' : 'down'}; both are divided in the same ratio:`,
+            `Die Massen in $${sTex(A)}$ und $${sTex(B)}$ stehen im Verhältnis der Längen, $${mTex(A)} : ${mTex(B)} = ${num(k.A.m, 1)} : ${num(k.B.m, 1)}$. Ihr gemeinsamer Schwerpunkt liegt auf ihrer Verbindungslinie, näher beim schwereren Teil, mit $${mTex(A)}\\cdot a_{${A}} = ${mTex(B)}\\cdot a_{${B}}$: Er liegt beim Bruchteil $\\frac{${mTex(B)}}{${mTex(A)} + ${mTex(B)}} = \\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}}$ des Wegs von $${sTex(A)}$ nach $${sTex(B)}$. Die Linie verläuft ${q(Math.abs(dx), 'cm', 1)} nach ${dx > 0 ? 'rechts' : 'links'} und ${q(Math.abs(dy), 'cm', 1)} nach ${dy > 0 ? 'oben' : 'unten'}; beides wird im gleichen Verhältnis geteilt:`) +
+            `$$\\Delta x = ${tq(dx, 'cm', 1)}\\cdot\\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}} = ${tq(dx * f, 'cm', 2)},\\qquad \\Delta y = ${tq(dy, 'cm', 1)}\\cdot\\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}} = ${tq(dy * f, 'cm', 2)}$$` +
+            L(`from $${sTex(A)}$: `, `von $${sTex(A)}$ aus: `);
+          const body = equal
+            ? L(`$${sTex(A)}$ and $${sTex(B)}$ belong to parts of equal mass, so their common centre of mass lies in the middle between them: ${where}.`,
+              `$${sTex(A)}$ und $${sTex(B)}$ gehören zu Teilen gleicher Masse, also liegt ihr gemeinsamer Schwerpunkt in der Mitte dazwischen: ${where}.`)
+            : !straight ? `${oblique}${where}.` : L(`The masses at $${sTex(A)}$ and $${sTex(B)}$ are in the ratio of the lengths, $${mTex(A)} : ${mTex(B)} = ${num(k.A.m, 1)} : ${num(k.B.m, 1)}$. Their common centre of mass lies on the line between them, ${q(k.D, 'cm', 2)} long, closer to the heavier part:`,
+              `Die Massen in $${sTex(A)}$ und $${sTex(B)}$ stehen im Verhältnis der Längen, $${mTex(A)} : ${mTex(B)} = ${num(k.A.m, 1)} : ${num(k.B.m, 1)}$. Ihr gemeinsamer Schwerpunkt liegt auf ihrer Verbindungslinie, die ${q(k.D, 'cm', 2)} lang ist, näher beim schwereren Teil:`) +
+              `$$${mTex(A)}\\cdot a_{${A}} = ${mTex(B)}\\cdot a_{${B}},\\quad a_{${A}} + a_{${B}} = ${tq(k.D, 'cm', 2)}$$ ` +
+              `$$a_{${A}} = ${tq(k.D, 'cm', 2)}\\cdot\\frac{${mTex(B)}}{${mTex(A)} + ${mTex(B)}} = ${tq(k.D, 'cm', 2)}\\cdot\\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}} = ${tq(k.aA, 'cm', 2)}$$` +
+              L(`from $${sTex(A)}$ toward $${sTex(B)}$: ${where}.`, `von $${sTex(A)}$ aus in Richtung $${sTex(B)}$: ${where}.`);
+          const more = k.S.name ? L(` Together they count as one part at $${sTex(k.S.name)}$, with the mass $${mTex(k.S.name)} = ${mTex(A)} + ${mTex(B)}$ (length ${q(k.S.m, 'cm', 1)}).`, ` Zusammen zählen sie als ein Teil in $${sTex(k.S.name)}$ mit der Masse $${mTex(k.S.name)} = ${mTex(A)} + ${mTex(B)}$ (Länge ${q(k.S.m, 'cm', 1)}).`)
+            : S.offWire ? `</p><p>${L('S need not lie on the wire.', 'S muss nicht auf dem Draht liegen.')}` : '';
+          out.push(step(L(`${i + 2} · Combine ${sTex(A).replace(/[{}]/g, '')} and ${sTex(B).replace(/[{}]/g, '')}`, `${i + 2} · ${sTex(A).replace(/[{}]/g, '')} und ${sTex(B).replace(/[{}]/g, '')} zusammenfassen`).replace(/S_(\d+)/g, (x, n) => `S${n.replace(/\d/g, (d) => '₀₁₂₃₄₅₆₇₈₉'[d])}`),
+            `<p>${body}${more}</p>`, shown, [`comb${i}`, ...(k.S.name ? [] : ['S'])]));
+        });
         return out;
       },
     };
