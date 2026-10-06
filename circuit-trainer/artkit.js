@@ -3,7 +3,7 @@
 // style of Force Systems' real problems: soft backgrounds, filled figures, vehicles with rims and
 // shadows, and force arrows in the apps' colours. The colours are CSS classes rp-* (ui.css).
 //   Art.svg(w, h, body, label)      the picture (with its gradients) in a <div class="fig">
-//   Art.bg(x0, y0, x1, y1, fill)     a rounded background (sky by default; 'metal')
+//   Art.bg(x0, y0, x1, y1, fill)     a rounded background (sky by default; 'metal', 'night')
 //   Art.ground(x0, x1, y, kind)      asphalt, concrete, gravel, grass, snow, wood or water below y
 //   Art.person(x, y, s, o)           a person standing at (x, y), about 76·s tall (o: hands,
 //                                    knee, lean, dir, shirt: red|blue|green|orange)
@@ -19,6 +19,7 @@
     <linearGradient id="rp-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--rp-sky1)"/><stop offset="1" style="stop-color:var(--rp-sky2)"/></linearGradient>
     <linearGradient id="rp-metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:var(--rp-metal1)"/><stop offset="0.5" style="stop-color:var(--rp-metal2)"/><stop offset="1" style="stop-color:var(--rp-metal1)"/></linearGradient>
     <linearGradient id="rp-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity="0.15"/></linearGradient>
+    <linearGradient id="rp-night" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c2a44"/><stop offset="1" stop-color="#3d4f6e"/></linearGradient>
     <linearGradient id="rp-snow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--rp-snow1)"/><stop offset="1" style="stop-color:var(--rp-snow2)"/></linearGradient>
     <radialGradient id="rp-flame" cx="0.5" cy="0.2" r="0.8"><stop offset="0" stop-color="#fff6c2"/><stop offset="0.45" stop-color="#ffc23d"/><stop offset="1" stop-color="#e8542c"/></radialGradient>
   </defs>`;

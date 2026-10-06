@@ -452,3 +452,62 @@ svg .rp-head { fill: #6f7882; stroke: var(--rp-outline); stroke-width: 1.2; }
 svg .rp-finger { fill: var(--rp-skin); stroke: #b98d6a; stroke-width: 1; }
 svg .rp-bus { fill: var(--rp-yellow); stroke: var(--rp-outline); stroke-width: 1.2; }
 svg .rp-com { fill: var(--card); stroke: var(--ink); stroke-width: 2; }
+
+/* pictures for circuits (Resistor Circuit Trainer's problems) */
+svg .rp-cable { fill: none; stroke: #2f343a; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+svg .rp-cable.red { stroke: var(--rp-red); }
+svg .rp-cable.white { stroke: #f4f5f6; }
+svg .rp-cable.thin { stroke-width: 2; }
+svg .rp-cable.dashed { stroke-dasharray: 6 5; }
+svg .rp-battery { fill: #2b2f35; stroke: var(--rp-outline); stroke-width: 1.2; }
+svg .rp-terminal { fill: #b9bec4; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-batlbl { fill: #ffffff; font-size: 15px; font-weight: 600; text-anchor: middle; }
+svg .rp-leg { stroke: #8f979f; stroke-width: 2; }
+svg .rp-resistor { fill: #e3cfa0; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-band { stroke: none; }
+svg .rp-band.a { fill: #8a4b22; }
+svg .rp-band.b { fill: #2b2f35; }
+svg .rp-band.c { fill: var(--rp-red); }
+svg .rp-band.d { fill: #c9a227; }
+svg .rp-led { stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-led.red { fill: #ef5350; }
+svg .rp-led.green { fill: #4caf50; }
+svg .rp-led.blue { fill: #42a5f5; }
+svg .rp-led.yellow { fill: #ffd54f; }
+svg .rp-glow { stroke: none; opacity: 0.35; }
+svg .rp-glow.red { fill: #ff6b5e; }
+svg .rp-glow.green { fill: #7ee08a; }
+svg .rp-glow.blue { fill: #7cc4ff; }
+svg .rp-glow.yellow { fill: #ffe066; }
+svg .rp-bulbglass { fill: #fff6c2; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-device { fill: #f2f4f6; stroke: var(--rp-outline); stroke-width: 1.2; stroke-linejoin: round; }
+svg .rp-device.red { fill: var(--rp-red); }
+svg .rp-dark { fill: #3b4148; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-socket { fill: #fafafa; stroke: #8f979f; stroke-width: 1; }
+svg .rp-hole { fill: #3b3f45; }
+svg .rp-spark { fill: #ffd23f; stroke: #e8542c; stroke-width: 1.2; stroke-linejoin: round; }
+svg .rp-coil { fill: none; stroke: #e8542c; stroke-width: 2.2; stroke-linejoin: round; }
+svg .rp-heat { fill: none; stroke: #e8542c; stroke-width: 1.6; opacity: 0.7; stroke-linecap: round; }
+svg .rp-heatline { stroke: #e8742c; stroke-width: 1.4; }
+svg .rp-hedge { fill: #3f8f4f; stroke: #2c6b3a; stroke-width: 1; }
+svg .rp-blade { stroke: #9aa3ab; stroke-width: 5; stroke-linecap: round; }
+svg .rp-drum { fill: var(--rp-red); stroke: var(--rp-outline); stroke-width: 1.2; }
+svg .rp-star { fill: #ffd23f; stroke: #c99a1a; stroke-width: 0.8; }
+svg .rp-moon { fill: #f4f1d0; }
+svg .rp-beam { fill: #fff3b0; opacity: 0.45; stroke: none; }
+svg .rp-switch { fill: #e9edf1; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-switch-plate { fill: #3b4148; stroke: none; }
+svg .rp-switch-lbl { fill: #ffffff; font-size: 11px; font-weight: 600; text-anchor: middle; }
+svg .rp-handle-line { fill: none; stroke: var(--rp-outline); stroke-width: 4; stroke-linecap: round; }
+svg .rp-fanblade { fill: none; stroke: #9aa3ab; stroke-width: 3; stroke-linecap: round; }
+svg .rp-pcb { fill: #2f8a57; stroke: #1f5f3c; stroke-width: 1.2; }
+svg .rp-chip { fill: #2b2f35; stroke: none; }
+svg .rp-pin { fill: #d9b44a; stroke: none; }
+svg .rp-cup { fill: #f4f5f6; stroke: var(--rp-outline); stroke-width: 1.2; }
+svg .rp-tea { fill: #b5652b; stroke: none; }
+svg .rp-thermistor { fill: #3b4148; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-lcd { fill: #c9dcb8; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-lcdtext { fill: #22301a; font-family: ui-monospace, Menlo, monospace; font-size: 16px; text-anchor: middle; }
+svg .rp-dial { fill: #fbfaf3; stroke: var(--rp-outline); stroke-width: 1.2; }
+svg .rp-tick { stroke: #3b3f45; stroke-width: 1.2; }
+svg .rp-needle { stroke: var(--rp-red); stroke-width: 2.2; stroke-linecap: round; }
