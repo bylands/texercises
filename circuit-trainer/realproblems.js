@@ -501,10 +501,10 @@
       const ticks = [];
       for (let k = 0; k <= 10; k++) { const d = 140 - 10 * k; ticks.push(a.line(at(d, R - 12), at(d, k % 5 ? R - 4 : R), 'rp-tick')); }
       return a.svg(400, 220, a.bg(0, 0, 400, 220, 'metal') + a.rect(70, 20, 330, 200, 'rp-device', 10) + a.path(`M${at(145, R + 8).map(a.f).join(' ')}A${R + 8} ${R + 8} 0 0 1 ${at(35, R + 8).map(a.f).join(' ')}L${at(35, 30).map(a.f).join(' ')}A30 30 0 0 0 ${at(145, 30).map(a.f).join(' ')}Z`, 'rp-dial') +
-        ticks.join('') + a.text(...at(140, R + 18), '0', 'lbl small') + a.text(...at(40, R + 18), '1', 'lbl small') + a.text(200, 112, 'mA', 'lbl small') +
+        ticks.join('') + a.text(...at(140, R + 18), '0', 'rp-ink') + a.text(...at(40, R + 18), '1', 'rp-ink') + a.text(200, 112, 'mA', 'rp-ink') +
         a.line(c, at(62, R - 4), 'rp-needle') + a.circle(c[0], c[1], 7, 'rp-dark') +
-        a.circle(140, 186, 7, 'rp-terminal') + a.circle(260, 186, 7, 'rp-terminal') + a.text(140, 176, '−', 'lbl small') + a.text(260, 176, '+', 'lbl small') +
-        a.text(200, 176, `${num(p.Rm)} Ω`, 'lbl small'),
+        a.circle(140, 186, 7, 'rp-terminal') + a.circle(260, 186, 7, 'rp-terminal') + a.text(140, 176, '−', 'rp-ink') + a.text(260, 176, '+', 'rp-ink') +
+        a.text(200, 176, `${num(p.Rm)} Ω`, 'rp-ink'),
       L('A moving-coil meter for currents up to 1 mA', 'Ein Drehspulmessgerät für Ströme bis 1 mA'));
     },
     circuit: (p, v) => {

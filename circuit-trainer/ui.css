@@ -349,7 +349,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   --rp-skin: #f1c9a5; --rp-hair: #5a3b26; --rp-legs: #2f3a4a; --rp-steel: #e0a526; --rp-wood: #c48a4f;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --rp-sky1: #22364b; --rp-sky2: #2c3540; --rp-metal1: #3a4048; --rp-metal2: #4a5159; --rp-snow1: #e6edf4; --rp-snow2: #b9c7d6; --rp-outline: #11151a; }
+  :root { --rp-sky1: #22364b; --rp-sky2: #2c3540; --rp-metal1: #3a4048; --rp-metal2: #4a5159; --rp-snow1: #e6edf4; --rp-snow2: #b9c7d6; --rp-outline: #9aa3ab; --rp-legs: #56677f; }
 }
 svg .rp-bg { stroke: none; }
 svg .rp-ground { stroke: none; }
@@ -546,3 +546,22 @@ svg .rp-bumper { fill: #f2b632; stroke: #c43c3c; stroke-width: 3; }
 svg .rp-tlegs { stroke: #3b4148; stroke-width: 4; stroke-linecap: round; }
 svg .rp-tmat { fill: none; stroke: #23272c; stroke-width: 5; stroke-linecap: round; }
 svg .rp-tframe { fill: #3f78c8; stroke: var(--rp-outline); stroke-width: 1; }
+
+/* the pictures in dark mode: what is drawn dark (ropes, cables, tyres, poles, legs) would vanish
+   against the night sky, so it is drawn lighter; outlines are light (--rp-outline, above) */
+@media (prefers-color-scheme: dark) {
+  svg :is(.rp-rope, .rp-hook, .rp-pole, .rp-runner, .rp-crank, .rp-cable, .rp-vaultpole, .rp-tmat) { stroke: #b4bcc4; }
+  svg .rp-cable.red { stroke: #ff7a70; }
+  svg .rp-cable.white { stroke: #f4f5f6; }
+  svg :is(.rp-tlegs, .rp-tick, .rp-hline-dot) { stroke: #8f979f; }
+  svg .rp-lines { stroke: #a9b1b9; }
+  svg .rp-tyre { stroke: #8f979f; stroke-width: 1; }
+  svg .rp-wheel { stroke: #8f979f; }
+  svg .rp-shoe { fill: #6f777f; }
+  svg :is(.rp-dark, .rp-switch-plate, .rp-thermistor, .rp-hole) { fill: #5d6670; }
+  svg .rp-battery { fill: #3b4148; }
+  svg .rp-tick { stroke: #3b3f45; } /* on the light dial */
+  svg :is(.rp-dial, .rp-device, .rp-cup, .rp-socket) { stroke: #6f777f; }
+}
+/* text on light objects (a meter's dial): dark in both modes */
+svg .rp-ink { fill: #2b3138; font-size: 12px; }
