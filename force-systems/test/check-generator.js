@@ -9,7 +9,7 @@
 'use strict';
 
 const load = typeof require === 'function'
-  ? () => { require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../generator.js'); require('../lessons.js'); }
+  ? () => { require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../generator.js'); require('../realproblems.js'); require('../lessons.js'); }
   : () => {};
 load();
 const { FS, Forces, Lessons } = globalThis;
@@ -180,6 +180,27 @@ for (const lang of ['en', 'de']) {
   }
 }
 log(`${practised} practice exercises checked`);
+
+// Real problems: every one in both languages, with values that are positive, round where they
+// should be, texts without undefined values, and wrong-idea answers that differ from the right ones.
+let reals = 0;
+const RP = globalThis.RealProblems;
+for (const lang of ['en', 'de']) {
+  FS.setLang(lang);
+  RP.PROBLEMS.forEach((pb, i) => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const ex = RP.realOf(i, seed), id = `${lang} real ${pb.id}-${seed}`;
+      reals++;
+      ex.fields.forEach((f) => {
+        if (!(f.value > 0) || !Number.isFinite(f.value)) fail(`${id}: ${f.key} = ${f.value}`);
+        if (f.exact !== false && Math.abs(f.value * 10 ** f.dec - Math.round(f.value * 10 ** f.dec)) > 1e-6) fail(`${id}: ${f.key} = ${f.value} needs rounding`);
+        f.traps.forEach((t) => { if (Math.abs(t.value - f.value) < 1e-9) fail(`${id}: trap ${t.flag} equals the answer`); });
+      });
+      [ex.text, ...ex.hints, ...ex.solution, ex.results].forEach((x, k) => { if (/undefined|NaN|Infinity|\[object/.test(x)) fail(`${id}: text ${k} has an undefined value`); });
+    }
+  });
+}
+log(`${reals} real problems checked`);
 
 log(`${checked} exercises checked, ${Object.keys(seen).length} situations: ${JSON.stringify(seen)}`);
 log(failures ? `${failures} failures` : 'all checks passed');

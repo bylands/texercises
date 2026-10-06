@@ -27,6 +27,11 @@
     m: { en: ['m', ''], de: ['m', ''] },
     mu: { en: ['μ', 'k'], de: ['μ', 'G'] },
     alpha: { en: ['α', ''], de: ['α', ''] },
+    // for the real problems: static friction coefficient, air resistance, thrust, a scale's reading
+    mus: { en: ['μ', 's'], de: ['μ', 'H'] },
+    D: { en: ['F', 'd'], de: ['F', 'L'] },
+    Th: { en: ['F', 'th'], de: ['F', 'Sch'] },
+    mS: { en: ['m', 'scale'], de: ['m', 'Waage'] },
   };
   const TEX_LETTER = { μ: '\\mu', α: '\\alpha' };
   const parts = (key, i = '') => { const [l, s] = SYM[key][getLang()]; return [l, `${s}${i}`]; };
@@ -56,7 +61,7 @@
   const num = (x, dec) => String(round(x, dec)); // decimal point in both languages
   const texNum = (x, dec) => String(round(x, dec));
 
-  const UNITS = { N: 'N', a: 'm/s²', kg: 'kg', deg: '°' };
+  const UNITS = { N: 'N', a: 'm/s²', kg: 'kg', deg: '°', '': '' };
   const TEX_UNITS = { N: '\\mathrm{N}', a: '\\mathrm{m/s^2}', kg: '\\mathrm{kg}', deg: '^\\circ' };
   // A quantity: "14 N", in text or in KaTeX.
   const q = (x, u) => (u === 'deg' ? `${num(x)}°` : `${num(x)} ${UNITS[u]}`);

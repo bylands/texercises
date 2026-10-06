@@ -12,7 +12,7 @@
   };
   const UI = {
     en: {
-      title: 'Force Systems', mode: 'Mode', difficulty: 'Difficulty', calc: 'Calculator', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
+      title: 'Force Systems', mode: 'Mode', difficulty: 'Difficulty', calc: 'Calculator', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise', real: 'Real problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
       tutorNote: `Use the arrow keys ← → to step through. The forces a step is about are highlighted. Colours: ${LEGEND.en}.`,
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
@@ -27,7 +27,7 @@
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
     de: {
-      title: 'Kräftesysteme', mode: 'Modus', difficulty: 'Schwierigkeit', calc: 'Taschenrechner', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
+      title: 'Kräftesysteme', mode: 'Modus', difficulty: 'Schwierigkeit', calc: 'Taschenrechner', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
       tutorNote: `Mit den Pfeiltasten ← → blätterst du weiter. Die Kräfte, um die es in einem Schritt geht, sind hervorgehoben. Farben: ${LEGEND.de}.`,
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
@@ -117,7 +117,7 @@
   // one if possible.
   function fresh() { open(topics.next(ex)); }
   // the same exercise again (e.g. in the other language); links of earlier versions name a level
-  const again = (e) => topics.parse(e.id) || generate(e.level, e.seed, e.calc);
+  const again = (e) => (e.real != null ? window.RealProblems.realOf(e.real, e.seed) : topics.parse(e.id) || generate(e.level, e.seed, e.calc));
 
   // The topics of practice: those of the tutor's examples, with their stages (lessons.js).
   const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
@@ -147,6 +147,7 @@
   // The task's drawing with every force ticked in the table drawn in, whether it acts or not:
   // the drawing shows what the student claims.
   function drawTicked() {
+    if (!ex.forces) return;
     const ticked = new Set([...document.querySelectorAll('#ftable input:checked')].map((b) => `${b.dataset.i}:${b.dataset.j}`));
     $('#figure').innerHTML = ex.taskFigure(ticked, identified());
     markScrollable();
@@ -164,10 +165,13 @@
     $('#title').append(' ', stars);
     $('#prompt').innerHTML = ex.text;
     $('#figure').innerHTML = ex.taskFigure(new Set());
-    $('#forces-note').textContent = ui().forcesNote(ex.forces.boxes.length);
-    $('#ftable').innerHTML = forcesHtml();
-    $('#ftable-fb').textContent = '';
-    $('#ftable-fb').className = 'table-fb';
+    $('#forces-part').hidden = !ex.forces; // real problems: no table of forces
+    if (ex.forces) {
+      $('#forces-note').textContent = ui().forcesNote(ex.forces.boxes.length);
+      $('#ftable').innerHTML = forcesHtml();
+      $('#ftable-fb').textContent = '';
+      $('#ftable-fb').className = 'table-fb';
+    }
     $('#fields').innerHTML = fieldsHtml(ex, 'in');
     showComps();
     $('#hint-list').innerHTML = '';
@@ -185,7 +189,8 @@
   const identified = () => ex.comps.filter((c) => (st && st.revealed) || (st && Identify.right(identItems().find((it) => it.key === c.key), st.ident))).map((c) => c.fig);
   function showComps() {
     $('#comps-part').hidden = !ex.comps.length;
-    $('#results-head').textContent = ui().resultsHead(ex.comps.length ? 3 : 2);
+    const parts = (ex.forces ? 1 : 0) + (ex.comps.length ? 1 : 0) + 1; // numbered only when there are several
+    $('#results-head').textContent = parts > 1 ? ui().resultsHead(parts) : ui().results;
     $('#comps').innerHTML = Identify.html(identItems(), st ? st.ident || {} : {}, st && st.revealed);
     math($('#comps'));
   }
@@ -194,7 +199,7 @@
 
   function updateButtons() {
     // once everything is right, Check becomes New exercise, like the button at the top
-    $('#check').textContent = st.solved ? ui().new : ui().check;
+    $('#check').textContent = st.solved ? (isReal() ? ui().nextProblem : ui().new) : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     const left = ex.hints.length - st.hints;
@@ -210,13 +215,15 @@
   // Marks every field; true if all are right, null if some are empty.
   function feedback() {
     let allOk = true, anyEmpty = false, wrongCells = 0;
-    document.querySelectorAll('#ftable input').forEach((box) => {
+    if (ex.forces) document.querySelectorAll('#ftable input').forEach((box) => {
       const right = box.checked === ex.forces.table[box.dataset.i][box.dataset.j];
       box.closest('td').className = right ? 'ok' : 'bad';
       if (!right) wrongCells++;
     });
-    $('#ftable-fb').className = `table-fb ${wrongCells ? 'bad' : 'ok'}`;
-    $('#ftable-fb').textContent = wrongCells ? ui().tableBad(wrongCells) : ui().tableOk;
+    if (ex.forces) {
+      $('#ftable-fb').className = `table-fb ${wrongCells ? 'bad' : 'ok'}`;
+      $('#ftable-fb').textContent = wrongCells ? ui().tableBad(wrongCells) : ui().tableOk;
+    }
     if (wrongCells) allOk = false;
     ex.fields.forEach((f) => {
       const row = $('#fields').querySelector(`.field[data-key="${f.key}"]`);
@@ -242,7 +249,7 @@
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { fresh(); return; } // the button reads New exercise
+    if (st.solved) { if (isReal()) openReal((ex.real + 1) % Real.PROBLEMS.length); else fresh(); return; } // the button reads New exercise (Next problem)
     if (!Identify.ok(identItems(), st.ident)) { showStatus('ident'); return; }
     const r = feedback();
     st.checked = true;
@@ -257,6 +264,7 @@
         showScore();
       }
       st.solved = true;
+      if (isReal()) { store('fs-real-solved', [...new Set([...stored('fs-real-solved', []), Real.PROBLEMS[ex.real].id])]); realPick(); }
       finish();
       st.advance = topics.solved(st, ex);
       showStatus('ok');
@@ -303,7 +311,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    if (topics) topics.relabel();
+    if (topics) { topics.relabel(); realPick(); }
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
@@ -337,10 +345,11 @@
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('fs-mode', m);
-    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
+    // practice and the real problems share the exercise card; each has its own controls
+    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); });
     $('#tutor').hidden = m !== 'tutor';
     $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
+    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
     if (m !== 'arcade') arcade.stop();
   }
   function play() {
@@ -350,7 +359,23 @@
   }
   function practise() {
     setMode('practice');
-    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
+    if (ex && !isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
+  }
+
+  // Real problems: stories from everyday life (realproblems.js), chosen in a menu; solved ones have a ✓.
+  const Real = window.RealProblems, isReal = () => !!ex && ex.real != null;
+  function realPick() {
+    const done = stored('fs-real-solved', []), cur = isReal() ? ex.real : stored('fs-real-last', 0);
+    $('#real-pick').innerHTML = Real.PROBLEMS.map((pb, i) => `<option value="${i}"${i === cur ? ' selected' : ''}>${i + 1} · ${pb.title()}${done.includes(pb.id) ? ' ✓' : ''}</option>`).join('');
+  }
+  function openReal(i, seed = newSeed()) {
+    open(Real.realOf(i, seed));
+    store('fs-real-last', i);
+    realPick();
+  }
+  function realMode() {
+    setMode('real');
+    if (isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else openReal(stored('fs-real-last', 0));
   }
 
   function fromHash() {
@@ -360,6 +385,13 @@
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
+      return true;
+    }
+    const rm = /^real(\d+)-(\d+)$/.exec(h);
+    if (rm && Number(rm[1]) >= 1 && Number(rm[1]) <= Real.PROBLEMS.length) {
+      setMode('real');
+      if (!ex || ex.id !== h) open(Real.realOf(Number(rm[1]) - 1, Number(rm[2])));
+      realPick();
       return true;
     }
     const te = topics.parse(h);
@@ -389,6 +421,9 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
+    realPick();
+    $('#real-pick').addEventListener('change', () => openReal(Number($('#real-pick').value)));
+    $('#real-new').addEventListener('click', () => openReal(isReal() ? ex.real : Number($('#real-pick').value)));
     Identify.attach($('#comps'), identItems, () => st.ident, (right) => {
       math($('#comps'));
       if (right) drawTicked(); // the component appears in the drawing
@@ -410,13 +445,13 @@
     });
     arcade = Arcade.create(window.ArcadeSource, { math, markScrollable, stored, store });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('fs-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
