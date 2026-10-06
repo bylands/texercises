@@ -105,6 +105,7 @@
   function open(exercise) {
     finish(); // the student moves on
     ex = exercise;
+    if (ex.real != null) store('fs-real-seeds', { ...stored('fs-real-seeds', {}), [ex.real]: ex.seed }); // the numbers to come back to
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, ident: {} };
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
@@ -195,7 +196,8 @@
     math($('#comps'));
   }
 
-  const canReveal = () => st.solved || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
+  // solved now, or solved before (its solution can be looked at again)
+  const canReveal = () => st.solved || Practice.solvedBefore(PRACTICE, ex.id) || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
 
   function updateButtons() {
     // once everything is right, Check becomes New exercise, like the button at the top
@@ -249,7 +251,7 @@
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (isReal()) openReal((ex.real + 1) % Real.PROBLEMS.length); else fresh(); return; } // the button reads New exercise (Next problem)
+    if (st.solved) { if (isReal()) openReal((ex.real + 1) % Real.PROBLEMS.length, newSeed()); else fresh(); return; } // the button reads New exercise (Next problem)
     if (!Identify.ok(identItems(), st.ident)) { showStatus('ident'); return; }
     const r = feedback();
     st.checked = true;
@@ -264,6 +266,7 @@
         showScore();
       }
       st.solved = true;
+      Practice.markSolved(PRACTICE, ex.id);
       if (isReal()) { store('fs-real-solved', [...new Set([...stored('fs-real-solved', []), Real.PROBLEMS[ex.real].id])]); realPick(); }
       finish();
       st.advance = topics.solved(st, ex);
@@ -368,8 +371,10 @@
     const done = stored('fs-real-solved', []), cur = isReal() ? ex.real : stored('fs-real-last', 0);
     $('#real-pick').innerHTML = Real.PROBLEMS.map((pb, i) => `<option value="${i}"${i === cur ? ' selected' : ''}>${i + 1} · ${pb.title()}${done.includes(pb.id) ? ' ✓' : ''}</option>`).join('');
   }
-  function openReal(i, seed = newSeed()) {
-    open(Real.realOf(i, seed));
+  // a problem with the numbers it had last time (the same exercise, so a solved one shows its
+  // solution), or with the seed given
+  function openReal(i, seed) {
+    open(Real.realOf(i, seed || stored('fs-real-seeds', {})[i] || newSeed()));
     store('fs-real-last', i);
     realPick();
   }
@@ -423,7 +428,7 @@
     topics.mount($('#levels'));
     realPick();
     $('#real-pick').addEventListener('change', () => openReal(Number($('#real-pick').value)));
-    $('#real-new').addEventListener('click', () => openReal(isReal() ? ex.real : Number($('#real-pick').value)));
+    $('#real-new').addEventListener('click', () => openReal(isReal() ? ex.real : Number($('#real-pick').value), newSeed()));
     Identify.attach($('#comps'), identItems, () => st.ident, (right) => {
       math($('#comps'));
       if (right) drawTicked(); // the component appears in the drawing

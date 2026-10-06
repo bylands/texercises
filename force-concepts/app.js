@@ -139,7 +139,8 @@
     return FC.generate(key, Number(seed), f || 'all');
   }
 
-  const canReveal = () => st.solved || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
+  // solved now, or solved before (its solution can be looked at again)
+  const canReveal = () => st.solved || Practice.solvedBefore('fc', ex.id) || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
 
   function updateButtons() {
     const left = ex.hints.length - st.hints;
@@ -209,6 +210,7 @@
       st.okPlain = st.revealed;
       if (!st.revealed) record(Math.min(1, 0.3 * (st.tries - 1) + 0.2 * st.hints));
       st.solved = true;
+      Practice.markSolved('fc', ex.id);
       st.advance = topics.solved(st, ex);
       st.status = 'ok';
     } else st.status = 'bad';

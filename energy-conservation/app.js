@@ -235,7 +235,8 @@
     updateButtons();
   }
 
-  const canReveal = () => st.solved || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
+  // solved now, or solved before (its solution can be looked at again)
+  const canReveal = () => st.solved || Practice.solvedBefore(PRACTICE, ex.id) || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
 
   function updateButtons() {
     // once everything is right, Check becomes New exercise, like the button at the top
@@ -303,6 +304,7 @@
         showScore();
       }
       st.solved = true;
+      Practice.markSolved(PRACTICE, ex.id);
       finish();
       st.advance = topics.solved(st, ex);
       showStatus('ok');

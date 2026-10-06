@@ -9,6 +9,9 @@
 //   Practice.finish(app, type, st)       records the result once per exercise (sets st.recorded);
 //                                        call it when solved, when the solution is shown and when
 //                                        the student moves on
+//   Practice.solvedBefore(app, id), Practice.markSolved(app, id)
+//                                        the exercises solved (their ids, the last 500 kept): one
+//                                        solved before shows its solution right away
 //   Practice.next(app, make, typeOf, last)  the next exercise: make(seed) builds one, typeOf(ex)
 //                                        says its type; a few are drawn, and one is chosen with the
 //                                        weight of its type (not of the type `last` if another
@@ -55,6 +58,15 @@
     return pool[pool.length - 1].ex;
   }
 
-  root.Practice = { score, finish, next, weight, read };
+  const doneKey = (app) => `${app}-done`;
+  function solvedList(app) { try { return JSON.parse(localStorage.getItem(doneKey(app))) || []; } catch (e) { return []; } }
+  const solvedBefore = (app, id) => solvedList(app).includes(id);
+  function markSolved(app, id) {
+    const list = solvedList(app).filter((x) => x !== id);
+    list.push(id);
+    try { localStorage.setItem(doneKey(app), JSON.stringify(list.slice(-500))); } catch (e) { /* storage unavailable */ }
+  }
+
+  root.Practice = { score, finish, next, weight, read, solvedBefore, markSolved };
   if (typeof module !== 'undefined') module.exports = root.Practice;
 })(typeof window !== 'undefined' ? window : globalThis);

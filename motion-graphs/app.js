@@ -508,7 +508,8 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  const canReveal = () => st.solved || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
+  // solved now, or solved before (its solution can be looked at again)
+  const canReveal = () => st.solved || Practice.solvedBefore(PRACTICE, ex.id) || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
   const hintsOf = () => (isQuiz() ? ex.hints : ex.dir === 'diff' ? hintsDiff() : hintsInt());
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
@@ -565,6 +566,7 @@
         showScore();
       }
       st.solved = true;
+      Practice.markSolved(PRACTICE, ex.id);
       st.advance = topics.solved(st, ex);
       finish();
     }
@@ -587,6 +589,7 @@
           showScore();
         }
         st.solved = true;
+        Practice.markSolved(PRACTICE, ex.id);
         st.advance = topics.solved(st, ex);
         finish();
       }

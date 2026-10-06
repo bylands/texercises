@@ -126,3 +126,91 @@ svg .pic-ski { stroke: var(--pic-car2); stroke-width: 4; stroke-linecap: round; 
 svg .pic-runner { fill: none; stroke: var(--ink); stroke-width: 2.5; }
 svg .pic-speed { stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }
 .fig-note { flex-basis: 100%; text-align: center; margin: 0; }
+
+/* the pictures, drawn with care (realpictures.js) */
+:root {
+  --rp-sky1: #cfe4f6; --rp-sky2: #f4f8fb; --rp-metal1: #d9dee3; --rp-metal2: #f3f5f7; --rp-snow1: #ffffff; --rp-snow2: #dfe9f3;
+  --rp-outline: #2b3138; --rp-asphalt: #5d6267; --rp-concrete: #c9c4bb; --rp-gravel: #a49d92; --rp-water: #5b93c7;
+  --rp-red: #d64541; --rp-blue: #3f78c8; --rp-orange: #ea8a2e; --rp-green: #3c9a5f; --rp-yellow: #f2b632;
+  --rp-skin: #f1c9a5; --rp-hair: #5a3b26; --rp-legs: #2f3a4a; --rp-steel: #e0a526; --rp-wood: #c48a4f;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --rp-sky1: #22364b; --rp-sky2: #2c3540; --rp-metal1: #3a4048; --rp-metal2: #4a5159; --rp-snow1: #e6edf4; --rp-snow2: #b9c7d6; --rp-outline: #11151a; }
+}
+svg .rp-bg { stroke: none; }
+svg .rp-ground { stroke: none; }
+svg .rp-ground.asphalt { fill: var(--rp-asphalt); }
+svg .rp-ground.concrete { fill: var(--rp-concrete); }
+svg .rp-ground.gravel { fill: var(--rp-gravel); }
+svg .rp-ground.snow { fill: url(#rp-snow); }
+svg .rp-lane { stroke: #f4f4f4; stroke-width: 2; stroke-dasharray: 14 12; }
+svg .rp-edge { stroke: var(--rp-outline); stroke-width: 1.5; }
+svg .rp-water { fill: var(--rp-water); stroke: none; }
+svg .rp-shadow { fill: #000; opacity: 0.18; }
+svg .rp-tyre { fill: #24282d; }
+svg .rp-rim { fill: #c8cdd2; stroke: #8f979f; stroke-width: 1; }
+svg .rp-hub { fill: #5b636b; }
+svg :is(.rp-car, .rp-truck, .rp-loco, .rp-wagon, .rp-container, .rp-crate, .rp-rocket, .rp-fin, .rp-canopy, .rp-cabin, .rp-weight, .rp-scale, .rp-glassbox, .rp-nozzle) { stroke: var(--rp-outline); stroke-width: 1.2; stroke-linejoin: round; }
+svg .rp-car.red, svg .rp-fin, svg .rp-stripe.red { fill: var(--rp-red); }
+svg .rp-car.blue { fill: var(--rp-blue); }
+svg .rp-shine { fill: url(#rp-body); stroke: none; }
+svg .rp-glass { fill: #bfdcf0; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-glassbox { fill: #bfdcf0; }
+svg .rp-line { stroke: rgba(0, 0, 0, 0.35); stroke-width: 1.2; fill: none; }
+svg .rp-light { fill: #ffe9a6; stroke: none; }
+svg .rp-tail { fill: #ff6b5e; stroke: none; }
+svg .rp-truck { fill: var(--rp-yellow); }
+svg .rp-chassis { fill: #4a5058; stroke: none; }
+svg .rp-crate { fill: var(--rp-wood); }
+svg .rp-planks { stroke: rgba(0, 0, 0, 0.3); stroke-width: 1.2; fill: none; }
+svg .rp-container { fill: var(--rp-blue); }
+svg .rp-ribs { stroke: rgba(255, 255, 255, 0.4); stroke-width: 2; fill: none; }
+svg .rp-steel { fill: none; stroke: var(--rp-steel); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+svg .rp-weight { fill: #5d6670; }
+svg .rp-rope { fill: none; stroke: #3b3f45; stroke-width: 1.8; }
+svg .rp-hook { fill: none; stroke: #3b3f45; stroke-width: 2.5; }
+svg .rp-shaft { fill: none; stroke: #8b939b; stroke-width: 1.5; stroke-dasharray: 6 4; }
+svg .rp-cabin { fill: #c3cad1; }
+svg .rp-cabin-in { fill: #eef1f4; stroke: #9aa3ab; stroke-width: 1; }
+svg .rp-rail { stroke: #7d868f; stroke-width: 3; }
+svg .rp-floor { fill: #7d868f; stroke: none; }
+svg .rp-scale { fill: #f4f6f8; }
+svg .rp-display { fill: #5fd38d; stroke: none; }
+svg .rp-wagon { fill: #7d8a96; }
+svg .rp-loco { fill: var(--rp-red); }
+svg .rp-stripe { stroke: #f4d06f; stroke-width: 4; }
+svg .rp-coupling { stroke: var(--rp-outline); stroke-width: 3; }
+svg .rp-sleeper { stroke: #6b5a48; stroke-width: 4; }
+svg .rp-railtop { stroke: #8f979f; stroke-width: 3; }
+svg .rp-canopy { fill: var(--rp-orange); }
+svg .rp-cells { fill: none; stroke: rgba(0, 0, 0, 0.25); stroke-width: 1.2; }
+svg .rp-lines { fill: none; stroke: #6f777f; stroke-width: 0.9; }
+svg .rp-cloud { fill: #ffffff; opacity: 0.85; }
+svg .rp-smoke { fill: #e9ecef; opacity: 0.9; stroke: #c9ced4; stroke-width: 1; }
+svg .rp-rocket { fill: #f6f8fa; }
+svg .rp-nozzle { fill: #5d6670; }
+svg .rp-slope { stroke: var(--rp-outline); stroke-width: 1.2; }
+svg .rp-slope.concrete { fill: var(--rp-concrete); }
+svg .rp-slope.snow { fill: url(#rp-snow); }
+svg .rp-tree { fill: #2f7a4f; stroke: #24603d; stroke-width: 1; }
+svg .rp-trunk { stroke: #6b4a2e; stroke-width: 4; }
+svg .rp-ski { stroke: var(--rp-blue); stroke-width: 4; stroke-linecap: round; }
+svg .rp-pole { stroke: #3b3f45; stroke-width: 1.6; fill: none; }
+svg .rp-runner { fill: none; stroke: #3b3f45; stroke-width: 3; stroke-linecap: round; }
+svg .rp-hat { fill: var(--rp-red); }
+svg .rp-flag { fill: var(--rp-red); }
+svg .rp-speed { stroke: #9aa3ab; stroke-width: 2.5; stroke-linecap: round; }
+svg .rp-skin { fill: var(--rp-skin); stroke: #b98d6a; stroke-width: 0.8; }
+svg .rp-hair { fill: var(--rp-hair); }
+svg .rp-legs { fill: none; stroke: var(--rp-legs); stroke-linecap: round; stroke-linejoin: round; }
+svg .rp-shoe { fill: #1e2329; }
+svg .rp-torso { stroke: none; fill: var(--rp-blue); }
+svg .rp-arm { fill: none; stroke: var(--rp-blue); stroke-linecap: round; }
+svg :is(.rp-torso, .rp-arm).red { fill: var(--rp-red); stroke: var(--rp-red); }
+svg .rp-arm.red { fill: none; }
+svg .rp-torso.orange { fill: var(--rp-orange); }
+svg .rp-arm.orange { stroke: var(--rp-orange); }
+svg .rp-torso.green { fill: var(--rp-green); }
+svg .rp-arm.green { stroke: var(--rp-green); }
+svg .rp-torso.blue { fill: var(--rp-blue); }
+svg .rp-arm.blue { stroke: var(--rp-blue); }
