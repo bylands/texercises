@@ -105,7 +105,6 @@
   function open(exercise) {
     finish(); // the student moves on
     ex = exercise;
-    if (ex.real != null) store('fs-real-seeds', { ...stored('fs-real-seeds', {}), [ex.real]: ex.seed }); // the numbers to come back to
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, ident: {} };
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
@@ -251,7 +250,7 @@
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (isReal()) openReal((ex.real + 1) % Real.PROBLEMS.length, newSeed()); else fresh(); return; } // the button reads New exercise (Next problem)
+    if (st.solved) { if (isReal()) problems.next(); else fresh(); return; } // the button reads New exercise (Next problem)
     if (!Identify.ok(identItems(), st.ident)) { showStatus('ident'); return; }
     const r = feedback();
     st.checked = true;
@@ -267,7 +266,7 @@
       }
       st.solved = true;
       Practice.markSolved(PRACTICE, ex.id);
-      if (isReal()) { store('fs-real-solved', [...new Set([...stored('fs-real-solved', []), Real.PROBLEMS[ex.real].id])]); realPick(); }
+      problems.solved(ex);
       finish();
       st.advance = topics.solved(st, ex);
       showStatus('ok');
@@ -314,7 +313,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    if (topics) { topics.relabel(); realPick(); }
+    if (topics) { topics.relabel(); problems.menu(); }
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
@@ -365,22 +364,12 @@
     if (ex && !isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
   }
 
-  // Real problems: stories from everyday life (realproblems.js), chosen in a menu; solved ones have a ✓.
-  const Real = window.RealProblems, isReal = () => !!ex && ex.real != null;
-  function realPick() {
-    const done = stored('fs-real-solved', []), cur = isReal() ? ex.real : stored('fs-real-last', 0);
-    $('#real-pick').innerHTML = Real.PROBLEMS.map((pb, i) => `<option value="${i}"${i === cur ? ' selected' : ''}>${i + 1} · ${pb.title()}${done.includes(pb.id) ? ' ✓' : ''}</option>`).join('');
-  }
-  // a problem with the numbers it had last time (the same exercise, so a solved one shows its
-  // solution), or with the seed given
-  function openReal(i, seed) {
-    open(Real.realOf(i, seed || stored('fs-real-seeds', {})[i] || newSeed()));
-    store('fs-real-last', i);
-    realPick();
-  }
+  // Real problems: stories from everyday life (realproblems.js, shared problems.js).
+  let problems = null;
+  const isReal = () => problems && problems.is(ex);
   function realMode() {
     setMode('real');
-    if (isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else openReal(stored('fs-real-last', 0));
+    if (isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
   }
 
   function fromHash() {
@@ -392,11 +381,11 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
-    const rm = /^real(\d+)-(\d+)$/.exec(h);
-    if (rm && Number(rm[1]) >= 1 && Number(rm[1]) <= Real.PROBLEMS.length) {
+    const re = problems.parse(h);
+    if (re) {
       setMode('real');
-      if (!ex || ex.id !== h) open(Real.realOf(Number(rm[1]) - 1, Number(rm[2])));
-      realPick();
+      if (!ex || ex.id !== h) open(re);
+      problems.menu();
       return true;
     }
     const te = topics.parse(h);
@@ -426,9 +415,11 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    realPick();
-    $('#real-pick').addEventListener('change', () => openReal(Number($('#real-pick').value)));
-    $('#real-new').addEventListener('click', () => openReal(isReal() ? ex.real : Number($('#real-pick').value), newSeed()));
+    problems = window.Problems.create({
+      app: PRACTICE, problems: window.RealProblems.PROBLEMS, make: window.RealProblems.realOf,
+      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
+    });
+    problems.menu();
     Identify.attach($('#comps'), identItems, () => st.ident, (right) => {
       math($('#comps'));
       if (right) drawTicked(); // the component appears in the drawing

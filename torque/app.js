@@ -8,7 +8,7 @@
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Torque', mode: 'Mode', difficulty: 'Difficulty', calc: 'Calculator', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
+      title: 'Torque', mode: 'Mode', difficulty: 'Difficulty', calc: 'Calculator', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise', real: 'Problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
       tutorNote: 'Use the arrow keys ← → to step through. What a step is about is highlighted. Torques: ↺ counterclockwise, ↻ clockwise.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
@@ -23,7 +23,7 @@
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
     de: {
-      title: 'Drehmoment', mode: 'Modus', difficulty: 'Schwierigkeit', calc: 'Taschenrechner', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
+      title: 'Drehmoment', mode: 'Modus', difficulty: 'Schwierigkeit', calc: 'Taschenrechner', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Worum es in einem Schritt geht, ist hervorgehoben. Drehmomente: ↺ im Gegenuhrzeigersinn, ↻ im Uhrzeigersinn.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
@@ -115,7 +115,7 @@
   // current one if possible.
   function fresh() { open(topics.next(ex)); }
   // the same exercise again (e.g. in the other language); links of earlier versions name a level
-  const again = (e) => topics.parse(e.id) || generate(e.level, e.seed, e.calc);
+  const again = (e) => (e.real != null ? window.TorqueProblems.realOf(e.real, e.seed) : null) || topics.parse(e.id) || generate(e.level, e.seed, e.calc);
 
   // The topics of practice: those of the tutor's examples, with their stages (lessons.js).
   const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
@@ -179,7 +179,7 @@
 
   function updateButtons() {
     // once everything is right, Check becomes New exercise, like the button at the top
-    $('#check').textContent = st.solved ? ui().new : ui().check;
+    $('#check').textContent = st.solved ? (isReal() ? ui().nextProblem : ui().new) : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     const left = ex.hints.length - st.hints;
@@ -219,7 +219,7 @@
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { fresh(); return; } // the button reads New exercise
+    if (st.solved) { if (isReal()) problems.next(); else fresh(); return; } // the button reads New exercise
     if (!Identify.ok(identItems(), st.ident)) { showStatus('ident'); return; }
     const r = feedback();
     st.checked = true;
@@ -235,6 +235,7 @@
       }
       st.solved = true;
       Practice.markSolved(PRACTICE, ex.id);
+      if (isReal()) problems.solved(ex);
       finish();
       st.advance = topics.solved(st, ex);
       showStatus('ok');
@@ -282,7 +283,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    if (topics) topics.relabel();
+    if (topics) { topics.relabel(); problems.menu(); }
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
@@ -319,10 +320,10 @@
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('tq-mode', m);
-    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
+    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); }); // practice and problems share the card
     $('#tutor').hidden = m !== 'tutor';
     $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
+    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
     if (m !== 'arcade') arcade.stop();
   }
   function play() {
@@ -332,7 +333,15 @@
   }
   function practise() {
     setMode('practice');
-    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
+    if (ex && !isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
+  }
+
+  // Problems from everyday life (realproblems.js, shared problems.js), chosen in a menu.
+  let problems = null;
+  const isReal = () => !!problems && problems.is(ex);
+  function realMode() {
+    setMode('real');
+    if (isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
   }
 
   function fromHash() {
@@ -342,6 +351,13 @@
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
+      return true;
+    }
+    const re = problems.parse(h);
+    if (re) {
+      setMode('real');
+      if (!ex || ex.id !== h) open(re);
+      problems.menu();
       return true;
     }
     const te = topics.parse(h);
@@ -370,6 +386,11 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
+    problems = window.Problems.create({
+      app: PRACTICE, problems: window.TorqueProblems.PROBLEMS, make: window.TorqueProblems.realOf,
+      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
+    });
+    problems.menu();
     applyStatic();
     Identify.attach($('#comps'), identItems, () => st.ident, (right) => {
       math($('#comps'));
@@ -391,13 +412,13 @@
     });
     arcade = Arcade.create(window.ArcadeSource, { math, markScrollable, stored, store });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('tq-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
