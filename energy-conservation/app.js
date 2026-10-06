@@ -475,12 +475,15 @@
     topics = window.Topics.create({
       app: PRACTICE, topics: topicList(),
       make: (type, seed) => generateFor(type, seed, formal()), typeOf,
+      // with symbols, an exercise is new by its text; with numbers, by its values
+      keyOf: (e) => (e.formal ? `${e.title}|${e.text}` : JSON.stringify(e.p)), variant: () => (formal() ? 'symbols' : 'numbers'),
       onChange: fresh,
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
     $('#formal').checked = stored('ec-formal', true);
-    $('#formal').addEventListener('change', () => { store('ec-formal', formal()); fresh(); });
+    topics.relabel(); // the steps depend on it
+    $('#formal').addEventListener('change', () => { store('ec-formal', formal()); topics.relabel(); tutor.relabel(lessons()); fresh(); });
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);

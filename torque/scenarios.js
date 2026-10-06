@@ -709,12 +709,14 @@
       text: () => L(`A figure is bent from one piece of uniform wire. Find its centre of mass S: its coordinates in the system drawn, with the origin O.${S.ask.length === 1 ? ` (By symmetry, ${S.ask[0] === 'x' ? 'y' : 'x'}<sub>S</sub> = 0.)` : ''}`,
         `Eine Figur ist aus einem gleichmässigen Draht gebogen. Bestimme ihren Schwerpunkt S: seine Koordinaten im eingezeichneten System mit dem Ursprung O.${S.ask.length === 1 ? ` (Aus Symmetriegründen ist ${S.ask[0] === 'x' ? 'y' : 'x'}<sub>S</sub> = 0.)` : ''}`),
       figure: (p, v, view) => comFigure(shape, p, v, view),
-      hints: () => [
-        L('Split the figure into simple parts: straight pieces (and rings). The mass of each part is proportional to its length.', 'Zerlege die Figur in einfache Teile: gerade Stücke (und Ringe). Die Masse jedes Teils ist proportional zu seiner Länge.'),
-        L('Find the centre of mass of each part: the middle of a straight piece, the centre of a ring (whose wire is 2πr long).', 'Bestimme den Schwerpunkt jedes Teils: die Mitte eines geraden Stücks, den Mittelpunkt eines Rings (dessen Draht 2πr lang ist).'),
+      hints: (p) => { const hasSquare = S.parts(p).some((pt) => pt.kind === 'square'); return [
+        hasSquare ? L('Split the figure into simple parts: straight pieces and squares. The mass of each part is proportional to its length (a square: its four sides).', 'Zerlege die Figur in einfache Teile: gerade Stücke und Quadrate. Die Masse jedes Teils ist proportional zu seiner Länge (beim Quadrat: seine vier Seiten).')
+          : L('Split the figure into simple parts: its straight pieces. The mass of each part is proportional to its length.', 'Zerlege die Figur in einfache Teile: ihre geraden Stücke. Die Masse jedes Teils ist proportional zu seiner Länge.'),
+        hasSquare ? L('Find the centre of mass of each part: the middle of a straight piece, the centre of a square (its opposite sides meet in the middle).', 'Bestimme den Schwerpunkt jedes Teils: die Mitte eines geraden Stücks, den Mittelpunkt eines Quadrats (seine gegenüberliegenden Seiten treffen sich in der Mitte).')
+          : L('Find the centre of mass of each part: the middle of each straight piece.', 'Bestimme den Schwerpunkt jedes Teils: die Mitte jedes geraden Stücks.'),
         L('Combine the parts two at a time. The common centre of mass lies on the line between their centres, closer to the heavier part: m₁ · a₁ = m₂ · a₂, where a₁ and a₂ are its distances from the two centres. Then combine the result with the next part.',
           'Fasse die Teile schrittweise zu zweit zusammen. Der gemeinsame Schwerpunkt liegt auf der Verbindungslinie ihrer Schwerpunkte, näher beim schwereren Teil: m₁ · a₁ = m₂ · a₂, wobei a₁ und a₂ seine Abstände von den beiden Schwerpunkten sind. Fasse das Ergebnis dann mit dem nächsten Teil zusammen.'),
-      ],
+      ]; },
       steps(p, v) {
         const parts = S.parts(p), lens = parts.map(lengthOf), cs = parts.map(centreOf), total = lens.reduce((a, b) => a + b, 0);
         const lenTex = (pt) => (pt.kind === 'ring' ? `2\\pi\\cdot ${tq(pt.r, 'cm')} = ${tq(lengthOf(pt), 'cm', 1)}` : pt.kind === 'square' ? `4\\cdot ${tq(pt.s, 'cm')} = ${tq(lengthOf(pt), 'cm')}` : tq(lengthOf(pt), 'cm'));
@@ -722,7 +724,7 @@
         const rows = parts.map((pt, i) => `<li>${pt.kind === 'ring' ? L('ring', 'Ring') : pt.kind === 'square' ? L('square (its centre: opposite sides meet in the middle)', 'Quadrat (sein Mittelpunkt: gegenüberliegende Seiten treffen sich in der Mitte)') : L('straight piece', 'gerades Stück')} ${i + 1}: ${L('length', 'Länge')} $${lenTex(pt)}$, ${L('centre of mass', 'Schwerpunkt')} $S_${i + 1} = ${pt$(cs[i])}$</li>`).join('');
         void lens; void total;
         const out = [step(L('1 · Split into parts', '1 · In Teile zerlegen'),
-          `<p>${L('The figure consists of these parts. Each part’s mass is proportional to its length, so the lengths can stand for the masses. A straight piece has its centre of mass in its middle, a ring in its centre:', 'Die Figur besteht aus diesen Teilen. Die Masse jedes Teils ist proportional zu seiner Länge, also können die Längen für die Massen stehen. Ein gerades Stück hat seinen Schwerpunkt in seiner Mitte, ein Ring in seinem Mittelpunkt:')}</p><ul>${rows}</ul>`,
+          `<p>${(parts.some((pt) => pt.kind === 'square') ? L('The figure consists of these parts. Each part’s mass is proportional to its length, so the lengths can stand for the masses. A straight piece has its centre of mass in its middle, a square in its centre:', 'Die Figur besteht aus diesen Teilen. Die Masse jedes Teils ist proportional zu seiner Länge, also können die Längen für die Massen stehen. Ein gerades Stück hat seinen Schwerpunkt in seiner Mitte, ein Quadrat in seinem Mittelpunkt:') : L('The figure consists of these parts. Each part’s mass is proportional to its length, so the lengths can stand for the masses. A straight piece has its centre of mass in its middle:', 'Die Figur besteht aus diesen Teilen. Die Masse jedes Teils ist proportional zu seiner Länge, also können die Längen für die Massen stehen. Ein gerades Stück hat seinen Schwerpunkt in seiner Mitte:'))}</p><ul>${rows}</ul>`,
           ['mids', ...parts.map((x, i) => `part${i}`)], ['mids'])];
         const ks = combos(parts), sTex = (n) => (n ? `S_{${n}}` : 'S'), mTex = (n) => `m_{${n}}`;
         ks.forEach((k, i) => {

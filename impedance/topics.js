@@ -11,11 +11,15 @@
 //     typeOf(ex),             the type of an exercise
 //     onChange(),             the student chose another topic or stage (start a new exercise)
 //     tutor(i),               show worked example i (the link next to the stages)
-//     keyOf(ex),              (optional) what makes an exercise new to the student; by default
-//                             its title and text. Exercises without either never run out.
+//     keyOf(ex),              (optional) what makes an exercise new to the student; by default its
+//                             parameters ex.p. Exercises without them never run out.
+//     variant(),              (optional) a mode that changes how many exercises there are (e.g.
+//                             with symbols or with numbers)
 //   })
-// When a step has no new exercises left (e.g. exercises with symbols only, which do not vary with
-// numbers), a note says so and suggests moving on; the exercises then come round again.
+// The steps the student sees are the topic's stages, but a stage with fewer than three different
+// exercises (in the current variant) is merged with the next one; after the last step comes one
+// with the exercises of all steps. When a step has no new exercises left, a note says so and
+// suggests moving on; the exercises then come round again.
 //   T.mount(el)               the topic menu, the stages and the link to the worked example, in el
 //   T.relabel()               the texts in the current language
 //   T.next(last)              a new exercise of the current topic and stage, its id 'p3.2-seed'
@@ -33,9 +37,9 @@
   const WINS = 2;
   const TX = {
     en: { topic: 'Topic', mixed: 'All topics (mixed)', stage: 'Step', worked: (i, n) => `Worked example ${i} · ${n}`, like: 'like the example',
-      done: (n) => `Well done! Next step: ${n}.`, none: 'You have seen all the exercises of this step: move on to the next step or to another topic.', noneLast: 'You have seen all the exercises of this step: move on to another topic.', last: 'Well done! You have reached the last step of this topic; practise on, or choose another topic.', also: 'Practice:' },
+      done: (n) => `Well done! Next step: ${n}.`, allSteps: 'all steps', none: 'You have seen all the exercises of this step: move on to the next step or to another topic.', noneLast: 'You have seen all the exercises of this step: move on to another topic.', last: 'Well done! You have reached the last step of this topic; practise on, or choose another topic.', also: 'Practice:' },
     de: { topic: 'Thema', mixed: 'Alle Themen (gemischt)', stage: 'Schritt', worked: (i, n) => `Beispiel ${i} · ${n}`, like: 'wie im Beispiel',
-      done: (n) => `Gut gemacht! Nächster Schritt: ${n}.`, none: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit dem nächsten Schritt oder einem anderen Thema weiter.', noneLast: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit einem anderen Thema weiter.', last: 'Gut gemacht! Du hast den letzten Schritt dieses Themas erreicht; übe weiter oder wähle ein anderes Thema.', also: 'Üben:' },
+      done: (n) => `Gut gemacht! Nächster Schritt: ${n}.`, allSteps: 'alle Schritte', none: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit dem nächsten Schritt oder einem anderen Thema weiter.', noneLast: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit einem anderen Thema weiter.', last: 'Gut gemacht! Du hast den letzten Schritt dieses Themas erreicht; übe weiter oder wähle ein anderes Thema.', also: 'Üben:' },
   };
   const tx = () => TX[root.Lang && root.Lang.get() === 'de' ? 'de' : 'en'];
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -52,13 +56,40 @@
     // current step has run out of new ones
     const seen = new Map();
     let runOut = false;
-    const keyOf = (ex) => (o.keyOf ? o.keyOf(ex) : (ex.title || ex.text || ex.situation) ? `${ex.title || ''}|${ex.text || ex.situation || ''}` : null);
+    const keyOf = (ex) => (o.keyOf ? o.keyOf(ex) : ex.p ? JSON.stringify(ex.p) : null);
     const seenHere = () => { const k = `${cur.topic}.${cur.stage}`; if (!seen.has(k)) seen.set(k, new Set()); return seen.get(k); };
     if (!(cur.topic >= -1 && cur.topic < o.topics.length)) cur = { topic: 0, stage: 0 };
-    const stagesOf = (t) => (t < 0 ? [] : o.topics[t].stages);
+    // The steps of a topic, in the current variant: stages with fewer than MIN different exercises
+    // (counted in SAMPLES of them) merged with the next, then the step with all of them.
+    const MIN = 3, SAMPLES = 24, plans = new Map();
+    function count(types) {
+      const keys = new Set();
+      for (let k = 1; k <= SAMPLES; k++) {
+        const kk = keyOf(o.make(types[k % types.length], 7919 * k));
+        if (kk == null) return Infinity;
+        keys.add(kk);
+      }
+      return keys.size;
+    }
+    function stagesOf(t) {
+      if (t < 0) return [];
+      const id = `${t}|${o.variant ? o.variant() : ''}`;
+      if (plans.has(id)) return plans.get(id);
+      const raw = o.topics[t].stages, groups = [];
+      let open = null;
+      raw.forEach((st) => {
+        open = { names: [...(open ? open.names : []), st.name || null], types: [...(open ? open.types : []), ...st.types] };
+        if (count(open.types) >= MIN) { groups.push(open); open = null; }
+      });
+      if (open && groups.length) { const g = groups.pop(); groups.push({ names: [...g.names, ...open.names], types: [...g.types, ...open.types] }); } else if (open) groups.push(open);
+      const steps = groups.map((g) => ({ name: () => g.names.map((n) => (n ? n() : tx().like)).join(', '), types: [...new Set(g.types)] }));
+      if (steps.length > 1) steps.push({ name: () => tx().allSteps, types: [...new Set(raw.flatMap((st) => st.types))], all: true });
+      plans.set(id, steps);
+      return steps;
+    }
     const reached = (t) => Math.min((progress[t] || {}).stage || 0, stagesOf(t).length - 1);
     const typesOf = (t, s) => (t < 0 ? all : stagesOf(t)[Math.min(s, stagesOf(t).length - 1)].types);
-    const stageName = (t, s) => { const n = stagesOf(t)[s].name; return n ? n() : tx().like; };
+    const stageName = (t, s) => stagesOf(t)[s].name();
 
     function exercise(t, s, seed) {
       const types = typesOf(t, s), type = types[seed % types.length];
@@ -71,6 +102,7 @@
     function render() {
       if (!el) return;
       const t = cur.topic, X = tx();
+      if (t >= 0 && cur.stage > stagesOf(t).length - 1) cur.stage = stagesOf(t).length - 1; // fewer steps in this variant
       const opts = o.topics.map((tp, i) => `<option value="${i}"${i === t ? ' selected' : ''}>${i + 1} · ${esc(tp.name())}</option>`).join('') +
         `<option value="-1"${t < 0 ? ' selected' : ''}>${X.mixed}</option>`;
       const stages = stagesOf(t).length > 1 ? `<div class="levels small stages" role="radiogroup" aria-label="${X.stage}">${stagesOf(t).map((s, i) =>
@@ -158,9 +190,9 @@
       },
       go(i) { choose(i, reached(i)); },
       also(i) {
-        const st = o.topics[i].stages;
+        const st = stagesOf(i).filter((x) => !x.all);
         if (st.length < 2) return '';
-        return `${tx().also} ${st.map((s, k) => `${k + 1} · ${esc(stageName(i, k))}`).join(', ')}.`;
+        return `${tx().also} ${st.map((x, k) => `${k + 1} · ${esc(stageName(i, k))}`).join(', ')}.`;
       },
       count: () => o.topics.length,
     };
