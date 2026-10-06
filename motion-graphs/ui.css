@@ -511,3 +511,38 @@ svg .rp-lcdtext { fill: #22301a; font-family: ui-monospace, Menlo, monospace; fo
 svg .rp-dial { fill: #fbfaf3; stroke: var(--rp-outline); stroke-width: 1.2; }
 svg .rp-tick { stroke: #3b3f45; stroke-width: 1.2; }
 svg .rp-needle { stroke: var(--rp-red); stroke-width: 2.2; stroke-linecap: round; }
+
+/* pictures for energy (Energy Conservation's problems) */
+svg .rp-hline { fill: none; stroke: var(--rp-outline); stroke-width: 1.2; stroke-dasharray: 5 3; }
+svg .rp-hline-dot { fill: none; stroke: #6f777f; stroke-width: 1; stroke-dasharray: 2 4; }
+svg .rp-spring { fill: none; stroke: #5d6670; stroke-width: 2; stroke-linejoin: round; }
+svg .rp-building { fill: #b8a48c; stroke: var(--rp-outline); stroke-width: 1.2; }
+svg .rp-window { fill: #cfe4f6; stroke: #6f777f; stroke-width: 0.8; }
+svg .rp-concrete-block { fill: var(--rp-concrete); stroke: var(--rp-outline); stroke-width: 1.2; }
+svg .rp-drop { fill: #7fb4e6; stroke: none; }
+svg .rp-basin { fill: #c9c4bb; stroke: var(--rp-outline); stroke-width: 1.2; }
+svg .rp-waterline { fill: none; stroke: #5b93c7; stroke-width: 3; }
+svg .rp-jet { fill: #9cc6ee; stroke: #5b93c7; stroke-width: 1; }
+svg .rp-spray { fill: none; stroke: #9cc6ee; stroke-width: 2; stroke-dasharray: 3 5; stroke-linecap: round; }
+svg .rp-track { fill: none; stroke: #c43c3c; stroke-width: 5; stroke-linecap: round; }
+svg .rp-track-ties { fill: none; stroke: #ffffff; stroke-width: 2; stroke-dasharray: 2 8; }
+svg .rp-post { stroke: #6f777f; stroke-width: 3; }
+svg .rp-mat { fill: var(--rp-blue); stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-bar { stroke: #f2b632; stroke-width: 4; stroke-linecap: round; }
+svg .rp-vaultpole { stroke: #3b3f45; stroke-width: 3; stroke-linecap: round; }
+svg .rp-hill { fill: #8cbf72; stroke: #5f8f4a; stroke-width: 1.2; }
+svg .rp-inrun { fill: #9aa3ab; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-flight { fill: none; stroke: #6f777f; stroke-width: 1.2; stroke-dasharray: 4 4; }
+svg .rp-branch { fill: #6b4a2e; stroke: none; }
+svg .rp-trunkwide { fill: #6b4a2e; stroke: none; }
+svg .rp-rope.ghost { stroke: #9aa3ab; stroke-dasharray: 4 4; }
+svg .rp-slingframe { fill: none; stroke: #8a5a32; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+svg .rp-band-rubber { fill: none; stroke: #d64541; stroke-width: 3; }
+svg .rp-stone { fill: #8f979f; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-pintable { fill: #2d3e66; stroke: var(--rp-outline); stroke-width: 1.2; }
+svg .rp-plunger { stroke: #c8cdd2; stroke-width: 5; stroke-linecap: round; }
+svg .rp-ball { fill: #e3e7eb; stroke: var(--rp-outline); stroke-width: 1; }
+svg .rp-bumper { fill: #f2b632; stroke: #c43c3c; stroke-width: 3; }
+svg .rp-tlegs { stroke: #3b4148; stroke-width: 4; stroke-linecap: round; }
+svg .rp-tmat { fill: none; stroke: #23272c; stroke-width: 5; stroke-linecap: round; }
+svg .rp-tframe { fill: #3f78c8; stroke: var(--rp-outline); stroke-width: 1; }
