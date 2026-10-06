@@ -83,7 +83,10 @@
   const V0 = () => L('<i>V</i><sub>0</sub>', '<i>U</i><sub>0</sub>');
   const clone = (x) => JSON.parse(JSON.stringify(x));
   const volts = (f) => (isZero(f) ? '0' : cmp(f, ONE) === 0 ? V0() : `${ftext(f)} ${V0()}`);
-  const it = (name) => `<i>${name}</i>`;
+  // A bulb's name with its index as a subscript (L2 → L₂), in a text and in a drawing (upright
+  // index, see style.css).
+  const it = (name) => { const m = /^([A-Za-z]+)(\d+)$/.exec(name); return m ? `<i>${m[1]}</i><sub>${m[2]}</sub>` : `<i>${name}</i>`; };
+  const svgName = (name) => { const m = /^([A-Za-z]+)(\d+)$/.exec(name); return m ? `${m[1]}<tspan class="sub" dy="0.3em">${m[2]}</tspan><tspan dy="-0.3em">\u200b</tspan>` : name; };
   const Vof = (name) => `${L('<i>V</i>', '<i>U</i>')}(${it(name)})`;
   const and = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} ${L('and', 'und')} ${xs[xs.length - 1]}`);
   const cap = (s) => s.replace(/^(<i>)?([a-zäöü])/, (m, tag, c) => (tag || '') + c.toUpperCase());
@@ -225,10 +228,10 @@
   }
 
   // ---------------------------------------------------------------- rendering
-  const ref = (glow) => circuit({ t: 'L', i: 0 }, { t: 'B', dir: 1 }, () => ({ label: 'L₀', glow }));
+  const ref = (glow) => circuit({ t: 'L', i: 0 }, { t: 'B', dir: 1 }, () => ({ label: svgName('L0'), glow }));
   // `glows[i]` is the answer shown for bulb i (none: unlit).
   // asked: the name of a bulb to mark (the one an arcade question is about)
-  const taskOf = (e, glows, asked) => circuit(clone(e.load), clone(e.pack), (i) => ({ label: e.bulbs[i].name, glow: GLOW[glows[i]] || 0, asked: e.bulbs[i].name === asked }));
+  const taskOf = (e, glows, asked) => circuit(clone(e.load), clone(e.pack), (i) => ({ label: svgName(e.bulbs[i].name), glow: GLOW[glows[i]] || 0, asked: e.bulbs[i].name === asked }));
   const drawAnswers = () => { $('#figure').innerHTML = taskOf(ex, answers()); };
   const starsOf = (d) => `<span class="stars" role="img" aria-label="${ui().stars(d)}" title="${ui().stars(d)}">${'★'.repeat(d)}${'☆'.repeat(5 - d)}</span>`;
 
@@ -238,7 +241,7 @@
     $('#figure').innerHTML = taskOf(ex, []);
     $('#fields').innerHTML = ex.bulbs.map((b) => `
       <div class="field" data-name="${b.name}">
-        <span class="name">${b.name}</span>
+        <span class="name">${it(b.name)}</span>
         <span class="choices" role="radiogroup" aria-label="${b.name}">${ANSWERS.map((a) => `
           <label><input type="radio" name="ans-${b.name}" value="${a}"><span>${WORDS()[a]}</span></label>`).join('')}
         </span>
@@ -334,7 +337,7 @@
       seen.get(key).bulbs.push(ex.bulbs[i]);
     });
     $('#feedback').innerHTML = [...seen.values()]
-      .map(({ c, bulbs }) => `<li><b>${and(bulbs.map((b) => b.name))}</b>: ${why(c, bulbs[0])}</li>`).join('');
+      .map(({ c, bulbs }) => `<li><b>${and(bulbs.map((b) => it(b.name)))}</b>: ${why(c, bulbs[0])}</li>`).join('');
   }
 
   function check() {
@@ -429,10 +432,10 @@
     return withEx(e, () => {
       const frames = [], notes = new Map(); // bulb index → note shown from now on
       const figure = (o = {}) => {
-        const look = (i) => ({ label: e.bulbs[i].name, glow: o.lit ? GLOW[e.bulbs[i].answer] : 0,
+        const look = (i) => ({ label: svgName(e.bulbs[i].name), glow: o.lit ? GLOW[e.bulbs[i].answer] : 0,
           note: o.lit ? SHORT()[e.bulbs[i].answer] : notes.get(i), hl: o.hl && o.hl.has(i), noteCls: o.lit ? '' : 'v' });
         const reference = circuit({ t: 'L', i: 0 }, { t: 'B', dir: 1 },
-          () => ({ label: 'L₀', glow: o.lit ? GLOW.equal : 0, note: o.ref ? `${L('V', 'U')} = ${L('V₀', 'U₀')}` : '', noteCls: 'v' }), { zones: new Map() });
+          () => ({ label: svgName('L0'), glow: o.lit ? GLOW.equal : 0, note: o.ref ? `${L('V', 'U')} = ${L('V₀', 'U₀')}` : '', noteCls: 'v' }), { zones: new Map() });
         const task = larger(circuit(e.load, e.pack, look, { zones: o.zones || new Map(), captions: o.captions, bat: o.bat }), 1.3);
         return `<div class="figs"><figure class="fig ref">${reference}<figcaption>${ui().reference}</figcaption></figure>` +
           `<figure class="fig">${task}<figcaption>${ui().circuit}</figcaption></figure></div>`;

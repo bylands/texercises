@@ -34,6 +34,7 @@ svg .bulb { fill: var(--card); stroke: var(--ink); stroke-width: 1.8; }
 svg .bulb.lit { fill: var(--glow); }
 svg .halo { fill: var(--glow); }
 svg .lbl { fill: var(--ink); font: italic 15px var(--serif); }
+svg .lbl .sub { font-size: 70%; font-style: normal; }
 svg .plus { fill: var(--ink); font: 13px system-ui, sans-serif; }
 
 /* answers: one row per bulb */
@@ -95,3 +96,4 @@ details.intro > p { margin: 0 0 4px; }
   details.intro > summary { display: list-item; cursor: pointer; color: var(--accent); margin: 2px 0 6px; }
   #task.folded .fig.ref, #ar-play.folded #ar-figure .fig.ref { display: none; }
 }
+.field .name sub, .steps sub, #hint-list sub { font-style: normal; }
