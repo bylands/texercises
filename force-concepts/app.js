@@ -50,7 +50,7 @@
   };
   const ui = () => UI[FC.getLang()];
 
-  let ex = null, st = null, tutor = null, arcade = null;
+  let ex = null, st = null, tutor = null, arcade = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -110,7 +110,6 @@
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
   // ---------------------------------------------------------------- exercise lifecycle
-  const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'easy';
 
   function open(exercise) {
     if (ex && st.tries > 0 && !st.recorded) record(0.75); // left unsolved after trying
@@ -121,11 +120,23 @@
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
+    topics.shown(ex);
   }
 
-  function fresh() {
-    const lv = level();
-    open(FC.generate(lv, FC.freshSeed(lv, 'all', stored('fc-recent', []), Math.random, stored('fc-types', {}))));
+  // A new exercise of the topic and stage chosen (topics.js); types that were hard come up more
+  // often (fc-types, the same statistics as before).
+  function fresh() { open(topics.next(ex)); }
+  // The topics of practice: those of the tutor's examples; a stage is named after its types.
+  const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
+    name: () => e.name[FC.getLang()],
+    stages: e.practice.map((st, i) => ({ name: i ? () => [...new Set(st.types.map((t) => FC.typeName(t.split('/')[1])))].join(', ') : null, types: st.types })),
+  }));
+  // the same exercise again (e.g. in the other language); links of earlier versions name a level or topic
+  function again(e) {
+    const te = topics.parse(e.id);
+    if (te) return te;
+    const [, key, f, seed] = e.id.match(ID);
+    return FC.generate(key, Number(seed), f || 'all');
   }
 
   const canReveal = () => st.solved || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
@@ -149,7 +160,7 @@
   // The status line, kept as a state so that it can be rewritten in the other language.
   function showStatus() {
     const s = $('#status'), k = st && st.status;
-    s.textContent = !k ? '' : k === 'choose' ? ui().choose : k === 'ok' ? (st.okPlain ? ui().ok : ui().okWell)
+    s.textContent = !k ? '' : k === 'choose' ? ui().choose : k === 'ok' ? (st.okPlain ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
       : ui().notYet(st.tries) + (canReveal() ? ui().canReveal : ui().tryAgain);
     s.className = `status${k === 'ok' ? ' ok' : k === 'bad' ? ' bad' : ''}`;
   }
@@ -198,6 +209,7 @@
       st.okPlain = st.revealed;
       if (!st.revealed) record(Math.min(1, 0.3 * (st.tries - 1) + 0.2 * st.hints));
       st.solved = true;
+      st.advance = topics.solved(st, ex);
       st.status = 'ok';
     } else st.status = 'bad';
     showStatus();
@@ -260,7 +272,7 @@
       },
     };
   }
-  const lessons = () => window.Lessons.EXAMPLES.map(lesson);
+  const lessons = () => window.Lessons.EXAMPLES.map((d, i) => ({ ...lesson(d), also: topics.also(i) }));
 
   // ---------------------------------------------------------------- arcade
   // Each question is a single-choice question with four options (a prediction counts too) from
@@ -307,9 +319,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    const cur = $('#levels').childElementCount ? level() : stored('fc-level', 'easy');
-    $('#levels').innerHTML = Object.entries(ui().levels).map(([k, n]) => `
-      <label><input type="radio" name="level" value="${k}"${k === cur ? ' checked' : ''}><span>${n}</span></label>`).join('');
+    if (topics) topics.relabel();
   }
 
   // Same exercise (same seed) in the other language: the options keep their order, so the
@@ -320,8 +330,7 @@
     showProfile();
     if (ex) {
       const states = ex.questions.map(Q.state);
-      const [, key, f, seed] = ex.id.match(ID);
-      ex = FC.generate(key, Number(seed), f || 'all');
+      ex = again(ex);
       const keep = { ...st };
       render();
       st = keep;
@@ -374,11 +383,15 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
+    const te = topics.parse(h);
+    if (te) {
+      setMode('practice');
+      if (!ex || ex.id !== h) open(te);
+      return true;
+    }
     m = h.match(ID);
     if (m) {
       setMode('practice');
-      const lv = document.querySelector(`input[name="level"][value="${m[1]}"]`);
-      if (lv) lv.checked = true;
       if (!ex || ex.id !== h) open(FC.generate(m[1], Number(m[3]), m[2] || 'all'));
       return true;
     }
@@ -391,7 +404,13 @@
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     applyStatic();
     Lang.wire(switchLang);
-    $('#levels').addEventListener('change', () => { store('fc-level', level()); fresh(); });
+    topics = window.Topics.create({
+      app: 'fc', topics: topicList(),
+      make: (type, seed) => FC.generateGen(type, seed), typeOf: (e) => e.gen,
+      onChange: fresh,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+    });
+    topics.mount($('#levels'));
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
     // A new answer clears the marks on that part of the question.
@@ -411,7 +430,7 @@
     });
     window.addEventListener('hashchange', fromHash);
 
-    tutor = window.createTutor(lessons(), { done: practise });
+    tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(i); setMode('practice'); fresh(); } });
     arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
     $('#modes').addEventListener('change', () => {
       if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();

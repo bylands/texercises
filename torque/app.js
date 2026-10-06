@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const TQ = window.TQ, Lang = window.Lang, Arcade = window.Arcade, { LEVELS, generate, tutorial } = window.Torque;
+  const TQ = window.TQ, Lang = window.Lang, Arcade = window.Arcade, { generate, practiceOf, tutorial } = window.Torque;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
@@ -38,7 +38,7 @@
   };
   const ui = () => UI[TQ.getLang()];
 
-  let ex = null, st = null, tutor = null, arcade = null;
+  let ex = null, st = null, tutor = null, arcade = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -93,7 +93,6 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'mixed';
   // with a calculator, or without: then no sine or cosine, and results that are multiples of 0.5
   const calc = () => $('#calc').checked;
 
@@ -108,11 +107,21 @@
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
+    topics.shown(ex);
     $(`#in-${ex.fields[0].key}`).focus({ preventScroll: true });
   }
 
-  // A new exercise, of another situation than the current one if possible.
-  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s, calc()), typeOf, ex && typeOf(ex))); }
+  // A new exercise of the topic and stage chosen (topics.js), of another situation than the
+  // current one if possible.
+  function fresh() { open(topics.next(ex)); }
+  // the same exercise again (e.g. in the other language); links of earlier versions name a level
+  const again = (e) => topics.parse(e.id) || generate(e.level, e.seed, e.calc);
+
+  // The topics of practice: those of the tutor's examples, with their stages (lessons.js).
+  const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
+    name: () => e.name[TQ.getLang()],
+    stages: e.practice.map((s) => ({ name: s.en ? () => s[TQ.getLang()] : null, types: s.types })),
+  }));
 
   // The answer fields; their inputs have the ids `${prefix}-${key}`. A torque has its sense of
   // rotation too: ↺, ↻ or none (radio buttons named `${prefix}-${key}-s`, values 1, -1, 0).
@@ -187,7 +196,7 @@
     st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
     el.textContent = !kind ? '' : kind === 'fill' ? ui().fill
-      : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell)
+      : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (st.tries < MAX_TRIES && !canReveal() ? ui().tryAgain : ui().canReveal);
   }
 
@@ -208,6 +217,7 @@
       }
       st.solved = true;
       finish();
+      st.advance = topics.solved(st, ex);
       showStatus('ok');
     } else showStatus('bad');
     updateButtons();
@@ -244,17 +254,14 @@
   }
 
   // ---------------------------------------------------------------- language
-  const lessons = () => window.Lessons.EXAMPLES.map((e) => ({
-    name: e.name[TQ.getLang()], idea: e.idea[TQ.getLang()], frames: () => tutorial(e).frames,
+  const lessons = () => window.Lessons.EXAMPLES.map((e, i) => ({
+    name: e.name[TQ.getLang()], idea: e.idea[TQ.getLang()], also: topics.also(i), frames: () => tutorial(e).frames,
   }));
 
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    let cur = $('#levels').childElementCount ? level() : stored('tq-level', 'easy');
-    if (!LEVELS[cur]) cur = 'easy'; // a level of an earlier version
-    $('#levels').innerHTML = Object.entries(LEVELS).map(([k, lv]) => `
-      <label><input type="radio" name="level" value="${k}"${k === cur ? ' checked' : ''}><span>${lv.name()}</span></label>`).join('');
+    if (topics) topics.relabel();
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
@@ -264,7 +271,7 @@
     if (ex) {
       const values = ex.fields.map((f) => $(`#in-${f.key}`).value), senses = ex.fields.map((f) => (f.sense ? senseOf(f) : null));
       const keep = { ...st };
-      ex = generate(ex.level, ex.seed, ex.calc);
+      ex = again(ex);
       render();
       st = keep;
       ex.fields.forEach((f, k) => {
@@ -314,10 +321,15 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
+    const te = topics.parse(h);
+    if (te) {
+      setMode('practice');
+      if (!ex || ex.id !== h) open(te);
+      return true;
+    }
     m = h.match(/^(easy|medium|hard|mixed)(-nocalc)?-(\d+)$/);
     if (m) {
       setMode('practice');
-      document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;
       $('#calc').checked = !m[2];
       if (!ex || ex.id !== h) open(generate(m[1], Number(m[3]), !m[2]));
       return true;
@@ -329,8 +341,14 @@
   function init() {
     Lang.init(); // see lang.js
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    topics = window.Topics.create({
+      app: PRACTICE, topics: topicList(),
+      make: (type, seed) => practiceOf(type, seed, calc()), typeOf,
+      onChange: fresh,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+    });
+    topics.mount($('#levels'));
     applyStatic();
-    $('#levels').addEventListener('change', () => { store('tq-level', level()); fresh(); });
     $('#calc').checked = stored('tq-calc', true);
     $('#calc').addEventListener('change', () => { store('tq-calc', calc()); fresh(); });
     Lang.wire(switchLang);
@@ -343,6 +361,7 @@
     tutor = window.createTutor(lessons(), {
       after: () => { math($('#tutor')); markScrollable(); },
       done: practise,
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
       t: () => ui().tutorBtns,
     });
     arcade = Arcade.create(window.ArcadeSource, { math, markScrollable, stored, store });

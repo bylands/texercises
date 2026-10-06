@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const { generate, ofDifficulty, quiz, evaluate, copied, sloped, len, rate, area } = window.Motion;
+  const { generate, KINDS, ofDifficulty, quiz, evaluate, copied, sloped, len, rate, area } = window.Motion;
   const Concepts = window.Concepts, Quiz = window.Quiz;
   const Plot = window.Plot, { sourceGraph, UNIT, dec } = Plot;
   const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
@@ -59,7 +59,7 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, editor = null, tutor = null, arcade = null;
+  let ex = null, editor = null, tutor = null, arcade = null, topics = null;
   // tries, hints used, solved, revealed, res: the result of the last check (null after an edit)
   let st = null;
 
@@ -449,7 +449,7 @@
     if (!st.res) return;
     const right = st.res.filter((r) => r.ok).length;
     if (right === st.res.length) {
-      status.textContent = ui().ok;
+      status.textContent = ui().ok + (st.advance ? ` ${st.advance}` : '');
       status.className = 'status ok';
       return;
     }
@@ -475,7 +475,7 @@
     const evs = ex.questions.map((q) => Quiz.evaluate(q, st.checked[q.key]));
     if (evs.some((e) => !e.complete)) { status.textContent = ui().choose; return; }
     const right = evs.filter((e) => e.ok).length;
-    if (right === evs.length) { status.textContent = ui().qOk; status.className = 'status ok'; return; }
+    if (right === evs.length) { status.textContent = ui().qOk + (st.advance ? ` ${st.advance}` : ''); status.className = 'status ok'; return; }
     status.textContent = ui().qSome(right, evs.length, st.tries) + (canReveal() ? ui().canReveal : ui().qTry);
     status.className = 'status bad';
   }
@@ -508,7 +508,6 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'easy';
   const canReveal = () => st.solved || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
   const hintsOf = () => (isQuiz() ? ex.hints : ex.dir === 'diff' ? hintsDiff() : hintsInt());
 
@@ -524,9 +523,13 @@
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
+    topics.shown(ex);
   }
 
-  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s), typeOf, ex && typeOf(ex))); }
+  // A new exercise of the topic and stage chosen (topics.js), of another type than the current one if possible.
+  function fresh() { open(topics.next(ex)); }
+  // an exercise of a practice type: a task (sv, …) or a kind of question with its difficulty (compare:2)
+  const ofType = (type, seed) => { const [k, d] = type.split(':'); return d ? KINDS[k].make(seed, Number(d)) : generate(k, seed); };
 
   function updateButtons() {
     const left = ex.hints.length - st.hints;
@@ -562,6 +565,7 @@
         showScore();
       }
       st.solved = true;
+      st.advance = topics.solved(st, ex);
       finish();
     }
     showDrawing();
@@ -583,6 +587,7 @@
           showScore();
         }
         st.solved = true;
+        st.advance = topics.solved(st, ex);
         finish();
       }
     }
@@ -619,31 +624,31 @@
   // is highlighted in both graphs; derivative: the chord of the given graph (its mean slope)
   // and, for a parabola, the tangents at its ends; integral: the area under the given graph.
   const LESSONS = [
-    { name: () => L('Faster', 'Schneller'), kind: 'compare', d: 2, seed: 1,
+    { name: () => L('Faster', 'Schneller'), kind: 'compare', d: 2, seed: 1, practice: [{ types: ['compare:1', 'compare:2'] }],
       idea: () => L('The speed is the steepness of the s(t) graph, not its height; a falling graph means motion in the negative direction.',
         'Die Geschwindigkeit ist die Steilheit des s(t)-Graphen, nicht seine Höhe; ein fallender Graph bedeutet Bewegung in negativer Richtung.') },
-    { name: () => L('Direction', 'Richtung'), kind: 'direction', d: 2, seed: 1,
+    { name: () => L('Direction', 'Richtung'), kind: 'direction', d: 2, seed: 1, practice: [{ types: ['direction:2'] }],
       idea: () => L('The sign of v is the direction of motion: negative where s decreases, wherever the graph lies.',
         'Das Vorzeichen von v ist die Bewegungsrichtung: negativ, wo s abnimmt, egal wo der Graph liegt.') },
-    { name: () => L('Value table', 'Wertetabelle'), kind: 'table', d: 2, seed: 1,
+    { name: () => L('Value table', 'Wertetabelle'), kind: 'table', d: 2, seed: 1, practice: [{ types: ['table:2'] }, { name: () => L('more values', 'mehr Werte'), types: ['table:3'] }],
       idea: () => L('In a value table, the direction shows in the changes from one time to the next, not in the signs of the positions.',
         'In einer Wertetabelle zeigt sich die Richtung in den Änderungen von einem Zeitpunkt zum nächsten, nicht in den Vorzeichen der Orte.') },
-    { name: () => L('Accelerated table', 'Tabelle mit Beschleunigung'), kind: 'atable', d: 3, seed: 1,
+    { name: () => L('Accelerated table', 'Tabelle mit Beschleunigung'), kind: 'atable', d: 3, seed: 1, practice: [{ types: ['atable:3'] }, { name: () => L('values to fill in', 'Werte ergänzen'), types: ['atable:4'] }],
       idea: () => L('With constant acceleration, the changes of position Δs in equal time steps change by the same amount each step: find the Δs, their constant change, the missing positions, and only then the acceleration.',
         'Bei konstanter Beschleunigung ändern sich die Ortsänderungen Δs in gleichen Zeitschritten jedes Mal um gleich viel: Bestimme die Δs, ihre konstante Änderung, die fehlenden Orte und erst dann die Beschleunigung.') },
-    { name: () => L('Stroboscope', 'Stroboskop'), kind: 'strobe', d: 3, seed: 1,
+    { name: () => L('Stroboscope', 'Stroboskop'), kind: 'strobe', d: 3, seed: 1, practice: [{ types: ['strobe:2', 'strobe:3'] }],
       idea: () => L('With constant acceleration, the distances between neighbouring dots change by the same amount each second; each is the mean velocity in that second, and v(t) is a straight line.',
         'Bei konstanter Beschleunigung ändern sich die Abstände benachbarter Punkte jede Sekunde um gleich viel; jeder ist die mittlere Geschwindigkeit in dieser Sekunde, und v(t) ist eine Gerade.') },
-    { name: 's → v', task: 'sv', seed: 17,
+    { name: 's → v', task: 'sv', seed: 17, practice: [{ types: ['sv'] }, { name: () => L('from v to a', 'von v zu a'), types: ['va'] }],
       idea: () => L('The velocity is the slope of the position graph: read it piece by piece, from straight lines and from the tangents to the curves.',
         'Die Geschwindigkeit ist die Steigung des Ort-Zeit-Graphen: Lies sie Stück für Stück ab, an Geraden und an den Tangenten der Kurven.') },
-    { name: () => L('Area', 'Fläche'), kind: 'area', d: 4, seed: 1,
+    { name: () => L('Area', 'Fläche'), kind: 'area', d: 4, seed: 1, practice: [{ types: ['area:3', 'area:4'] }],
       idea: () => L('The area under v(t) is the displacement (below the axis negative); counting all areas positive gives the distance travelled.',
         'Die Fläche unter v(t) ist die Verschiebung (unter der Achse negativ); zählt man alle Flächen positiv, erhält man den zurückgelegten Weg.') },
-    { name: 'v → s', task: 'vs', seed: 45,
+    { name: 'v → s', task: 'vs', seed: 45, practice: [{ types: ['vs'] }],
       idea: () => L('The change of position in a piece is the area between the velocity graph and the time axis; below the axis it counts negative.',
         'Die Ortsänderung in einem Stück ist die Fläche zwischen dem Geschwindigkeit-Zeit-Graphen und der Zeitachse; unter der Achse zählt sie negativ.') },
-    { name: 'a → v', task: 'av', seed: 12,
+    { name: 'a → v', task: 'av', seed: 12, practice: [{ types: ['av'] }],
       idea: () => L('The change of velocity is the area under the acceleration graph, and the acceleration is the slope of the velocity graph.',
         'Die Geschwindigkeitsänderung ist die Fläche unter dem Beschleunigung-Zeit-Graphen, und die Beschleunigung ist die Steigung des Geschwindigkeit-Zeit-Graphen.') },
   ];
@@ -716,7 +721,7 @@
     return [task, ...steps, { text: `<p class="step-rule">${ui().answers}</p>${answers}`, figure: steps[steps.length - 1].figure }];
   }
   const nameOf = (l) => (typeof l.name === 'function' ? l.name() : l.name);
-  const lessons = () => LESSONS.map((l) => ({ name: nameOf(l), idea: l.idea(), frames: () => (l.kind ? quizLesson(l) : phone() ? narrowed(() => lesson(l)) : lesson(l)) }));
+  const lessons = () => LESSONS.map((l, i) => ({ name: nameOf(l), idea: l.idea(), also: topics.also(i), frames: () => (l.kind ? quizLesson(l) : phone() ? narrowed(() => lesson(l)) : lesson(l)) }));
 
   // ---------------------------------------------------------------- arcade
   // Each question shows a given graph; the options are the right graph and three from typical
@@ -803,9 +808,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    const cur = $('#levels').childElementCount ? level() : stored('mg-level', 'easy');
-    $('#levels').innerHTML = Object.entries(ui().levels).map(([k, n]) => `
-      <label><input type="radio" name="level" value="${k}"${k === cur ? ' checked' : ''}><span>${n}</span></label>`).join('');
+    if (topics) topics.relabel();
   }
 
   // The same exercise in the other language, with the drawing, feedback, hints and solution kept.
@@ -813,8 +816,8 @@
     applyStatic();
     showScore();
     if (ex && isQuiz()) {
-      const keep = quizAnswers(), id = ex.id, [, key, seed] = id.match(/^([a-z]+)-(\d+)$/);
-      ex = generate(key, Number(seed));
+      const keep = quizAnswers(), id = ex.id, old = /^([a-z]+)-(\d+)$/.exec(id);
+      ex = topics.parse(id) || generate(old[1], Number(old[2])); // links of earlier versions name a level
       ex.id = id;
       render(keep);
       if ($('#task').hidden) { $('#hints').hidden = true; $('#solution').hidden = true; }
@@ -859,12 +862,16 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
+    const te = topics.parse(h);
+    if (te) {
+      setMode('practice');
+      if (!ex || ex.id !== h) open(te);
+      return true;
+    }
     // a level, or (older links) a task
     m = h.match(/^(easy|medium|hard|mixed|sv|va|vs|av|compare|direction|table|atable|strobe|area)-(\d+)$/);
     if (!m) return false;
     setMode('practice');
-    const lv = document.querySelector(`input[name="level"][value="${m[1]}"]`);
-    if (lv) lv.checked = true;
     if (!ex || ex.id !== h) open(generate(m[1], Number(m[2])));
     return true;
   }
@@ -875,7 +882,14 @@
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     applyStatic();
     Lang.wire(switchLang);
-    $('#levels').addEventListener('change', () => { store('mg-level', level()); fresh(); });
+    topics = window.Topics.create({
+      app: PRACTICE,
+      topics: LESSONS.map((l) => ({ name: () => nameOf(l), stages: l.practice.map((st) => ({ name: st.name || null, types: st.types })) })),
+      make: ofType, typeOf,
+      onChange: fresh,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+    });
+    topics.mount($('#levels'));
     $('#new').addEventListener('click', fresh);
     $('#q-fields').addEventListener('input', () => { if (st && !st.solved) showFeedback(); });
     $('#q-fields').addEventListener('change', () => { if (st && !st.solved) showFeedback(); });
@@ -887,7 +901,7 @@
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);
     window.addEventListener('resize', relayout);
-    tutor = window.createTutor(lessons(), { done: practise });
+    tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(i); setMode('practice'); fresh(); } });
     arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
     $('#modes').addEventListener('change', () => {
       if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();

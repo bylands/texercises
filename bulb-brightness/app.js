@@ -54,7 +54,7 @@
   const ui = () => UI[Lang.get()];
   const WORDS = () => ({ brighter: L('brighter', 'heller'), equal: L('equally bright', 'gleich hell'), dimmer: L('less bright', 'weniger hell'), off: L('off', 'aus') });
 
-  let ex = null, st = null, tutor = null, arcade = null;
+  let ex = null, st = null, tutor = null, arcade = null, topics = null;
 
   // ---------------------------------------------------------------- folded introductions
   const SMALL = window.matchMedia('(max-width: 640px)');
@@ -257,11 +257,29 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'easy';
   const canReveal = () => st.solved || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
-  const PRACTICE = 'bb', typeOf = (e) => `${e.packKey}-d${e.difficulty}`;
+  const PRACTICE = 'bb', typeOf = (e) => e.ptype || `${e.packKey}-d${e.difficulty}`;
+  // The kind of an exercise, as in the tutor: a battery the other way round, a bulb bridged by a
+  // wire, else only series, only parallel, or both (mixed).
+  const hasWire = (n) => n.t === 'W' || (n.kids || []).some(hasWire);
+  function kindOf(e) {
+    if (e.packKey[0] === 'R') return 'reversed';
+    if (hasWire(e.load)) return 'bridged';
+    const l = e.load;
+    if (l.kids && l.kids.every((k) => k.t === 'L')) return l.t === 'S' ? 'series' : 'parallel';
+    return 'mixed';
+  }
+  // An exercise of a practice type 'kind:level' (e.g. 'bridged:medium'): the first of that level,
+  // from the seed on, of that kind.
+  function ofType(type, seed) {
+    const [kind, lv] = type.split(':');
+    for (let k = 0; ; k++) {
+      const e = generate(lv, seed * 1000 + k);
+      if (kindOf(e) === kind || k >= 5000) { e.ptype = type; return e; }
+    }
+  }
   const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
 
   function open(exercise) {
@@ -272,9 +290,11 @@
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
+    topics.shown(ex);
   }
 
-  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s), typeOf, ex && typeOf(ex))); }
+  // A new exercise of the topic and stage chosen (topics.js), of another type than the current one if possible.
+  function fresh() { open(topics.next(ex)); }
 
   function updateButtons() {
     const left = ex.hints.length - st.hints;
@@ -300,7 +320,7 @@
     codes.forEach((c, i) => { document.querySelector(`.field[data-name="${ex.bulbs[i].name}"]`).className = `field ${c === 'right' ? 'ok' : 'bad'}`; });
     const right = codes.filter((c) => c === 'right').length;
     if (right === codes.length) {
-      status.textContent = ui().ok;
+      status.textContent = ui().ok + (st.advance ? ` ${st.advance}` : '');
       status.className = 'status ok';
     } else {
       status.textContent = ui().some(right, codes.length, st.tries) + (canReveal() ? ui().canReveal : ui().tryAgain);
@@ -337,6 +357,7 @@
       }
       st.solved = true;
       finish();
+      st.advance = topics.solved(st, ex);
     }
     showFeedback();
     updateButtons();
@@ -375,17 +396,17 @@
   const Lb = () => ({ t: 'L' }), Wire = () => ({ t: 'W' });
   const Ser = (...kids) => ({ t: 'S', kids }), Par = (...kids) => ({ t: 'P', kids });
   const LESSONS = [
-    { name: () => L('Series', 'Serie'), pack: '1', load: () => Ser(Lb(), Lb()),
+    { name: () => L('Series', 'Serie'), pack: '1', practice: [{ types: ['series:easy'] }], load: () => Ser(Lb(), Lb()),
       idea: () => L('Two identical bulbs in series on one battery share its voltage equally.', 'Zwei gleiche Lampen in Serie an einer Batterie teilen sich deren Spannung gleichmässig.') },
-    { name: () => L('Parallel', 'Parallel'), pack: '1', load: () => Par(Lb(), Lb()),
+    { name: () => L('Parallel', 'Parallel'), pack: '1', practice: [{ types: ['parallel:easy'] }], load: () => Par(Lb(), Lb()),
       idea: () => L('Bulbs in parallel each get the full voltage of the battery, however many branches there are.', 'Parallele Lampen bekommen je die volle Spannung der Batterie, egal wie viele Zweige es sind.') },
-    { name: () => L('Mixed', 'Gemischt'), pack: 'S2', load: () => Ser(Lb(), Par(Lb(), Lb())),
+    { name: () => L('Mixed', 'Gemischt'), pack: 'S2', practice: [{ types: ['mixed:medium'] }, { name: () => L('more bulbs', 'mehr Lampen'), types: ['mixed:hard'] }], load: () => Ser(Lb(), Par(Lb(), Lb())),
       idea: () => L('Two batteries in series double the voltage. A bulb in series with a parallel pair takes the larger share: at the same voltage the pair would let more current through, but in series both carry the same current.',
         'Zwei Batterien in Serie verdoppeln die Spannung. Eine Lampe in Serie mit einem parallelen Paar bekommt den grösseren Teil: Bei gleicher Spannung würde das Paar mehr Strom durchlassen, in Serie fliesst aber durch beide derselbe Strom.') },
-    { name: () => L('Bridged', 'Überbrückt'), pack: '1', load: () => Ser(Lb(), Par(Lb(), Wire())),
+    { name: () => L('Bridged', 'Überbrückt'), pack: '1', practice: [{ types: ['bridged:medium'] }, { name: () => L('more bulbs', 'mehr Lampen'), types: ['bridged:hard'] }], load: () => Ser(Lb(), Par(Lb(), Wire())),
       idea: () => L('A wire across a bulb takes all the current: the bridged bulb goes off, and the rest of the circuit gets the whole voltage.',
         'Ein Draht parallel zu einer Lampe nimmt den ganzen Strom: Die überbrückte Lampe geht aus, und der Rest der Schaltung bekommt die ganze Spannung.') },
-    { name: () => L('Reversed', 'Verkehrt herum'), pack: 'R3', load: () => Par(Lb(), Ser(Lb(), Lb())),
+    { name: () => L('Reversed', 'Verkehrt herum'), pack: 'R3', practice: [{ types: ['reversed:medium'] }, { name: () => L('more bulbs', 'mehr Lampen'), types: ['reversed:hard'] }], load: () => Par(Lb(), Ser(Lb(), Lb())),
       idea: () => L('A battery connected the other way round cancels one of the others.', 'Eine verkehrt herum angeschlossene Batterie hebt eine der anderen auf.') },
   ];
 
@@ -476,7 +497,7 @@
       return frames;
     });
   }
-  const lessons = () => LESSONS.map((l) => ({ name: l.name(), idea: l.idea(), frames: () => lesson(l) }));
+  const lessons = () => LESSONS.map((l, i) => ({ name: l.name(), idea: l.idea(), also: topics.also(i), frames: () => lesson(l) }));
 
   // ---------------------------------------------------------------- arcade
   // Each question asks how bright one bulb is; the four options are the four answers. A wrong
@@ -536,9 +557,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    const cur = $('#levels').childElementCount ? level() : stored('bb-level', 'easy');
-    $('#levels').innerHTML = Object.entries(ui().levels).map(([k, n]) => `
-      <label><input type="radio" name="level" value="${k}"${k === cur ? ' checked' : ''}><span>${n}</span></label>`).join('');
+    if (topics) topics.relabel();
   }
 
   // The same exercise in the other language, with the answers, feedback, hints and solution kept.
@@ -594,10 +613,15 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
+    const te = topics.parse(h);
+    if (te) {
+      setMode('practice');
+      if (!ex || ex.id !== h) open(te);
+      return true;
+    }
     m = h.match(/^(easy|medium|hard|mixed)-(\d+)$/);
     if (!m) return false;
     setMode('practice');
-    document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;
     if (!ex || ex.id !== h) open(generate(m[1], Number(m[2])));
     return true;
   }
@@ -614,14 +638,21 @@
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     applyStatic();
     Lang.wire(switchLang);
-    $('#levels').addEventListener('change', () => { store('bb-level', level()); fresh(); });
+    topics = window.Topics.create({
+      app: PRACTICE,
+      topics: LESSONS.map((l) => ({ name: l.name, stages: l.practice.map((st) => ({ name: st.name || null, types: st.types })) })),
+      make: ofType, typeOf,
+      onChange: fresh,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+    });
+    topics.mount($('#levels'));
     $('#new').addEventListener('click', fresh);
     $('#check').addEventListener('click', check);
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     $('#fields').addEventListener('change', drawAnswers);
     window.addEventListener('hashchange', fromHash);
-    tutor = window.createTutor(lessons(), { done: practise });
+    tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(i); setMode('practice'); fresh(); } });
     arcade = Arcade.create(arcadeSource, { math: syncFold, markScrollable: () => {}, stored, store }); // math: runs after each question is shown
     $('#modes').addEventListener('change', () => {
       if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();

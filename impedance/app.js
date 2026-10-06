@@ -41,7 +41,7 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, st = null, probe = null, tutor = null, arcade = null;
+  let ex = null, st = null, probe = null, tutor = null, arcade = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -98,7 +98,6 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'mixed';
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
   const PRACTICE = 'imp', typeOf = (e) => `${e.c.kind}-${e.c.conn}`;
@@ -112,9 +111,15 @@
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
+    topics.shown(ex);
   }
 
-  function fresh() { open(Practice.next(PRACTICE, (s) => I.generate(level(), s), typeOf, ex && typeOf(ex))); }
+  // A new exercise of the topic chosen (topics.js), of another kind than the current one if possible.
+  function fresh() { open(topics.next(ex)); }
+  // the same exercise again (e.g. in the other language); links of earlier versions name a level
+  const again = (e) => topics.parse(e.id) || I.generate(e.id.split('-')[0], Number(e.id.split('-')[1]));
+  // an exercise of a kind of circuit: 'RL-series' and so on
+  const ofType = (type, seed) => { const [kind, conn] = type.split('-'); return I.generate(`${conn} ${kind}`, seed); };
 
   // Narrow screens get a smaller drawing; redraw when that changes.
   const narrow = () => document.querySelector('main').clientWidth < 600;
@@ -192,7 +197,7 @@
     if (st) st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
     el.textContent = !kind ? '' : kind === 'fill' ? ui().choose
-      : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell)
+      : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (!canReveal() ? ui().tryAgain : ui().canReveal);
   }
 
@@ -213,6 +218,7 @@
       }
       st.solved = true;
       finish();
+      st.advance = topics.solved(st, ex);
       showStatus('ok');
     } else showStatus('bad');
     updateButtons();
@@ -269,7 +275,7 @@
       },
     };
   }
-  const lessons = () => window.Lessons.EXAMPLES.map(lesson);
+  const lessons = () => window.Lessons.EXAMPLES.map((d, i) => ({ ...lesson(d), also: topics.also(i) }));
 
   // ---------------------------------------------------------------- arcade
   // Each question asks for one of R, L, C with the four options of the practice exercise. The
@@ -334,10 +340,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    let cur = $('#levels').childElementCount ? level() : stored('imp-level', 'mixed');
-    if (!ui().levels[cur]) cur = 'mixed';
-    $('#levels').innerHTML = Object.entries(ui().levels).map(([k, n]) => `
-      <label><input type="radio" name="level" value="${k}"${k === cur ? ' checked' : ''}><span>${n}</span></label>`).join('');
+    if (topics) topics.relabel();
   }
 
   // The same exercise in the other language, with the choices, feedback, hints and solution kept.
@@ -346,8 +349,8 @@
     showScore();
     if (ex) {
       const chosen = ex.fields.map((f) => { const r = document.querySelector(`input[name="opt-${f.key}"]:checked`); return r ? r.value : null; });
-      const keep = st, [, lv, seed] = ex.id.match(/^(\w+)-(\d+)$/);
-      ex = I.generate(lv, Number(seed));
+      const keep = st;
+      ex = again(ex);
       ex.hints = hints();
       render();
       st = keep;
@@ -396,10 +399,15 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
+    const te = topics.parse(h);
+    if (te) {
+      setMode('practice');
+      if (!ex || ex.id !== h) open(te);
+      return true;
+    }
     m = h.match(/^(easy|medium|hard|mixed)-(\d+)$/);
     if (m) {
       setMode('practice');
-      document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;
       if (!ex || ex.id !== h) open(I.generate(m[1], Number(m[2])));
       return true;
     }
@@ -415,7 +423,14 @@
     document.querySelector(`input[name="axes"][value="${stored('imp-axes', 'lin')}"]`).checked = true;
 
     probe = window.createProbe($('#graph'), () => ({ c: ex.c, ax: ex.ax, mode: axesMode() }), $('#readout'), $('#pins'));
-    $('#levels').addEventListener('change', () => { store('imp-level', level()); fresh(); });
+    topics = window.Topics.create({
+      app: PRACTICE,
+      topics: window.Lessons.EXAMPLES.map((e) => ({ name: () => e.name[Lang.get()], stages: e.practice.map((st) => ({ name: null, types: st.types })) })),
+      make: ofType, typeOf,
+      onChange: fresh,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+    });
+    topics.mount($('#levels'));
     $('#axes').addEventListener('change', () => {
       store('imp-axes', axesMode());
       if (ex) drawGraph();
@@ -436,7 +451,7 @@
     window.addEventListener('resize', relayout);
     P.setNarrow(narrow());
 
-    tutor = window.createTutor(lessons(), { after: () => math($('#tutor')), done: practise });
+    tutor = window.createTutor(lessons(), { after: () => math($('#tutor')), done: practise, practise: (i) => { topics.go(i); setMode('practice'); fresh(); } });
     arcade = Arcade.create(arcadeSource, { math, markScrollable, stored, store });
     $('#modes').addEventListener('change', () => {
       if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();

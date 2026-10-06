@@ -75,6 +75,13 @@
     return { ...exercise(scn, make(scn, r, ok, o)), id: `${level}${calc ? '' : '-nocalc'}-${seed}`, level, seed, calc };
   }
 
+  // A practice exercise of the given situation, as generate() makes them.
+  function practiceOf(scenario, seed, calc = true) {
+    const scn = byId(scenario), r = rng(seed);
+    const ok = scn.calc === 'always' || (scn.calc === 'trig' && calc) ? null : neat(scn);
+    return { ...exercise(scn, make(scn, r, ok, { nice: !calc })), seed, calc };
+  }
+
   // An exercise of the given situation (for the arcade); with o.nice, one that needs no calculator.
   function generateFor(scenario, seed, o = {}) {
     const scn = byId(scenario);
@@ -110,6 +117,6 @@
     return { frames: [first, ...frames] };
   }
 
-  root.Torque = { LEVELS, SCENARIOS, generate, generateFor, quiz, tutorial, exercise };
+  root.Torque = { LEVELS, SCENARIOS, generate, generateFor, practiceOf, quiz, tutorial, exercise };
   if (typeof module !== 'undefined') module.exports = root.Torque;
 })(typeof window !== 'undefined' ? window : globalThis);

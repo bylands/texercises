@@ -52,7 +52,7 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, tutor = null, arcade = null;
+  let ex = null, tutor = null, arcade = null, topics = null;
   // pairs: flux id → voltage id; sel: the card waiting for a partner; marks: flux id → 'ok' | 'bad'
   let st = null;
 
@@ -304,7 +304,7 @@
     if (!st.checked) return;
     const right = Object.values(st.marks).filter((m) => m === 'ok').length;
     if (right === ex.flux.length) {
-      status.textContent = ui().ok;
+      status.textContent = ui().ok + (st.advance ? ` ${st.advance}` : '');
       status.className = 'status ok';
       return;
     }
@@ -335,7 +335,6 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'easy';
   const canReveal = () => st.solved || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
@@ -350,9 +349,11 @@
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
+    topics.shown(ex);
   }
 
-  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s), typeOf, ex && typeOf(ex))); }
+  // A new exercise of the topic and stage chosen (topics.js), of another type than the current one if possible.
+  function fresh() { open(topics.next(ex)); }
 
   function updateButtons() {
     const left = ex.hints.length - st.hints;
@@ -392,6 +393,7 @@
       }
       st.solved = true;
       finish();
+      st.advance = topics.solved(st, ex);
     }
     showFeedback();
     paint();
@@ -426,19 +428,19 @@
   // Worked examples: four flux graphs turned into their voltage graphs piece by piece (the piece
   // is highlighted in both graphs, with its slope drawn in), then a whole matching exercise.
   const LESSONS = [
-    { name: () => L('Straight', 'Gerade'), family: 'pieces', seed: 25, graph: 'A',
+    { name: () => L('Straight', 'Gerade'), family: 'pieces', seed: 25, graph: 'A', practice: [{ types: ['straight'] }],
       idea: () => L('Where the flux changes steadily, the induced voltage is constant: its size is the slope of the flux graph, and its sign is the opposite.',
         'Wo sich der Fluss gleichmässig ändert, ist die induzierte Spannung konstant: Ihr Betrag ist die Steigung des Flussgraphen, ihr Vorzeichen das umgekehrte.') },
-    { name: () => L('Curved', 'Gekrümmt'), family: 'pieces', seed: 8, graph: 'C',
+    { name: () => L('Curved', 'Gekrümmt'), family: 'pieces', seed: 8, graph: 'C', practice: [{ types: ['pieces'] }],
       idea: () => L('Where the flux graph is curved, its slope changes steadily, so the induced voltage changes steadily too: a sloping straight line.',
         'Wo der Flussgraph gekrümmt ist, ändert sich seine Steigung gleichmässig, also ändert sich auch die induzierte Spannung gleichmässig: eine schräge Gerade.') },
-    { name: () => L('Exponential', 'Exponentiell'), family: 'exp', seed: 2, graph: 'A',
+    { name: () => L('Exponential', 'Exponentiell'), family: 'exp', seed: 2, graph: 'A', practice: [{ types: ['exp'] }],
       idea: () => L('When a field is switched on or off, the flux changes fastest at first: the voltage jumps, then decays.',
         'Wenn ein Feld ein- oder ausgeschaltet wird, ändert sich der Fluss zuerst am schnellsten: Die Spannung springt und klingt dann ab.') },
-    { name: () => L('Sinusoidal', 'Sinusförmig'), family: 'sine', seed: 1, graph: 'B',
+    { name: () => L('Sinusoidal', 'Sinusförmig'), family: 'sine', seed: 1, graph: 'B', practice: [{ types: ['sine'] }],
       idea: () => L('The slope of a sine curve is a cosine curve: the voltage oscillates with the same period, shifted by a quarter period.',
         'Die Steigung einer Sinuskurve ist eine Kosinuskurve: Die Spannung schwingt mit derselben Periode, um eine Viertelperiode verschoben.') },
-    { name: () => L('Matching', 'Zuordnen'), family: 'pieces', seed: 6,
+    { name: () => L('Matching', 'Zuordnen'), family: 'pieces', seed: 6, practice: [{ types: ['straight', 'pieces'] }, { name: () => L('all kinds of graphs', 'alle Arten von Graphen'), types: ['straight', 'pieces', 'exp', 'sine'] }],
       idea: () => L('In the exercises, four flux graphs have to be matched with four voltage graphs, and some of the voltage graphs are traps.',
         'In den Aufgaben müssen vier Flussgraphen vier Spannungsgraphen zugeordnet werden, und einige der Spannungsgraphen sind Fallen.') },
   ];
@@ -550,7 +552,7 @@
       return frames;
     });
   }
-  const lessons = () => LESSONS.map((l) => ({ name: l.name(), idea: l.idea(), frames: () => (l.graph ? graphLesson(l) : matchingLesson(l)) }));
+  const lessons = () => LESSONS.map((l, i) => ({ name: l.name(), idea: l.idea(), also: topics.also(i), frames: () => (l.graph ? graphLesson(l) : matchingLesson(l)) }));
 
   // ---------------------------------------------------------------- arcade
   // Each question shows one flux graph of an exercise; the options are the exercise's four voltage
@@ -606,9 +608,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    const cur = $('#levels').childElementCount ? level() : stored('im-level', 'easy');
-    $('#levels').innerHTML = Object.entries(ui().levels).map(([k, n]) => `
-      <label><input type="radio" name="level" value="${k}"${k === cur ? ' checked' : ''}><span>${n}</span></label>`).join('');
+    if (topics) topics.relabel();
   }
 
   // The same exercise in the other language, with the pairs, feedback, hints and solution kept.
@@ -656,12 +656,16 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
+    const te = topics.parse(h);
+    if (te) {
+      setMode('practice');
+      if (!ex || ex.id !== h) open(te);
+      return true;
+    }
     // a level, or (older links) a family
     m = h.match(/^(easy|medium|hard|mixed|straight|pieces|exp|sine)-(\d+)$/);
     if (!m) return false;
     setMode('practice');
-    const lv = document.querySelector(`input[name="level"][value="${m[1]}"]`);
-    if (lv) lv.checked = true;
     if (!ex || ex.id !== h) open(generate(m[1], Number(m[2])));
     return true;
   }
@@ -672,7 +676,14 @@
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     applyStatic();
     Lang.wire(switchLang);
-    $('#levels').addEventListener('change', () => { store('im-level', level()); fresh(); });
+    topics = window.Topics.create({
+      app: PRACTICE,
+      topics: LESSONS.map((l) => ({ name: l.name, stages: l.practice.map((st) => ({ name: st.name || null, types: st.types })) })),
+      make: (type, seed) => generate(type, seed), typeOf,
+      onChange: fresh,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+    });
+    topics.mount($('#levels'));
     $('#new').addEventListener('click', fresh);
     $('#check').addEventListener('click', check);
     $('#hint').addEventListener('click', hint);
@@ -682,7 +693,7 @@
       if (el && !el.disabled) pick(el.dataset.side, el.dataset.id);
     });
     window.addEventListener('hashchange', fromHash);
-    tutor = window.createTutor(lessons(), { done: practise });
+    tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(i); setMode('practice'); fresh(); } });
     arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
     $('#modes').addEventListener('change', () => {
       if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();

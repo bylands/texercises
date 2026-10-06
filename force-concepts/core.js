@@ -348,6 +348,13 @@
     return ex;
   }
 
+  // An exercise of one type, 'topic/generator' (e.g. 'inertia/balance': as registered for that
+  // topic, with its parameters), for practice by topic (topics.js).
+  function generateGen(key, seed) {
+    const [topic, name] = key.split('/'), g = POOLS[topic].find((x) => x.name === name);
+    return finish(GENS[name](rng(seed), { ...g.params }), `${key}-${seed}`, topic, name);
+  }
+
   // A fixed exercise (for the tutor): the generator with the given parameters.
   function build(gen, params, seed = 1) {
     return finish(GENS[gen](rng(seed), { ...params }), `tutor-${gen}`, 'tutor', gen);
@@ -356,7 +363,7 @@
   const api = {
     LANGS, setLang, getLang, T, TOPICS, LEVELS, DIFFICULTY, topicName, FORMATS, formatName, MIS, mis, POOLS, GENS, rng,
     it, F, FL, list, cap, num, qty, deg, noun, o, q, stmt, tf, rank, match, two, ranksOf, rankText, answerText, misreads,
-    arcadeQuestions, register, pool, genOf, freshSeed, generate, build, TYPE_NAMES, typeName, recordResult, weightOf,
+    arcadeQuestions, register, pool, genOf, freshSeed, generate, generateGen, build, TYPE_NAMES, typeName, recordResult, weightOf,
   };
   root.FC = api;
   if (typeof module !== 'undefined') module.exports = api;

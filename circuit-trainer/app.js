@@ -46,7 +46,7 @@
 
   // An exercise is { id, difficulty, title, text, fields: [{key, sym, unit, value}], tol, figure(sol),
   // hints: [html], solution: [html], results: html }.
-  let ex = null, st = null, tutor = null, arcade = null;
+  let ex = null, st = null, tutor = null, arcade = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -99,11 +99,29 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'medium';
   const starsOf = (d) => `<span class="stars" role="img" aria-label="${ui().stars(d)}" title="${ui().stars(d)}">${'★'.repeat(d)}${'☆'.repeat(5 - d)}</span>`;
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
-  const PRACTICE = 'rc', typeOf = (e) => `d${e.difficulty}`;
+  const PRACTICE = 'rc', typeOf = (e) => e.ptype || `d${e.difficulty}`;
+  // The kind of an exercise, as in the tutor: groups inside groups inside groups (nested), else
+  // backwards (a resistance is wanted), else by the circuit: series or parallel only, or one group
+  // inside the other (mixed).
+  const depth = (node) => (node.t === 'R' ? 0 : 1 + Math.max(...node.kids.map(depth)));
+  function kindOf(e) {
+    const root = e.circuit.nodes[0], d = depth(root);
+    if (d >= 3) return 'nested';
+    if (e.targets.some((t) => t[0] === 'R')) return 'backwards';
+    return d === 1 ? (root.t === 'S' ? 'series' : 'parallel') : 'mixed';
+  }
+  // An exercise of a practice type 'kind:level' (e.g. 'mixed:medium'): the first of that level,
+  // from the seed on, of that kind.
+  function ofType(type, seed) {
+    const [kind, lv] = type.split(':');
+    for (let k = 0; ; k++) {
+      const e = generate(lv, seed * 1000 + k);
+      if (kindOf(e) === kind || k >= 5000) { e.ptype = type; return e; }
+    }
+  }
   const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
 
   function open(exercise) {
@@ -113,10 +131,21 @@
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
+    topics.shown(ex);
     $(`#in-${ex.fields[0].key}`).focus({ preventScroll: true });
   }
 
-  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s), typeOf, ex && typeOf(ex))); }
+  // A new exercise of the topic and stage chosen (topics.js), of another type than the current
+  // one if possible.
+  function fresh() { open(topics.next(ex)); }
+  // the same exercise again (e.g. in the other language); links of earlier versions name a level
+  const again = (e) => topics.parse(e.id) || generate(e.id.split('-')[0], Number(e.id.split('-')[1]));
+
+  // The topics of practice: those of the tutor's examples, with their stages (lessons.js).
+  const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
+    name: () => e.name[Lang.get()],
+    stages: e.practice.map((s) => ({ name: s.en ? () => s[Lang.get()] : null, types: s.types })),
+  }));
 
   function render() {
     $('#title').innerHTML = `${esc(ex.title)} ${starsOf(ex.difficulty)}`;
@@ -176,7 +205,7 @@
     if (st) st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
     el.textContent = !kind ? '' : kind === 'fill' ? ui().fill
-      : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell)
+      : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (st.tries < MAX_TRIES && !canReveal() ? ui().tryAgain : ui().canReveal);
   }
 
@@ -197,6 +226,7 @@
       }
       st.solved = true;
       finish();
+      st.advance = topics.solved(st, ex);
       showStatus('ok');
     } else showStatus('bad');
     updateButtons();
@@ -300,17 +330,14 @@
   };
 
   // ---------------------------------------------------------------- language
-  const lessons = () => window.Lessons.EXAMPLES.map((e) => ({
-    name: e.name[Lang.get()], idea: e.idea[Lang.get()], frames: () => tutorial(e.level, e.seed, e.path).frames,
+  const lessons = () => window.Lessons.EXAMPLES.map((e, i) => ({
+    name: e.name[Lang.get()], idea: e.idea[Lang.get()], also: topics.also(i), frames: () => tutorial(e.level, e.seed, e.path).frames,
   }));
 
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    let cur = $('#levels').childElementCount ? level() : stored('rc-level', 'medium');
-    if (!ui().levels[cur]) cur = 'medium';
-    $('#levels').innerHTML = Object.entries(ui().levels).map(([k, n]) => `
-      <label><input type="radio" name="level" value="${k}"${k === cur ? ' checked' : ''}><span>${n}</span></label>`).join('');
+    if (topics) topics.relabel();
   }
 
   // The same exercise in the other language, with the answers, hints and solution kept.
@@ -319,8 +346,7 @@
     showScore();
     if (ex) {
       const values = ex.fields.map((f) => $(`#in-${f.key}`).value), keep = st;
-      const [, lv, seed] = ex.id.match(/^(\w+)-(\d+)$/);
-      ex = generate(lv, Number(seed));
+      ex = again(ex);
       render();
       st = keep;
       ex.fields.forEach((f, k) => { $(`#in-${f.key}`).value = values[k]; });
@@ -367,10 +393,15 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
+    const te = topics.parse(h);
+    if (te) {
+      setMode('practice');
+      if (!ex || ex.id !== h) open(te);
+      return true;
+    }
     m = h.match(/^(easy|medium|hard|mixed)-(\d+)$/);
     if (m) {
       setMode('practice');
-      document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;
       if (!ex || ex.id !== h) open(generate(m[1], Number(m[2])));
       return true;
     }
@@ -383,7 +414,13 @@
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     applyStatic();
     Lang.wire(switchLang);
-    $('#levels').addEventListener('change', () => { store('rc-level', level()); fresh(); });
+    topics = window.Topics.create({
+      app: PRACTICE, topics: topicList(),
+      make: ofType, typeOf,
+      onChange: fresh,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+    });
+    topics.mount($('#levels'));
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
     $('#hint').addEventListener('click', hint);
@@ -393,6 +430,7 @@
     tutor = window.createTutor(lessons(), {
       after: () => { fitText($('#t-figure svg')); math($('#tutor')); markScrollable(); },
       done: practise,
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
     });
     // circuit diagrams fit their labels to the rendered text (fitText)
     const typeset = (el) => { el.querySelectorAll('.fig svg').forEach((svg) => fitText(svg)); math(el); };

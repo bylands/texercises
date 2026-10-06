@@ -157,6 +157,13 @@
   const half = (x) => Math.abs(2 * x - Math.round(2 * x)) < 1e-9;
   const nice = (scn, p) => Object.values(scn.solve(p)).every((x) => half(x) && x >= 0 && x < 1000);
 
+  // A practice exercise of the given situation, as generate() makes them: without a calculator,
+  // the 3-4-5 angle and results that are multiples of 0.5.
+  function practiceOf(scenario, seed, calc = true) {
+    const scn = byId(scenario);
+    return { ...exercise(scn, make(scn, rng(seed), calc ? neat(scn) : (p) => nice(scn, p), { nice: !calc })), seed, calc };
+  }
+
   // An exercise of the given situation (for the arcade); with o.nice, one that needs no calculator.
   function generateFor(scenario, seed, o = {}) {
     const scn = byId(scenario);
@@ -194,6 +201,6 @@
     return { frames: [first, ...frames] };
   }
 
-  root.Forces = { LEVELS, SCENARIOS, generate, generateFor, quiz, nice, tutorial };
+  root.Forces = { LEVELS, SCENARIOS, generate, generateFor, practiceOf, quiz, nice, tutorial };
   if (typeof module !== 'undefined') module.exports = root.Forces;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -318,3 +318,14 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   #arcade { padding: 16px; }
   .ar-options { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* practice by topic (topics.js): the topic menu, its steps and the link to the worked example */
+.topics { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; flex-basis: 100%; }
+.topic-pick { display: inline-flex; align-items: center; gap: 8px; }
+.topic-pick span { color: var(--muted); font-size: 0.9rem; }
+.topic-pick select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); max-width: 100%; }
+.topics .stages span { padding: 5px 12px; font-size: 0.88rem; white-space: normal; }
+.linklike { border: 0; background: none; padding: 2px 0; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; font-size: 0.9rem; }
+.linklike:hover { color: var(--ink); }
+.tutor-nav #t-practise { margin-left: auto; margin-right: 8px; }
+.note.also { margin-top: -2px; }

@@ -12,6 +12,7 @@
         de: 'Unmittelbar nach dem Schliessen des Schalters führt die Spule noch keinen Strom, also fliesst überhaupt kein Strom: Die ganze Batteriespannung liegt über der Spule.',
       },
       circuit: { r1: 150, branches: [[null, true, 0.5]], sw: { at: 'main', before: 'open' }, V: 12 },
+      practice: [{ types: ['main-open:easy'] }, { en: 'larger circuits', de: 'grössere Schaltungen', types: ['main-open:hard'] }],
     },
     {
       name: { en: 'Switching off', de: 'Ausschalten' },
@@ -20,6 +21,7 @@
         de: 'Durch die Spule fliesst ein Strom, wenn die Batterie abgetrennt wird. Die Spule hält ihn aufrecht, zurück durch den Widerstand daneben, und in der Spule wird eine grosse Spannung induziert.',
       },
       circuit: { r1: 150, branches: [[100], [null, true, 0.5]], sw: { at: 'main', before: 'closed' }, V: 12 },
+      practice: [{ types: ['main-closed:easy'] }],
     },
     {
       name: { en: 'Reopening', de: 'Wieder öffnen' },
@@ -28,6 +30,7 @@
         de: 'Die Schaltung der texercises-Aufgabe «Advanced RL circuit», lange nachdem der Schalter geschlossen wurde: Beim Öffnen fliesst der Spulenstrom weiter, durch die Masche der beiden Zweige.',
       },
       circuit: { r1: 20, branches: [[60, true, 1], [30]], sw: { at: 'main', before: 'closed' }, V: 12 },
+      practice: [{ types: ['main-closed:medium'] }, { en: 'larger circuits', de: 'grössere Schaltungen', types: ['main-closed:hard'] }],
     },
     {
       name: { en: 'Branch added', de: 'Zweig zugeschaltet' },
@@ -36,6 +39,7 @@
         de: 'Ein Schalter schliesst einen zweiten Zweig, während Strom durch die Spule fliesst: Der neue Zweig nimmt sofort Strom auf, der Spulenzweig behält seinen Strom.',
       },
       circuit: { r1: 40, branches: [[60, true, 1], [40, false, null, true]], sw: { at: 'branch', j: 1, before: 'open' }, V: 20 },
+      practice: [{ types: ['branch-open:medium'] }, { en: 'branch switched off, larger circuits', de: 'Zweig abgeschaltet, grössere Schaltungen', types: ['branch-closed:medium', 'branch-open:hard', 'branch-closed:hard'] }],
     },
     {
       name: { en: 'Bridge removed', de: 'Überbrückung aufgehoben' },
@@ -44,6 +48,7 @@
         de: 'Ein geschlossener Schalter hat R₁ lange überbrückt. Öffnet man ihn, ist R₁ wieder im Stromkreis: Die Spannung über den Zweigen sinkt sofort, der Spulenstrom aber nicht.',
       },
       circuit: { r1: 30, branches: [[60, true, 2], [30]], sw: { at: 'bridge', before: 'closed' }, V: 24 },
+      practice: [{ types: ['bridge-closed:hard'] }, { en: 'bridge closed', de: 'Überbrückung geschlossen', types: ['bridge-open:hard'] }],
     },
   ];
 

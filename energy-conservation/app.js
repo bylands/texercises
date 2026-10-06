@@ -2,7 +2,7 @@
   'use strict';
 
   const EC = window.EC, Expr = window.Expr, Lang = window.Lang, Arcade = window.Arcade;
-  const { LEVELS, generate, tutorial, judgeFormula, judgeNumber } = window.Energy;
+  const { generate, generateFor, tutorial, judgeFormula, judgeNumber } = window.Energy;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
@@ -63,7 +63,7 @@
   };
   const ui = () => UI[EC.getLang()];
 
-  let ex = null, st = null, tutor = null, arcade = null;
+  let ex = null, st = null, tutor = null, arcade = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -125,7 +125,6 @@
 
   // ---------------------------------------------------------------- exercise lifecycle
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  const level = () => (document.querySelector('input[name="level"]:checked') || {}).value || 'mixed';
   const formal = () => $('#formal').checked;
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
@@ -139,10 +138,20 @@
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
+    topics.shown(ex);
   }
 
-  // A new exercise, of another situation than the current one if possible.
-  function fresh() { open(Practice.next(PRACTICE, (s) => generate(level(), s, formal()), typeOf, ex && typeOf(ex))); }
+  // A new exercise of the topic and stage chosen (topics.js), of another type than the current
+  // one if possible.
+  function fresh() { open(topics.next(ex)); }
+  // the same exercise again (e.g. in the other language); links of earlier versions name a level
+  const again = (e) => topics.parse(e.id) || generate(e.level, e.seed, e.formal);
+
+  // The topics of practice: those of the tutor's examples, with their stages (lessons.js).
+  const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
+    name: () => e.name[EC.getLang()],
+    stages: e.practice.map((s) => ({ name: s.en ? () => s[EC.getLang()] : null, types: s.types })),
+  }));
 
   // The energy table: a row per state, a column per form of energy, a box per cell.
   function tableHtml() {
@@ -274,7 +283,7 @@
     st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
     el.textContent = !kind ? '' : kind === 'fill' ? ui().fill
-      : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell)
+      : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (st.tries < MAX_TRIES && !canReveal() ? ui().tryAgain : ui().canReveal);
   }
 
@@ -295,6 +304,7 @@
       }
       st.solved = true;
       finish();
+      st.advance = topics.solved(st, ex);
       showStatus('ok');
     } else showStatus('bad');
     updateButtons();
@@ -373,17 +383,14 @@
   }
 
   // ---------------------------------------------------------------- language
-  const lessons = () => window.Lessons.EXAMPLES.map((e) => ({
-    name: e.name[EC.getLang()], idea: e.idea[EC.getLang()], frames: () => tutorial(e).frames,
+  const lessons = () => window.Lessons.EXAMPLES.map((e, i) => ({
+    name: e.name[EC.getLang()], idea: e.idea[EC.getLang()], also: topics.also(i), frames: () => tutorial(e).frames,
   }));
 
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    let cur = $('#levels').childElementCount ? level() : stored('ec-level', 'easy');
-    if (!LEVELS[cur]) cur = 'easy';
-    $('#levels').innerHTML = Object.entries(LEVELS).map(([k, lv]) => `
-      <label><input type="radio" name="level" value="${k}"${k === cur ? ' checked' : ''}><span>${lv.name()}</span></label>`).join('');
+    if (topics) topics.relabel();
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
@@ -394,7 +401,7 @@
       const value = $('#in-ans').value, boxes = [...document.querySelectorAll('#etable input')].map((b) => b.checked);
       const energies = ex.table.map((_, i) => $(`#in-e${i}`).value);
       const keep = { ...st };
-      ex = generate(ex.level, ex.seed, ex.formal);
+      ex = again(ex);
       render();
       st = keep;
       $('#in-ans').value = value;
@@ -444,10 +451,15 @@
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
+    const te = topics.parse(h);
+    if (te) {
+      setMode('practice');
+      if (!ex || ex.id !== h) open(te);
+      return true;
+    }
     m = h.match(/^(easy|medium|hard|mixed)(-num)?-(\d+)$/);
     if (m) {
       setMode('practice');
-      document.querySelector(`input[name="level"][value="${m[1]}"]`).checked = true;
       $('#formal').checked = !m[2];
       if (!ex || ex.id !== h) open(generate(m[1], Number(m[3]), !m[2]));
       return true;
@@ -460,7 +472,13 @@
     Lang.init(); // see lang.js
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     applyStatic();
-    $('#levels').addEventListener('change', () => { store('ec-level', level()); fresh(); });
+    topics = window.Topics.create({
+      app: PRACTICE, topics: topicList(),
+      make: (type, seed) => generateFor(type, seed, formal()), typeOf,
+      onChange: fresh,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+    });
+    topics.mount($('#levels'));
     $('#formal').checked = stored('ec-formal', true);
     $('#formal').addEventListener('change', () => { store('ec-formal', formal()); fresh(); });
     Lang.wire(switchLang);
@@ -478,6 +496,7 @@
     tutor = window.createTutor(lessons(), {
       after: () => { math($('#tutor')); markScrollable(); startAnim(); },
       done: practise,
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
       t: () => ui().tutorBtns,
     });
     arcade = Arcade.create(window.ArcadeSource, { math, markScrollable, stored, store });
