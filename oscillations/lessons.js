@@ -1,29 +1,23 @@
 // The tutor's worked examples, from easy to hard, the first three with equations of the worksheet
 // "S2 Charakteristische Differentialgleichung". Each is a topic of practice (see topics.js) with
 // its stages: first exercises like the example, then variations with new ideas (types: the
-// exercise types of scenarios.js). An example gives its parameters p, or a seed for them.
+// exercise types of scenarios.js). An example gives its parameters p, or a seed for them, and
+// may go on with more exercises of its topic (more: [{ scenario, p }]).
 (function (root) {
   'use strict';
 
   const P = { c: 1.3, A: 1, m: 1, D: 4, g: 2, gamma: 0.3, B: 1, C1: 1, C2: 0.6, phi: 0.5 };
   const EXAMPLES = [
     {
+      // the worksheet: one example of each answer (yes and the period; no and the mistake)
       scenario: 'shm-2', p: { eq: { form: 'inv', y: '\\xi', c: 'k', note: 'dot' }, P, seed: 11 },
-      practice: [{ types: ['pick-shm', 'shm-1'] }, { en: 'rearranged equations and solutions', de: 'umgeformte Gleichungen und Lösungen', types: ['shm-2'] }],
+      more: [
+        { scenario: 'shm-2', p: { eq: { form: 'c1c2', y: '\\psi', c: '\\alpha', note: 'dot' }, P, seed: 5 } },
+        { scenario: 'shm-1', p: { eq: { form: 'square', y: 'y', c: '\\delta', note: 'dot' }, P, seed: 3 } },
+      ],
+      practice: [{ types: ['pick-shm', 'shm-1'] }, { en: 'rearranged equations and solutions', de: 'umgeformte Gleichungen und Lösungen', types: ['shm-2'] }, { en: 'the subtle cases', de: 'die heiklen Fälle', types: ['shm-3'] }],
       name: { en: 'Harmonic or not?', de: 'Harmonisch oder nicht?' },
-      idea: { en: 'A simple harmonic motion has an equation of motion ÿ = −ω²·y: the acceleration is proportional to the displacement and points back. Solve for ÿ and compare.', de: 'Eine harmonische Schwingung hat eine Bewegungsgleichung ÿ = −ω²·y: Die Beschleunigung ist proportional zur Auslenkung und zeigt zurück. Löse nach ÿ auf und vergleiche.' },
-    },
-    {
-      scenario: 'period-2', p: { eq: { form: 'c1c2', y: '\\psi', c: '\\alpha', note: 'dot' }, P, seed: 5 },
-      practice: [{ types: ['period-1'] }, { en: 'rearranged equations and solutions', de: 'umgeformte Gleichungen und Lösungen', types: ['period-2'] }],
-      name: { en: 'The period', de: 'Die Periode' },
-      idea: { en: 'In ÿ = −ω²·y, the factor is ω², not ω; in y = A·cos(ωt), ω stands with t. The period is T = 2π/ω.', de: 'In ÿ = −ω²·y ist der Faktor ω², nicht ω; in y = A·cos(ωt) steht ω bei t. Die Periode ist T = 2π/ω.' },
-    },
-    {
-      scenario: 'mistake-1', p: { eq: { form: 'square', y: 'y', c: '\\delta', note: 'dot' }, P, seed: 3 },
-      practice: [{ types: ['mistake-1'] }, { en: 'more kinds of mistakes', de: 'weitere Arten von Fehlern', types: ['mistake-2'] }, { en: 'the subtle cases', de: 'die heiklen Fälle', types: ['shm-3'] }],
-      name: { en: 'What goes wrong?', de: 'Was stimmt nicht?' },
-      idea: { en: 'Compare term by term with ÿ = −ω²·y: the sign, the order of the derivative, the power of y. A constant only shifts the equilibrium.', de: 'Vergleiche Term für Term mit ÿ = −ω²·y: das Vorzeichen, die Ordnung der Ableitung, die Potenz von y. Eine Konstante verschiebt nur die Gleichgewichtslage.' },
+      idea: { en: 'A simple harmonic motion has an equation of motion ÿ = −ω²·y: the acceleration is proportional to the displacement and points back. Solve for ÿ and compare: if it fits, T = 2π/ω (the factor is ω², not ω); if not, find the term that differs.', de: 'Eine harmonische Schwingung hat eine Bewegungsgleichung ÿ = −ω²·y: Die Beschleunigung ist proportional zur Auslenkung und zeigt zurück. Löse nach ÿ auf und vergleiche: Passt sie, ist T = 2π/ω (der Faktor ist ω², nicht ω); sonst such den Term, der abweicht.' },
     },
     {
       scenario: 'match-1', seed: 2,

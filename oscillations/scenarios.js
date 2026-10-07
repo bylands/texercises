@@ -9,7 +9,7 @@
 // a choice comes from v[key].
 // view: { task: true } the task; { show: Set } the keys of what a step adds to the figure.
 //
-//   SHM or not       pick-shm, shm-1 … shm-3, period-1, period-2, mistake-1, mistake-2
+//   SHM or not       pick-shm, shm-1 … shm-3
 //   equation, graph  match-1, match-2 (an equation and four graphs), match-back (a graph and four
 //                    equations)
 //   kinematics       vmax, back-f, back-A, speed-x, speed-t
@@ -52,22 +52,51 @@
   }
 
   // the answers: yes or no, then the period or the mistake
+  // where a shifted SHM oscillates around: x₀ = g/c² (ODE) or B (solution)
+  const eqm = (p) => { const s = Eq.sym(p.eq); return p.eq.form === 'shift' ? `${s.y}_0 = \\frac{g}{${s.c}^2}` : `${s.y}_0 = B`; };
   // the wrong answer carries the idea behind it: a shifted equilibrium taken for no SHM, or the
   // mistake not seen
   const yesNo = (p) => {
     const f = byId(p.eq.form), again = L('Bring it into the form ÿ = −ω²·y (or compare the solution with y = A·cos(ωt + φ₀)) and look again.', 'Bring sie in die Form ÿ = −ω²·y (oder vergleiche die Lösung mit y = A·cos(ωt + φ₀)) und schau nochmals.');
     const noFlag = f.shifted ? 'shift' : f.kind === 'ode' && f.level >= 2 ? 'form' : null;
-    return [['yes', L('yes', 'ja'), again, f.shm ? null : f.mistake], ['no', L('no', 'nein'), f.shifted ? L('A constant only shifts the equilibrium: around it, the motion can still be harmonic.', 'Eine Konstante verschiebt nur die Gleichgewichtslage: Um sie herum kann die Bewegung trotzdem harmonisch sein.') : again, f.shm ? noFlag : null]];
+    return [['yes', L('yes', 'ja'), again, f.shm ? null : f.mistake], ['no', L('no', 'nein'), f.shifted ? L(`A constant only shifts the equilibrium, here to $${eqm(p)}$: around it, the motion is harmonic.`, `Eine Konstante verschiebt nur die Gleichgewichtslage, hier nach $${eqm(p)}$: Um sie herum ist die Bewegung harmonisch.`) : again, f.shm ? noFlag : null]];
   };
   function periodField(p, after, r) {
     const f = byId(p.eq.form), [right, ...wrong] = f.T(Eq.sym(p.eq));
     const opts = [['right', `$T = ${right}$`, '', null], ...wrong.map(([tex, flag]) => [flag, `$T = ${tex}$`, PWHY[flag](), flag])];
     return choice('T', L('Its period:', 'Ihre Periode:'), shuffle(r, opts), { after, ask: L('It describes an SHM. What is its period?', 'Sie beschreibt eine harmonische Schwingung. Wie gross ist ihre Periode?') });
   }
+  // What is wrong: the real mistake, and three features the equation really has, but which are
+  // harmless (blaming them is the wrong idea: flag 'form'). Each feature says why it is fine.
+  const ODE_NO = ['plus', 'first', 'square', 'const', 'damp', 'plusinv', 'cube'];
+  function decoys(eq) {
+    const f = byId(eq.form), s = Eq.sym(eq), id = f.id, has = (list) => list.includes(id), out = [];
+    const add = (key, short, why) => out.push([key, short, why]);
+    if (has(ODE_NO)) add('csq', L(`The constant appears squared: $${s.c}^2$.`, `Die Konstante steht im Quadrat: $${s.c}^2$.`),
+      L(`That is fine: in $\\ddot y = -\\omega^2\\cdot y$ the constant is squared too. Writing it as $${s.c}^2$ only makes sure it is positive.`, `Das ist in Ordnung: Auch in $\\ddot y = -\\omega^2\\cdot y$ steht die Konstante im Quadrat. Als $${s.c}^2$ geschrieben ist sie sicher positiv.`));
+    if (has(['first', 'square', 'const', 'cube'])) add('minus', L('The minus sign on the right-hand side.', 'Das Minuszeichen auf der rechten Seite.'),
+      L('The minus sign is right: the acceleration must point back towards the equilibrium.', 'Das Minuszeichen ist richtig: Die Beschleunigung muss zur Gleichgewichtslage zurück zeigen.'));
+    if (has(['plus', 'square', 'const', 'damp', 'plusinv', 'cube'])) add('second', L('It contains the second derivative.', 'Sie enthält die zweite Ableitung.'),
+      L('That is right: an equation of motion links the acceleration, the second derivative, to the displacement.', 'Das ist richtig: Eine Bewegungsgleichung verknüpft die Beschleunigung, die zweite Ableitung, mit der Auslenkung.'));
+    if (has(['damp', 'plusinv'])) add('zero', L('All terms stand on one side (= 0).', 'Alle Terme stehen auf einer Seite (= 0).'),
+      L('Rearranging changes nothing: $\\ddot y + \\omega^2\\cdot y = 0$ is the same as $\\ddot y = -\\omega^2\\cdot y$.', 'Umformen ändert nichts: $\\ddot y + \\omega^2\\cdot y = 0$ ist dasselbe wie $\\ddot y = -\\omega^2\\cdot y$.'));
+    if (eq.note === 'leib') add('leib', L(`The derivative is written as $\\frac{\\mathrm{d}^2${s.y}}{\\mathrm{d}t^2}$.`, `Die Ableitung ist als $\\frac{\\mathrm{d}^2${s.y}}{\\mathrm{d}t^2}$ geschrieben.`),
+      L(`Only another way of writing: $\\frac{\\mathrm{d}^2${s.y}}{\\mathrm{d}t^2} = \\ddot{${s.y}}$.`, `Nur eine andere Schreibweise: $\\frac{\\mathrm{d}^2${s.y}}{\\mathrm{d}t^2} = \\ddot{${s.y}}$.`));
+    if (has(['tsq', 'amp', 'expamp'])) add('cos', L('A cosine instead of a sine.', 'Ein Kosinus statt eines Sinus.'),
+      L('A cosine is a sine shifted in time: both describe harmonic oscillations.', 'Ein Kosinus ist ein zeitlich verschobener Sinus: Beide beschreiben harmonische Schwingungen.'));
+    if (has(['amp', 'expamp'])) add('targ', L(`The argument $${s.c}\\cdot t$ grows with time.`, `Das Argument $${s.c}\\cdot t$ wächst mit der Zeit.`),
+      L('It must: in an SHM, the phase ω·t grows evenly with time.', 'Das muss es: Bei einer harmonischen Schwingung wächst die Phase ω·t gleichmässig mit der Zeit.'));
+    if (has(['tsq'])) add('aconst', L('The factor $A$ in front stays the same.', 'Der Faktor $A$ vorne bleibt gleich.'),
+      L('That is right: an SHM has a constant amplitude.', 'Das ist richtig: Eine harmonische Schwingung hat eine konstante Amplitude.'));
+    add('name', eq.y === 'x' ? L(`The letter $${s.c}$ instead of $\\omega$.`, `Der Buchstabe $${s.c}$ statt $\\omega$.`) : L(`The letters $${s.y}$ and $${s.c}$ instead of $x$ and $\\omega$.`, `Die Buchstaben $${s.y}$ und $${s.c}$ statt $x$ und $\\omega$.`),
+      L('The names do not matter, only the form of the equation.', 'Die Namen spielen keine Rolle, nur die Form der Gleichung.'));
+    return out;
+  }
   function mistakeField(p, after, r) {
     const right = byId(p.eq.form).mistake;
-    const others = shuffle(r, Object.keys(MISTAKES).filter((m) => m !== right)).slice(0, 3);
-    const opts = [right, ...others].map((m) => [m, MISTAKES[m].short(), m === right ? '' : L('That is not what differs here. Compare term by term with ÿ = −ω²·y, or with y = A·cos(ωt + φ₀).', 'Das ist hier nicht der Unterschied. Vergleiche Term für Term mit ÿ = −ω²·y oder mit y = A·cos(ωt + φ₀).'), null]);
+    // a feature that is there to see (its notation) first, then any of the others
+    const all = shuffle(r, decoys(p.eq)), wrong = [...all.filter((d) => d[0] === 'leib'), ...all.filter((d) => d[0] !== 'leib')].slice(0, 3);
+    const opts = [[right, MISTAKES[right].short(), '', null], ...wrong.map(([key, short, why]) => [key, short, why, 'form'])];
     return choice('mistake', L('What is wrong?', 'Was stimmt nicht?'), shuffle(r, opts), { after, stack: true, ask: L('It describes no SHM. What is wrong?', 'Sie beschreibt keine harmonische Schwingung. Was stimmt nicht?') });
   }
   // a fresh random source for the order of the options (the same for the same parameters)
@@ -84,7 +113,7 @@
         'Eine harmonische Schwingung ist eine Bewegung $y(t) = A\\cdot\\cos(\\omega\\, t + \\varphi_0)$ (ein Sinus ist ein zeitlich verschobener Kosinus): eine konstante Amplitude und eine Phase, die gleichmässig mit $t$ wächst.'))));
     if (f.shm) {
       const sum = f.id === 'c1c2' ? p$(L('A sum of a cosine and a sine with the same $\\omega$ is again a cosine with this $\\omega$ (with another amplitude and phase).', 'Eine Summe von Kosinus und Sinus mit demselben $\\omega$ ist wieder ein Kosinus mit diesem $\\omega$ (mit anderer Amplitude und Phase).')) : '';
-      const shift = f.shifted ? p$(L('The constant only shifts the equilibrium: around it, the body oscillates harmonically. It is an SHM.', 'Die Konstante verschiebt nur die Gleichgewichtslage: Um sie herum schwingt der Körper harmonisch. Es ist eine harmonische Schwingung.')) : '';
+      const shift = f.shifted ? p$(L(`The constant only shifts the equilibrium to $${eqm(p)}$: around it, the body oscillates harmonically. It is an SHM.`, `Die Konstante verschiebt nur die Gleichgewichtslage nach $${eqm(p)}$: Um sie herum schwingt der Körper harmonisch. Es ist eine harmonische Schwingung.`)) : '';
       out.push(step(L('Compare', 'Vergleichen'), (f.kind === 'ode'
         ? `$$${given}\\quad\\Longrightarrow\\quad ${f.std(s)}$$` + p$(L(`This has the form $\\ddot y = -\\omega^2\\cdot y$ with $\\omega^2 = ${f.w2(s)}$, so $\\omega = ${f.w(s)}$.`, `Das hat die Form $\\ddot y = -\\omega^2\\cdot y$ mit $\\omega^2 = ${f.w2(s)}$, also $\\omega = ${f.w(s)}$.`))
         : `$$${given}$$` + p$(L(`Compare with $${f.std(s)}$: the angular frequency is $\\omega = ${f.w(s)}$.`, `Vergleiche mit $${f.std(s)}$: Die Kreisfrequenz ist $\\omega = ${f.w(s)}$.`))) + sum + shift));
@@ -129,42 +158,6 @@
   const shm1 = shmScenario('shm-1', 1, (f) => f.level === 1);
   const shm2 = shmScenario('shm-2', 2, (f) => f.level === 2 || (f.level === 1 && !f.shm));
   const shm3 = shmScenario('shm-3', 3, (f) => f.level === 3 || (f.level === 2 && f.shm));
-
-  // the period only (the equation is an SHM)
-  function periodScenario(id, difficulty, forms) {
-    return {
-      id, difficulty, kind: 'period',
-      title: () => L('The period', 'Die Periode'),
-      make: (r) => { const p = eqMake(r, formsOf((f) => f.shm && forms(f))); p.seed = Math.floor(r() * 1e9); return p; },
-      solve: () => ({ T: 'right' }),
-      traps: [],
-      fields: (p) => [periodField(p, null, orderOf(p))],
-      text: () => L('This equation describes a simple harmonic motion. What is its period?', 'Diese Gleichung beschreibt eine harmonische Schwingung. Wie gross ist ihre Periode?'),
-      hints: (p) => eqHints(p).slice(1).concat([L('The period is the time for the phase ω·t to grow by 2π.', 'Die Periode ist die Zeit, in der die Phase ω·t um 2π wächst.')]),
-      steps: (p) => eqSteps(p, 'T').slice(1),
-      figure: eqFigure,
-    };
-  }
-  const period1 = periodScenario('period-1', 1, (f) => f.level === 1);
-  const period2 = periodScenario('period-2', 2, (f) => f.level >= 2);
-
-  // the mistake only (the equation is no SHM)
-  function mistakeScenario(id, difficulty, forms) {
-    return {
-      id, difficulty, kind: 'mistake',
-      title: () => L('What goes wrong?', 'Was stimmt nicht?'),
-      make: (r) => { const p = eqMake(r, formsOf((f) => !f.shm && forms(f))); p.seed = Math.floor(r() * 1e9); return p; },
-      solve: (p) => ({ mistake: byId(p.eq.form).mistake }),
-      traps: [],
-      fields: (p) => [mistakeField(p, null, orderOf(p))],
-      text: () => L('This equation does not describe a simple harmonic motion. Why not?', 'Diese Gleichung beschreibt keine harmonische Schwingung. Warum nicht?'),
-      hints: (p) => [eqHints(p)[0], eqHints(p)[1], L('Compare with ÿ = −ω²·y term by term: the sign, the derivative, the power of y.', 'Vergleiche Term für Term mit ÿ = −ω²·y: das Vorzeichen, die Ableitung, die Potenz von y.')],
-      steps: (p) => eqSteps(p, 'mistake'),
-      figure: eqFigure,
-    };
-  }
-  const mistake1 = mistakeScenario('mistake-1', 1, (f) => f.level === 1);
-  const mistake2 = mistakeScenario('mistake-2', 2, (f) => f.level >= 2);
 
   // four equations, one of them an SHM
   const pickShm = {
@@ -499,7 +492,7 @@
     figure: (p, v, view) => (view.task ? '' : xGraph(p, { marks: view.show && view.show.has('t') ? [v.t] : [], dots: view.show && view.show.has('t') ? [[v.t, v.x * 100]] : [] })),
   };
 
-  const SCENARIOS = [pickShm, shm1, period1, mistake1, shm2, period2, mistake2, shm3, match1, match2, matchBack, vmax, backF, backA, speedX, speedT];
+  const SCENARIOS = [pickShm, shm1, shm2, shm3, match1, match2, matchBack, vmax, backF, backA, speedX, speedT];
 
   root.Scenarios = { SCENARIOS, NKINDS, curveOf, Y0, xGraph };
   if (typeof module !== 'undefined') module.exports = root.Scenarios;

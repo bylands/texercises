@@ -22,7 +22,7 @@
     linear: L('harmonic needs y to the first power', 'harmonisch braucht y in der ersten Potenz'),
     amp: L('a constant amplitude, a phase growing evenly', 'eine konstante Amplitude, eine gleichmässig wachsende Phase'),
     shift: L('a constant only shifts the equilibrium', 'eine Konstante verschiebt nur die Gleichgewichtslage'),
-    form: L('rearranged equations', 'umgeformte Gleichungen'),
+    form: L('harmless features taken for mistakes (letters, notation, rearranging)', 'harmlose Merkmale für Fehler gehalten (Buchstaben, Schreibweise, Umformen)'),
     damp: L('damping: a term with ẏ', 'Dämpfung: ein Term mit ẏ'),
     twopi: L('ω = 2πf = 2π/T', 'ω = 2πf = 2π/T'),
     square: L('v_max = Aω, a_max = Aω²', 'v_max = Aω, a_max = Aω²'),

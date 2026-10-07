@@ -78,16 +78,22 @@
     return { field: f, options: shuffle(options).map((o) => ({ ...o, html: html(o) })) };
   }
 
-  // The tutor: the task with what is wanted, then the steps of the solution.
-  function tutorial(lesson) {
+  // The tutor: the task with what is wanted, then the steps of the solution; then the same for
+  // each further exercise of the example (lesson.more).
+  function framesOf(lesson) {
     const scn = byId(lesson.scenario), ex = exercise(scn, lesson.p || make(scn, rng(lesson.seed)));
     const wanted = ex.fields.filter((f) => !f.after).map((f) => (f.type === 'num' ? `${f.what} $${f.sym}$` : f.what.replace(/:$/, ''))).join(', ');
     const first = {
       text: `<p class="step-rule">${L('The task', 'Die Aufgabe')}</p>${ex.text}<p>${L('Wanted', 'Gesucht')}: ${wanted}</p>`,
       figure: ex.figure({ task: true }),
     };
-    const frames = ex.steps.map((s) => ({ text: s.text, figure: ex.figure({ show: new Set(s.show || []) }) }));
-    return { frames: [first, ...frames] };
+    return [first, ...ex.steps.map((s) => ({ text: s.text, figure: ex.figure({ show: new Set(s.show || []) }) }))];
+  }
+  function tutorial(lesson) {
+    const parts = [lesson, ...(lesson.more || [])].map(framesOf);
+    // a further exercise starts with a heading: the next equation
+    parts.slice(1).forEach((fr, i) => { fr[0].text = `<p class="step-rule">${L(`Another equation (${i + 2} of ${parts.length})`, `Eine weitere Gleichung (${i + 2} von ${parts.length})`)}</p>${fr[0].text.replace(/^<p class="step-rule">[^<]*<\/p>/, '')}`; });
+    return { frames: parts.flat() };
   }
 
   root.Osc = { SCENARIOS, practiceOf, quiz, tutorial, exercise, byId };

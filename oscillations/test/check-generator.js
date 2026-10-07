@@ -70,7 +70,12 @@ const LAWS = {
     const right = T.options.find((o) => o[0] === T.value);
     if (!right || right[1] !== `$T = ${f.T(Eq.sym(p.eq))[0]}$`) fail(`${ex.scenario}: the right period`);
   },
-  mistake: (p, ex) => { if (val(ex, 'mistake').value !== Eq.byId(p.eq.form).mistake) fail(`${ex.scenario}: the mistake`); },
+  mistake: (p, ex) => {
+    const m = val(ex, 'mistake');
+    if (m.value !== Eq.byId(p.eq.form).mistake) fail(`${ex.scenario}: the mistake`);
+    // the wrong options are features of this equation, not mistakes it does not make
+    if (m.options.some((o) => o[0] !== m.value && Eq.MISTAKES[o[0]])) fail(`${ex.scenario}: another mistake offered for ${p.eq.form}`);
+  },
   pick: (p, ex) => {
     const which = Number(val(ex, 'which').value);
     if (p.eqs.filter((e) => Eq.byId(e.form).shm).length !== 1 || !Eq.byId(p.eqs[which].form).shm) fail('pick-shm: not one SHM');
@@ -133,6 +138,7 @@ for (const lang of ['en', 'de']) {
   // the tutor's examples, and the worksheet's ξ + k²·ξ̈ = 0: an SHM with T = 2πk
   Lessons.EXAMPLES.forEach((e) => Osc.tutorial(e).frames.forEach((f, i) => { checkText(`tutor ${e.scenario}`, `frame ${i}`, f.text); checkText(`tutor ${e.scenario}`, `figure ${i}`, f.figure); }));
   const w1 = Osc.exercise(Osc.byId('shm-2'), Lessons.EXAMPLES[0].p);
+  if (Osc.tutorial(Lessons.EXAMPLES[0]).frames.length < 9) fail('tutor 1: the three equations of the worksheet');
   const T1 = val(w1, 'T');
   if (val(w1, 'shm').value !== 'yes' || !T1 || T1.options.find((o) => o[0] === T1.value)[1] !== '$T = 2\\pi\\cdot k$') fail('worksheet: ξ + k²·ξ̈ = 0 has T = 2πk');
 
