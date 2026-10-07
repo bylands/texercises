@@ -637,8 +637,8 @@
       idea: () => L('In a value table, the direction shows in the changes from one time to the next, not in the signs of the positions.',
         'In einer Wertetabelle zeigt sich die Richtung in den Änderungen von einem Zeitpunkt zum nächsten, nicht in den Vorzeichen der Orte.') },
     { name: () => L('Accelerated table', 'Tabelle mit Beschleunigung'), kind: 'atable', d: 3, seed: 1, practice: [{ types: ['atable:3'] }, { name: () => L('values to fill in', 'Werte ergänzen'), types: ['atable:4'] }],
-      idea: () => L('With constant acceleration, the changes of position Δs in equal time steps change by the same amount each step: find the Δs, their constant change, the missing positions, and only then the acceleration.',
-        'Bei konstanter Beschleunigung ändern sich die Ortsänderungen Δs in gleichen Zeitschritten jedes Mal um gleich viel: Bestimme die Δs, ihre konstante Änderung, die fehlenden Orte und erst dann die Beschleunigung.') },
+      idea: () => L('With constant acceleration, the changes of position Δs in equal time steps Δt change by the same amount Δ(Δs) from step to step. Continuing this pattern fills the gaps in the table, and Δ(Δs) = a · (Δt)² gives the acceleration.',
+        'Bei konstanter Beschleunigung ändern sich die Ortsänderungen Δs in gleichen Zeitschritten Δt von Schritt zu Schritt um gleich viel, Δ(Δs). Setzt man dieses Muster fort, füllen sich die Lücken der Tabelle, und Δ(Δs) = a · (Δt)² ergibt die Beschleunigung.') },
     { name: () => L('Stroboscope', 'Stroboskop'), kind: 'strobe', d: 3, seed: 1, practice: [{ types: ['strobe:2', 'strobe:3'] }],
       idea: () => L('With constant acceleration, the distances between neighbouring dots change by the same amount each second; each is the mean velocity in that second, and v(t) is a straight line.',
         'Bei konstanter Beschleunigung ändern sich die Abstände benachbarter Punkte jede Sekunde um gleich viel; jeder ist die mittlere Geschwindigkeit in dieser Sekunde, und v(t) ist eine Gerade.') },
@@ -654,6 +654,9 @@
     { name: 'a → v', task: 'av', seed: 12, practice: [{ types: ['av'] }],
       idea: () => L('The change of velocity is the area under the acceleration graph, and the acceleration is the slope of the velocity graph.',
         'Die Geschwindigkeitsänderung ist die Fläche unter dem Beschleunigung-Zeit-Graphen, und die Beschleunigung ist die Steigung des Geschwindigkeit-Zeit-Graphen.') },
+    { name: () => L('Matching graphs', 'Graphen zuordnen'), kind: 'match', d: 4, seed: 1, practice: [{ types: ['match:2'] }, { name: () => L('from v to a', 'von v zu a'), types: ['match:3'] }, { name: () => L('from s to a', 'von s zu a'), types: ['match:4'] }],
+      idea: () => L('v(t) is the slope of s(t), and a(t) the slope of v(t): a straight piece gives a constant slope, a curved one a changing slope, whatever the height of the graph.',
+        'v(t) ist die Steigung von s(t), und a(t) die Steigung von v(t): Ein gerades Stück gibt eine konstante Steigung, ein gekrümmtes eine veränderliche, egal wie hoch der Graph liegt.') },
   ];
   const bar = (q) => `${q}̄`; // q with a bar: the mean value
   // A given graph and its answer side by side, or (stack: in the tutor) the answer below the given
@@ -783,10 +786,10 @@
     question: arcadeQuestion,
     concept: {
       copy: 'copy', sign: 'sign', average: 'mean', rectStart: 'area', curve: 'shape', rect: 'area',
-      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned', 'linear', 'steps'].map((f) => [f, f])),
+      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned', 'linear', 'steps', 'value', 'skip'].map((f) => [f, f])),
     },
     concepts: () => ({
-      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned', 'linear', 'steps'].map((f) => [f, Concepts.FLAGS[f]()])),
+      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned', 'linear', 'steps', 'value', 'skip'].map((f) => [f, Concepts.FLAGS[f]()])),
       copy: L('the value instead of the slope', 'der Wert statt der Steigung'),
       sign: L('the sign', 'das Vorzeichen'),
       mean: L('the mean value for a whole piece', 'der Mittelwert für ein ganzes Stück'),
@@ -872,7 +875,7 @@
       return true;
     }
     // a level, or (older links) a task
-    m = h.match(/^(easy|medium|hard|mixed|sv|va|vs|av|compare|direction|table|atable|strobe|area)-(\d+)$/);
+    m = h.match(/^(easy|medium|hard|mixed|sv|va|vs|av|compare|direction|table|atable|strobe|area|match)-(\d+)$/);
     if (!m) return false;
     setMode('practice');
     if (!ex || ex.id !== h) open(generate(m[1], Number(m[2])));

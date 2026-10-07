@@ -181,3 +181,5 @@ svg .vline { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 4; }
 .tag { display: inline-block; margin-left: 4px; padding: 0 8px; border: 1px solid currentColor; border-radius: 999px; color: var(--bad); font-size: 0.78rem; font-weight: 600; }
 .short { list-style: none; padding-left: 0; }
 .short li { margin: 4px 0; }
+/* a graph as an answer (a choice of graphs): small, below its number */
+.short svg.cgraph, .tutor-text p > b > svg.cgraph { display: block; width: 100%; max-width: 280px; height: auto; margin-top: 4px; }

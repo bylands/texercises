@@ -8,20 +8,21 @@
 
   const Lang = root.Lang || require('./lang.js');
   const L = (en, de) => Lang.L(en, de);
-  const UNIT = { s: 'm', v: 'm/s' };
+  const UNIT = { s: 'm', v: 'm/s', a: 'm/s²' };
   const f1 = (x) => Math.round(x * 10) / 10;
   const dec = (x) => String(x); // decimal point in both languages
   const num = (x) => (x < 0 ? '−' + dec(-x) : dec(x));
 
   // ---------------------------------------------------------------- graphs
-  // A graph of quantity q ('s' or 'v') over 0 … T s, the vertical axis from lo to hi with a label
+  // A graph of quantity q ('s', 'v' or 'a') over 0 … T s, the vertical axis from lo to hi with a label
   // every `step`. lines: [{ pts: [[t, y], …] (straight between them), name, dash, at: t (where the
   // name goes) }]. opts.areas: [[t0, v0, t1, v1], …] shaded between v and the t axis, by sign;
   // opts.band: [t0, t1] highlighted; opts.marks: times with a dashed vertical line; opts.dots:
   // [[t, y], …] marked points; opts.tris: slope triangles [{ t0, y0, t1, y1, corner: 'end' (the
   // right angle at (t1, y0)) | 'start' (at (t0, y1)), dt, dy (labels of the legs), dtIn (the Δt
   // label inside the triangle) }];
-  // opts.label: an aria label.
+  // opts.tStep, opts.tLabel: a grid line and a label on the time axis every so many seconds (by
+// default every 1 and 2 s, or 0.5 and 1 s up to T = 6 s); opts.label: an aria label.
   const GW = 360, GH = 230, GL = 48, GR = 36, GT = 30, GB = 38;
   function graph(q, axis, T, lines, opts = {}) {
     const { lo, hi, step } = axis;
@@ -29,7 +30,7 @@
     const y = (v) => f1(GT + ((hi - v) / (hi - lo)) * (GH - GT - GB));
     let s = '';
     if (opts.band) s += `<rect class="band focus" x="${x(opts.band[0])}" y="${y(hi)}" width="${f1(x(opts.band[1]) - x(opts.band[0]))}" height="${f1(y(lo) - y(hi))}"/>`;
-    const tStep = T > 6 ? 1 : 0.5, tLabel = T > 6 ? 2 : 1;
+    const tStep = opts.tStep || (T > 6 ? 1 : 0.5), tLabel = opts.tLabel || (T > 6 ? 2 : 1);
     for (let t = tStep; t <= T + 1e-9; t += tStep) s += `<line class="grid${Math.abs(t / tLabel - Math.round(t / tLabel)) < 1e-9 ? ' major' : ''}" x1="${x(t)}" y1="${y(hi)}" x2="${x(t)}" y2="${y(lo)}"/>`;
     const vMinor = step >= 2 ? step / 2 : step;
     for (let v = lo; v <= hi + 1e-9; v += vMinor) if (Math.abs(v) > 1e-9) s += `<line class="grid${Math.abs(v / step - Math.round(v / step)) < 1e-9 ? ' major' : ''}" x1="${x(0)}" y1="${y(v)}" x2="${x(T)}" y2="${y(v)}"/>`;
@@ -84,8 +85,9 @@
 
   // ---------------------------------------------------------------- stroboscope picture
   // Dots at the positions xs (m) at t = 0, 1, 2, … s on a number line from lo to hi, each with its
-  // time above it; dots that would overlap an earlier one are lifted to a row of their own.
-  const SW = 380, SH = 104, SL = 16, SR = 34;
+  // time above it; dots that would overlap an earlier one are lifted to a row of their own, high
+// enough to clear the time of the dot below.
+  const SW = 380, SH = 104, SL = 16, SR = 34, ROW = 32;
   function strobe(xs, lo, hi, opts = {}) {
     const x = (v) => f1(SL + ((v - lo) / (hi - lo)) * (SW - SL - SR));
     const base = SH - 34;
@@ -101,12 +103,12 @@
       let row = 0;
       while ((rows[row] || []).some((w) => Math.abs(w - v) < 0.9)) row++;
       (rows[row] = rows[row] || []).push(v);
-      const cy = base - row * 22;
+      const cy = base - row * ROW;
       s += `<circle class="sdot" cx="${x(v)}" cy="${cy}" r="6.5"/>`;
       if (!opts.noTimes) s += `<text class="stime" x="${x(v)}" y="${cy - 11}" text-anchor="middle">${k}</text>`;
     });
     // just enough room above the highest row of dots and its times
-    const top = base - (rows.length - 1) * 22 - 26;
+    const top = base - (rows.length - 1) * ROW - 26;
     return `<svg class="strobe" viewBox="0 ${top} ${SW} ${SH - top}" role="img" aria-label="${opts.label || ''}"><g class="qc-s">${s}</g></svg>`;
   }
 

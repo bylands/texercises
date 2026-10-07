@@ -6,7 +6,8 @@
 // It finds the fields by itself, also those drawn later.
 // Also: Enter checks the answers from any answer, not only from a text field (where the browser
 // submits the form by itself): from a radio button or a checkbox of the exercise (a sense of
-// rotation, a choice, the table of forces) and from a select, as if Check were pressed.
+// rotation, a choice, the table of forces) and from a select, as if Check were pressed; and from a
+// text field that is in no form (there the browser does nothing by itself).
 (function (root) {
   'use strict';
 
@@ -47,7 +48,10 @@
   function enter(evt) {
     if (evt.key !== 'Enter' || evt.isComposing || evt.altKey || evt.ctrlKey || evt.metaKey || evt.shiftKey) return;
     const el = evt.target;
-    if (!el.matches || !el.matches('input[type="radio"], input[type="checkbox"], select')) return;
+    if (!el.matches) return;
+    // a text field submits its form by itself; without a form (motion-graphs), Enter checks here
+    const field = el.matches('input[type="text"], input:not([type])') && !el.form;
+    if (!field && !el.matches('input[type="radio"], input[type="checkbox"], select')) return;
     const check = document.getElementById('check');
     if (!check || check.disabled || !check.offsetParent || !el.closest('#task')) return;
     evt.preventDefault();

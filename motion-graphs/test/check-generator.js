@@ -228,7 +228,8 @@ for (const lang of ['en', 'de']) {
         }
         if (kind === 'table' && d === 3) {
           if (!near(qOf('vA').value, D.A.v) || !near(qOf('vB').value, D.B.v)) fail(`${tag}: wrong velocities`);
-          if (!near(qOf('sA').value, D.A.s0 + 20 * D.A.v) || !near(qOf('sB').value, D.B.s0)) fail(`${tag}: wrong positions`);
+          if (['A', 'B'].some((n) => !near(qOf(`s${n}`).value, D[n].s0 + D[n].v * D.times[D[n].asked]))) fail(`${tag}: wrong positions`);
+          if (['A', 'B'].some((n) => D[n].known.includes(D[n].asked))) fail(`${tag}: a known position asked for`);
         }
         if (kind === 'strobe') {
           if (D.xs.some((x) => x < -7 || x > 7)) fail(`${tag}: dot off the number line`);
@@ -245,14 +246,28 @@ for (const lang of ['en', 'de']) {
           const g = D.xs.slice(1).map((x, k) => x - D.xs[k]), st = D.step || 1;
           if (g.slice(1).some((x, k) => !near(x - g[k], D.a * st * st))) fail(`${tag}: acceleration not constant`);
           if (!near(qOf('a').value, D.a)) fail(`${tag}: wrong acceleration`);
-          if (d === 3 && (!near(qOf('s4').value, D.xs[4]) || !near(qOf('s5').value, D.xs[5]))) fail(`${tag}: wrong positions`);
-          if (d === 4) {
-            if (!near(qOf('s6').value, D.xs[3]) || !near(qOf('s8').value, D.xs[4])) fail(`${tag}: wrong positions`);
-            if (!near(qOf('v2').value, (D.xs[2] - D.xs[0]) / 4)) fail(`${tag}: wrong velocity at 2 s`);
-          }
+          if (D.asked.some((k) => !near(qOf(`s${k}`).value, D.xs[k]))) fail(`${tag}: wrong positions`);
+          if (D.asked.some((k) => k >= D.b && k <= D.b + 2)) fail(`${tag}: one of the three neighbours asked for`);
+          if (d === 4 && !near(qOf('vm').value, (D.xs[D.b + 2] - D.xs[D.b]) / (2 * st))) fail(`${tag}: wrong velocity in the middle`);
           // the strategy: the missing positions are asked before the acceleration
           const keys = ex.questions.map((q) => q.key);
-          if (keys.indexOf('a') < Math.max(keys.indexOf(d === 3 ? 's5' : 's8'), 0)) fail(`${tag}: the acceleration is asked before the positions`);
+          if (D.asked.some((k) => keys.indexOf(`s${k}`) > keys.indexOf('a'))) fail(`${tag}: the acceleration is asked before the positions`);
+          if (!qOf('graph') || qOf('graph').options.length !== 4) fail(`${tag}: no graph with four options`);
+        }
+        if (kind === 'match') {
+          // the right graph is the slope of the given one, piece by piece
+          if (qOf('graph').options.length !== 4) fail(`${tag}: ${qOf('graph').options.length} options`);
+          if (d === 2 && D.pieces.some((p) => !near(p.v, (p.s1 - p.s0) / (p.t1 - p.t0)))) fail(`${tag}: wrong v`);
+          if (d >= 3 && D.pieces.some((p) => !near(p.a, (p.v1 - p.v0) / (p.t1 - p.t0)))) fail(`${tag}: wrong a`);
+          if (d === 4 && D.pieces.some((p, i) => i && !near(p.v0, D.pieces[i - 1].v1))) fail(`${tag}: v jumps`);
+        }
+        if (['table', 'strobe'].includes(kind) && ex.questions.some((q) => q.pics && q.options.length !== 4)) fail(`${tag}: a graph question without four options`);
+        // every curve of a graph inside its plot (y from 30 to 192 in figs.js)
+        const graphs = [ex.figure, ...ex.steps.map((x) => x.figure), ...ex.questions.flatMap((q) => (q.pics ? q.options.map((o) => o.html) : []))];
+        for (const g of graphs) {
+          for (const m of g.matchAll(/class="curve[^"]*" d="M([^"]+)"/g)) {
+            if (m[1].split(/ ?L/).some((pt) => { const y = Number(pt.split(',')[1]); return y < 29.5 || y > 192.5; })) { fail(`${tag}: a curve off its axis`); break; }
+          }
         }
         if (kind === 'area' && D.pts) {
           const ds = C.integrate(D.pts, D.a, D.b, false), dist = C.integrate(D.pts, D.a, D.b, true);
