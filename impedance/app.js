@@ -22,11 +22,10 @@
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
       correct: 'Correct',
-      chooseCurve: 'Choose a curve, then check again.', idFirst: 'First answer the questions above.',
-      whichCurve: 'Which curve?', thenChoose: 'Then choose the curve:', curve: (k) => `Curve ${k}`,
-      whichCircuit: 'Which circuit?', thenChooseCircuit: 'Then choose the circuit:', circuit: (k) => `Circuit ${k}`, chooseCircuit: 'Choose a circuit, then check again.',
-      inversePrompt: 'The curve shows the impedance <i>Z</i> of a circuit against the angular frequency <i>ω</i>. Which of the four circuits is it? First answer the questions: each right answer rules out the circuits that do not fit.',
-      matchPrompt: 'Which of the four curves shows the impedance <i>Z</i> of this circuit against the angular frequency <i>ω</i>? First answer the questions: each right answer rules out the curves that do not fit.',
+      whichCurve: 'Which curve?', theCurves: 'The curves:', curve: (k) => `Curve ${k}`,
+      whichCircuit: 'Which circuit?', theCircuits: 'The circuits:', circuit: (k) => `Circuit ${k}`,
+      inversePrompt: 'The curve shows the impedance <i>Z</i> of a circuit against the angular frequency <i>ω</i>. Which of the four circuits is it? Answer the questions: each right answer rules out the circuits that do not fit, until one is left.',
+      matchPrompt: 'Which of the four curves shows the impedance <i>Z</i> of this circuit against the angular frequency <i>ω</i>? Answer the questions: each right answer rules out the curves that do not fit, until one is left.',
     },
     de: {
       title: 'Impedanzkurven', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', axes: 'Achsen',
@@ -42,11 +41,10 @@
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
       correct: 'Richtig',
-      chooseCurve: 'Wähle eine Kurve und prüfe dann nochmals.', idFirst: 'Beantworte zuerst die Fragen oben.',
-      whichCurve: 'Welche Kurve?', thenChoose: 'Dann wähle die Kurve:', curve: (k) => `Kurve ${k}`,
-      whichCircuit: 'Welche Schaltung?', thenChooseCircuit: 'Dann wähle die Schaltung:', circuit: (k) => `Schaltung ${k}`, chooseCircuit: 'Wähle eine Schaltung und prüfe dann nochmals.',
-      inversePrompt: 'Die Kurve zeigt die Impedanz <i>Z</i> einer Schaltung gegen die Kreisfrequenz <i>ω</i>. Welche der vier Schaltungen ist es? Beantworte zuerst die Fragen: Jede richtige Antwort schliesst die Schaltungen aus, die nicht passen.',
-      matchPrompt: 'Welche der vier Kurven zeigt die Impedanz <i>Z</i> dieser Schaltung gegen die Kreisfrequenz <i>ω</i>? Beantworte zuerst die Fragen: Jede richtige Antwort schliesst die Kurven aus, die nicht passen.',
+      whichCurve: 'Welche Kurve?', theCurves: 'Die Kurven:', curve: (k) => `Kurve ${k}`,
+      whichCircuit: 'Welche Schaltung?', theCircuits: 'Die Schaltungen:', circuit: (k) => `Schaltung ${k}`,
+      inversePrompt: 'Die Kurve zeigt die Impedanz <i>Z</i> einer Schaltung gegen die Kreisfrequenz <i>ω</i>. Welche der vier Schaltungen ist es? Beantworte die Fragen: Jede richtige Antwort schliesst die Schaltungen aus, die nicht passen, bis eine übrig bleibt.',
+      matchPrompt: 'Welche der vier Kurven zeigt die Impedanz <i>Z</i> dieser Schaltung gegen die Kreisfrequenz <i>ω</i>? Beantworte die Fragen: Jede richtige Antwort schliesst die Kurven aus, die nicht passen, bis eine übrig bleibt.',
     },
   };
   const ui = () => UI[Lang.get()];
@@ -84,8 +82,8 @@
 
   // ---------------------------------------------------------------- matching (match.js)
   // The four options of a matching exercise, curves or (inverse) circuits: the ones that do not fit
-  // the answers so far (keys of the questions) faded; with pick, as radio buttons; marks: labels on
-  // the right curve.
+  // the answers so far (keys of the questions) faded, and once all are answered the one left marked
+  // (o.done); marks: labels on the right curve. There is nothing to pick: the answers decide.
   // A curve: with the level R and ω₀ where the circuit shown has them; the curve given in the
   // inverse has neither, which would tell whether there is a resistor or a resonance.
   const sketchOf = (e, id, o, label, marks) => P.sketch(M.circuit(id, e.q), o.mode || axesMode(), {
@@ -93,15 +91,15 @@
   });
   function curves(e, answered, o = {}) {
     const name = e.inverse ? ui().circuit : ui().curve;
-    return `<div class="cands${e.inverse ? ' circuits' : ''}"${o.pick ? ` role="radiogroup" aria-label="${e.inverse ? ui().whichCircuit : ui().whichCurve}"` : ''}>${e.cands.map((id, k) => {
-      const tag = o.pick ? 'label' : 'div', cls = `cand${M.fits(e, k, answered) ? '' : ' out'}`;
+    return `<div class="cands${e.inverse ? ' circuits' : ''}">${e.cands.map((id, k) => {
+      const cls = `cand${M.fits(e, k, answered) ? (o.done ? ' ok' : '') : ' out'}`;
       const svg = e.inverse ? P.schematic(M.circuit(id, e.q)) : sketchOf(e, id, o, name(M.letter(k)), o.marks && k === e.right ? M.marks(id) : null);
-      return `<${tag} class="${cls}" data-k="${k}">${o.pick ? `<input type="radio" name="cand" value="${k}">` : ''}<span class="letter">${M.letter(k)}</span>${svg}</${tag}>`;
+      return `<div class="${cls}" data-k="${k}"><span class="letter">${M.letter(k)}</span>${svg}</div>`;
     }).join('')}</div>`;
   }
   // the circuit (or the curve) given, and the options
   const given = (e, o = {}) => (e.inverse ? `<div class="fig curve-big">${sketchOf(e, e.net, o, L('The curve', 'Die Kurve'), o.marks ? M.marks(e.net) : null)}</div>` : `<div class="fig">${P.schematic(M.circuit(e.net, e.q))}</div>`);
-  const matchFigure = (e, answered, o = {}) => `${given(e, o)}<div class="fig cands-wrap">${curves(e, answered, o)}</div>`;
+  const matchFigure = (e, answered, o = {}) => `${given(e, o)}<div class="fig cands-wrap">${curves(e, answered, { done: answered.length === M.phases(e.net).length, ...o })}</div>`;
   // the questions answered right so far
   const answeredOf = () => ex.items.filter((it) => Identify.right(it, st.ident)).map((it) => it.key);
   const matchSolution = (e) => { const s = M.solution(e); return s.steps.map((x) => `<h4>${x.title}</h4><p>${x.text}</p>`).join('') + `<p>${s.verdict}</p><ul>${s.others.map((x) => `<li>${x}</li>`).join('')}</ul>`; };
@@ -109,29 +107,15 @@
   function renderMatch() {
     $('#title').innerHTML = `${ex.inverse ? ui().whichCircuit : ui().whichCurve} ${starsOf(ex.difficulty)}`;
     $('#prompt').innerHTML = ex.inverse ? ui().inversePrompt : ui().matchPrompt;
-    $('#fields').innerHTML = `<div id="ident"></div><p class="match-head">${ex.inverse ? ui().thenChooseCircuit : ui().thenChoose}</p><div id="cands"></div><p id="cand-fb" class="ident-fb bad" aria-live="polite"></p>`;
+    $('#fields').innerHTML = `<div id="ident"></div><p class="match-head">${ex.inverse ? ui().theCircuits : ui().theCurves}</p><div id="cands"></div>`;
   }
-  // the questions and the curves, keeping the curve chosen
+  // the questions and the options
   function drawMatch() {
-    const sel = document.querySelector('input[name="cand"]:checked');
     // the circuit given, or in the inverse the curve (redrawn when the axes change)
     $('#schematic').outerHTML = given(ex).replace('class="fig', 'id="schematic" class="fig');
     $('#ident').innerHTML = Identify.html(ex.items, st.ident, st.revealed);
-    $('#cands').innerHTML = curves(ex, st.revealed ? M.phases(ex.net) : answeredOf(), { pick: true });
-    if (sel) document.querySelector(`input[name="cand"][value="${sel.value}"]`).checked = true;
-    if (st.checked && st.pick != null) matchFeedback();
-  }
-  // Marks the curve chosen; true if right, null if none is chosen.
-  function matchFeedback() {
-    const sel = document.querySelector('input[name="cand"]:checked');
-    document.querySelectorAll('.cand').forEach((el) => el.classList.remove('ok', 'bad'));
-    $('#cand-fb').innerHTML = '';
-    if (!sel) return null;
-    const k = Number(sel.value), ok = k === ex.right;
-    st.pick = k;
-    sel.closest('.cand').classList.add(ok ? 'ok' : 'bad');
-    if (!ok) $('#cand-fb').innerHTML = M.mismatch(ex, k);
-    return ok;
+    const answered = st.revealed ? M.phases(ex.net) : answeredOf();
+    $('#cands').innerHTML = curves(ex, answered, { done: answered.length === ex.items.length });
   }
 
   // ---------------------------------------------------------------- hints and solution
@@ -170,7 +154,7 @@
     finish(); // the student moves on
     ex = exercise;
     prepare(ex);
-    st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null, ident: {}, pick: null };
+    st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null, ident: {} };
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
@@ -262,6 +246,7 @@
     $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
+    $('#check').hidden = !!ex.match && !st.solved; // a matching exercise is solved by its questions
   }
 
   // Marks every choice; true if all are right, null if some are missing.
@@ -284,7 +269,7 @@
     const el = $('#status');
     if (st) st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
-    el.textContent = !kind ? '' : kind === 'fill' ? (ex && ex.match ? (ex.inverse ? ui().chooseCircuit : ui().chooseCurve) : ui().choose) : kind === 'ident' ? ui().idFirst
+    el.textContent = !kind ? '' : kind === 'fill' ? ui().choose
       : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (!canReveal() ? ui().tryAgain : ui().canReveal);
   }
@@ -292,26 +277,29 @@
   function check(evt) {
     evt.preventDefault();
     if (st.solved) { fresh(); return; } // the button reads New exercise
-    if (ex.match && !Identify.ok(ex.items, st.ident)) { showStatus('ident'); return; }
-    const r = ex.match ? matchFeedback() : feedback();
+    if (ex.match) return; // solved by its questions (see init), no Check
+    const r = feedback();
     st.checked = true;
     if (r === null) { showStatus('fill'); return; }
     st.tries++;
-    if (r) {
-      if (!st.revealed) {
-        const s = stored('imp-score', { solved: 0, clean: 0 });
-        s.solved++;
-        if (st.tries === 1 && st.hints === 0) s.clean++;
-        store('imp-score', s);
-        showScore();
-      }
-      st.solved = true;
-      Practice.markSolved(PRACTICE, ex.id);
-      finish();
-      st.advance = topics.solved(st, ex);
-      showStatus('ok');
-    } else showStatus('bad');
+    if (r) solved();
+    else showStatus('bad');
     updateButtons();
+  }
+  // The exercise is solved: the score, the record of practice and the step of the topic.
+  function solved() {
+    if (!st.revealed) {
+      const s = stored('imp-score', { solved: 0, clean: 0 });
+      s.solved++;
+      if (st.tries === 1 && st.hints === 0) s.clean++;
+      store('imp-score', s);
+      showScore();
+    }
+    st.solved = true;
+    Practice.markSolved(PRACTICE, ex.id);
+    finish();
+    st.advance = topics.solved(st, ex);
+    showStatus('ok');
   }
 
   function showHints() {
@@ -490,18 +478,14 @@
     if (ex) {
       const fields = ex.fields || [];
       const chosen = fields.map((f) => { const r = document.querySelector(`input[name="opt-${f.key}"]:checked`); return r ? r.value : null; });
-      const pick = document.querySelector('input[name="cand"]:checked');
       const keep = st, status = st.status; // render() clears the status line
       ex = again(ex);
       prepare(ex);
       render();
       st = keep;
       ex.fields && ex.fields.forEach((f, k) => { if (chosen[k] != null) document.querySelector(`input[name="opt-${f.key}"][value="${chosen[k]}"]`).checked = true; });
-      if (ex.match) {
-        drawMatch();
-        if (pick) document.querySelector(`input[name="cand"][value="${pick.value}"]`).checked = true;
-        if (st.checked) matchFeedback();
-      } else if (st.checked) feedback();
+      if (ex.match) drawMatch();
+      else if (st.checked) feedback();
       showStatus(status);
       showHints();
       if (st.revealed) showSolution();
@@ -592,16 +576,24 @@
     $('#answers').addEventListener('submit', check);
     // A new choice clears the feedback on the old one.
     $('#fields').addEventListener('change', (evt) => {
-      if (evt.target.name === 'cand') { document.querySelectorAll('.cand').forEach((el) => el.classList.remove('ok', 'bad')); $('#cand-fb').innerHTML = ''; return; }
       const row = evt.target.closest('.field');
       if (!row) return;
       row.className = 'field';
       row.querySelector('.fb').textContent = '';
     });
-    // the questions of a matching exercise: a right answer fades the curves that do not fit, a
-    // wrong one counts as an attempt
+    // the questions of a matching exercise: a right answer fades the options that do not fit; once
+    // one option is left, the exercise is solved (counted as the attempt that solves it), and the
+    // questions not needed any more are shown answered, with their reasoning. A wrong answer counts
+    // as an attempt.
     Identify.attach($('#fields'), () => (ex && ex.match ? ex.items : []), () => st.ident, (right) => {
-      if (right) drawMatch(); else { st.tries++; updateButtons(); }
+      if (!right) st.tries++;
+      else if (!st.solved && ex.cands.filter((x, k) => M.fits(ex, k, answeredOf())).length === 1) {
+        ex.items.forEach((it) => { st.ident[it.key] = it.options.findIndex((o) => o.right); });
+        st.tries++;
+        solved();
+      }
+      if (right) drawMatch();
+      updateButtons();
     });
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
