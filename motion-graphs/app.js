@@ -633,13 +633,13 @@
     { name: () => L('Direction', 'Richtung'), kind: 'direction', d: 2, seed: 1, practice: [{ types: ['direction:2'] }],
       idea: () => L('The sign of v is the direction of motion: negative where s decreases, wherever the graph lies.',
         'Das Vorzeichen von v ist die Bewegungsrichtung: negativ, wo s abnimmt, egal wo der Graph liegt.') },
-    { name: () => L('Value table', 'Wertetabelle'), kind: 'table', d: 2, seed: 1, practice: [{ types: ['table:2'] }, { name: () => L('more values', 'mehr Werte'), types: ['table:3'] }],
+    { name: () => L('Value table', 'Wertetabelle'), kind: 'table', d: 2, seed: 1, practice: [{ types: ['table:2'] }, { name: () => L('more values', 'mehr Werte'), types: ['table:3'] }, { name: () => L('table and graph', 'Tabelle und Graph'), types: ['tablegraph:2', 'tablegraph:3'] }],
       idea: () => L('In a value table, the direction shows in the changes from one time to the next, not in the signs of the positions.',
         'In einer Wertetabelle zeigt sich die Richtung in den Änderungen von einem Zeitpunkt zum nächsten, nicht in den Vorzeichen der Orte.') },
-    { name: () => L('Accelerated table', 'Tabelle mit Beschleunigung'), kind: 'atable', d: 3, seed: 1, practice: [{ types: ['atable:3'] }, { name: () => L('values to fill in', 'Werte ergänzen'), types: ['atable:4'] }],
+    { name: () => L('Accelerated table', 'Tabelle mit Beschleunigung'), kind: 'atable', d: 3, seed: 1, practice: [{ types: ['atable:3'] }, { name: () => L('values to fill in', 'Werte ergänzen'), types: ['atable:4'] }, { name: () => L('table and graph', 'Tabelle und Graph'), types: ['atablegraph:3', 'atablegraph:4'] }],
       idea: () => L('With constant acceleration, the changes of position Δs in equal time steps Δt change by the same amount Δ(Δs) from step to step. Continuing this pattern fills the gaps in the table, and Δ(Δs) = a · (Δt)² gives the acceleration.',
         'Bei konstanter Beschleunigung ändern sich die Ortsänderungen Δs in gleichen Zeitschritten Δt von Schritt zu Schritt um gleich viel, Δ(Δs). Setzt man dieses Muster fort, füllen sich die Lücken der Tabelle, und Δ(Δs) = a · (Δt)² ergibt die Beschleunigung.') },
-    { name: () => L('Stroboscope', 'Stroboskop'), kind: 'strobe', d: 3, seed: 1, practice: [{ types: ['strobe:2', 'strobe:3'] }],
+    { name: () => L('Stroboscope', 'Stroboskop'), kind: 'strobe', d: 3, seed: 1, practice: [{ types: ['strobe:2', 'strobe:3'] }, { name: () => L('picture and graph', 'Bild und Graph'), types: ['strobegraph:2', 'strobegraph:3'] }],
       idea: () => L('With constant acceleration, the distances between neighbouring dots change by the same amount each second; each is the mean velocity in that second, and v(t) is a straight line.',
         'Bei konstanter Beschleunigung ändern sich die Abstände benachbarter Punkte jede Sekunde um gleich viel; jeder ist die mittlere Geschwindigkeit in dieser Sekunde, und v(t) ist eine Gerade.') },
     { name: 's → v', task: 'sv', seed: 17, practice: [{ types: ['sv'] }, { name: () => L('from v to a', 'von v zu a'), types: ['va'] }],
@@ -875,7 +875,7 @@
       return true;
     }
     // a level, or (older links) a task
-    m = h.match(/^(easy|medium|hard|mixed|sv|va|vs|av|compare|direction|table|atable|strobe|area|match)-(\d+)$/);
+    m = h.match(/^(easy|medium|hard|mixed|sv|va|vs|av|compare|direction|table|tablegraph|atable|atablegraph|strobe|strobegraph|area|match)-(\d+)$/);
     if (!m) return false;
     setMode('practice');
     if (!ex || ex.id !== h) open(generate(m[1], Number(m[2])));

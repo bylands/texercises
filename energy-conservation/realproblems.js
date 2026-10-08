@@ -3,7 +3,7 @@
 // has random values that keep the numbers simple, a picture of the situation (artkit.js) and the
 // energy bars of the states for the solution (draw.js):
 //   { id, difficulty, title(), make(r), solve(p), zero(), states(p, v) [{pot, kin, el} in J],
-//     spring, fields(), text(p), hints(p), steps(p, v), pic(p) }
+//     spring, fields(), text(p), hints(p), steps(p, v) } (the picture of the task: figures.js)
 // realOf(i, seed) gives an exercise as the practice ones (generator.js), with several numbers to
 // find and no formulas to type.
 (function (root) {
@@ -65,15 +65,6 @@
       step(L('Twice the speed', 'Doppelte Geschwindigkeit'), p$(L('The height grows with the square of the speed: twice the speed needs four times the height.', 'Die Höhe wächst mit dem Quadrat der Geschwindigkeit: Doppelte Geschwindigkeit braucht die vierfache Höhe.')) +
         `$$h' = \\frac{(2v)^2}{2\\,g} = 4\\,h ${res(v.h2, 'm')}$$` + p$(L(`That is about ${Math.round(v.h2 / 3)} floors of a building.`, `Das sind etwa ${Math.round(v.h2 / 3)} Stockwerke eines Gebäudes.`))),
     ],
-    pic(p) {
-      const a = A(), y = 180;
-      return a.svg(420, 230, a.bg(0, 0, 420, 230) + a.rect(250, 20, 330, y, 'rp-building', 2) +
-        [0, 1, 2, 3, 4, 5, 6, 7].map((k) => a.rect(262 + 34 * (k % 2), 30 + 19 * Math.floor(k / 2) * 2, 284 + 34 * (k % 2), 46 + 19 * Math.floor(k / 2) * 2, 'rp-window', 1)).join('') +
-        a.ground(0, 420, y, 'asphalt', 50) + a.rect(184, y - 70, 214, y, 'rp-concrete-block', 2) +
-        a.car(30, y, 150, 'red') + a.path(`M12 ${y - 40}h24M4 ${y - 26}h30M14 ${y - 12}h20`, 'rp-speed') + lbl(105, y - 82, q(p.vk, 'kmh'), 'lbl') +
-        `<g opacity="0.45">${a.car(338, 52, 70, 'red')}</g>` + height(372, y, 60, '?'),
-      L('A car driving into a concrete block, and a car high above the ground', 'Ein Auto fährt gegen einen Betonblock, und ein Auto hoch über dem Boden'));
-    },
   };
 
   // ---------------------------------------------------------------- 2 a fountain
@@ -101,16 +92,6 @@
         `$$m\\,g\\,H = m\\,g\\,h + \\tfrac{1}{2}\\,m\\left(\\frac{v_0}{2}\\right)^2 = m\\,g\\,h + \\tfrac{1}{4}\\,m\\,g\\,H \\;\\Rightarrow\\; h = \\tfrac{3}{4}\\,H ${res(v.h, 'm')}$$` +
         p$(L('Half the speed means a quarter of the kinetic energy: three quarters of the way up.', 'Halbe Geschwindigkeit heisst ein Viertel der kinetischen Energie: drei Viertel des Wegs nach oben.'))),
     ],
-    pic(p) {
-      const a = A(), y = 190, top = 34;
-      const drops = [[-14, 50], [12, 44], [-22, 70], [20, 66], [-8, 30], [6, 28]].map(([dx, dy]) => a.circle(210 + dx, top + dy, 3, 'rp-drop')).join('');
-      return a.svg(420, 230, a.bg(0, 0, 420, 230) + a.tree(60, y, 90) + a.tree(360, y, 70) + a.ground(0, 420, y, 'grass', 40) +
-        a.path(`M120 ${y - 6}Q210 ${y - 26} 300 ${y - 6}L300 ${y + 10}H120Z`, 'rp-basin') + a.path(`M130 ${y - 8}Q210 ${y - 22} 290 ${y - 8}`, 'rp-waterline') +
-        a.path(`M204 ${y - 18}L206 ${top + 6}Q210 ${top - 6} 214 ${top + 6}L216 ${y - 18}Z`, 'rp-jet') +
-        a.path(`M210 ${top + 2}C190 ${top + 2} 180 ${top + 40} 176 ${y - 20}M210 ${top + 2}C230 ${top + 2} 240 ${top + 40} 244 ${y - 20}`, 'rp-spray') + drops +
-        a.rect(200, y - 20, 220, y - 12, 'rp-dark', 2) + height(330, y - 16, top, q(p.H, 'm')),
-      L('A fountain shooting water straight up', 'Ein Springbrunnen spritzt Wasser senkrecht nach oben'));
-    },
   };
 
   // ---------------------------------------------------------------- 3 a roller coaster
@@ -137,16 +118,6 @@
       step(L('On the second hill', 'Auf dem zweiten Hügel'), p$(L(`Let $h_2$ be the height of the second hill. Between ① and ③:`, `Sei $h_2$ die Höhe des zweiten Hügels. Zwischen ① und ③:`)) +
         `$$m\\,g\\,H = m\\,g\\,h_2 + \\tfrac{1}{2}\\,m\\,v_2^2 \\;\\Rightarrow\\; v_2 = \\sqrt{2\\,g\\,(H - h_2)} = \\sqrt{2\\cdot ${gq}\\cdot ${tq(p.H - p.h2, 'm')}} ${res(v.v2, 'v')}$$`),
     ],
-    pic(p) {
-      const a = A(), y = 200, s = 150 / 80, top1 = y - p.H * s, top2 = y - p.h2 * s;
-      const track = `M10 ${a.f(top1 + 6)}Q60 ${a.f(top1 - 10)} 100 ${a.f(top1 + 20)}Q150 ${y + 6} 200 ${y - 4}Q250 ${y - 14} 290 ${a.f(top2 + 10)}Q320 ${a.f(top2 - 8)} 350 ${a.f(top2 + 14)}Q380 ${a.f(top2 + 50)} 410 ${a.f(top2 + 70)}`;
-      const posts = [40, 80, 120, 260, 300, 340, 380].map((x) => a.line([x, y], [x, y - 20], 'rp-post')).join('');
-      return a.svg(420, 230, a.bg(0, 0, 420, 230) + a.ground(0, 420, y, 'grass', 30) + posts +
-        a.path(track, 'rp-track') + a.path(track, 'rp-track-ties') +
-        a.rect(40, top1 - 16, 72, top1 - 2, 'rp-car red', 4) + a.circle(48, top1 - 1, 4, 'rp-tyre') + a.circle(64, top1 - 1, 4, 'rp-tyre') +
-        height(6, y, top1 + 4, q(p.H, 'm'), 1) + height(410, y, top2 + 6, q(p.h2, 'm')),
-      L('A roller coaster with two hills', 'Eine Achterbahn mit zwei Hügeln'));
-    },
   };
 
   // ---------------------------------------------------------------- 4 pole vault
@@ -174,14 +145,6 @@
         `$$v = \\sqrt{2\\,g\\,(H - h_0)} = \\sqrt{2\\cdot ${gq}\\cdot ${tq(p.H - p.h0, 'm')}} ${res(v.vn, 'v')}$$` +
         p$(L('Top vaulters do sprint at about 10 m/s. They also push with their arms, and their centre of mass passes just under the bar.', 'Spitzenathletinnen sprinten tatsächlich mit etwa 10 m/s. Sie stossen sich zudem mit den Armen ab, und ihr Schwerpunkt passiert knapp unter der Latte.'))),
     ],
-    pic() {
-      const a = A(), y = 196;
-      return a.svg(420, 230, a.bg(0, 0, 420, 230) + a.ground(0, 420, y, 'concrete', 34) + a.rect(300, y - 22, 410, y, 'rp-mat', 4) +
-        a.line([318, y - 22], [318, 40], 'rp-post') + a.line([392, y - 22], [392, 40], 'rp-post') + a.line([314, 46], [396, 46], 'rp-bar') +
-        a.person(110, y, 1.3, { lean: 10, knee: 10, shirt: 'blue', hands: [[100, y - 64], [122, y - 70]] }) + a.line([60, y - 50], [260, y - 96], 'rp-vaultpole') +
-        a.path(`M40 ${y - 50}h30M30 ${y - 34}h36M42 ${y - 18}h22`, 'rp-speed') + a.path(`M262 ${y}l-12 -8h24z`, 'rp-dark'),
-      L('A pole vaulter running towards the bar', 'Eine Stabhochspringerin beim Anlauf zur Latte'));
-    },
   };
 
   // ---------------------------------------------------------------- 5 a cyclist rolling over two hills
@@ -209,15 +172,6 @@
         `$$m\\,g\\,h_1 + \\tfrac{1}{2}\\,m\\,v_0^2 = m\\,g\\,h_2 \\;\\Rightarrow\\; h_2 = h_1 + \\frac{v_0^2}{2\\,g} = ${tq(p.h1, 'm')} + \\frac{(${tq(p.v0, 'v')})^2}{2\\cdot ${gq}} ${res(v.h2, 'm')}$$` +
         p$(L('Higher than where she started: her kinetic energy at the start carries her further up.', 'Höher als dort, wo sie gestartet ist: Ihre kinetische Energie am Anfang trägt sie weiter hinauf.'))),
     ],
-    pic(p) {
-      const a = A(), y = 196, k = 110 / (p.h1 + sq(p.v0) / (2 * G)), top1 = y - p.h1 * k;
-      const hill = `M0 ${a.f(top1)}Q50 ${a.f(top1 - 6)} 100 ${a.f(top1 + 30)}Q170 ${y + 4} 220 ${y}Q280 ${y - 4} 340 ${a.f(y - 80)}Q380 ${a.f(y - 120)} 420 ${a.f(y - 130)}V230H0Z`;
-      return a.svg(420, 230, a.bg(0, 0, 420, 230) + a.path(hill, 'rp-hill') +
-        `<g transform="translate(40 ${a.f(top1 - 2)}) rotate(4)">` + a.rim(-14, -9, 9) + a.rim(14, -9, 9) + a.path('M-14 -9L-3 -24L10 -24L14 -9M-3 -24L0 -9L-14 -9M10 -24L12 -30', 'rp-frame') +
-        a.person(-2, -12, 0.55, { knee: 6, lean: 14, shirt: 'green', hands: [[9, -30], [11, -30]] }) + '</g>' +
-        height(218, y, top1, q(p.h1, 'm'), 1) + lbl(70, top1 - 48, q(p.v0, 'v'), 'lbl small', 'start') + a.line([228, y], [6, y], 'rp-hline-dot'),
-      L('A cyclist on a hill above a valley', 'Eine Velofahrerin auf einer Kuppe über einem Tal'));
-    },
   };
 
   // ---------------------------------------------------------------- 6 a ski jump
@@ -245,16 +199,6 @@
       step(L('At the landing', 'Bei der Landung'), p$(L(`Let $h_2$ be the height of the take-off above the landing point and $v_2$ the landing speed. Between ① and ③, she drops by $h_1 + h_2$:`, `Sei $h_2$ die Höhe des Schanzentischs über dem Landepunkt und $v_2$ die Landegeschwindigkeit. Zwischen ① und ③ sinkt sie um $h_1 + h_2$:`)) +
         `$$m\\,g\\,(h_1 + h_2) = \\tfrac{1}{2}\\,m\\,v_2^2 \\;\\Rightarrow\\; v_2 = \\sqrt{2\\,g\\,(h_1 + h_2)} = \\sqrt{2\\cdot ${gq}\\cdot ${tq(p.h1 + p.h2, 'm')}} ${res(v.v2, 'v')}$$`),
     ],
-    pic(p) {
-      const a = A(), k = 150 / (p.h1 + p.h2), yT = 30 + p.h1 * k, yL = yT + p.h2 * k;
-      return a.svg(420, 230, a.bg(0, 0, 420, 230) + a.tree(330, 120, 60) + a.tree(380, 130, 50) +
-        a.path(`M0 230V${a.f(yT + 70)}L150 ${a.f(yT + 8)}H176Q240 ${a.f(yT + 70)} 330 ${a.f(yL)}Q370 ${a.f(yL + 18)} 420 ${a.f(yL + 22)}V230Z`, 'rp-slope snow') +
-        a.path(`M20 30L150 ${a.f(yT - 4)}Q160 ${a.f(yT)} 176 ${a.f(yT)}L176 ${a.f(yT + 8)}L20 38Z`, 'rp-inrun') +
-        a.path(`M176 ${a.f(yT + 8)}Q260 ${a.f(yT + 30)} 330 ${a.f(yL)}`, 'rp-flight') +
-        skier(48, a.f(30 + 30 * (yT - 34) / 130), 0.45, a.f((Math.atan2(yT - 34, 130) * 180) / Math.PI)) + skier(250, a.f(yT + 4), 0.5, 10) +
-        height(14, yT, 30, q(p.h1, 'm'), 1) + a.line([176, yT], [400, yT], 'rp-hline-dot') + height(404, yL, yT, q(p.h2, 'm')),
-      L('A ski jump: in-run, take-off and landing', 'Eine Skisprungschanze: Anlauf, Absprung und Landung'));
-    },
   };
 
   // ---------------------------------------------------------------- 7 a rope swing
@@ -282,19 +226,6 @@
       step(L('In the water', 'Im Wasser'), p$(L('Let $d$ be the height of the lowest point above the lake. Between ① and ③, she drops by $\\ell/2 + d$:', 'Sei $d$ die Höhe des tiefsten Punkts über dem See. Zwischen ① und ③ sinkt sie um $\\ell/2 + d$:')) +
         `$$m\\,g\\left(\\frac{\\ell}{2} + d\\right) = \\tfrac{1}{2}\\,m\\,v_2^2 \\;\\Rightarrow\\; v_2 = \\sqrt{g\\,\\ell + 2\\,g\\,d} = \\sqrt{${gq}\\cdot ${tq(p.l, 'm')} + 2\\cdot ${gq}\\cdot ${tq(p.d, 'm')}} ${res(v.v2, 'v')}$$`),
     ],
-    pic(p) {
-      const a = A(), P = [250, 30], R = 130, low = [P[0], P[1] + R], th = (60 * Math.PI) / 180, start = [P[0] - R * Math.sin(th), P[1] + R * Math.cos(th)], yw = low[1] + 30;
-      return a.svg(420, 230, a.bg(0, 0, 420, 230) + a.rect(0, yw, 420, 230, 'rp-water', 0) + a.path(`M0 ${yw - 2}H420`, 'rp-waterline') +
-        a.path(`M0 ${a.f(start[1] + 24)}Q60 ${a.f(start[1] + 20)} 110 ${a.f(start[1] + 30)}L130 ${yw}H0Z`, 'rp-hill') +
-        a.path(`M420 18L${P[0] - 30} 26L${P[0] - 34} 32L420 30Z`, 'rp-branch') + a.rect(400, 0, 420, 230, 'rp-trunkwide', 0) +
-        a.path(`M${P[0]} ${P[1]}L${a.f(start[0])} ${a.f(start[1])}`, 'rp-rope') + a.path(`M${P[0]} ${P[1]}V${low[1]}`, 'rp-rope ghost') +
-        a.path(`M${a.f(start[0])} ${a.f(start[1])}A${R} ${R} 0 0 0 ${low[0]} ${low[1]}`, 'rp-hline-dot') +
-        a.person(start[0], start[1] + 50, 0.66, { shirt: 'orange', hands: [[start[0] - 1, start[1] + 2], [start[0] + 3, start[1] + 4]] }) +
-        a.circle(low[0], low[1], 4, 'rp-com') + lbl(low[0] + 30, low[1] + 4, L('lets go', 'lässt los')) +
-        a.path(`M${P[0] - 2} ${P[1] + 40}A40 40 0 0 1 ${a.f(P[0] - 40 * Math.sin(th))} ${a.f(P[1] + 40 * Math.cos(th))}`, 'rp-hline') + lbl(P[0] - 22, P[1] + 56, '60°') +
-        height(low[0] + 60, yw, low[1], q(p.d, 'm'), 1),
-      L('A girl on a rope swing above a lake', 'Ein Mädchen an einer Seilschaukel über einem See'));
-    },
   };
 
   // ---------------------------------------------------------------- 8 a slingshot
@@ -321,16 +252,6 @@
       step(L('The height', 'Die Höhe'), p$(L('At the top, at ③, all of it has become potential energy:', 'Zuoberst, in ③, ist alles zu Lageenergie geworden:')) +
         `$$\\tfrac{1}{2}\\,k\\,s^2 = m\\,g\\,h \\;\\Rightarrow\\; h = \\frac{k\\,s^2}{2\\,m\\,g} = \\frac{${tq(p.k, 'k')}\\cdot (${tq(p.s, 'm')})^2}{2\\cdot ${tq(p.m, 'kg')}\\cdot ${gq}} ${res(v.h, 'm')}$$`),
     ],
-    pic(p) {
-      const a = A(), x = 200, y = 150;
-      return a.svg(420, 230, a.bg(0, 0, 420, 230) + a.tree(60, 200, 80) + a.tree(360, 200, 66) + a.ground(0, 420, 200, 'grass', 30) +
-        a.path(`M${x - 6} 230V${y}L${x - 40} ${y - 70}M${x + 6} 230V${y}L${x + 40} ${y - 70}M${x - 6} ${y}H${x + 6}`, 'rp-slingframe') +
-        a.path(`M${x - 40} ${y - 68}L${x - 4} ${y - 14}M${x + 40} ${y - 68}L${x + 4} ${y - 14}`, 'rp-band-rubber') +
-        a.rect(x - 9, y - 18, x + 9, y - 8, 'rp-dark', 2) + a.circle(x, y - 24, 8, 'rp-stone') +
-        a.path(`M${x} ${y - 40}V24M${x - 5} 32L${x} 22L${x + 5} 32`, 'rp-hline') + lbl(x + 10, 50, L('straight up', 'senkrecht nach oben'), 'lbl small', 'start') +
-        a.person(x + 70, 200, 1.1, { shirt: 'blue', hands: [[x + 46, y + 2], [x + 8, y - 12]] }),
-      L('A slingshot pulled back, aimed straight up', 'Eine gespannte Steinschleuder, senkrecht nach oben gerichtet'));
-    },
   };
 
   // ---------------------------------------------------------------- 9 a pinball machine
@@ -362,17 +283,6 @@
       step(L('At the top', 'Zuoberst'), p$(L('Let $h$ be the height of the top above the plunger. Between ① and ③:', 'Sei $h$ die Höhe des oberen Endes über dem Bolzen. Zwischen ① und ③:')) +
         `$$\\tfrac{1}{2}\\,k\\,s^2 = m\\,g\\,h + \\tfrac{1}{2}\\,m\\,v_2^2 \\;\\Rightarrow\\; v_2 = \\sqrt{\\frac{k\\,s^2}{m} - 2\\,g\\,h} = \\sqrt{\\frac{${tq(p.k, 'k')}\\cdot (${tq(p.s, 'm')})^2}{${tq(p.m, 'kg')}} - 2\\cdot ${gq}\\cdot ${tq(p.h, 'm')}} ${res(v.v2, 'v')}$$`),
     ],
-    pic() {
-      const a = A(), x0 = 40, y0 = 196, x1 = 380, y1 = 96;
-      const at = (t, d = 0) => [x0 + t * (x1 - x0) - d * 0.28, y0 + t * (y1 - y0) - d * 0.96];
-      const box = (t0, t1, d0, d1) => [at(t0, d0), at(t1, d0), at(t1, d1), at(t0, d1)].map((pt) => pt.map(a.f).join(' ')).join('L');
-      return a.svg(420, 230, a.bg(0, 0, 420, 230, 'metal') + a.path(`M${box(0, 1, 0, 26)}Z`, 'rp-pintable') +
-        a.path(`M${at(0.02, 13).map(a.f).join(' ')}L${at(0.12, 13).map(a.f).join(' ')}`, 'rp-plunger') + zigzag(at(0.12, 13), at(0.24, 13), 6, 5) +
-        a.circle(...at(0.27, 13), 7, 'rp-ball') + a.circle(...at(0.6, 13), 9, 'rp-bumper') + a.circle(...at(0.8, 13), 9, 'rp-bumper') +
-        a.line([x0, y0 + 18], [x1, y0 + 18], 'rp-hline-dot') + a.line([x1, y1 + 4], [x1, y0 + 18], 'rp-hline') + lbl(x1 + 6, (y0 + y1) / 2 + 26, 'h', 'lbl small', 'start') +
-        a.path(`M${x0 - 10} ${y0 + 6}L${x0 + 30} 228H${x0 - 10}Z`, 'rp-dark') + a.path(`M${x1 - 30} ${y1 + 30}L${x1 + 4} 228H${x1 - 40}Z`, 'rp-dark'),
-      L('A sloping pinball table with the plunger and its spring', 'Ein schräger Flippertisch mit dem Abschussbolzen und seiner Feder'));
-    },
   };
 
   // ---------------------------------------------------------------- 10 a trampoline
@@ -404,14 +314,6 @@
           `$$s = \\frac{m\\,g + \\sqrt{(m\\,g)^2 + 2\\,k\\,m\\,g\\,h}}{k} = \\frac{${num(W)}\\,\\mathrm{N} + \\sqrt{(${num(W)}\\,\\mathrm{N})^2 + 2\\cdot ${tq(p.k, 'k')}\\cdot ${num(W)}\\,\\mathrm{N}\\cdot ${tq(p.h, 'm')}}}{${tq(p.k, 'k')}} ${res(v.s, 'm')}$$`),
       ];
     },
-    pic(p) {
-      const a = A(), y = 150, x0 = 90, x1 = 330;
-      return a.svg(420, 230, a.bg(0, 0, 420, 230) + a.tree(40, 196, 70) + a.tree(390, 196, 60) + a.ground(0, 420, 196, 'grass', 34) +
-        a.line([x0 + 10, y], [x0 - 4, 196], 'rp-tlegs') + a.line([x1 - 10, y], [x1 + 4, 196], 'rp-tlegs') + a.line([x0 + 40, y], [x0 + 46, 196], 'rp-tlegs') + a.line([x1 - 40, y], [x1 - 46, 196], 'rp-tlegs') +
-        a.path(`M${x0 + 10} ${y}Q210 ${y + 22} ${x1 - 10} ${y}`, 'rp-tmat') + a.rect(x0, y - 5, x0 + 20, y + 5, 'rp-tframe', 3) + a.rect(x1 - 20, y - 5, x1, y + 5, 'rp-tframe', 3) +
-        a.person(210, 96, 1.05, { shirt: 'orange', hands: [[190, 44], [230, 44]] }) + height(282, y + 8, 96, q(p.h, 'm'), 1),
-      L('A girl jumping on a trampoline', 'Ein Mädchen springt auf einem Trampolin'));
-    },
   };
 
   const PROBLEMS = [crash, fountain, coaster, vault, cyclist, skijump, swing, sling, pinball, trampoline];
@@ -439,7 +341,7 @@
       title: pb.title(), text: `<p>${pb.text(p)}</p><p class="note">${L('States', 'Zustände')}: ${pb.names().map((n, k) => `${CIRCLED[k]} ${n}`).join(', ')}. ${note}</p>`,
       zero, forms, table: states.map((s) => forms.map((k) => (s[k] || 0) > 1e-9)),
       fields, traps: [],
-      figure: () => (root.Art ? pb.pic(p) : ''),
+      figure: () => (root.EnergyFigures ? root.EnergyFigures[pb.id](p, v) : ''),
       solutionFigure: () => bars(states, forms, pb.title()),
       hints: [
         `${L('Choose the zero level', 'Wähle das Nullniveau')} (${L('here', 'hier')}: ${zero}). ${L('Which forms of energy does each state have?', 'Welche Energieformen hat jeder Zustand?')} $${E('pot')} = m\\,g\\,h$, $${E('kin')} = \\tfrac{1}{2}\\,m\\,v^2$${pb.spring ? `, $${E('el')} = \\tfrac{1}{2}\\,k\\,s^2$` : ''}.`,

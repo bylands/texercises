@@ -12,7 +12,10 @@
 //   SHM or not       pick-shm, shm-1 … shm-3
 //   equation, graph  match-1, match-2 (an equation and four graphs), match-back (a graph and four
 //                    equations)
-//   kinematics       vmax, back-f, back-A, speed-x, speed-t
+//   A, T and φ₀      read-3, read-4 (amplitude, period and phase off a graph)
+//   where on y(t)    points (the point where v or a is largest, zero, positive or negative)
+//   kinematics       vmax, back-w, back-A
+//   energy           energy (the kinetic share at a displacement, or where both are equal)
 (function (root) {
   'use strict';
 
@@ -186,314 +189,350 @@
   };
 
   // ================================================================ 2 equation and graph
-  // Equations with numbers (t in s, y in cm), from y(0) = Y0 and ẏ(0) = 0. Each kind: its TeX
-  // (K: the factor ω², G: damping, g: the constant), its motion, and why it would be wrong.
+  // Qualitative only: equations with letters (ω, γ, k, g all positive) and graphs without
+  // numbers. The body starts displaced (y(0) > 0), at rest. Each kind: its TeX and the motion
+  // drawn (numbers only for the drawing).
   const Y0 = 2;
-  // a factor before a variable: 1 is left out
-  const k$ = (K) => (K === 1 ? '' : `${K}\\cdot `);
+  const N = { w2: 1, G: 0.3, k: 0.35, g: 4 }; // the numbers of the drawings
   const NKINDS = {
-    shm: { tex: (y, n) => `\\ddot ${y} = -${k$(n.K)}${y}`, motion: (n) => ({ order: 2, acc: (y) => -n.K * y }), period: (n) => PI2 / Math.sqrt(n.K) },
-    omega: { tex: (y, n) => `\\ddot ${y} = -${k$(n.K * n.K)}${y}`, motion: (n) => ({ order: 2, acc: (y) => -n.K * n.K * y }) },
-    root: { tex: (y, n) => `\\ddot ${y} = -${k$(sig(Math.sqrt(n.K)))}${y}`, motion: (n) => ({ order: 2, acc: (y) => -Math.sqrt(n.K) * y }) },
-    damp: { tex: (y, n) => `\\ddot ${y} + ${n.G}\\cdot\\dot ${y} + ${k$(n.K)}${y} = 0`, motion: (n) => ({ order: 2, acc: (y, v) => -n.G * v - n.K * y }) },
-    anti: { tex: (y, n) => `\\ddot ${y} - ${n.G}\\cdot\\dot ${y} + ${k$(n.K)}${y} = 0`, motion: (n) => ({ order: 2, acc: (y, v) => n.G * v - n.K * y }) },
-    plus: { tex: (y, n) => `\\ddot ${y} = ${k$(n.K)}${y}`, motion: (n) => ({ order: 2, acc: (y) => n.K * y }) },
-    first: { tex: (y, n) => `\\dot ${y} = -${k$(n.K)}${y}`, motion: (n) => ({ order: 1, rate: (y) => -n.K * y }) },
-    const: { tex: (y, n) => `\\ddot ${y} = -${n.K}`, motion: (n) => ({ order: 2, acc: () => -n.K }) },
-    shift: { tex: (y, n) => `\\ddot ${y} = -${k$(n.K)}${y} + ${n.g}`, motion: (n) => ({ order: 2, acc: (y) => -n.K * y + n.g }), period: (n) => PI2 / Math.sqrt(n.K) },
-    unshift: { tex: (y, n) => `\\ddot ${y} = -${k$(n.K)}${y}`, motion: (n) => ({ order: 2, acc: (y) => -n.K * y }) },
-    cube: { tex: (y, n) => `\\ddot ${y} = -${k$(n.K)}${y}^3`, motion: (n) => ({ order: 2, acc: (y) => -n.K * y * y * y }) },
+    shm: { tex: (y) => `\\ddot ${y} = -\\omega^2\\cdot ${y}`, motion: () => ({ order: 2, acc: (y) => -N.w2 * y }) },
+    damp: { tex: (y) => `\\ddot ${y} + \\gamma\\cdot\\dot ${y} + \\omega^2\\cdot ${y} = 0`, motion: () => ({ order: 2, acc: (y, v) => -N.G * v - N.w2 * y }) },
+    anti: { tex: (y) => `\\ddot ${y} - \\gamma\\cdot\\dot ${y} + \\omega^2\\cdot ${y} = 0`, motion: () => ({ order: 2, acc: (y, v) => N.G * v - N.w2 * y }) },
+    plus: { tex: (y) => `\\ddot ${y} = k^2\\cdot ${y}`, motion: () => ({ order: 2, acc: (y) => N.k * N.k * y }) },
+    first: { tex: (y) => `\\dot ${y} = -k\\cdot ${y}`, motion: () => ({ order: 1, rate: (y) => -N.k * y }) },
+    const: { tex: (y) => `\\ddot ${y} = -g`, motion: () => ({ order: 2, acc: () => -N.g / 10 }) },
+    shift: { tex: (y) => `\\ddot ${y} = -\\omega^2\\cdot ${y} + g`, motion: () => ({ order: 2, acc: (y) => -N.w2 * y + N.g }) },
+    unshift: { tex: (y) => `\\ddot ${y} = -\\omega^2\\cdot ${y}`, motion: () => ({ order: 2, acc: (y) => -N.w2 * y }) },
   };
-  // why a graph (or an equation) of kind k is wrong when the right one is of kind right
+  // what a graph shows, and why it is wrong when the right one is another
   function graphWhy(k, right) {
     const W = {
-      omega: L('This one oscillates too fast: in ÿ = −K·y, the factor K is ω², so ω = √K.', 'Diese schwingt zu schnell: In ÿ = −K·y ist der Faktor K gleich ω², also ω = √K.'),
-      root: L('This one oscillates too slowly: in ÿ = −K·y, the factor K is ω² itself, so ω = √K, not ⁴√K.', 'Diese schwingt zu langsam: In ÿ = −K·y ist der Faktor K gleich ω², also ω = √K, nicht ⁴√K.'),
       shm: right === 'damp' ? L('Here the amplitude stays the same. But the term with ẏ damps the oscillation: the amplitude dies away.', 'Hier bleibt die Amplitude gleich. Der Term mit ẏ dämpft die Schwingung aber: Die Amplitude klingt ab.')
-        : right === 'shift' ? L('This one oscillates around 0. The constant shifts the equilibrium to g/K: the body oscillates around it.', 'Diese schwingt um 0. Die Konstante verschiebt die Gleichgewichtslage zu g/K: Der Körper schwingt um sie.')
-          : right === 'plus' ? L('An oscillation needs ÿ = −K·y. With a plus sign, there is no restoring force: the body runs away.', 'Eine Schwingung braucht ÿ = −K·y. Mit Pluszeichen gibt es keine rücktreibende Kraft: Der Körper läuft davon.')
-            : right === 'first' ? L('An oscillation needs the second derivative. With ẏ = −K·y, the body creeps towards 0 and never turns back.', 'Eine Schwingung braucht die zweite Ableitung. Mit ẏ = −K·y kriecht der Körper gegen 0 und kehrt nie um.')
-              : L('A constant acceleration gives no oscillation: the graph is a parabola.', 'Eine konstante Beschleunigung gibt keine Schwingung: Der Graph ist eine Parabel.'),
-      damp: L('The amplitude of this one dies away: that needs a term with ẏ (damping).', 'Bei dieser klingt die Amplitude ab: Das braucht einen Term mit ẏ (Dämpfung).'),
-      anti: L('The amplitude of this one grows: the damping term has the wrong sign.', 'Bei dieser wächst die Amplitude: Der Dämpfungsterm hat das falsche Vorzeichen.'),
-      plus: L('This one runs away exponentially: that would be ÿ = +K·y, without a restoring force.', 'Diese läuft exponentiell davon: Das wäre ÿ = +K·y, ohne rücktreibende Kraft.'),
-      first: L('This one creeps towards 0 without turning back: that would be ẏ = −K·y, with the first derivative only.', 'Diese kriecht gegen 0, ohne umzukehren: Das wäre ẏ = −K·y, nur mit der ersten Ableitung.'),
-      const: L('This is a parabola: a constant acceleration, ÿ = −K.', 'Das ist eine Parabel: eine konstante Beschleunigung, ÿ = −K.'),
-      unshift: L('This one oscillates around 0, but the constant shifts the equilibrium to g/K.', 'Diese schwingt um 0, aber die Konstante verschiebt die Gleichgewichtslage zu g/K.'),
+        : right === 'anti' ? L('Here the amplitude stays the same. But with −γ·ẏ the oscillation is driven: the amplitude grows.', 'Hier bleibt die Amplitude gleich. Mit −γ·ẏ wird die Schwingung aber angetrieben: Die Amplitude wächst.')
+          : right === 'shift' ? L('This one oscillates around 0. The constant g shifts the equilibrium to g/ω², so the body oscillates around it.', 'Diese schwingt um 0. Die Konstante g verschiebt die Gleichgewichtslage nach g/ω², der Körper schwingt also um sie.')
+            : right === 'plus' ? L('An oscillation needs a minus sign: ÿ = −ω²·y. With a plus sign, there is no restoring force: the body runs away.', 'Eine Schwingung braucht ein Minuszeichen: ÿ = −ω²·y. Mit Pluszeichen gibt es keine rücktreibende Kraft: Der Körper läuft davon.')
+              : right === 'first' ? L('An oscillation needs the second derivative. With ẏ = −k·y, the body creeps towards 0 and never turns back.', 'Eine Schwingung braucht die zweite Ableitung. Mit ẏ = −k·y kriecht der Körper gegen 0 und kehrt nie um.')
+                : L('A constant acceleration gives no oscillation: the graph is a parabola.', 'Eine konstante Beschleunigung gibt keine Schwingung: Der Graph ist eine Parabel.'),
+      damp: L('The amplitude of this one dies away: that needs a term +γ·ẏ (damping).', 'Bei dieser klingt die Amplitude ab: Das braucht einen Term +γ·ẏ (Dämpfung).'),
+      anti: L('The amplitude of this one grows: that would be −γ·ẏ, a damping term with the wrong sign.', 'Bei dieser wächst die Amplitude: Das wäre −γ·ẏ, ein Dämpfungsterm mit dem falschen Vorzeichen.'),
+      plus: L('This one runs away exponentially: that would be ÿ = +k²·y, without a restoring force.', 'Diese läuft exponentiell davon: Das wäre ÿ = +k²·y, ohne rücktreibende Kraft.'),
+      first: L('This one creeps towards 0 without turning back: that would be ẏ = −k·y, with the first derivative only.', 'Diese kriecht gegen 0, ohne umzukehren: Das wäre ẏ = −k·y, nur mit der ersten Ableitung.'),
+      const: L('This is a parabola: a constant acceleration, ÿ = −g.', 'Das ist eine Parabel: eine konstante Beschleunigung, ÿ = −g.'),
+      unshift: L('This one oscillates around 0, but the constant g shifts the equilibrium.', 'Diese schwingt um 0, aber die Konstante g verschiebt die Gleichgewichtslage.'),
       shift: L('This one oscillates around a shifted equilibrium: that needs a constant in the equation.', 'Diese schwingt um eine verschobene Gleichgewichtslage: Das braucht eine Konstante in der Gleichung.'),
-      cube: L('Its peaks are flattened, and its period depends on the amplitude: that is ÿ = −K·y³, not harmonic.', 'Ihre Spitzen sind abgeflacht, und ihre Periode hängt von der Amplitude ab: Das ist ÿ = −K·y³, nicht harmonisch.'),
     };
     return W[k] || '';
   }
-  const FLAG = { omega: 'omega2', root: 'omega2', damp: 'damp', anti: 'sign', plus: 'sign', first: 'order', const: 'const', shift: 'shift', unshift: 'shift', cube: 'power', shm: null };
+  const FLAG = { damp: 'damp', anti: 'sign', plus: 'sign', first: 'order', const: 'const', shift: 'shift', unshift: 'shift', shm: null };
 
   // the given kind and the wrong ones, in the order they are tried (some may look alike)
-  const MATCH1 = { shm: ['omega', 'root', 'damp', 'plus', 'first'], plus: ['shm', 'first', 'const', 'damp'], first: ['shm', 'plus', 'damp', 'const'] };
-  const MATCH2 = { damp: ['shm', 'anti', 'omega', 'first'], shift: ['unshift', 'omega', 'damp', 'plus'], const: ['shm', 'plus', 'first', 'damp'] };
-  const KS = [1, 4, 9, 16, 0.25];
-  function matchNums(r, given) {
-    const K = given === 'first' || given === 'plus' || given === 'const' ? pick(r, [0.5, 1, 2]) : pick(r, KS);
-    const w = Math.sqrt(K), T = PI2 / w;
-    return { K, G: sig(pick(r, [0.15, 0.2, 0.3]) * w, 2), g: sig(K * pick(r, [1, 1.5, 3]), 2), T };
-  }
-  // the time axis: about three periods of the given oscillation
-  const tEndOf = (n) => { const t = 3 * n.T; return [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30].find((x) => x >= t * 0.95) || 40; };
-  function curveOf(kind, n, tEnd) { return Eq.trace(NKINDS[kind].motion(n), tEnd, 240, Y0); }
-  // four graphs: the right one and the first three wrong ones that do not look like another
-  function matchOptions(given, wrongs, n, tEnd, axis) {
-    const span = axis.hi - axis.lo, kept = [[given, curveOf(given, n, tEnd)]];
+  const MATCH1 = { shm: ['damp', 'plus', 'first', 'anti', 'const'], plus: ['shm', 'first', 'const', 'damp'], first: ['shm', 'plus', 'damp', 'const'] };
+  const MATCH2 = { damp: ['shm', 'anti', 'first', 'plus'], anti: ['shm', 'damp', 'plus', 'first'], shift: ['unshift', 'damp', 'plus', 'const'], const: ['shm', 'plus', 'first', 'damp'] };
+  const T_END = 20;
+  const curveOf = (kind) => Eq.trace(NKINDS[kind].motion(), T_END, 240, Y0);
+  // the axis: room for a shifted equilibrium only where one is among the graphs
+  const AXIS = { lo: -3, hi: 9, step: 3 }, AXIS0 = { lo: -3, hi: 3, step: 1 };
+  const axisOf = (kinds) => (kinds.some((k) => k === 'shift') ? AXIS : AXIS0);
+  // a graph without numbers: only the axes, y(0) > 0 and the line y = 0
+  const qGraph = (kind, y, axis, o = {}) => Plot.graph([{ pts: curveOf(kind) }], { tEnd: T_END, axis, name: y, bare: true, label: L('A graph of the motion', 'Ein Graph der Bewegung'), ...o });
+  function matchOptions(given, wrongs) {
+    const span = AXIS.hi - AXIS.lo, clip = (pts) => pts.map(([t, y]) => [t, Math.max(AXIS.lo, Math.min(AXIS.hi, y))]), kept = [[given, clip(curveOf(given))]];
     for (const k of wrongs) {
       if (kept.length === 4) break;
-      const c = curveOf(k, n, tEnd), clipped = (pts) => pts.map(([t, y]) => [t, Math.max(axis.lo, Math.min(axis.hi, y))]);
-      if (kept.some(([, d]) => Plot.alike(clipped(c), clipped(d), span))) continue;
-      kept.push([k, c]);
+      const c = clip(curveOf(k));
+      if (!kept.some(([, d]) => Plot.alike(c, d, span))) kept.push([k, c]);
     }
-    return kept;
+    return kept.map((k) => k[0]);
   }
-  const yAxis = (n, given) => {
-    const pts = curveOf(given, n, tEndOf(n)).map((p) => p[1]);
-    return Plot.niceAxis([...pts, -Y0 * 1.1, Y0 * 1.1].filter((y) => Math.abs(y) < 40));
-  };
+  const KIND_TEXT = () => ({
+    shm: L('ÿ = −ω²·y: the acceleration points back to 0 and grows with the displacement: an SHM around 0, with a constant amplitude.', 'ÿ = −ω²·y: Die Beschleunigung zeigt zu 0 zurück und wächst mit der Auslenkung: eine harmonische Schwingung um 0, mit konstanter Amplitude.'),
+    damp: L('ÿ = −ω²·y with a term +γ·ẏ that brakes the motion like friction: a damped oscillation, its amplitude dies away.', 'ÿ = −ω²·y mit einem Term +γ·ẏ, der die Bewegung wie Reibung bremst: eine gedämpfte Schwingung, ihre Amplitude klingt ab.'),
+    anti: L('ÿ = −ω²·y with a term −γ·ẏ that pushes in the direction of motion: the oscillation is driven, its amplitude grows.', 'ÿ = −ω²·y mit einem Term −γ·ẏ, der in Bewegungsrichtung schiebt: Die Schwingung wird angetrieben, ihre Amplitude wächst.'),
+    shift: L('ÿ = −ω²·y plus a constant g: the acceleration is 0 at y = g/ω², not at 0. An SHM around this shifted equilibrium.', 'ÿ = −ω²·y plus eine Konstante g: Die Beschleunigung ist 0 bei y = g/ω², nicht bei 0. Eine harmonische Schwingung um diese verschobene Gleichgewichtslage.'),
+    plus: L('ÿ = +k²·y: the acceleration points away from 0, the more the farther: the body runs away exponentially.', 'ÿ = +k²·y: Die Beschleunigung zeigt von 0 weg, umso stärker, je weiter: Der Körper läuft exponentiell davon.'),
+    first: L('ẏ = −k·y: the velocity is proportional to the displacement; the body creeps towards 0 (exponentially) and never turns back.', 'ẏ = −k·y: Die Geschwindigkeit ist proportional zur Auslenkung; der Körper kriecht (exponentiell) gegen 0 und kehrt nie um.'),
+    const: L('ÿ = −g: a constant acceleration, as in a throw: the graph is a parabola opening downwards.', 'ÿ = −g: eine konstante Beschleunigung, wie bei einem Wurf: Der Graph ist eine nach unten geöffnete Parabel.'),
+  });
+  const MATCH_HINTS = () => [
+    L('Look at the form of the equation, not at numbers: is there ÿ = −ω²·y (an oscillation), a term with ẏ (damping or driving), a constant (a shifted equilibrium), a plus sign or only the first derivative (no oscillation)?', 'Schau auf die Form der Gleichung, nicht auf Zahlen: Gibt es ÿ = −ω²·y (eine Schwingung), einen Term mit ẏ (Dämpfung oder Antrieb), eine Konstante (eine verschobene Gleichgewichtslage), ein Pluszeichen oder nur die erste Ableitung (keine Schwingung)?'),
+    L('In the graphs: does the amplitude stay the same, die away or grow? Around which line does it oscillate? Does it oscillate at all?', 'In den Graphen: Bleibt die Amplitude gleich, klingt sie ab oder wächst sie? Um welche Linie schwingt er? Schwingt er überhaupt?'),
+    L('At the start the body is at rest above 0: the graph starts with a horizontal tangent.', 'Am Anfang ist der Körper oberhalb von 0 in Ruhe: Der Graph beginnt mit einer waagrechten Tangente.'),
+  ];
 
   function matchScenario(id, difficulty, table) {
     return {
       id, difficulty, kind: 'match',
       title: () => L('Which graph?', 'Welcher Graph?'),
       make: (r) => {
-        const given = pick(r, Object.keys(table)), n = matchNums(r, given), y = pick(r, ['x', 'y', 'z', 'u']);
-        const tEnd = tEndOf(n), axis = yAxis(n, given);
-        const kinds = matchOptions(given, table[given], n, tEnd, axis).map((k) => k[0]);
+        const given = pick(r, Object.keys(table)), y = pick(r, ['x', 'y', 'z', 'u']);
+        const kinds = matchOptions(given, table[given]);
         if (kinds.length < 4) return null;
-        return { given, n, y, tEnd, axis, kinds: shuffle(r, kinds) };
+        return { given, y, kinds: shuffle(r, kinds) };
       },
       solve: (p) => ({ graph: p.given }),
       traps: [],
-      fields: (p) => [choice('graph', L('Which graph shows the motion?', 'Welcher Graph zeigt die Bewegung?'), p.kinds.map((k) => [k,
-        Plot.graph([{ pts: curveOf(k, p.n, p.tEnd) }], { tEnd: p.tEnd, axis: p.axis, name: p.y, unit: 'cm', label: L('A graph to choose', 'Ein Graph zur Auswahl') }),
-        k === p.given ? '' : graphWhy(k, p.given), k === p.given ? null : FLAG[k]]), { pics: true })],
-      text: (p) => L(`A body moves according to the equation below (t in s, ${p.y} in cm). At t = 0 it is at ${p.y} = ${Y0} cm, at rest. Which graph shows its motion?`,
-        `Ein Körper bewegt sich gemäss der Gleichung unten (t in s, ${p.y} in cm). Bei t = 0 ist er bei ${p.y} = ${Y0} cm, in Ruhe. Welcher Graph zeigt seine Bewegung?`),
-      hints: (p) => matchHints(p),
-      steps: (p) => matchSteps(p),
-      figure: (p, v, view) => box(NKINDS[p.given].tex(p.y, p.n)) + (view.show && view.show.has('graph') ? `<div class="fig">${Plot.graph([{ pts: curveOf(p.given, p.n, p.tEnd) }], { tEnd: p.tEnd, axis: p.axis, name: p.y, unit: 'cm', marks: NKINDS[p.given].period ? [p.n.T] : [], label: L('The motion', 'Die Bewegung') })}</div>` : ''),
+      fields: (p) => [choice('graph', L('Which graph shows the motion?', 'Welcher Graph zeigt die Bewegung?'), p.kinds.map((k) => [k, qGraph(k, p.y, axisOf(p.kinds)), k === p.given ? '' : graphWhy(k, p.given), k === p.given ? null : FLAG[k]]), { pics: true })],
+      text: (p) => L(`A body moves according to the equation below (the constants are positive). At the start it is displaced to ${p.y} > 0 and at rest. Which graph shows its motion?`,
+        `Ein Körper bewegt sich gemäss der Gleichung unten (die Konstanten sind positiv). Am Anfang ist er nach ${p.y} > 0 ausgelenkt und in Ruhe. Welcher Graph zeigt seine Bewegung?`),
+      hints: () => MATCH_HINTS(),
+      steps: (p) => [
+        step(L('The form of the equation', 'Die Form der Gleichung'), p$(KIND_TEXT()[p.given])),
+        step(L('The graph', 'Der Graph'), p$(L('So the graph is this one:', 'Der Graph ist also dieser:')), ['graph']),
+      ],
+      figure: (p, v, view) => box(NKINDS[p.given].tex(p.y)) + (view.show && view.show.has('graph') ? `<div class="fig">${qGraph(p.given, p.y, axisOf(p.kinds))}</div>` : ''),
     };
-  }
-  const T$ = (n) => `T = \\frac{2\\pi}{\\sqrt{${n.K}}}\\,\\mathrm{s} = ${tnum(n.T)}\\,\\mathrm{s}`;
-  function matchHints(p) {
-    const g = p.given, n = p.n;
-    return [
-      L('First the kind of motion: an oscillation needs ÿ = −K·y. A term with ẏ damps it, a constant shifts the equilibrium, a plus sign or the first derivative alone gives no oscillation.', 'Zuerst die Art der Bewegung: Eine Schwingung braucht ÿ = −K·y. Ein Term mit ẏ dämpft sie, eine Konstante verschiebt die Gleichgewichtslage, ein Pluszeichen oder nur die erste Ableitung geben keine Schwingung.'),
-      NKINDS[g].period ? L(`Then the period: K = ω², so ω = √K and $${T$(n)}$.`, `Dann die Periode: K = ω², also ω = √K und $${T$(n)}$.`)
-        : g === 'damp' ? L(`The period is about that without damping: $${T$(n)}$.`, `Die Periode ist etwa die ohne Dämpfung: $${T$(n)}$.`)
-          : L('Where does the body go from rest at y(0)? Look at the sign of the acceleration there.', 'Wohin geht der Körper aus der Ruhe bei y(0)? Schau auf das Vorzeichen der Beschleunigung dort.'),
-      g === 'shift' ? L(`The equilibrium is where ÿ = 0: at ${p.y} = g/K = ${sig(n.g / n.K)} cm.`, `Die Gleichgewichtslage ist dort, wo ÿ = 0 ist: bei ${p.y} = g/K = ${sig(n.g / n.K)} cm.`)
-        : L(`Start: ${p.y}(0) = ${Y0} cm, at rest.`, `Start: ${p.y}(0) = ${Y0} cm, in Ruhe.`),
-    ];
-  }
-  function matchSteps(p) {
-    const g = p.given, n = p.n, kind = {
-      shm: L('The equation has the form ÿ = −K·y: an SHM.', 'Die Gleichung hat die Form ÿ = −K·y: eine harmonische Schwingung.'),
-      damp: L('ÿ = −K·y plus a term with ẏ: a damped oscillation, its amplitude dies away.', 'ÿ = −K·y plus ein Term mit ẏ: eine gedämpfte Schwingung, ihre Amplitude klingt ab.'),
-      shift: L('ÿ = −K·y plus a constant: an SHM around a shifted equilibrium.', 'ÿ = −K·y plus eine Konstante: eine harmonische Schwingung um eine verschobene Gleichgewichtslage.'),
-      plus: L('ÿ = +K·y: the acceleration points away from 0, the body runs away exponentially.', 'ÿ = +K·y: Die Beschleunigung zeigt von 0 weg, der Körper läuft exponentiell davon.'),
-      first: L('ẏ = −K·y: the velocity is proportional to the displacement; the body creeps towards 0 (exponentially) and never turns back.', 'ẏ = −K·y: Die Geschwindigkeit ist proportional zur Auslenkung; der Körper kriecht (exponentiell) gegen 0 und kehrt nie um.'),
-      const: L('ÿ = −K: a constant acceleration, as in a throw; the graph is a parabola opening downwards.', 'ÿ = −K: eine konstante Beschleunigung, wie bei einem Wurf; der Graph ist eine nach unten geöffnete Parabel.'),
-    }[g];
-    const out = [step(L('The kind of motion', 'Die Art der Bewegung'), p$(kind))];
-    if (NKINDS[g].period || g === 'damp') {
-      out.push(step(L('The period', 'Die Periode'), p$(L(`With K = ω²: ω = √K, so`, `Mit K = ω²: ω = √K, also`)) + `$$${T$(n)}$$` +
-        (g === 'shift' ? p$(L(`The equilibrium: ÿ = 0 at ${p.y} = g/K = ${sig(n.g / n.K)} cm. The body starts at ${Y0} cm and oscillates around it.`, `Die Gleichgewichtslage: ÿ = 0 bei ${p.y} = g/K = ${sig(n.g / n.K)} cm. Der Körper startet bei ${Y0} cm und schwingt um sie.`)) : '') +
-        (g === 'damp' ? p$(L('(With weak damping, the period is nearly the same as without.)', '(Bei schwacher Dämpfung ist die Periode fast gleich wie ohne.)')) : '')));
-    }
-    out.push(step(L('The graph', 'Der Graph'), p$(L('So the graph is this one:', 'Der Graph ist also dieser:')), ['graph']));
-    return out;
   }
   const match1 = matchScenario('match-1', 2, MATCH1);
   const match2 = matchScenario('match-2', 3, MATCH2);
 
   // a graph and four equations
-  const BACK = { shm: ['omega', 'root', 'plus', 'damp'], damp: ['anti', 'shm', 'omega', 'first'], shift: ['unshift', 'omega', 'damp', 'plus'] };
+  const BACK = { shm: ['damp', 'plus', 'anti', 'first'], damp: ['anti', 'shm', 'first', 'plus'], anti: ['damp', 'shm', 'plus', 'first'], shift: ['unshift', 'damp', 'plus', 'anti'] };
   const matchBack = {
-    id: 'match-back', difficulty: 4, kind: 'back',
+    id: 'match-back', difficulty: 3, kind: 'back',
     title: () => L('Which equation?', 'Welche Gleichung?'),
     make: (r) => {
       const given = pick(r, Object.keys(BACK)), y = pick(r, ['x', 'y', 'z', 'u']);
-      const K = pick(r, [1, 4, 9, 16]), w = Math.sqrt(K), n = { K, G: sig(pick(r, [0.15, 0.2, 0.3]) * w, 2), g: sig(K * pick(r, [1, 1.5, 3]), 2), T: PI2 / w };
-      const tEnd = tEndOf(n), axis = yAxis(n, given);
-      // equations that differ from the right one, as TeX
-      const kinds = [given, ...BACK[given].filter((k) => NKINDS[k].tex(y, n) !== NKINDS[given].tex(y, n))].slice(0, 4);
-      if (new Set(kinds.map((k) => NKINDS[k].tex(y, n))).size < 4) return null;
-      return { given, n, y, tEnd, axis, kinds: shuffle(r, kinds) };
+      return { given, y, kinds: shuffle(r, [given, ...BACK[given].slice(0, 3)]) };
     },
     solve: (p) => ({ eq: p.given }),
     traps: [],
-    fields: (p) => [choice('eq', L('Which equation belongs to the graph?', 'Welche Gleichung gehört zum Graphen?'), p.kinds.map((k) => [k, `$${NKINDS[k].tex(p.y, p.n)}$`, k === p.given ? '' : graphWhy(k, p.given), k === p.given ? null : FLAG[k]]), { stack: true })],
-    text: (p) => L(`The graph shows the motion of a body (t in s, ${p.y} in cm). It starts at rest. Which equation of motion belongs to it?`, `Der Graph zeigt die Bewegung eines Körpers (t in s, ${p.y} in cm). Er startet in Ruhe. Welche Bewegungsgleichung gehört dazu?`),
-    hints: (p) => [
-      L('First the kind: a constant amplitude (SHM), a dying amplitude (damping, a term with ẏ), or an oscillation around a shifted equilibrium (a constant).', 'Zuerst die Art: eine konstante Amplitude (harmonisch), eine abklingende Amplitude (Dämpfung, ein Term mit ẏ) oder eine Schwingung um eine verschobene Gleichgewichtslage (eine Konstante).'),
-      L('Read the period T off the graph. Then ω = 2π/T, and the factor in ÿ = −K·y is K = ω².', 'Lies die Periode T am Graphen ab. Dann ist ω = 2π/T, und der Faktor in ÿ = −K·y ist K = ω².'),
-      L(`Here T ≈ ${sig(p.n.T, 2)} s.`, `Hier ist T ≈ ${sig(p.n.T, 2)} s.`),
-    ],
+    fields: (p) => [choice('eq', L('Which equation belongs to the graph?', 'Welche Gleichung gehört zum Graphen?'), p.kinds.map((k) => [k, `$${NKINDS[k].tex(p.y)}$`, k === p.given ? '' : graphWhy(k, p.given), k === p.given ? null : FLAG[k]]), { stack: true })],
+    text: (p) => L(`The graph shows the motion of a body; it starts at rest. Which equation of motion belongs to it (the constants are positive)?`, `Der Graph zeigt die Bewegung eines Körpers; er startet in Ruhe. Welche Bewegungsgleichung gehört dazu (die Konstanten sind positiv)?`),
+    hints: () => [MATCH_HINTS()[1], MATCH_HINTS()[0]],
     steps: (p) => [
-      step(L('The period', 'Die Periode'), p$(L(`From the graph: T ≈ ${sig(p.n.T, 2)} s. So`, `Aus dem Graphen: T ≈ ${sig(p.n.T, 2)} s. Also`)) + `$$\\omega = \\frac{2\\pi}{T} = ${sig(Math.sqrt(p.n.K))}\\,\\mathrm{s^{-1}},\\qquad K = \\omega^2 = ${p.n.K}\\,\\mathrm{s^{-2}}$$`, ['marks']),
-      step(L('The equation', 'Die Gleichung'), p$({
-        shm: L('A constant amplitude around 0: an SHM, ÿ = −K·y.', 'Eine konstante Amplitude um 0: eine harmonische Schwingung, ÿ = −K·y.'),
-        damp: L('The amplitude dies away: a damping term with ẏ, with a plus sign on the left.', 'Die Amplitude klingt ab: ein Dämpfungsterm mit ẏ, mit Pluszeichen auf der linken Seite.'),
-        shift: L('A constant amplitude, but around a shifted equilibrium: ÿ = −K·y + g.', 'Eine konstante Amplitude, aber um eine verschobene Gleichgewichtslage: ÿ = −K·y + g.'),
-      }[p.given]) + `$$${res(NKINDS[p.given].tex(p.y, p.n))}$$`, ['marks']),
+      step(L('What the graph shows', 'Was der Graph zeigt'), p$({
+        shm: L('A constant amplitude around 0: an SHM.', 'Eine konstante Amplitude um 0: eine harmonische Schwingung.'),
+        damp: L('An oscillation around 0 whose amplitude dies away: damped.', 'Eine Schwingung um 0, deren Amplitude abklingt: gedämpft.'),
+        anti: L('An oscillation around 0 whose amplitude grows: driven.', 'Eine Schwingung um 0, deren Amplitude wächst: angetrieben.'),
+        shift: L('A constant amplitude, but around a line above 0: a shifted equilibrium.', 'Eine konstante Amplitude, aber um eine Linie oberhalb von 0: eine verschobene Gleichgewichtslage.'),
+      }[p.given])),
+      step(L('The equation', 'Die Gleichung'), p$(KIND_TEXT()[p.given]) + `$$${res(NKINDS[p.given].tex(p.y))}$$`),
     ],
-    figure: (p, v, view) => `<div class="fig">${Plot.graph([{ pts: curveOf(p.given, p.n, p.tEnd) }], { tEnd: p.tEnd, axis: p.axis, name: p.y, unit: 'cm', marks: view.show && view.show.has('marks') ? [p.n.T, 2 * p.n.T].filter((t) => t <= p.tEnd) : [], label: L('The motion', 'Die Bewegung') })}</div>`,
+    figure: (p) => `<div class="fig">${qGraph(p.given, p.y, axisOf([p.given]))}</div>`,
   };
 
   // ================================================================ 3 kinematics
-  // x(t) = A·sin(ωt) (or A·cos(ωt)), ω = 2π/T = 2πf, v_max = A·ω, a_max = A·ω².
+  // y(t) = A·sin(ωt), the angular frequency ω given (no 2π to work out): v̂ = A·ω, â = A·ω².
   const AS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20].map((x) => x / 100); // m
-  const FS = [0.2, 0.25, 0.4, 0.5, 0.8, 1, 1.25, 1.5, 2, 2.5, 4, 5];
+  const WS = [2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20]; // s⁻¹
   const unitOfA = (A) => (A < 0.01 ? 'mm' : 'cm');
-  const wT = (p) => (p.giveT ? `\\frac{2\\pi}{T} = \\frac{2\\pi}{${tq(1 / p.f, 's')}}` : `2\\pi f = 2\\pi\\cdot ${tq(p.f, 'Hz')}`);
-  const givenFT = (p) => (p.giveT ? L(`a period of ${q(1 / p.f, 's')}`, `einer Periode von ${q(1 / p.f, 's')}`) : L(`a frequency of ${q(p.f, 'Hz')}`, `einer Frequenz von ${q(p.f, 'Hz')}`));
+  const VH = '\\hat v', AH = '\\hat a', W = (w) => `${tnum(w)}\\,\\mathrm{s^{-1}}`;
   const xGraph = (p, o = {}) => {
-    const w = PI2 * p.f, T = 1 / p.f, tEnd = 2 * T, cm = p.A * 100, ph = p.start === 'top' ? Math.PI / 2 : 0;
+    const f = p.w ? p.w / PI2 : p.f, w = PI2 * f, T = 1 / f, tEnd = 2 * T, cm = p.A * 100, ph = p.start === 'top' ? Math.PI / 2 : 0;
     const pts = Array.from({ length: 201 }, (z, k) => { const t = (k * tEnd) / 200; return [t, cm * Math.sin(w * t + ph)]; });
-    return `<div class="fig">${Plot.graph([{ pts }], { tEnd, name: 'x', unit: 'cm', axis: Plot.niceAxis([-cm * 1.05, cm * 1.05]), label: L('Displacement against time', 'Auslenkung gegen die Zeit'), ...o })}</div>`;
+    return `<div class="fig">${Plot.graph([{ pts }], { tEnd, name: 'y', unit: 'cm', axis: Plot.niceAxis([-cm * 1.05, cm * 1.05]), label: L('Displacement against time', 'Auslenkung gegen die Zeit'), ...o })}</div>`;
   };
   const WHYK = {
-    noTwoPi: () => L('The angular frequency is ω = 2πf, not f: the 2π is missing.', 'Die Kreisfrequenz ist ω = 2πf, nicht f: Es fehlt der Faktor 2π.'),
-    twopiT: () => L('ω = 2π/T, not 2π·T.', 'ω = 2π/T, nicht 2π·T.'),
-    square: () => L('v_max = A·ω and a_max = A·ω²: the square belongs to the acceleration.', 'v_max = A·ω und a_max = A·ω²: Das Quadrat gehört zur Beschleunigung.'),
-    inverse: () => L('Upside down: from v_max = A·ω, ω = v_max/A.', 'Kehrwert verwechselt: Aus v_max = A·ω folgt ω = v_max/A.'),
-    freq: () => L('That is the frequency f = ω/(2π); the angular frequency is ω = a_max/v_max.', 'Das ist die Frequenz f = ω/(2π); die Kreisfrequenz ist ω = a_max/v_max.'),
-    vx: () => L('v = ω·x would be largest at the turning point, where the body stands still. The speed is largest at the equilibrium: v = ω·√(A² − x²).', 'v = ω·x wäre am Umkehrpunkt am grössten, wo der Körper stillsteht. Die Geschwindigkeit ist in der Gleichgewichtslage am grössten: v = ω·√(A² − x²).'),
-    linear: () => L('The speed does not fall off linearly with x: v = ω·√(A² − x²) (from energy, or from sin² + cos² = 1).', 'Die Geschwindigkeit nimmt nicht linear mit x ab: v = ω·√(A² − x²) (aus der Energie, oder aus sin² + cos² = 1).'),
-    plus: () => L('A minus under the root: v = ω·√(A² − x²); at x = A the speed is 0.', 'Unter der Wurzel ein Minus: v = ω·√(A² − x²); bei x = A ist die Geschwindigkeit 0.'),
-    amax: () => L('That is the largest acceleration, at the turning point. At x, a = ω²·x.', 'Das ist die grösste Beschleunigung, am Umkehrpunkt. Bei x ist a = ω²·x.'),
-    swap: () => L('Sine and cosine swapped: check where the body is at t = 0.', 'Sinus und Kosinus vertauscht: Prüfe, wo der Körper bei t = 0 ist.'),
-    deg: () => L('Your calculator is set to degrees: ω·t is in radians.', 'Dein Taschenrechner steht auf Grad: ω·t ist im Bogenmass.'),
+    square: () => L('$\\hat v = A\\,\\omega$ and $\\hat a = A\\,\\omega^2$: the square belongs to the acceleration.', '$\\hat v = A\\,\\omega$ und $\\hat a = A\\,\\omega^2$: Das Quadrat gehört zur Beschleunigung.'),
+    inverse: () => L('Upside down: from $\\hat v = A\\,\\omega$, $\\omega = \\hat v / A$.', 'Kehrwert verwechselt: Aus $\\hat v = A\\,\\omega$ folgt $\\omega = \\hat v / A$.'),
+    inverseA: () => L('Upside down: $\\hat a / \\hat v = A\\omega^2 / (A\\omega) = \\omega$.', 'Kehrwert verwechselt: $\\hat a / \\hat v = A\\omega^2 / (A\\omega) = \\omega$.'),
   };
-  const pickAF = (r) => ({ A: pick(r, AS), f: pick(r, FS), giveT: r() < 0.5 });
+  const pickAW = (r) => ({ A: pick(r, AS), w: pick(r, WS) });
+  const given = (p) => L(`an amplitude of ${q(p.A, unitOfA(p.A))} and an angular frequency of ${q(p.w, '')} s⁻¹`, `einer Amplitude von ${q(p.A, unitOfA(p.A))} und einer Kreisfrequenz von ${q(p.w, '')} s⁻¹`);
+  const peaks = (p, view, key) => (view.show && view.show.has(key) ? (key === 'eq' ? [[0, 0], [Math.PI / p.w, 0]] : [[(Math.PI / 2) / p.w, p.A * 100], [(1.5 * Math.PI) / p.w, -p.A * 100]]) : []);
 
   const vmax = {
     id: 'vmax', difficulty: 2, kind: 'kin',
     title: () => L('Fastest and strongest', 'Am schnellsten, am stärksten'),
-    make: pickAF,
-    solve: (p, o = {}) => { const w = o.noTwoPi ? p.f : o.twopiT && p.giveT ? PI2 / p.f : PI2 * p.f; return { w, vmax: o.square ? p.A * w * w : p.A * w, amax: o.square ? p.A * w : p.A * w * w }; },
-    traps: ['noTwoPi', 'twopiT', 'square'],
-    why: { noTwoPi: WHYK.noTwoPi, twopiT: WHYK.twopiT, square: WHYK.square },
-    fields: (p) => { const w = PI2 * p.f; return [num$('vmax', 'v_\\mathrm{max}', speedUnit(p.A * w), L('largest speed', 'grösste Geschwindigkeit')), num$('amax', 'a_\\mathrm{max}', 'm/s²', L('largest acceleration', 'grösste Beschleunigung'))]; },
-    text: (p) => L(`A body oscillates harmonically with an amplitude of ${q(p.A, unitOfA(p.A))} and ${givenFT(p)}. What are its largest speed and its largest acceleration?`,
-      `Ein Körper schwingt harmonisch mit einer Amplitude von ${q(p.A, unitOfA(p.A))} und ${givenFT(p)}. Wie gross sind seine grösste Geschwindigkeit und seine grösste Beschleunigung?`),
+    make: pickAW,
+    solve: (p, o = {}) => ({ vmax: o.square ? p.A * p.w * p.w : p.A * p.w, amax: o.square ? p.A * p.w : p.A * p.w * p.w }),
+    traps: ['square'],
+    why: { square: WHYK.square },
+    fields: (p) => [num$('vmax', VH, speedUnit(p.A * p.w), L('largest speed', 'grösste Geschwindigkeit')), num$('amax', AH, 'm/s²', L('largest acceleration', 'grösste Beschleunigung'))],
+    text: (p) => L(`A body oscillates harmonically with ${given(p)}. What are its largest speed and its largest acceleration?`, `Ein Körper schwingt harmonisch mit ${given(p)}. Wie gross sind seine grösste Geschwindigkeit und seine grösste Beschleunigung?`),
     hints: () => [
-      L('From $x(t) = A\\cdot\\sin(\\omega t)$: $v(t) = A\\omega\\cdot\\cos(\\omega t)$ and $a(t) = -A\\omega^2\\cdot\\sin(\\omega t)$. Cosine and sine are at most 1.', 'Aus $x(t) = A\\cdot\\sin(\\omega t)$: $v(t) = A\\omega\\cdot\\cos(\\omega t)$ und $a(t) = -A\\omega^2\\cdot\\sin(\\omega t)$. Kosinus und Sinus sind höchstens 1.'),
-      L('$\\omega = 2\\pi f = 2\\pi/T$. The amplitude in metres.', '$\\omega = 2\\pi f = 2\\pi/T$. Die Amplitude in Metern.'),
+      L('From $y(t) = A\\cdot\\sin(\\omega t)$: $v(t) = A\\omega\\cdot\\cos(\\omega t)$ and $a(t) = -A\\omega^2\\cdot\\sin(\\omega t)$. Cosine and sine are at most 1.', 'Aus $y(t) = A\\cdot\\sin(\\omega t)$: $v(t) = A\\omega\\cdot\\cos(\\omega t)$ und $a(t) = -A\\omega^2\\cdot\\sin(\\omega t)$. Kosinus und Sinus sind höchstens 1.'),
+      L('$\\hat v = A\\,\\omega$ and $\\hat a = A\\,\\omega^2$, the amplitude in metres.', '$\\hat v = A\\,\\omega$ und $\\hat a = A\\,\\omega^2$, die Amplitude in Metern.'),
     ],
     steps: (p, v) => [
-      step(L('The angular frequency', 'Die Kreisfrequenz'), `$$\\omega = ${wT(p)} = ${tnum(v.w)}\\,\\mathrm{s^{-1}}$$`),
-      step(L('The largest speed', 'Die grösste Geschwindigkeit'), p$(L('With $x(t) = A\\cdot\\sin(\\omega t)$, the velocity is $v(t) = A\\omega\\cdot\\cos(\\omega t)$: largest where the cosine is ±1, at the equilibrium.', 'Mit $x(t) = A\\cdot\\sin(\\omega t)$ ist die Geschwindigkeit $v(t) = A\\omega\\cdot\\cos(\\omega t)$: am grössten, wo der Kosinus ±1 ist, in der Gleichgewichtslage.')) +
-        `$$v_\\mathrm{max} = A\\,\\omega = ${tq(p.A, 'm')}\\cdot ${tnum(v.w)}\\,\\mathrm{s^{-1}} = ${res(tq(v.vmax, speedUnit(v.vmax)))}$$`, ['eq']),
+      step(L('The largest speed', 'Die grösste Geschwindigkeit'), p$(L('With $y(t) = A\\cdot\\sin(\\omega t)$, the velocity is $v(t) = A\\omega\\cdot\\cos(\\omega t)$: largest where the cosine is ±1, at the equilibrium.', 'Mit $y(t) = A\\cdot\\sin(\\omega t)$ ist die Geschwindigkeit $v(t) = A\\omega\\cdot\\cos(\\omega t)$: am grössten, wo der Kosinus ±1 ist, in der Gleichgewichtslage.')) +
+        `$$\\hat v = A\\,\\omega = ${tq(p.A, 'm')}\\cdot ${W(p.w)} = ${res(tq(v.vmax, speedUnit(v.vmax)))}$$`, ['eq']),
       step(L('The largest acceleration', 'Die grösste Beschleunigung'), p$(L('The acceleration $a(t) = -A\\omega^2\\cdot\\sin(\\omega t)$ is largest at the turning points.', 'Die Beschleunigung $a(t) = -A\\omega^2\\cdot\\sin(\\omega t)$ ist an den Umkehrpunkten am grössten.')) +
-        `$$a_\\mathrm{max} = A\\,\\omega^2 = ${tq(p.A, 'm')}\\cdot (${tnum(v.w)}\\,\\mathrm{s^{-1}})^2 = ${res(tq(v.amax, 'm/s²'))}$$`, ['top']),
+        `$$\\hat a = A\\,\\omega^2 = ${tq(p.A, 'm')}\\cdot (${W(p.w)})^2 = ${res(tq(v.amax, 'm/s²'))}$$`, ['top']),
     ],
-    figure: (p, v, view) => (view.task ? '' : xGraph({ ...p, start: 'eq' }, { dots: view.show && view.show.has('eq') ? [[0, 0], [0.5 / p.f, 0]] : view.show && view.show.has('top') ? [[0.25 / p.f, p.A * 100], [0.75 / p.f, -p.A * 100]] : [] })),
+    figure: (p, v, view) => (view.task ? '' : xGraph(p, { dots: [...peaks(p, view, 'eq'), ...peaks(p, view, 'top')] })),
   };
 
-  const backF = {
-    id: 'back-f', difficulty: 3, kind: 'kin',
-    title: () => L('How often?', 'Wie oft?'),
-    make: pickAF,
-    solve: (p, o = {}) => { const vm = p.A * PI2 * p.f, w = o.inverse ? p.A / vm : vm / p.A, f = o.noTwoPi ? w : w / PI2; return { vm, w, f, T: 1 / f }; },
-    traps: ['inverse', 'noTwoPi'],
-    why: { inverse: WHYK.inverse, noTwoPi: WHYK.noTwoPi },
-    fields: () => [num$('f', 'f', 'Hz', L('frequency', 'Frequenz')), num$('T', 'T', 's', L('period', 'Periode'))],
-    text: (p) => { const vm = p.A * PI2 * p.f; return L(`A body oscillates harmonically with an amplitude of ${q(p.A, unitOfA(p.A))}. Its largest speed is ${q(vm, speedUnit(vm))}. What are its frequency and its period?`, `Ein Körper schwingt harmonisch mit einer Amplitude von ${q(p.A, unitOfA(p.A))}. Seine grösste Geschwindigkeit beträgt ${q(vm, speedUnit(vm))}. Wie gross sind seine Frequenz und seine Periode?`); },
-    hints: () => [L('$v_\\mathrm{max} = A\\,\\omega$: solve for $\\omega$.', '$v_\\mathrm{max} = A\\,\\omega$: Löse nach $\\omega$ auf.'), L('$f = \\omega/(2\\pi)$ and $T = 1/f$.', '$f = \\omega/(2\\pi)$ und $T = 1/f$.')],
+  // from the amplitude and the largest speed: ω, and then the largest acceleration
+  const backW = {
+    id: 'back-w', difficulty: 3, kind: 'kin',
+    title: () => L('How fast does it oscillate?', 'Wie schnell schwingt er?'),
+    make: pickAW,
+    solve: (p, o = {}) => { const vm = p.A * p.w, w = o.flip ? p.A / vm : vm / p.A; return { vm, w, amax: o.square ? p.A * w : p.A * w * w }; },
+    traps: ['flip', 'square'],
+    why: { flip: WHYK.inverse, square: WHYK.square },
+    fields: () => [num$('w', '\\omega', 'rad/s', L('angular frequency', 'Kreisfrequenz')), num$('amax', AH, 'm/s²', L('largest acceleration', 'grösste Beschleunigung'))],
+    text: (p) => { const vm = p.A * p.w; return L(`A body oscillates harmonically with an amplitude of ${q(p.A, unitOfA(p.A))}. Its largest speed is ${q(vm, speedUnit(vm))}. What are its angular frequency and its largest acceleration?`, `Ein Körper schwingt harmonisch mit einer Amplitude von ${q(p.A, unitOfA(p.A))}. Seine grösste Geschwindigkeit beträgt ${q(vm, speedUnit(vm))}. Wie gross sind seine Kreisfrequenz und seine grösste Beschleunigung?`); },
+    hints: () => [L('$\\hat v = A\\,\\omega$: solve for $\\omega$.', '$\\hat v = A\\,\\omega$: Löse nach $\\omega$ auf.'), L('Then $\\hat a = A\\,\\omega^2$ (or $\\hat a = \\hat v\\,\\omega$).', 'Dann $\\hat a = A\\,\\omega^2$ (oder $\\hat a = \\hat v\\,\\omega$).')],
     steps: (p, v) => [
-      step(L('The angular frequency', 'Die Kreisfrequenz'), `$$\\omega = \\frac{v_\\mathrm{max}}{A} = \\frac{${tq(v.vm, 'm/s')}}{${tq(p.A, 'm')}} = ${tnum(v.w)}\\,\\mathrm{s^{-1}}$$`),
-      step(L('Frequency and period', 'Frequenz und Periode'), `$$f = \\frac{\\omega}{2\\pi} = ${res(tq(v.f, 'Hz'))},\\qquad T = \\frac{1}{f} = ${res(tq(v.T, 's'))}$$`, ['T']),
+      step(L('The angular frequency', 'Die Kreisfrequenz'), `$$\\omega = \\frac{\\hat v}{A} = \\frac{${tq(v.vm, 'm/s')}}{${tq(p.A, 'm')}} = ${res(W(v.w))}$$`),
+      step(L('The largest acceleration', 'Die grösste Beschleunigung'), `$$\\hat a = A\\,\\omega^2 = ${tq(p.A, 'm')}\\cdot (${W(v.w)})^2 = ${res(tq(v.amax, 'm/s²'))}$$`, ['top']),
     ],
-    figure: (p, v, view) => (view.task ? '' : xGraph({ ...p, start: 'eq' }, { marks: view.show && view.show.has('T') ? [1 / p.f] : [] })),
+    figure: (p, v, view) => (view.task ? '' : xGraph(p, { dots: peaks(p, view, 'top') })),
   };
 
   const backA = {
     id: 'back-A', difficulty: 3, kind: 'kin',
     title: () => L('How far?', 'Wie weit?'),
-    make: pickAF,
-    solve: (p, o = {}) => { const w0 = PI2 * p.f, vm = p.A * w0, am = p.A * w0 * w0, w = o.inverse ? vm / am : o.freq ? am / vm / PI2 : am / vm; return { vm, am, w, A: vm / w }; },
-    traps: ['inverse', 'freq'],
-    why: { inverse: () => L('Upside down: a_max/v_max = Aω²/(Aω) = ω.', 'Kehrwert verwechselt: a_max/v_max = Aω²/(Aω) = ω.'), freq: WHYK.freq },
+    make: pickAW,
+    solve: (p, o = {}) => { const vm = p.A * p.w, am = p.A * p.w * p.w, w = o.flip ? vm / am : am / vm; return { vm, am, w, A: vm / w }; },
+    traps: ['flip'],
+    why: { flip: WHYK.inverseA },
     fields: (p) => [num$('w', '\\omega', 'rad/s', L('angular frequency', 'Kreisfrequenz')), num$('A', 'A', unitOfA(p.A), L('amplitude', 'Amplitude'))],
-    text: (p) => { const w = PI2 * p.f, vm = p.A * w, am = p.A * w * w; return L(`A body oscillates harmonically. Its largest speed is ${q(vm, speedUnit(vm))}, its largest acceleration ${q(am, 'm/s²')}. What are its angular frequency and its amplitude?`, `Ein Körper schwingt harmonisch. Seine grösste Geschwindigkeit beträgt ${q(vm, speedUnit(vm))}, seine grösste Beschleunigung ${q(am, 'm/s²')}. Wie gross sind seine Kreisfrequenz und seine Amplitude?`); },
-    hints: () => [L('$v_\\mathrm{max} = A\\,\\omega$ and $a_\\mathrm{max} = A\\,\\omega^2$: two equations for $A$ and $\\omega$.', '$v_\\mathrm{max} = A\\,\\omega$ und $a_\\mathrm{max} = A\\,\\omega^2$: zwei Gleichungen für $A$ und $\\omega$.'), L('Divide them: $a_\\mathrm{max}/v_\\mathrm{max} = \\omega$.', 'Teile sie: $a_\\mathrm{max}/v_\\mathrm{max} = \\omega$.')],
+    text: (p) => { const vm = p.A * p.w, am = vm * p.w; return L(`A body oscillates harmonically. Its largest speed is ${q(vm, speedUnit(vm))}, its largest acceleration ${q(am, 'm/s²')}. What are its angular frequency and its amplitude?`, `Ein Körper schwingt harmonisch. Seine grösste Geschwindigkeit beträgt ${q(vm, speedUnit(vm))}, seine grösste Beschleunigung ${q(am, 'm/s²')}. Wie gross sind seine Kreisfrequenz und seine Amplitude?`); },
+    hints: () => [L('$\\hat v = A\\,\\omega$ and $\\hat a = A\\,\\omega^2$: two equations for $A$ and $\\omega$.', '$\\hat v = A\\,\\omega$ und $\\hat a = A\\,\\omega^2$: zwei Gleichungen für $A$ und $\\omega$.'), L('Divide them: $\\hat a / \\hat v = \\omega$.', 'Teile sie: $\\hat a / \\hat v = \\omega$.')],
     steps: (p, v) => [
-      step(L('The angular frequency', 'Die Kreisfrequenz'), p$(L('Divide $a_\\mathrm{max} = A\\,\\omega^2$ by $v_\\mathrm{max} = A\\,\\omega$:', 'Teile $a_\\mathrm{max} = A\\,\\omega^2$ durch $v_\\mathrm{max} = A\\,\\omega$:')) + `$$\\omega = \\frac{a_\\mathrm{max}}{v_\\mathrm{max}} = \\frac{${tq(v.am, 'm/s²')}}{${tq(v.vm, 'm/s')}} = ${res(`${tnum(v.w)}\\,\\mathrm{s^{-1}}`)}$$`),
-      step(L('The amplitude', 'Die Amplitude'), `$$A = \\frac{v_\\mathrm{max}}{\\omega} = \\frac{${tq(v.vm, 'm/s')}}{${tnum(v.w)}\\,\\mathrm{s^{-1}}} = ${res(tq(v.A, unitOfA(p.A)))}$$`, ['top']),
+      step(L('The angular frequency', 'Die Kreisfrequenz'), p$(L('Divide $\\hat a = A\\,\\omega^2$ by $\\hat v = A\\,\\omega$:', 'Teile $\\hat a = A\\,\\omega^2$ durch $\\hat v = A\\,\\omega$:')) + `$$\\omega = \\frac{\\hat a}{\\hat v} = \\frac{${tq(v.am, 'm/s²')}}{${tq(v.vm, 'm/s')}} = ${res(W(v.w))}$$`),
+      step(L('The amplitude', 'Die Amplitude'), `$$A = \\frac{\\hat v}{\\omega} = \\frac{${tq(v.vm, 'm/s')}}{${W(v.w)}} = ${res(tq(v.A, unitOfA(p.A)))}$$`, ['top']),
     ],
-    figure: (p, v, view) => (view.task ? '' : xGraph({ ...p, start: 'eq' }, { dots: view.show && view.show.has('top') ? [[0.25 / p.f, p.A * 100]] : [] })),
+    figure: (p, v, view) => (view.task ? '' : xGraph(p, { dots: peaks(p, view, 'top') })),
   };
 
-  const speedX = {
-    id: 'speed-x', difficulty: 4, kind: 'kin',
-    title: () => L('On the way', 'Unterwegs'),
-    make: (r) => { const p = pickAF(r); p.k = pick(r, [0.2, 0.25, 0.4, 0.5, 0.6, 0.75, 0.8]); return p; },
-    solve: (p, o = {}) => {
-      const w = PI2 * p.f, x = p.k * p.A;
-      const v = o.vx ? w * x : o.linearv ? p.A * w * (1 - p.k) : o.rootplus ? w * Math.sqrt(p.A ** 2 + x ** 2) : w * Math.sqrt(p.A ** 2 - x ** 2);
-      return { w, x, v, a: o.amax ? w * w * p.A : w * w * x };
+  // ================================================================ 4 amplitude, period and phase
+  // y(t) = A·sin(ωt + φ₀), −π < φ₀ ≤ π; the graph with numbers: A, T and φ₀ to read off.
+  // ★3: φ₀ a multiple of π/2; ★4: of π/4 (from y(0) = A·sin φ₀ and the direction at t = 0).
+  const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));
+  // k·π/4 as TeX
+  function piTex(k) {
+    if (k === 0) return '0';
+    const g = gcd(Math.abs(k), 4), n = k / g, d = 4 / g, sg = n < 0 ? '-' : '', a = Math.abs(n);
+    return d === 1 ? `${sg}${a === 1 ? '' : a}\\pi` : `${sg}\\frac{${a === 1 ? '' : a}\\pi}{${d}}`;
+  }
+  const RA = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8], RT = [0.4, 0.5, 0.8, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6];
+  // a time step for the grid that divides T (labels every step, lines every half step)
+  const tickFor = (T) => [0.1, 0.2, 0.25, 0.5, 1, 2].find((x) => (2 * T) / x <= 10 && Math.abs(T / x - Math.round(T / x)) < 1e-9) || 0.5;
+  function readScenario(id, difficulty, ks) {
+    return {
+      id, difficulty, kind: 'read',
+      title: () => L('Amplitude, period and phase', 'Amplitude, Periode und Phase'),
+      make: (r) => ({ A: pick(r, RA), T: pick(r, RT), k: pick(r, ks) }),
+      solve: (p, o = {}) => {
+        const phi = (p.k * Math.PI) / 4;
+        return { A: (o.peak ? 2 : 1) * p.A / 100, T: o.half ? p.T / 2 : p.T, phi: o.sign ? -phi : o.cos ? phi - Math.PI / 2 : o.deg ? (phi * 180) / Math.PI : phi };
+      },
+      traps: ['peak', 'half', 'sign', 'cos', 'deg'],
+      why: {
+        peak: () => L('That is the distance from the highest to the lowest point: 2A. The amplitude is the largest displacement from the equilibrium.', 'Das ist der Abstand vom höchsten zum tiefsten Punkt: 2A. Die Amplitude ist die grösste Auslenkung aus der Gleichgewichtslage.'),
+        half: () => L('That is only half a period, from a crest to a trough. One period goes from a crest to the next crest.', 'Das ist nur eine halbe Periode, von einem Berg zu einem Tal. Eine Periode geht von einem Berg zum nächsten Berg.'),
+        sign: () => L('Check the direction at t = 0: does y increase or decrease there? sin(ωt + φ₀) increases where the cosine of the phase is positive.', 'Prüfe die Richtung bei t = 0: Nimmt y dort zu oder ab? sin(ωt + φ₀) nimmt zu, wo der Kosinus der Phase positiv ist.'),
+        cos: () => L('That would be the phase for y(t) = A·cos(ωt + φ₀). Here the sine is asked for: sin(ωt + φ₀).', 'Das wäre die Phase für y(t) = A·cos(ωt + φ₀). Hier ist der Sinus gefragt: sin(ωt + φ₀).'),
+        deg: () => L('That is in degrees. The phase is asked in radians: 90° = π/2.', 'Das ist in Grad. Die Phase ist im Bogenmass gefragt: 90° = π/2.'),
+      },
+      fields: (p) => [num$('A', 'A', 'cm', L('amplitude', 'Amplitude')), num$('T', 'T', 's', L('period', 'Periode')),
+        { ...num$('phi', '\\varphi_0', 'rad', L('phase', 'Phase'), true), phase: true, show: piTex(p.k) }],
+      text: () => L('The graph shows a harmonic oscillation. Write it as y(t) = A·sin(ωt + φ₀) with −π &lt; φ₀ ≤ π: what are the amplitude A, the period T and the phase φ₀? (Type the phase as pi/2, -3pi/4, …)',
+        'Der Graph zeigt eine harmonische Schwingung. Schreib sie als y(t) = A·sin(ωt + φ₀) mit −π &lt; φ₀ ≤ π: Wie gross sind die Amplitude A, die Periode T und die Phase φ₀? (Tippe die Phase als pi/2, -3pi/4, …)'),
+      hints: (p) => [
+        L('The amplitude is the largest displacement from the equilibrium (the line y = 0).', 'Die Amplitude ist die grösste Auslenkung aus der Gleichgewichtslage (der Linie y = 0).'),
+        L('The period is the time from one crest to the next.', 'Die Periode ist die Zeit von einem Berg zum nächsten.'),
+        L('At t = 0: y(0) = A·sin φ₀, and y increases if cos φ₀ > 0, decreases if cos φ₀ < 0.', 'Bei t = 0: y(0) = A·sin φ₀, und y nimmt zu, wenn cos φ₀ > 0, ab, wenn cos φ₀ < 0.'),
+      ],
+      steps: (p) => {
+        const phi = (p.k * Math.PI) / 4, x0 = p.A * Math.sin(phi), up = Math.cos(phi) > 1e-9, down = Math.cos(phi) < -1e-9;
+        const tc = (((Math.PI / 2 - phi) / (2 * Math.PI)) % 1 + 1) % 1 * p.T; // the first crest
+        return [
+          step(L('The amplitude', 'Die Amplitude'), p$(L(`The largest displacement from y = 0: <span class="result">A = ${num(p.A)} cm</span>.`, `Die grösste Auslenkung aus y = 0: <span class="result">A = ${num(p.A)} cm</span>.`)), ['crest']),
+          step(L('The period', 'Die Periode'), p$(L(`From one crest to the next: <span class="result">T = ${num(p.T)} s</span> (so ω = 2π/T = ${num(PI2 / p.T)} s⁻¹).`, `Von einem Berg zum nächsten: <span class="result">T = ${num(p.T)} s</span> (also ω = 2π/T = ${num(PI2 / p.T)} s⁻¹).`)), ['period']),
+          step(L('The phase', 'Die Phase'), p$(L(`At t = 0 the graph is at y(0) = ${num(sig(x0, 2))} cm${up ? ' and rising' : down ? ' and falling' : p.k === 2 ? ', a crest' : ', a trough'}. So sin φ₀ = y(0)/A = ${num(sig(x0 / p.A, 2))}${up ? ' with cos φ₀ > 0' : down ? ' with cos φ₀ < 0' : ''}:`,
+            `Bei t = 0 ist der Graph bei y(0) = ${num(sig(x0, 2))} cm${up ? ' und steigt' : down ? ' und fällt' : p.k === 2 ? ', ein Berg' : ', ein Tal'}. Also sin φ₀ = y(0)/A = ${num(sig(x0 / p.A, 2))}${up ? ' mit cos φ₀ > 0' : down ? ' mit cos φ₀ < 0' : ''}:`)) +
+            `$$\\varphi_0 = ${res(piTex(p.k))},\\qquad y(t) = ${num(p.A)}\\,\\mathrm{cm}\\cdot\\sin\\!\\left(\\frac{2\\pi}{${num(p.T)}\\,\\mathrm{s}}\\,t ${p.k ? (p.k > 0 ? '+' : '-') + ' ' + piTex(Math.abs(p.k)) : ''}\\right)$$`, ['start']),
+        ];
+      },
+      figure: (p, v, view) => {
+        const phi = (p.k * Math.PI) / 4, tEnd = 2 * p.T, sh = view.show || new Set();
+        const pts = Array.from({ length: 241 }, (z, j) => { const t = (j * tEnd) / 240; return [t, p.A * Math.sin((PI2 * t) / p.T + phi)]; });
+        const tc = ((((Math.PI / 2 - phi) / PI2) % 1) + 1) % 1 * p.T;
+        return `<div class="fig">${Plot.graph([{ pts }], { tEnd, tStep: tickFor(p.T), name: 'y', unit: 'cm', axis: Plot.niceAxis([-p.A * 1.15, p.A * 1.15]),
+          dots: [...(sh.has('crest') ? [[tc, p.A]] : []), ...(sh.has('start') ? [[0, p.A * Math.sin(phi)]] : [])], marks: sh.has('period') ? [tc, tc + p.T].filter((t) => t <= tEnd + 1e-9) : [],
+          label: L('Displacement against time', 'Auslenkung gegen die Zeit') })}</div>`;
+      },
+    };
+  }
+  const read3 = readScenario('read-3', 3, [0, 2, 4, -2]);
+  const read4 = readScenario('read-4', 4, [1, 3, -1, -3]);
+
+  // ================================================================ 5 where on the graph
+  // y(t) = A·sin(ωt) with four named points; one question, one point the answer.
+  const PTS = ['P', 'Q', 'R', 'S'];
+  const ASK = {
+    vmax: { q: () => L('At which point is the body fastest?', 'In welchem Punkt ist der Körper am schnellsten?'), ok: (u) => Math.abs(Math.cos(PI2 * u)) > 0.999 },
+    v0: { q: () => L('At which point is the body at rest for a moment?', 'In welchem Punkt ist der Körper einen Moment lang in Ruhe?'), ok: (u) => Math.abs(Math.sin(PI2 * u)) > 0.999 },
+    amax: { q: () => L('At which point is the acceleration largest (in size)?', 'In welchem Punkt ist die Beschleunigung (dem Betrag nach) am grössten?'), ok: (u) => Math.abs(Math.sin(PI2 * u)) > 0.999 },
+    aplus: { q: () => L('At which point does the acceleration point in the positive direction?', 'In welchem Punkt zeigt die Beschleunigung in positive Richtung?'), ok: (u) => Math.sin(PI2 * u) < -1e-6 },
+    vminus: { q: () => L('At which point does the body move in the negative direction?', 'In welchem Punkt bewegt sich der Körper in negativer Richtung?'), ok: (u) => Math.cos(PI2 * u) < -1e-6 },
+  };
+  // the state of the body at phase u (in periods), in words
+  function stateAt(u) {
+    const x = Math.sin(PI2 * u), v = Math.cos(PI2 * u);
+    if (Math.abs(x) > 0.999) return x > 0 ? L('at the upper turning point: v = 0, the acceleration largest, pointing down (negative)', 'am oberen Umkehrpunkt: v = 0, die Beschleunigung am grössten, nach unten (negativ)') : L('at the lower turning point: v = 0, the acceleration largest, pointing up (positive)', 'am unteren Umkehrpunkt: v = 0, die Beschleunigung am grössten, nach oben (positiv)');
+    if (Math.abs(x) < 1e-6) return v > 0 ? L('at the equilibrium, moving up: the speed largest, a = 0', 'in der Gleichgewichtslage, nach oben unterwegs: die Geschwindigkeit am grössten, a = 0') : L('at the equilibrium, moving down: the speed largest, a = 0', 'in der Gleichgewichtslage, nach unten unterwegs: die Geschwindigkeit am grössten, a = 0');
+    return L(`${x > 0 ? 'above' : 'below'} the equilibrium, moving ${v > 0 ? 'up' : 'down'}: the acceleration points ${x > 0 ? 'down (negative)' : 'up (positive)'}`, `${x > 0 ? 'oberhalb' : 'unterhalb'} der Gleichgewichtslage, nach ${v > 0 ? 'oben' : 'unten'} unterwegs: Die Beschleunigung zeigt nach ${x > 0 ? 'unten (negativ)' : 'oben (positiv)'}`);
+  }
+  const points = {
+    id: 'points', difficulty: 2, kind: 'points',
+    title: () => L('Where on the graph?', 'Wo auf dem Graphen?'),
+    make: (r) => {
+      const ask = pick(r, Object.keys(ASK)), cand = Array.from({ length: 15 }, (z, k) => (k + 1) / 8); // phases 1/8 … 15/8 periods
+      const us = shuffle(r, cand.slice()).slice(0, 4).sort((a, b) => a - b);
+      if (us.filter(ASK[ask].ok).length !== 1) return null;
+      if (us.some((u, i) => i && u - us[i - 1] < 0.24)) return null; // apart, so the letters do not crowd
+      return { ask, us };
     },
-    traps: ['vx', 'linearv', 'rootplus', 'amax'],
-    why: { vx: WHYK.vx, linearv: WHYK.linear, rootplus: WHYK.plus, amax: WHYK.amax },
-    fields: (p) => { const w = PI2 * p.f; return [num$('v', 'v', speedUnit(w * p.A), L('speed there', 'Geschwindigkeit dort')), num$('a', 'a', 'm/s²', L('size of the acceleration there', 'Betrag der Beschleunigung dort'))]; },
-    text: (p) => L(`A body oscillates harmonically with an amplitude of ${q(p.A, unitOfA(p.A))} and ${givenFT(p)}. How fast is it, and how large is its acceleration, when it is ${q(p.k * p.A, unitOfA(p.A))} from the equilibrium?`,
-      `Ein Körper schwingt harmonisch mit einer Amplitude von ${q(p.A, unitOfA(p.A))} und ${givenFT(p)}. Wie schnell ist er, und wie gross ist seine Beschleunigung, wenn er ${q(p.k * p.A, unitOfA(p.A))} von der Gleichgewichtslage entfernt ist?`),
+    solve: (p) => ({ pt: PTS[p.us.findIndex(ASK[p.ask].ok)] }),
+    traps: [],
+    fields: (p) => [choice('pt', ASK[p.ask].q(), p.us.map((u, i) => [PTS[i], PTS[i], ASK[p.ask].ok(u) ? '' : L(`At ${PTS[i]} the body is ${stateAt(u)}.`, `In ${PTS[i]} ist der Körper ${stateAt(u)}.`), null]))],
+    text: () => L('The graph shows the displacement y of a harmonic oscillation against time.', 'Der Graph zeigt die Auslenkung y einer harmonischen Schwingung gegen die Zeit.'),
     hints: () => [
-      L('$x = A\\sin(\\omega t)$ and $v = A\\omega\\cos(\\omega t)$. With $\\sin^2 + \\cos^2 = 1$: $v = \\omega\\sqrt{A^2 - x^2}$.', '$x = A\\sin(\\omega t)$ und $v = A\\omega\\cos(\\omega t)$. Mit $\\sin^2 + \\cos^2 = 1$: $v = \\omega\\sqrt{A^2 - x^2}$.'),
-      L('The acceleration is proportional to the displacement: $a = -\\omega^2 x$.', 'Die Beschleunigung ist proportional zur Auslenkung: $a = -\\omega^2 x$.'),
+      L('The velocity is the slope of y(t): largest where the graph crosses the t axis, zero at crests and troughs; negative where the graph falls.', 'Die Geschwindigkeit ist die Steigung von y(t): am grössten, wo der Graph die t-Achse kreuzt, null in Bergen und Tälern; negativ, wo der Graph fällt.'),
+      L('The acceleration is a = −ω²·y: opposite to the displacement, largest in size at the turning points, zero at the equilibrium.', 'Die Beschleunigung ist a = −ω²·y: entgegen der Auslenkung, dem Betrag nach am grössten an den Umkehrpunkten, null in der Gleichgewichtslage.'),
+    ],
+    steps: (p) => [step(L('Point by point', 'Punkt für Punkt'), `<ul class="eqlist">${p.us.map((u, i) => `<li>${ASK[p.ask].ok(u) ? `<span class="result">${PTS[i]}</span>` : PTS[i]}: ${stateAt(u)}</li>`).join('')}</ul>`)],
+    figure: (p) => {
+      const pts = Array.from({ length: 241 }, (z, j) => { const t = (j * 2) / 240; return [t, Math.sin(PI2 * t)]; });
+      return `<div class="fig">${Plot.graph([{ pts }], { tEnd: 2, axis: { lo: -1.4, hi: 1.4, step: 1 }, name: 'y', bare: true, points: p.us.map((u, i) => [u, Math.sin(PI2 * u), PTS[i], Math.sin(PI2 * u) < -0.5]), label: L('Displacement against time, with four points', 'Auslenkung gegen die Zeit, mit vier Punkten') })}</div>`;
+    },
+  };
+
+  // ================================================================ 6 energy
+  // A body on a spring: E = ½·D·A² all the time, E_pot = ½·D·y², E_kin = E − E_pot.
+  const KS = [[1, 2], [1, 3], [2, 3], [1, 4], [3, 4], [3, 5], [4, 5]];
+  const frac = (n, d) => `\\tfrac{${n}}{${d}}`;
+  const energy = {
+    id: 'energy', difficulty: 3, kind: 'energy',
+    title: () => L('Energy in an oscillation', 'Energie in einer Schwingung'),
+    make: (r) => (r() < 0.75 ? { kind: 'share', k: pick(r, KS) } : { kind: 'equal' }),
+    solve: (p, o = {}) => {
+      if (p.kind === 'equal') return { x: o.half ? 0.5 : 1 / Math.SQRT2 };
+      const k = p.k[0] / p.k[1];
+      return { kin: o.linear ? 1 - k : o.swap ? k * k : 1 - k * k };
+    },
+    traps: ['linear', 'swap', 'half'],
+    why: {
+      linear: () => L('The potential energy of a spring grows with y², not with y: E_pot = ½·D·y².', 'Die potentielle Energie einer Feder wächst mit y², nicht mit y: E_pot = ½·D·y².'),
+      swap: () => L('That is the share of the potential energy, ½·D·y² / (½·D·A²). The kinetic energy is the rest.', 'Das ist der Anteil der potentiellen Energie, ½·D·y² / (½·D·A²). Die kinetische Energie ist der Rest.'),
+      half: () => L('At half the amplitude, E_pot = (½)² = ¼ of the total. Equal shares need y² = A²/2.', 'Bei halber Amplitude ist E_pot = (½)² = ¼ der Gesamtenergie. Gleiche Anteile brauchen y² = A²/2.'),
+    },
+    fields: (p) => (p.kind === 'equal' ? [num$('x', 'y/A', '', L('displacement in units of the amplitude', 'Auslenkung in Einheiten der Amplitude'))]
+      : [num$('kin', 'E_\\mathrm{kin}/E', '', L('share of the kinetic energy', 'Anteil der kinetischen Energie'))]),
+    text: (p) => (p.kind === 'equal'
+      ? L('A body on a spring oscillates harmonically with amplitude A. At what displacement are its kinetic and its potential energy equal? Give it in units of A.', 'Ein Körper an einer Feder schwingt harmonisch mit der Amplitude A. Bei welcher Auslenkung sind seine kinetische und seine potentielle Energie gleich gross? Gib sie in Einheiten von A an.')
+      : L(`A body on a spring oscillates harmonically. What share of its total energy is kinetic when it is ${p.k[0]}/${p.k[1]} of the amplitude away from the equilibrium? (A fraction like 3/4 is fine.)`, `Ein Körper an einer Feder schwingt harmonisch. Welcher Anteil seiner Gesamtenergie ist kinetisch, wenn er ${p.k[0]}/${p.k[1]} der Amplitude von der Gleichgewichtslage entfernt ist? (Ein Bruch wie 3/4 geht auch.)`)),
+    hints: () => [
+      L('The total energy stays the same: at a turning point it is all potential, E = ½·D·A².', 'Die Gesamtenergie bleibt gleich: An einem Umkehrpunkt ist alles potentielle Energie, E = ½·D·A².'),
+      L('At a displacement y: E_pot = ½·D·y², so E_pot/E = (y/A)².', 'Bei einer Auslenkung y: E_pot = ½·D·y², also E_pot/E = (y/A)².'),
+      L('The kinetic energy is the rest: E_kin = E − E_pot.', 'Die kinetische Energie ist der Rest: E_kin = E − E_pot.'),
     ],
     steps: (p, v) => [
-      step(L('The angular frequency', 'Die Kreisfrequenz'), `$$\\omega = ${wT(p)} = ${tnum(v.w)}\\,\\mathrm{s^{-1}}$$`),
-      step(L('The speed at x', 'Die Geschwindigkeit bei x'), p$(L('From $x = A\\sin(\\omega t)$ and $v = A\\omega\\cos(\\omega t)$ with $\\sin^2 + \\cos^2 = 1$:', 'Aus $x = A\\sin(\\omega t)$ und $v = A\\omega\\cos(\\omega t)$ mit $\\sin^2 + \\cos^2 = 1$:')) +
-        `$$v = \\omega\\sqrt{A^2 - x^2} = ${tnum(v.w)}\\,\\mathrm{s^{-1}}\\cdot\\sqrt{(${tq(p.A, 'm')})^2 - (${tq(v.x, 'm')})^2} = ${res(tq(v.v, speedUnit(PI2 * p.f * p.A)))}$$`, ['x']),
-      step(L('The acceleration at x', 'Die Beschleunigung bei x'), `$$|a| = \\omega^2\\, x = (${tnum(v.w)}\\,\\mathrm{s^{-1}})^2\\cdot ${tq(v.x, 'm')} = ${res(tq(v.a, 'm/s²'))}$$` + p$(L('It points back to the equilibrium.', 'Sie zeigt zur Gleichgewichtslage zurück.')), ['x']),
+      step(L('The total energy', 'Die Gesamtenergie'), p$(L('At a turning point the body is at rest: all energy is potential. Let $D$ be the spring constant:', 'An einem Umkehrpunkt ruht der Körper: Alle Energie ist potentiell. Sei $D$ die Federkonstante:')) + '$$E = \\tfrac12\\,D\\,A^2$$', ['total']),
+      p.kind === 'equal'
+        ? step(L('Equal shares', 'Gleiche Anteile'), p$(L('Equal kinetic and potential energy means each is half of $E$:', 'Gleiche kinetische und potentielle Energie heisst: je die Hälfte von $E$:')) + `$$\\tfrac12\\,D\\,y^2 = \\tfrac12\\cdot\\tfrac12\\,D\\,A^2 \;\\Rightarrow\; y = \\frac{A}{\\sqrt 2} = ${res(`${num(1 / Math.SQRT2)}\\,A`)}$$`, ['equal'])
+        : step(L('At this displacement', 'Bei dieser Auslenkung'), `$$\\frac{E_\\mathrm{pot}}{E} = \\frac{\\tfrac12 D y^2}{\\tfrac12 D A^2} = \\left(\\frac{y}{A}\\right)^2 = \\left(${frac(...p.k)}\\right)^2,\\qquad \\frac{E_\\mathrm{kin}}{E} = 1 - \\left(${frac(...p.k)}\\right)^2 = ${res(`${frac(p.k[1] ** 2 - p.k[0] ** 2, p.k[1] ** 2)} = ${num(v.kin)}`)}$$`, ['x']),
     ],
-    figure: (p, v, view) => {
-      if (view.task) return '';
-      const T = 1 / p.f, t1 = Math.asin(p.k) / (PI2 * p.f), cm = p.k * p.A * 100;
-      return xGraph({ ...p, start: 'eq' }, { dots: view.show && view.show.has('x') ? [[t1, cm], [T / 2 - t1, cm], [T + t1, cm], [1.5 * T - t1, cm]] : [] });
-    },
+    figure: (p, v, view) => (view.task || !root.Figures ? '' : root.Figures.energyWell(p.kind === 'equal' ? 1 / Math.SQRT2 : p.k[0] / p.k[1])),
   };
 
-  const speedT = {
-    id: 'speed-t', difficulty: 5, kind: 'kin',
-    title: () => L('At a given moment', 'In einem bestimmten Moment'),
-    make: (r) => { const p = pickAF(r); p.start = r() < 0.5 ? 'eq' : 'top'; p.u = pick(r, [0.1, 0.15, 0.2, 0.3, 0.35, 0.4, 0.55, 0.6, 0.65, 0.7, 0.8, 0.85, 0.9]); return p; },
-    solve: (p, o = {}) => {
-      const w = PI2 * p.f, t = sig(p.u / p.f, 2), ph = o.deg ? (w * t * Math.PI) / 180 : w * t;
-      const top = o.swap ? p.start !== 'top' : p.start === 'top';
-      return { w, t, x: top ? p.A * Math.cos(ph) : p.A * Math.sin(ph), v: top ? -p.A * w * Math.sin(ph) : p.A * w * Math.cos(ph) };
-    },
-    traps: ['swap', 'deg'],
-    why: { swap: WHYK.swap, deg: WHYK.deg },
-    fields: (p) => [num$('x', 'x', unitOfA(p.A), L('displacement', 'Auslenkung'), true), num$('v', 'v', speedUnit(PI2 * p.f * p.A), L('velocity', 'Geschwindigkeit'), true)],
-    text: (p) => { const t = sig(p.u / p.f, 2); return L(`A body oscillates harmonically with an amplitude of ${q(p.A, unitOfA(p.A))} and ${givenFT(p)}. At t = 0 it is ${p.start === 'top' ? 'at its highest point (x = A)' : 'at the equilibrium, moving in the positive direction'}. Where is it at t = ${q(t, 's')}, and what is its velocity then (with signs)?`,
-      `Ein Körper schwingt harmonisch mit einer Amplitude von ${q(p.A, unitOfA(p.A))} und ${givenFT(p)}. Bei t = 0 ist er ${p.start === 'top' ? 'an seinem höchsten Punkt (x = A)' : 'in der Gleichgewichtslage und bewegt sich in positiver Richtung'}. Wo ist er bei t = ${q(t, 's')}, und wie gross ist dann seine Geschwindigkeit (mit Vorzeichen)?`); },
-    hints: (p) => [
-      p.start === 'top' ? L('Starting at x = A: $x(t) = A\\cos(\\omega t)$, $v(t) = -A\\omega\\sin(\\omega t)$.', 'Start bei x = A: $x(t) = A\\cos(\\omega t)$, $v(t) = -A\\omega\\sin(\\omega t)$.')
-        : L('Starting at the equilibrium: $x(t) = A\\sin(\\omega t)$, $v(t) = A\\omega\\cos(\\omega t)$.', 'Start in der Gleichgewichtslage: $x(t) = A\\sin(\\omega t)$, $v(t) = A\\omega\\cos(\\omega t)$.'),
-      L('$\\omega t$ is in radians: set the calculator to RAD.', '$\\omega t$ ist im Bogenmass: Stell den Taschenrechner auf RAD.'),
-    ],
-    steps: (p, v) => {
-      const top = p.start === 'top', x$ = top ? 'A\\cos(\\omega t)' : 'A\\sin(\\omega t)', v$ = top ? '-A\\omega\\sin(\\omega t)' : 'A\\omega\\cos(\\omega t)';
-      return [
-        step(L('The motion', 'Die Bewegung'), p$(top ? L('At t = 0 at the top: a cosine.', 'Bei t = 0 oben: ein Kosinus.') : L('At t = 0 at the equilibrium, moving up: a sine.', 'Bei t = 0 in der Gleichgewichtslage, nach oben unterwegs: ein Sinus.')) +
-          `$$x(t) = ${x$},\\qquad v(t) = ${v$},\\qquad \\omega = ${wT(p)} = ${tnum(v.w)}\\,\\mathrm{s^{-1}}$$`),
-        step(L('At that moment', 'In diesem Moment'), `$$\\omega t = ${tnum(v.w)}\\,\\mathrm{s^{-1}}\\cdot ${tq(v.t, 's')} = ${tnum(v.w * v.t)}\\;(\\mathrm{rad})$$` +
-          ` $$x = ${res(tq(v.x, unitOfA(p.A)))},\\qquad v = ${res(tq(v.v, speedUnit(PI2 * p.f * p.A)))}$$`, ['t']),
-      ];
-    },
-    figure: (p, v, view) => (view.task ? '' : xGraph(p, { marks: view.show && view.show.has('t') ? [v.t] : [], dots: view.show && view.show.has('t') ? [[v.t, v.x * 100]] : [] })),
-  };
+  const SCENARIOS = [pickShm, shm1, shm2, shm3, match1, match2, matchBack, read3, read4, points, vmax, backW, backA, energy];
 
-  const SCENARIOS = [pickShm, shm1, shm2, shm3, match1, match2, matchBack, vmax, backF, backA, speedX, speedT];
-
-  root.Scenarios = { SCENARIOS, NKINDS, curveOf, Y0, xGraph };
+  root.Scenarios = { SCENARIOS, NKINDS, curveOf, Y0, AXIS, xGraph };
   if (typeof module !== 'undefined') module.exports = root.Scenarios;
 })(typeof window !== 'undefined' ? window : globalThis);

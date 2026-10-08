@@ -3,12 +3,14 @@
 // numbers instead of drawing:
 //   compare    two motions in one s(t) graph: which is faster, and the velocity of one (★1–2)
 //   direction  a piecewise uniform s(t): when is v negative, and v in one interval (★2)
-//   table      value tables: which vehicles always move backwards, velocities, missing positions,
-//              and the s(t) or v(t) graph (★2–3)
-//   atable     value table of a constantly accelerated cart: missing positions, the acceleration
-//              and its s(t), v(t) or a(t) graph (★3: steps of 1 or 2 s; ★4: of 0.5–5 s, and a velocity)
-//   strobe     a stroboscope picture of a constantly accelerated cart: its s(t) or v(t) graph,
-//              the motion, and (★3) the acceleration and its a(t) graph (★2–3)
+//   table      value tables: which vehicles always move backwards, velocities, missing positions (★2–3)
+//   atable     value table of a constantly accelerated cart: missing positions and the acceleration
+//              (★3: steps of 1 or 2 s; ★4: of 0.5–5 s, and a velocity)
+//   strobe     a stroboscope picture of a constantly accelerated cart: in which second it is
+//              fastest (★2), how it moves, and (★3) its acceleration
+//   tablegraph, atablegraph, strobegraph   the same tables and pictures with one graph to choose:
+//              s(t) of the vehicle that turns or v(t) of two (★2–3); s(t), v(t) or a(t) (★3–4);
+//              s(t) (★2), v(t) or a(t) (★3)
 //   area       v(t): displacement and distance between two times, or who is farther from the start (★3–4)
 //   match      a graph and the one of its slope: s(t) → v(t) (★2), v(t) → a(t) (★3), s(t) → a(t) (★4)
 // make(kind, seed, d) gives { kind, id, difficulty, title, text, figure, questions, hints, steps,
@@ -273,14 +275,16 @@
   // ---------------------------------------------------------------- table (C2.3, C2.5)
   // ★2: four vehicles every 5 s; which move backwards all the time, and the velocity of the
   // uniform one. ★3: two uniform vehicles with gaps in the table; their velocities and two
-  // missing positions.
-  function tableEx(seed, d) {
+  // missing positions. The same tables with a graph to choose instead (graph: kind tablegraph):
+  // ★2 the s(t) graph of the vehicle that turns, ★3 the v(t) graph of both.
+  function tableEx(seed, d, gmode = false) {
     const r = rng(seed);
     d = d || r.pick([2, 3]);
-    return d === 2 ? table4(r, seed) : table2(r, seed);
+    return d === 2 ? table4(r, seed, gmode) : table2(r, seed, gmode);
   }
+  const tableGraph = (seed, d) => tableEx(seed, d, true);
 
-  function table4(r, seed) {
+  function table4(r, seed, gmode) {
     const times = [0, 5, 10, 15, 20, 25, 30];
     const make = {
       down: () => { const s0 = r.pick([18, 20, 24, 25, 30]), ds = r.pick([-2, -3, -4]); return { kind: 'down', values: times.map((t, k) => s0 + ds * k), back: true, uniform: true }; },
@@ -329,12 +333,28 @@
       [ptsOf(others('negup').values), null, L(`That is the graph of ${others('negup').name}, which moves in the positive direction all the time.`, `Das ist der Graph von ${others('negup').name}, das sich die ganze Zeit in positiver Richtung bewegt.`)],
       [ptsOf(others('down').values), null, L(`That is the graph of ${others('down').name}, which moves in the negative direction all the time.`, `Das ist der Graph von ${others('down').name}, das sich die ganze Zeit in negativer Richtung bewegt.`)],
     ]);
+    const graphStep = step(L(`The s(t) graph of ${Tn.name}`, `Der s(t)-Graph von ${Tn.name}`), L(`Each column of the table gives a point (t, s) of ${Tn.name}: ${Tn.values.map((x, k) => `(${times[k]} s, ${num(x)} m)`).join(', ')}. The graph ${Tn.kind === 'backforth' ? 'falls first and then rises' : 'rises first and then falls'}: ${Tn.name} turns around.`,
+      `Jede Spalte der Tabelle gibt einen Punkt (t, s) von ${Tn.name}: ${Tn.values.map((x, k) => `(${times[k]} s, ${num(x)} m)`).join(', ')}. Der Graph ${Tn.kind === 'backforth' ? 'fällt zuerst und steigt dann' : 'steigt zuerst und fällt dann'}: ${Tn.name} kehrt um.`), G.right({ dots: ptsOf(Tn.values) }));
+    const text = L('<p>The table gives the positions of four vehicles A, B, C and D on a straight road every 5 seconds.</p>', '<p>Die Tabelle gibt die Orte von vier Fahrzeugen A, B, C und D auf einer geraden Strasse alle 5 Sekunden an.</p>');
+    if (gmode) {
+      return finish('tablegraph', seed, 2, {
+        data: { times, rows, turning: Tn.name },
+        title: L('From the table to the graph', 'Von der Tabelle zum Graphen'),
+        text, figure: fig(), questions: [G.question],
+        hints: [
+          L('Each column of the table gives a point (t, s) of the graph.', 'Jede Spalte der Tabelle gibt einen Punkt (t, s) des Graphen.'),
+          L(`Read the row of ${Tn.name} from left to right: where does s increase, where does it decrease?`, `Lies die Zeile von ${Tn.name} von links nach rechts: Wo nimmt s zu, wo nimmt es ab?`),
+          L(`${Tn.name} starts at ${val(Tn.values[0], 'm')} and ends at ${val(Tn.values[6], 'm')}.`, `${Tn.name} startet bei ${val(Tn.values[0], 'm')} und endet bei ${val(Tn.values[6], 'm')}.`),
+        ],
+        steps: [step(L('The changes', 'Die Änderungen'), `${Tn.name}: ${Tn.values.slice(1).map((v2, k) => `${v2 - Tn.values[k] > 0 ? '+' : ''}${num(v2 - Tn.values[k])}`).join(', ')} m`, fig()), graphStep],
+      });
+    }
     return finish('table', seed, 2, {
       data: { times, rows, uniform: U.name },
       title: L('Four vehicles', 'Vier Fahrzeuge'),
-      text: L('<p>The table gives the positions of four vehicles A, B, C and D on a straight road every 5 seconds.</p>', '<p>Die Tabelle gibt die Orte von vier Fahrzeugen A, B, C und D auf einer geraden Strasse alle 5 Sekunden an.</p>'),
+      text,
       figure: fig(),
-      questions: [q1, q2, G.question],
+      questions: [q1, q2],
       hints: [
         L('A vehicle moves in the negative direction when its position decreases. Look at the changes from one column to the next, not at the signs of the positions.', 'Ein Fahrzeug bewegt sich in negativer Richtung, wenn sein Ort abnimmt. Schau auf die Änderungen von einer Spalte zur nächsten, nicht auf die Vorzeichen der Orte.'),
         L('"All the time" means: every change must be negative. One increase is enough to rule a vehicle out.', '«Die ganze Zeit» heisst: Jede Änderung muss negativ sein. Eine einzige Zunahme genügt, um ein Fahrzeug auszuschliessen.'),
@@ -345,8 +365,6 @@
         step(L('The changes', 'Die Änderungen'), rows.map((x) => `${x.name}: ${x.values.slice(1).map((v2, k) => `${v2 - x.values[k] > 0 ? '+' : ''}${num(v2 - x.values[k])}`).join(', ')} m`).join('<br>'), fig()),
         step(L('Always backwards', 'Immer rückwärts'), L(`Only ${and(backs)} ${backs.length > 1 ? 'decrease' : 'decreases'} every time. Negative positions alone do not mean negative direction.`, `Nur ${and(backs)} ${backs.length > 1 ? 'nehmen' : 'nimmt'} jedes Mal ab. Negative Orte allein bedeuten keine negative Richtung.`), fig()),
         step(L('Velocity', 'Geschwindigkeit'), L(`${U.name}: v = Δs/Δt = ${num(U.values[1] - U.values[0])} m / 5 s = ${sval(v, 'm/s')}.`, `${U.name}: v = Δs/Δt = ${num(U.values[1] - U.values[0])} m / 5 s = ${sval(v, 'm/s')}.`), fig()),
-        step(L(`The s(t) graph of ${Tn.name}`, `Der s(t)-Graph von ${Tn.name}`), L(`Each column of the table gives a point (t, s) of ${Tn.name}: ${Tn.values.map((x, k) => `(${times[k]} s, ${num(x)} m)`).join(', ')}. The graph ${Tn.kind === 'backforth' ? 'falls first and then rises' : 'rises first and then falls'}: ${Tn.name} turns around.`,
-          `Jede Spalte der Tabelle gibt einen Punkt (t, s) von ${Tn.name}: ${Tn.values.map((x, k) => `(${times[k]} s, ${num(x)} m)`).join(', ')}. Der Graph ${Tn.kind === 'backforth' ? 'fällt zuerst und steigt dann' : 'steigt zuerst und fällt dann'}: ${Tn.name} kehrt um.`), G.right({ dots: ptsOf(Tn.values) })),
       ],
     });
   }
@@ -354,7 +372,7 @@
   // ★3: the times vary; each vehicle has two known positions and one asked for, before, between
   // or after them (not at the same time for both).
   const TIMES = [[0, 2, 4, 6, 10, 20], [0, 1, 3, 5, 8, 12], [0, 3, 6, 9, 12, 15], [0, 5, 10, 15, 20, 30], [0, 2, 5, 8, 10, 16], [0, 4, 8, 10, 14, 20], [0, 1, 2, 4, 7, 10]];
-  function table2(r, seed) {
+  function table2(r, seed, gmode) {
     const times = r.pick(TIMES), T = times[times.length - 1];
     const vs = [-3, -2.5, -2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2, 2.5, 3];
     const s = (m, t) => round(m.s0 + m.v * t);
@@ -377,7 +395,8 @@
       break;
     }
     const M = { A, B };
-    const rows = ['A', 'B'].map((n) => ({ name: n, values: times.map((t, k) => (M[n].known.includes(k) ? s(M[n], t) : M[n].asked === k ? null : '')) }));
+    // (with a graph to choose, no position is asked for: the gaps stay empty)
+    const rows = ['A', 'B'].map((n) => ({ name: n, values: times.map((t, k) => (M[n].known.includes(k) ? s(M[n], t) : M[n].asked === k && !gmode ? null : '')) }));
     const fig = () => table(times, rows);
     const br = (x) => (x < 0 ? `(${num(x)} m)` : `${num(x)} m`);
     // the velocity from the two known positions; the asked one from the nearer known one
@@ -419,24 +438,39 @@
       opt(vFig(B.v, A.v), false, null, L('This graph swaps A and B.', 'Dieser Graph vertauscht A und B.')),
       opt(vFig(Math.abs(A.v), Math.abs(B.v)), false, 'sign', L(`Both velocities are positive here. But ${A.v < 0 ? 'A' : 'B'} moves in the negative direction: its position decreases, so its v is negative.`, `Hier sind beide Geschwindigkeiten positiv. ${A.v < 0 ? 'A' : 'B'} bewegt sich aber in negativer Richtung: Sein Ort nimmt ab, also ist sein v negativ.`)),
     ]), true);
+    const velSteps = [
+      step(L('Velocity of A', 'Geschwindigkeit von A'), L(`A moves uniformly, so the velocity follows from its two known positions: ${vLine('A')}.`, `A bewegt sich gleichförmig, also folgt die Geschwindigkeit aus seinen zwei bekannten Orten: ${vLine('A')}.`), fig()),
+      step(L('Velocity of B', 'Geschwindigkeit von B'), L(`The same for B: ${vLine('B')}.`, `Dasselbe für B: ${vLine('B')}.`), fig()),
+    ];
+    if (gmode) {
+      return finish('tablegraph', seed, 3, {
+        data: { times, A, B },
+        title: L('From the table to the graph', 'Von der Tabelle zum Graphen'),
+        text: L('<p>Two vehicles A and B move uniformly. The table gives some of their positions.</p>', '<p>Zwei Fahrzeuge A und B bewegen sich gleichförmig. Die Tabelle gibt einige ihrer Orte an.</p>'),
+        figure: fig(), questions: [q5],
+        hints: [
+          L('Uniform motion: the velocity is the same all the time, v = Δs/Δt from the two known positions.', 'Gleichförmige Bewegung: Die Geschwindigkeit ist die ganze Zeit gleich, v = Δs/Δt aus den zwei bekannten Orten.'),
+          ['A', 'B'].map((n) => { const f = F[n]; return L(`${n}: Δs = ${num(f.sj)} m − ${br(f.si)} in Δt = ${num(f.tj - f.ti)} s.`, `${n}: Δs = ${num(f.sj)} m − ${br(f.si)} in Δt = ${num(f.tj - f.ti)} s.`); }).join(' '),
+          L('In a v(t) graph, a uniform motion is a horizontal line at the height of its velocity, with its sign.', 'Im v(t)-Diagramm ist eine gleichförmige Bewegung eine waagrechte Gerade auf der Höhe ihrer Geschwindigkeit, mit Vorzeichen.'),
+        ],
+        steps: [...velSteps, step(L('The v(t) graph', 'Der v(t)-Graph'), L(`Each velocity stays the same all the time: two horizontal lines, A at ${sval(A.v, 'm/s')} and B at ${sval(B.v, 'm/s')}.`, `Jede Geschwindigkeit bleibt die ganze Zeit gleich: zwei waagrechte Geraden, A bei ${sval(A.v, 'm/s')} und B bei ${sval(B.v, 'm/s')}.`), vFig(A.v, B.v))],
+      });
+    }
     return finish('table', seed, 3, {
       data: { times, A, B },
       title: L('Completing a value table', 'Wertetabelle ergänzen'),
       text: L('<p>Two vehicles A and B move uniformly. The table gives some of their positions; complete it.</p>', '<p>Zwei Fahrzeuge A und B bewegen sich gleichförmig. Die Tabelle gibt einige ihrer Orte an; ergänze sie.</p>'),
       figure: fig(),
-      questions: [vQ('A'), vQ('B'), sQ('A'), sQ('B'), q5],
+      questions: [vQ('A'), vQ('B'), sQ('A'), sQ('B')],
       hints: [
         L('Uniform motion: the position changes by the same amount in every second. So v = Δs/Δt from any two known positions.', 'Gleichförmige Bewegung: Der Ort ändert sich in jeder Sekunde um gleich viel. Also v = Δs/Δt aus zwei beliebigen bekannten Orten.'),
         ['A', 'B'].map((n) => { const f = F[n]; return L(`${n}: Δs = ${num(f.sj)} m − ${br(f.si)} in Δt = ${num(f.tj - f.ti)} s.`, `${n}: Δs = ${num(f.sj)} m − ${br(f.si)} in Δt = ${num(f.tj - f.ti)} s.`); }).join(' '),
         L('A missing position: start from a known one and add v · Δt (going back in time, Δt is negative).', 'Ein fehlender Ort: Geh von einem bekannten aus und zähle v · Δt dazu (rückwärts in der Zeit ist Δt negativ).'),
-        L('In a v(t) graph, a uniform motion is a horizontal line at the height of its velocity, with its sign.', 'Im v(t)-Diagramm ist eine gleichförmige Bewegung eine waagrechte Gerade auf der Höhe ihrer Geschwindigkeit, mit Vorzeichen.'),
       ],
       steps: [
-        step(L('Velocity of A', 'Geschwindigkeit von A'), L(`A moves uniformly, so the velocity follows from its two known positions: ${vLine('A')}.`, `A bewegt sich gleichförmig, also folgt die Geschwindigkeit aus seinen zwei bekannten Orten: ${vLine('A')}.`), fig()),
-        step(L('Velocity of B', 'Geschwindigkeit von B'), L(`The same for B: ${vLine('B')}.`, `Dasselbe für B: ${vLine('B')}.`), fig()),
+        ...velSteps,
         step(L('Missing positions', 'Fehlende Orte'), L(`From the nearest known position, add v · Δt (Δt negative when going back in time): ${sLine('A')}; ${sLine('B')}.`,
           `Vom nächsten bekannten Ort aus zählt man v · Δt dazu (Δt negativ, wenn man in der Zeit zurückgeht): ${sLine('A')}; ${sLine('B')}.`), fig()),
-        step(L('The v(t) graph', 'Der v(t)-Graph'), L(`Each velocity stays the same all the time: two horizontal lines, A at ${sval(A.v, 'm/s')} and B at ${sval(B.v, 'm/s')}.`, `Jede Geschwindigkeit bleibt die ganze Zeit gleich: zwei waagrechte Geraden, A bei ${sval(A.v, 'm/s')} und B bei ${sval(B.v, 'm/s')}.`), vFig(A.v, B.v)),
       ],
     });
   }
@@ -558,7 +592,7 @@
     4: { as: [-1, -0.5, 0.5, 1], g: 30, max: 150 },
     5: { as: [-0.8, -0.4, 0.4, 0.8], g: 40, max: 200 },
   };
-  function atable(seed, d) {
+  function atable(seed, d, gmode = false) {
     const r = rng(seed);
     d = d || r.pick([3, 4]);
     const tau = r.pick(d === 3 ? [1, 2] : [0.5, 2, 3, 4, 5]), P = TAU[tau], n = 6;
@@ -582,7 +616,9 @@
     }
     const DD = round(a * tau * tau), v0 = g0 / tau - (a * tau) / 2;
     const gaps = xs.slice(1).map((x, k) => round(x - xs[k]));
-    const known = [b, b + 1, b + 2, extra];
+    // with a graph to choose, the table is complete
+    if (gmode) asked = [];
+    const known = gmode ? cols.slice() : [b, b + 1, b + 2, extra];
     // each missing position from a neighbour already known: forward from the left or back from the right
     const how = {}, have = new Set(known), order = [];
     while (order.length < asked.length) {
@@ -644,7 +680,6 @@
     }
     const gq = r.pick(['s', 'v', 'a']);
     const G = accChoice(r, 'graph', gq, { s0: xs[0], v0, a, T: times[n - 1], tau });
-    questions.push(G.question);
     const fill = order.map((k) => (how[k] === 'fwd'
       ? `${sAt(k)} = ${num(xs[k - 1])} m ${pm(gaps[k - 1])} m = ${val(xs[k], 'm')}`
       : `${sAt(k)} = ${num(xs[k + 1])} m ${pm(-gaps[k])} m = ${val(xs[k], 'm')}`));
@@ -687,8 +722,21 @@
         L(`With constant acceleration, the mean velocity over an interval is reached in its middle. ${num(tm)} s is the middle of ${interval(times[b], times[b + 2])}: v(${num(tm)} s) = (${num(xs[b + 2])} m − ${xs[b] < 0 ? `(${num(xs[b])} m)` : `${num(xs[b])} m`}) / ${num(2 * tau)} s = ${sv(vm, 'm/s')}.`,
           `Bei konstanter Beschleunigung wird die mittlere Geschwindigkeit eines Intervalls in seiner Mitte erreicht. ${num(tm)} s ist die Mitte von ${interval(times[b], times[b + 2])}: v(${num(tm)} s) = (${num(xs[b + 2])} m − ${xs[b] < 0 ? `(${num(xs[b])} m)` : `${num(xs[b])} m`}) / ${num(2 * tau)} s = ${sv(vm, 'm/s')}.`),
         fig({ all: true, rows: [dsRow(true), ddRow(true)] }))] : []),
-      step(L(`The ${gq}(t) graph`, `Der ${gq}(t)-Graph`), graphText, G.right(gq === 's' ? { dots: xs.map((x, k) => [times[k], x]) } : {})),
     ];
+    const graphStep = step(L(`The ${gq}(t) graph`, `Der ${gq}(t)-Graph`), graphText, G.right(gq === 's' ? { dots: xs.map((x, k) => [times[k], x]) } : {}));
+    if (gmode) {
+      // the changes of position, their constant change and the acceleration, then the graph
+      return finish('atablegraph', seed, d, {
+        data: { times, xs, a, step: tau, graph: gq },
+        title: L('From the table to the graph', 'Von der Tabelle zum Graphen'),
+        text: L(`<p>A ${body()} moves along a straight ${car ? 'road' : 'track'} with constant acceleration. The table gives its position every ${ts}.</p>`,
+          `<p>Ein Wagen bewegt sich mit konstanter Beschleunigung auf einer geraden ${car ? 'Strasse' : 'Bahn'}. Die Tabelle gibt seinen Ort alle ${ts} an.</p>`),
+        figure: fig(), questions: [G.question],
+        hints: [hints[0], L(`The Δs change by Δ(Δs) = ${dif(DD)} m from step to step: Δ(Δs) = a · (${ts})².`, `Die Δs ändern sich von Schritt zu Schritt um Δ(Δs) = ${dif(DD)} m: Δ(Δs) = a · (${ts})².`),
+          { s: L('s(t) is a parabola through the points of the table.', 's(t) ist eine Parabel durch die Punkte der Tabelle.'), v: L('With constant acceleration, v(t) is a straight line; each Δs/Δt is the velocity in the middle of its step.', 'Bei konstanter Beschleunigung ist v(t) eine Gerade; jedes Δs/Δt ist die Geschwindigkeit in der Mitte seines Schritts.'), a: L('With constant acceleration, a(t) is a horizontal line at the value of a.', 'Bei konstanter Beschleunigung ist a(t) eine waagrechte Gerade beim Wert von a.') }[gq]],
+        steps: [steps[0], steps[1], steps[4], graphStep],
+      });
+    }
     return finish('atable', seed, d, {
       data: { times, xs, a, step: tau, b, asked, order, vm },
       title: L('Value table with acceleration', 'Wertetabelle mit Beschleunigung'),
@@ -717,7 +765,7 @@
     { gaps: [3, 1, -1, -3, -5], how: 'turn' },
     { gaps: [5, 3, 1, -1, -3], how: 'turn' },
   ];
-  function strobeEx(seed, d) {
+  function strobeEx(seed, d, gmode = false) {
     const r = rng(seed);
     d = d || r.pick([2, 3]);
     const pat = r.pick(PATTERNS), dir = r.pick([1, -1]);
@@ -747,21 +795,35 @@
       sign: () => L(`At first the dots move towards ${dir > 0 ? 'larger' : 'smaller'} s, so v starts ${dir > 0 ? 'positive' : 'negative'}.`, `Zuerst wandern die Punkte zu ${dir > 0 ? 'grösseren' : 'kleineren'} s, also ist v zuerst ${dir > 0 ? 'positiv' : 'negativ'}.`),
       jumps: () => L('With a constant acceleration, the velocity changes steadily, not in jumps once a second: the distance per second is only its mean in that second, reached in its middle.', 'Bei konstanter Beschleunigung ändert sich die Geschwindigkeit gleichmässig, nicht sprunghaft einmal pro Sekunde: Der Abstand pro Sekunde ist nur ihr Mittelwert in dieser Sekunde, erreicht in deren Mitte.'),
     };
-    const questions = [];
-    if (d === 2) {
-      questions.push(choice('graph', L('Which s(t) graph belongs to this motion?', 'Welcher s(t)-Graph gehört zu dieser Bewegung?'), r.shuffle([
+    // with a graph to choose: ★2 the s(t) graph, ★3 the v(t) or the a(t) graph; else questions
+    const gq = d === 2 ? 's' : r.pick(['v', 'a']);
+    const graphQs = [];
+    if (gq === 's') {
+      graphQs.push(choice('graph', L('Which s(t) graph belongs to this motion?', 'Welcher s(t)-Graph gehört zu dieser Bewegung?'), r.shuffle([
         opt(sGraph(curve(gaps, x0)), true, null, ''),
         opt(sGraph(curve(inv, x0)), false, 'gaps', WHYG.gaps()),
         opt(sGraph(curve(gaps, x0).map(([t]) => [t, sAt(gaps, x0, n - t)])), false, 'order', WHYG.order()),
         opt(sGraph([[0, xs[0]], [n, xs[n]]]), false, null, WHYG.steady()),
       ]), true));
-    } else {
-      questions.push(choice('graph', L('Which v(t) graph belongs to this motion?', 'Welcher v(t)-Graph gehört zu dieser Bewegung?'), r.shuffle([
+    } else if (gq === 'v') {
+      graphQs.push(choice('graph', L('Which v(t) graph belongs to this motion?', 'Welcher v(t)-Graph gehört zu dieser Bewegung?'), r.shuffle([
         opt(vGraph(vLine(gaps)), true, null, ''),
         opt(vGraph(vLine(inv)), false, 'gaps', WHYG.gaps()),
         opt(vGraph(vLine(gaps.map((g) => -g))), false, 'sign', WHYG.sign()),
         opt(vGraph(steps(gaps)), false, null, WHYG.jumps()),
       ]), true));
+    }
+    const A = gq === 'a' ? accChoice(r, 'graph', 'a', { s0: x0, v0, a: acc, T: n, tau: 1 }) : null;
+    if (A) graphQs.push(A.question);
+    const questions = [];
+    // ★2: in which second the cart is fastest (the largest distance between neighbouring dots)
+    if (d === 2) {
+      const ks = gaps.map((g, k) => k), fast = ks.reduce((m, k) => (Math.abs(gaps[k]) > Math.abs(gaps[m]) ? k : m), 0);
+      const slow = ks.reduce((m, k) => (Math.abs(gaps[k]) < Math.abs(gaps[m]) ? k : m), 0);
+      const pickK = [fast, slow, ...r.shuffle(ks.filter((k) => k !== fast && k !== slow))].slice(0, 4).sort((x, y) => x - y);
+      questions.push(choice('fastest', L('In which second does the cart move fastest?', 'In welcher Sekunde fährt der Wagen am schnellsten?'), pickK.map((k) =>
+        opt(interval(k, k + 1), k === fast, k === slow ? 'gaps' : null, k === slow ? WHYG.gaps()
+          : L(`In this second the cart moves ${val(Math.abs(gaps[k]), 'm')}; in ${interval(fast, fast + 1)} it moves ${val(Math.abs(gaps[fast]), 'm')}, farther.`, `In dieser Sekunde fährt der Wagen ${val(Math.abs(gaps[k]), 'm')}; in ${interval(fast, fast + 1)} fährt er ${val(Math.abs(gaps[fast]), 'm')}, weiter.`)))));
     }
     // how the cart moves, as the answer and in the sentence "So the cart …"
     const HOW = {
@@ -784,10 +846,35 @@
         { value: acc / 2, flag: null, why: L('The distances per second change by a · (1 s)² from one second to the next, so a is that change itself, not half of it.', 'Die Abstände pro Sekunde ändern sich von einer Sekunde zur nächsten um a · (1 s)², also ist a diese Änderung selbst, nicht die Hälfte davon.') },
       ], L('a = (change of the distance per second) / (1 s)².', 'a = (Änderung des Abstands pro Sekunde) / (1 s)².')));
     }
-    const A = d === 3 ? accChoice(r, 'agraph', 'a', { s0: x0, v0, a: acc, T: n, tau: 1 }) : null;
-    if (A) questions.push(A.question);
     const fig = () => strobe(xs, -7, 7, { label: L('Stroboscope picture: one dot per second', 'Stroboskopaufnahme: ein Punkt pro Sekunde') });
     const gapText = gaps.map((g, k) => `${k}–${k + 1} s: ${g > 0 ? '+' : ''}${num(g)} m`).join(', ');
+    const S = {
+      gaps: step(L('Distances per second', 'Abstände pro Sekunde'), L(`From one dot to the next, the cart moves: ${gapText}. They change by ${sval(acc, 'm')} each second: a constant acceleration a = ${sval(acc, 'm/s²')}.`,
+        `Von einem Punkt zum nächsten fährt der Wagen: ${gapText}. Sie ändern sich jede Sekunde um ${sval(acc, 'm')}: eine konstante Beschleunigung a = ${sval(acc, 'm/s²')}.`), fig()),
+      s: step(L('The s(t) graph', 'Der s(t)-Graph'), L('Each dot gives a point (t, s). With constant acceleration, s(t) is a parabola through these points.', 'Jeder Punkt gibt einen Punkt (t, s). Bei konstanter Beschleunigung ist s(t) eine Parabel durch diese Punkte.'),
+        sGraph(curve(gaps, x0), { dots: xs.map((x, k) => [k, x]) })),
+      v: step(L('The v(t) graph', 'Der v(t)-Graph'), L(`The distance in each second is the mean velocity in that second, reached in its middle (dots). v(t) is the straight line through them, from ${sval(v0, 'm/s')} at t = 0 with slope a = ${sval(acc, 'm/s²')}. So the cart ${HOW[pat.how]()}.`,
+        `Der Abstand in jeder Sekunde ist die mittlere Geschwindigkeit in dieser Sekunde, erreicht in deren Mitte (Punkte). v(t) ist die Gerade durch sie, von ${sval(v0, 'm/s')} bei t = 0 mit der Steigung a = ${sval(acc, 'm/s²')}. Der Wagen ${HOW[pat.how]()}.`),
+        vGraph(vLine(gaps), { dots: means })),
+      a: () => step(L('The a(t) graph', 'Der a(t)-Graph'), L(`The acceleration is the slope of v(t), the same all the time: a(t) is a horizontal line at a = ${sval(acc, 'm/s²')}.`,
+        `Die Beschleunigung ist die Steigung von v(t), die ganze Zeit gleich: a(t) ist eine waagrechte Gerade bei a = ${sval(acc, 'm/s²')}.`), A.right()),
+    };
+    const text = L('<p>A cart moves along a straight track with constant acceleration. The stroboscope picture shows where it is every second, from t = 0 (the numbers above the dots are the times in s).</p>',
+      '<p>Ein Wagen bewegt sich mit konstanter Beschleunigung auf einer geraden Bahn. Die Stroboskopaufnahme zeigt, wo er jede Sekunde ist, ab t = 0 (die Zahlen über den Punkten sind die Zeiten in s).</p>');
+    const hint0 = L('The distance between two neighbouring dots is how far the cart moves in one second, its mean velocity in that second: a large distance means fast, a small one slow.', 'Der Abstand zwischen zwei benachbarten Punkten ist, wie weit der Wagen in einer Sekunde fährt, seine mittlere Geschwindigkeit in dieser Sekunde: Ein grosser Abstand bedeutet schnell, ein kleiner langsam.');
+    if (gmode) {
+      return finish('strobegraph', seed, d, {
+        data: { xs, gaps, acc, v0, graph: gq },
+        title: L('From the picture to the graph', 'Vom Bild zum Graphen'),
+        text, figure: fig(), questions: graphQs,
+        hints: [hint0, L(`The changes of position per second: ${gapText}.`, `Die Ortsänderungen pro Sekunde: ${gapText}.`), {
+          s: L(`So the s(t) graph goes through ${xs.map((x, k) => `(${k} s, ${num(x)} m)`).join(', ')}, curved like a parabola.`, `Der s(t)-Graph geht also durch ${xs.map((x, k) => `(${k} s, ${num(x)} m)`).join(', ')}, gekrümmt wie eine Parabel.`),
+          v: L(`The mean velocity in each second is reached in its middle: v(0.5 s) = ${sval(gaps[0], 'm/s')}, v(1.5 s) = ${sval(gaps[1], 'm/s')}, …; v(t) is the straight line through these points.`, `Die mittlere Geschwindigkeit jeder Sekunde wird in deren Mitte erreicht: v(0.5 s) = ${sval(gaps[0], 'm/s')}, v(1.5 s) = ${sval(gaps[1], 'm/s')}, …; v(t) ist die Gerade durch diese Punkte.`),
+          a: L('The distances per second change by the same amount each second: a constant acceleration, a horizontal line in the a(t) graph.', 'Die Abstände pro Sekunde ändern sich jede Sekunde um gleich viel: eine konstante Beschleunigung, eine waagrechte Gerade im a(t)-Graphen.'),
+        }[gq]],
+        steps: gq === 's' ? [S.gaps, S.s] : gq === 'v' ? [S.gaps, S.v] : [S.gaps, S.v, S.a()],
+      });
+    }
     return finish('strobe', seed, d, {
       data: { xs, gaps, how: pat.how, acc, v0 },
       title: L('Stroboscope picture', 'Stroboskopaufnahme'),
@@ -796,24 +883,11 @@
       figure: fig(),
       questions,
       hints: [
-        L('The distance between two neighbouring dots is how far the cart moves in one second, its mean velocity in that second: a large distance means fast, a small one slow.', 'Der Abstand zwischen zwei benachbarten Punkten ist, wie weit der Wagen in einer Sekunde fährt, seine mittlere Geschwindigkeit in dieser Sekunde: Ein grosser Abstand bedeutet schnell, ein kleiner langsam.'),
-        L('With constant acceleration, the distances per second change by the same amount each second, and s(t) is a parabola.', 'Bei konstanter Beschleunigung ändern sich die Abstände pro Sekunde jede Sekunde um gleich viel, und s(t) ist eine Parabel.'),
+        hint0,
+        L('With constant acceleration, the distances per second change by the same amount each second.', 'Bei konstanter Beschleunigung ändern sich die Abstände pro Sekunde jede Sekunde um gleich viel.'),
         L(`The changes of position per second: ${gapText}.`, `Die Ortsänderungen pro Sekunde: ${gapText}.`),
-        d === 2 ? L(`So the s(t) graph goes through ${xs.map((x, k) => `(${k} s, ${num(x)} m)`).join(', ')}, curved like a parabola.`, `Der s(t)-Graph geht also durch ${xs.map((x, k) => `(${k} s, ${num(x)} m)`).join(', ')}, gekrümmt wie eine Parabel.`)
-          : L(`The mean velocity in each second is reached in its middle: v(0.5 s) = ${sval(gaps[0], 'm/s')}, v(1.5 s) = ${sval(gaps[1], 'm/s')}, …; v(t) is the straight line through these points.`,
-            `Die mittlere Geschwindigkeit jeder Sekunde wird in deren Mitte erreicht: v(0.5 s) = ${sval(gaps[0], 'm/s')}, v(1.5 s) = ${sval(gaps[1], 'm/s')}, …; v(t) ist die Gerade durch diese Punkte.`),
       ],
-      steps: [
-        step(L('Distances per second', 'Abstände pro Sekunde'), L(`From one dot to the next, the cart moves: ${gapText}. They change by ${sval(acc, 'm')} each second: a constant acceleration a = ${sval(acc, 'm/s²')}.`,
-          `Von einem Punkt zum nächsten fährt der Wagen: ${gapText}. Sie ändern sich jede Sekunde um ${sval(acc, 'm')}: eine konstante Beschleunigung a = ${sval(acc, 'm/s²')}.`), fig()),
-        step(L('The s(t) graph', 'Der s(t)-Graph'), L('Each dot gives a point (t, s). With constant acceleration, s(t) is a parabola through these points.', 'Jeder Punkt gibt einen Punkt (t, s). Bei konstanter Beschleunigung ist s(t) eine Parabel durch diese Punkte.'),
-          sGraph(curve(gaps, x0), { dots: xs.map((x, k) => [k, x]) })),
-        step(L('The v(t) graph', 'Der v(t)-Graph'), L(`The distance in each second is the mean velocity in that second, reached in its middle (dots). v(t) is the straight line through them, from ${sval(v0, 'm/s')} at t = 0 with slope a = ${sval(acc, 'm/s²')}. So the cart ${HOW[pat.how]()}.`,
-          `Der Abstand in jeder Sekunde ist die mittlere Geschwindigkeit in dieser Sekunde, erreicht in deren Mitte (Punkte). v(t) ist die Gerade durch sie, von ${sval(v0, 'm/s')} bei t = 0 mit der Steigung a = ${sval(acc, 'm/s²')}. Der Wagen ${HOW[pat.how]()}.`),
-          vGraph(vLine(gaps), { dots: means })),
-        ...(A ? [step(L('The a(t) graph', 'Der a(t)-Graph'), L(`The acceleration is the slope of v(t), the same all the time: a(t) is a horizontal line at a = ${sval(acc, 'm/s²')}.`,
-          `Die Beschleunigung ist die Steigung von v(t), die ganze Zeit gleich: a(t) ist eine waagrechte Gerade bei a = ${sval(acc, 'm/s²')}.`), A.right())] : []),
-      ],
+      steps: [S.gaps, S.v],
     });
   }
 
@@ -1159,8 +1233,8 @@
     return { ask: n.ask, options: r.shuffle(vals.map((v) => ({ html: val(v.value, n.unit), correct: !!v.correct, flag: v.correct ? null : v.flag, why: v.correct ? '' : v.why }))) };
   }
 
-  const BUILD = { compare, direction, table: tableEx, atable, strobe: strobeEx, area: areaEx, match: matchEx };
-  const DIFF = { compare: [1, 2], direction: [2], table: [2, 3], atable: [3, 4], strobe: [2, 3], area: [3, 4], match: [2, 3, 4] };
+  const BUILD = { compare, direction, table: tableEx, tablegraph: tableGraph, atable, atablegraph: (seed, d) => atable(seed, d, true), strobe: strobeEx, strobegraph: (seed, d) => strobeEx(seed, d, true), area: areaEx, match: matchEx };
+  const DIFF = { compare: [1, 2], direction: [2], table: [2, 3], tablegraph: [2, 3], atable: [3, 4], atablegraph: [3, 4], strobe: [2, 3], strobegraph: [2, 3], area: [3, 4], match: [2, 3, 4] };
   const make = (kind, seed, d) => BUILD[kind](seed, d);
   for (const k of Object.keys(BUILD)) Motion.register(k, { difficulties: DIFF[k], make: (seed, d) => make(k, seed, d) });
 

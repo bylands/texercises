@@ -3,7 +3,7 @@
 // mass). Each has random values that keep the results round, a picture of the situation and a
 // diagram for the solution (artkit.js):
 //   { id, difficulty, title(), make(r), solve(p, o), traps, why, fields(p), text(p), hints(p, v),
-//     steps(p, v), pic(p, v), fbd(p, v) }
+//     steps(p, v), fbd(p, v) } (the picture of the task: figures.js)
 // realOf(i, seed) gives an exercise as the practice ones (generator.js).
 (function (root) {
   'use strict';
@@ -40,18 +40,6 @@
       step(L('At the handle', 'An der Klinke'), `$$F_1 = \\frac{M}{d_1} = \\frac{${tq(p.M, 'Nm')}}{${tq(p.d / 100, 'm')}} = ${res(v.F1, 'N')}$$`),
       step(L('Near the hinge', 'Nahe beim Scharnier'), `$$F_2 = \\frac{M}{d_2} = \\frac{${tq(p.M, 'Nm')}}{${tq(p.n / 100, 'm')}} = ${res(v.F2, 'N')}$$<p>${L('A shorter lever arm needs a larger force: that is why handles are far from the hinges.', 'Ein kürzerer Hebelarm braucht eine grössere Kraft: Darum sind Klinken weit weg von den Scharnieren.')}</p>`),
     ],
-    pic(p) {
-      const a = A(), x0 = 60, y0 = 70, ang = 25 * Math.PI / 180, len = 230, end = [x0 + len * Math.cos(ang), y0 + len * Math.sin(ang)];
-      const at = (d) => [x0 + d * len / 100 * Math.cos(ang), y0 + d * len / 100 * Math.sin(ang)];
-      return a.svg(380, 250, a.bg(0, 0, 380, 250, 'metal') +
-        a.rect(10, 50, 60, 64, 'rp-wall', 0) + a.rect(300, 50, 370, 64, 'rp-wall', 0) +
-        a.path(`M${a.f(x0 + len)} ${a.f(y0)}A${len} ${len} 0 0 1 ${a.f(end[0])} ${a.f(end[1])}`, 'rp-swing') +
-        a.line([x0, y0], end, 'rp-door') + a.circle(x0, y0, 6, 'rp-hinge') +
-        a.circle(...at(p.d / 0.9), 4, 'rp-handle') +
-        a.arrow(at(p.d / 0.9).map((c, k) => c - 46 * [-Math.sin(ang), Math.cos(ang)][k]), [-Math.sin(ang), Math.cos(ang)], 40, 'force k-s', sym('F')) +
-        a.text(x0, y0 - 14, L('hinges', 'Scharniere'), 'lbl small') + a.text(200, 236, L('seen from above', 'von oben gesehen'), 'lbl note'),
-      L('A door seen from above, pushed at the handle', 'Eine Tür von oben, an der Klinke gestossen'));
-    },
     fbd(p) {
       const a = A(), x0 = 40, y = 80, s = 3.2;
       return a.svg(360, 170, a.line([x0, y], [x0 + 95 * s, y], 'rp-door') + a.circle(x0, y, 6, 'rp-hinge') +
@@ -77,15 +65,6 @@
       step(L('With the wrench', 'Mit dem Schlüssel'), `$$F_1 = \\frac{M}{d_1} = \\frac{${tq(p.M, 'Nm')}}{${tq(p.l1 / 100, 'm')}} = ${res(v.F1, 'N')}$$<p>${L(`About the weight of ${num(v.F1 / G)} kg: more than most people can push with their arms.`, `Etwa die Gewichtskraft von ${num(v.F1 / G)} kg: mehr, als die meisten mit den Armen drücken können.`)}</p>`),
       step(L('With the pipe', 'Mit dem Rohr'), `$$F_2 = \\frac{M}{d_2} = \\frac{${tq(p.M, 'Nm')}}{${tq(p.l2 / 100, 'm')}} = ${res(v.F2, 'N')}$$<p>${L('A longer lever arm: the same torque with less force.', 'Ein längerer Hebelarm: dasselbe Drehmoment mit weniger Kraft.')}</p>`),
     ],
-    pic(p) {
-      const a = A(), c = [120, 120], s = 2.2;
-      return a.svg(400, 230, a.bg(0, 0, 400, 230) + a.ground(0, 400, 200, 'asphalt') +
-        a.circle(...c, 70, 'rp-tyre') + a.circle(...c, 44, 'rp-rim') + [0, 72, 144, 216, 288].map((d) => a.circle(c[0] + 22 * Math.cos(d * Math.PI / 180), c[1] + 22 * Math.sin(d * Math.PI / 180), 4.5, 'rp-hub')).join('') +
-        a.path(`M${c[0]} ${c[1] - 6}H${a.f(c[0] + p.l1 * s)}V${c[1] + 6}H${c[0]}Z`, 'rp-wrench') +
-        a.path(`M${a.f(c[0] + (p.l1 - 6) * s)} ${c[1] - 8}H${a.f(c[0] + Math.min(p.l2, 75) * s)}V${c[1] + 8}H${a.f(c[0] + (p.l1 - 6) * s)}Z`, 'rp-pipe') +
-        a.arrow([c[0] + Math.min(p.l2, 75) * s - 8, c[1] - 52], [0, 1], 44, 'force k-s', sym('F', '2'), [8, -26]),
-      L('A wheel with a wrench on its nut, lengthened by a pipe', 'Ein Rad mit einem Schlüssel auf der Mutter, mit einem Rohr verlängert'));
-    },
     fbd(p) {
       const a = A(), x0 = 40, y = 90, s = 3;
       return a.svg(380, 170, a.line([x0, y], [x0 + p.l2 * s, y], 'rp-door') + a.circle(x0, y, 6, 'rp-hinge') +
@@ -112,13 +91,6 @@
       step(L('Balance of torques', 'Gleichgewicht der Drehmomente'), `<p>${L('About the pivot, the heavier child turns the seesaw one way, the lighter child and the parent the other:', 'Bezüglich des Drehpunkts dreht das schwerere Kind die Wippe in die eine Richtung, das leichtere Kind und der Elternteil in die andere:')}</p>$$m_1\\,g\\cdot 2\\,\\mathrm{m} = m_2\\,g\\cdot 2\\,\\mathrm{m} + m_\\mathrm{P}\\,g\\cdot x$$`),
       step(L('Position', 'Position'), `$$x = \\frac{(m_1 - m_2)\\cdot 2\\,\\mathrm{m}}{m_\\mathrm{P}} = \\frac{${tq(p.m1 - p.m2, 'kg')}\\cdot ${tq(2, 'm')}}{${tq(p.mP, 'kg')}} = ${res(v.x, 'm')}$$<p>${L('The parent sits close to the middle: a heavy load needs only a short lever arm.', 'Der Elternteil sitzt nahe der Mitte: Eine grosse Last braucht nur einen kurzen Hebelarm.')}</p>`),
     ],
-    pic(p, v) {
-      const a = A(), c = [210, 170], s = 75, plank = (x) => [c[0] + x * s, c[1]];
-      return a.svg(420, 240, a.bg(0, 0, 420, 240) + a.ground(0, 420, 210, 'grass', 30) + a.tree(30, 210, 70) + a.tree(390, 210, 56) +
-        a.path(`M${c[0]} ${c[1] + 4}L${c[0] - 18} 210H${c[0] + 18}Z`, 'rp-weight') + a.rect(c[0] - 2 * s, c[1] - 4, c[0] + 2 * s, c[1] + 4, 'rp-crate', 2) +
-        a.person(...plank(-1.9), 0.75, { shirt: 'red' }) + a.person(...plank(1.9), 0.62, { shirt: 'green' }) + a.person(...plank(v.x), 1.1, { shirt: 'blue' }),
-      L('Two children and a parent on a seesaw', 'Zwei Kinder und ein Elternteil auf einer Wippe'));
-    },
     fbd(p, v) {
       const a = A(), c = [200, 90], s = 80, k = 80 / p.mP;
       return a.svg(400, 200, a.rect(c[0] - 2 * s, c[1] - 4, c[0] + 2 * s, c[1] + 4, 'rp-crate', 2) + a.path(`M${c[0]} ${c[1] + 4}l-12 22h24Z`, 'rp-weight') +
@@ -151,13 +123,6 @@
       step(L('Torques about the front end', 'Drehmomente bezüglich des vorderen Endes'), `$$${T('B')}\\cdot\\ell = m\\,g\\cdot\\frac{\\ell}{2} + M\\,g\\cdot(\\ell - x) \\;\\Rightarrow\\; ${T('B')} = \\frac{${tq(p.m * G, 'N')}\\cdot ${tq(p.len / 2, 'm')} + ${tq(p.M * G, 'N')}\\cdot ${tq(p.len - p.x, 'm')}}{${tq(p.len, 'm')}} = ${res(v.B, 'N')}$$`),
       step(L('Forces', 'Kräfte'), `$$${T('A')} = m\\,g + M\\,g - ${T('B')} = ${tq((p.m + p.M) * G, 'N')} - ${tq(v.B, 'N')} = ${res(v.A, 'N')}$$<p>${L('The front painter, nearer the bucket, carries more.', 'Der vordere Maler, näher beim Eimer, trägt mehr.')}</p>`),
     ],
-    pic(p) {
-      const a = A(), y = 120, x0 = 80, s = 260 / p.len;
-      return a.svg(440, 230, a.bg(0, 0, 440, 230, 'metal') + a.ground(0, 440, 200, 'wood', 24) +
-        a.person(x0 + 6, 200, 1.35, { shirt: 'blue', hands: [[x0 - 4, y - 2], [x0 + 12, y - 2]] }) + a.person(x0 + 260 - 6, 200, 1.35, { shirt: 'orange', dir: -1, hands: [[x0 + 248, y - 2], [x0 + 264, y - 2]] }) +
-        a.rect(x0 - 10, y - 5, x0 + 270, y + 3, 'rp-crate', 2) + a.path(`M${a.f(x0 + 260 - p.x * s - 13)} ${y - 5}l3 -24h20l3 24Z`, 'rp-bucket'),
-      L('Two painters carrying a plank with a bucket on it', 'Zwei Maler tragen ein Brett mit einem Eimer darauf'));
-    },
     fbd(p, v) {
       const a = A(), y = 90, x0 = 50, s = 300 / p.len, k = 60 / Math.max(v.A, v.B);
       return a.svg(400, 200, a.rect(x0, y - 4, x0 + 300, y + 4, 'rp-crate', 2) +
@@ -188,14 +153,6 @@
       step(L('Torques about the bolt', 'Drehmomente bezüglich des Bolzens'), `$$${T('B')}\\cdot b = m\\,g\\cdot\\frac{\\ell}{2} + M\\,g\\cdot\\ell \\;\\Rightarrow\\; ${T('B')} = \\frac{${tq(p.m * G, 'N')}\\cdot ${tq(p.len / 2, 'm')} + ${tq(p.M * G, 'N')}\\cdot ${tq(p.len, 'm')}}{${tq(p.b, 'm')}} = ${res(v.B, 'N')}$$`),
       step(L('Forces', 'Kräfte'), `<p>${L('Up: the support. Down: the bolt and the two weights.', 'Nach oben: die Stütze. Nach unten: der Bolzen und die beiden Gewichtskräfte.')}</p>$$${T('A')} = ${T('B')} - m\\,g - M\\,g = ${tq(v.B, 'N')} - ${tq((p.m + p.M) * G, 'N')} = ${res(v.A, 'N')}$$<p>${L('The support carries several times the diver’s weight: the board acts as a lever.', 'Die Stütze trägt ein Vielfaches der Gewichtskraft des Springers: Das Brett wirkt als Hebel.')}</p>`),
     ],
-    pic(p) {
-      const a = A(), x0 = 40, y = 110, s = 280 / p.len;
-      const edge = x0 + p.b * s + 24;
-      return a.svg(420, 250, a.bg(0, 0, 420, 250) + a.rect(0, y + 30, edge, 250, 'rp-concrete', 0) + a.rect(edge, 160, 420, 250, 'rp-pool', 0) +
-        a.rect(x0 - 4, y + 5, x0 + 10, y + 30, 'rp-weight', 1) + a.rect(x0 + p.b * s - 6, y + 5, x0 + p.b * s + 6, y + 30, 'rp-weight', 1) +
-        a.rect(x0, y - 5, x0 + 280, y + 5, 'rp-board', 3) + a.circle(x0 + 6, y, 4, 'rp-hub') + a.person(x0 + 272, y - 5, 1.2, { shirt: 'red', hands: [[x0 + 262, y - 78], [x0 + 282, y - 78]] }),
-      L('A diving board over a pool with a diver at its tip', 'Ein Sprungbrett über einem Becken mit einem Springer an der Spitze'));
-    },
     fbd(p, v) {
       const a = A(), x0 = 40, y = 100, s = 320 / p.len, k = 70 / v.B;
       return a.svg(400, 220, a.rect(x0, y - 4, x0 + 320, y + 4, 'rp-board', 2) +
@@ -223,15 +180,6 @@
       step(L('Balance', 'Gleichgewicht'), `$$m\\,g\\cdot r = m_\\mathrm{G}\\,g\\cdot c \\;\\Rightarrow\\; m = \\frac{m_\\mathrm{G}\\,c}{r}$$`),
       step(L('The two distances', 'Die beiden Abstände'), `$$m_1 = \\frac{${tq(p.mG, 'kg')}\\cdot ${tq(p.c, 'm')}}{${tq(p.r1, 'm')}} = ${res(v.M1, 'kg')},\\qquad m_2 = \\frac{${tq(p.mG, 'kg')}\\cdot ${tq(p.c, 'm')}}{${tq(p.r2, 'm')}} = ${res(v.M2, 'kg')}$$<p>${L('That is why a crane’s load chart allows less the farther out the load hangs.', 'Darum erlaubt die Lasttabelle eines Krans umso weniger, je weiter draussen die Last hängt.')}</p>`),
     ],
-    pic() {
-      const a = A(), T0 = 120;
-      const lat = (x0, y0, x1, y1, w) => { let d = `M${x0} ${y0 - w / 2}H${x1}M${x0} ${y0 + w / 2}H${x1}M${x0} ${y0 - w / 2}`; for (let x = x0 + w, s = 1; x <= x1; x += w, s = -s) d += `L${x} ${y0 + s * w / 2}`; return a.path(d, 'rp-steel'); };
-      let mast = `M${T0 - 7} 240V40M${T0 + 7} 240V40M${T0 - 7} 240`;
-      for (let y = 226, s = 1; y >= 40; y -= 14, s = -s) mast += `L${T0 + s * 7} ${y}`;
-      return a.svg(440, 270, a.bg(0, 0, 440, 270) + a.ground(0, 440, 240, 'concrete', 30) + a.path(mast, 'rp-steel') + lat(40, 46, 420, 46, 12) +
-        a.path(`M${T0} 20L40 46M${T0} 20L420 46M${T0} 20V40`, 'rp-steel') + a.rect(44, 52, 74, 80, 'rp-weight', 2) + a.rect(T0 + 10, 52, T0 + 34, 68, 'rp-glass', 2) +
-        a.line([330, 52], [330, 150], 'rp-rope') + a.rect(296, 150, 364, 186, 'rp-container', 2), L('A tower crane with its counterweight and a load', 'Ein Turmdrehkran mit Gegengewicht und Last'));
-    },
     fbd(p, v) {
       const a = A(), t = 120, y = 70, s = 250 / p.r2;
       return a.svg(420, 190, a.rect(t - p.c * s, y - 4, t + p.r2 * s, y + 4, 'rp-crate', 2) + a.path(`M${t} ${y + 4}l-10 20h20Z`, 'rp-weight') +
@@ -257,12 +205,6 @@
     steps: (p, v) => [
       step(L('Torques about the elbow', 'Drehmomente bezüglich des Ellbogens'), `$$${T('Fm')} = \\frac{m_\\mathrm{A}\\,g\\cdot c + M\\,g\\cdot a}{d} = \\frac{${tq(p.mA * G, 'N')}\\cdot ${tq(p.c, 'cm')} + ${tq(p.M * G, 'N')}\\cdot ${tq(p.a, 'cm')}}{${tq(p.d, 'cm')}} = ${res(v.Fm, 'N')}$$<p>${L(`About ${num(Math.round(v.Fm / (p.M * G)))} times the bag’s weight: muscles act on very short lever arms.`, `Etwa ${num(Math.round(v.Fm / (p.M * G)))}-mal die Gewichtskraft der Tasche: Muskeln wirken an sehr kurzen Hebelarmen.`)}</p>`),
     ],
-    pic(p) {
-      const a = A(), hand = [300, 140];
-      return a.svg(400, 280, a.bg(0, 0, 400, 280, 'metal') + a.ground(0, 400, 250, 'wood', 30) +
-        a.person(170, 250, 2.4, { shirt: 'green', hands: [[150, 200], hand] }) +
-        a.line(hand, [hand[0], 182], 'rp-rope') + a.path(`M${hand[0] - 24} 182h48l-6 54h-36Z`, 'rp-bag') + a.text(hand[0], 216, q(p.M, 'kg'), 'lbl mass'), L('A person holding a shopping bag with the forearm level', 'Eine Person hält eine Einkaufstasche mit waagrechtem Unterarm'));
-    },
     fbd(p, v) {
       const a = A(), x0 = 50, y = 90, s = 8.5, k = 70 / v.Fm;
       return a.svg(380, 200, a.rect(x0, y - 5, x0 + (p.a + 4) * s, y + 5, 'rp-crate', 3) + a.circle(x0, y, 6, 'rp-hinge') +
@@ -288,14 +230,6 @@
       step(L('Torque of the pedal', 'Drehmoment am Pedal'), `$$M = F\\cdot r_\\mathrm{K} = ${tq(p.F, 'N')}\\cdot ${tq(p.r1 / 100, 'm')} = ${res(v.M, 'Nm')}$$`),
       step(L('Force in the chain', 'Kraft in der Kette'), `<p>${L('The crank and the chainring turn together; the chain pulls at the chainring’s edge:', 'Kurbel und Kettenblatt drehen sich zusammen; die Kette zieht am Rand des Kettenblatts:')}</p>$$F_\\mathrm{Kette} = \\frac{M}{r_\\mathrm{B}} = \\frac{${tq(v.M, 'Nm')}}{${tq(p.r2 / 100, 'm')}} = ${res(v.Fc, 'N')}$$`),
     ],
-    pic(p) {
-      const a = A(), c = [200, 160], rc = p.r1 * 3.2, rb = p.r2 * 3.2;
-      return a.svg(420, 250, a.bg(0, 0, 420, 250) + a.ground(0, 420, 214, 'asphalt', 30) +
-        a.circle(80, 170, 44, 'rp-wheel') + a.circle(330, 170, 44, 'rp-wheel') + a.path(`M80 170L${c[0]} ${c[1]}L330 170M${c[0]} ${c[1]}L150 90H270L${c[0]} ${c[1]}M270 90L330 170M150 90L140 76`, 'rp-frame') +
-        a.circle(...c, rb, 'rp-chainring') + a.path(`M${c[0]} ${c[1] - rb}L80 ${170 - 8}M${c[0]} ${c[1] + rb}L80 ${170 + 8}`, 'rp-chain') +
-        a.line(c, [c[0] + rc, c[1]], 'rp-crank') + a.rect(c[0] + rc - 10, c[1] - 3, c[0] + rc + 10, c[1] + 3, 'rp-weight', 1) +
-        a.arrow([c[0] + rc, c[1] - 56], [0, 1], 50, 'force k-s', sym('F'), [8, -30]), L('A bicycle with the crank level and the pedal pushed down', 'Ein Velo mit waagrechter Kurbel, das Pedal nach unten gedrückt'));
-    },
     fbd(p, v) {
       const a = A(), c = [140, 100], rc = p.r1 * 7, rb = p.r2 * 7;
       return a.svg(380, 210, a.circle(...c, rb, 'rp-chainring') + a.line(c, [c[0] + rc, c[1]], 'rp-crank') + a.circle(...c, 4, 'rp-hub') +
@@ -319,13 +253,6 @@
       step(L('The two parts', 'Die beiden Teile'), `<p>${L(`The handle’s centre of mass is ${q(p.len / 2, 'cm')} from its end, the head’s ${q(p.len, 'cm')}.`, `Der Schwerpunkt des Stiels liegt ${q(p.len / 2, 'cm')} vom Ende, der des Kopfs ${q(p.len, 'cm')}.`)}</p>`),
       step(L('Combined', 'Zusammengefasst'), `$$x = \\frac{m_1\\cdot\\frac{\\ell}{2} + m_2\\cdot\\ell}{m_1 + m_2} = \\frac{${tq(p.m1, 'kg')}\\cdot ${tq(p.len / 2, 'cm')} + ${tq(p.m2, 'kg')}\\cdot ${tq(p.len, 'cm')}}{${tq(p.m1 + p.m2, 'kg')}} = ${res(v.x, 'cm')}$$<p>${L('Close to the head: there the hammer balances, and there you hold it for strong blows with least effort.', 'Nahe beim Kopf: Dort balanciert der Hammer.')}</p>`),
     ],
-    pic(p, v) {
-      const a = A(), x0 = 60, y = 110, s = 260 / (p.len + 4);
-      return a.svg(400, 230, a.bg(0, 0, 400, 230, 'metal') +
-        a.path(`M${x0} ${y - 6}H${a.f(x0 + p.len * s)}V${y + 6}H${x0}Q${x0 - 6} ${y} ${x0} ${y - 6}Z`, 'rp-crate') +
-        a.rect(x0 + p.len * s - 14, y - 36, x0 + p.len * s + 18, y + 16, 'rp-head', 3) +
-        a.path(`M${a.f(x0 + v.x * s - 14)} 230V${y + 18}Q${a.f(x0 + v.x * s)} ${y + 4} ${a.f(x0 + v.x * s + 14)} ${y + 18}V230Z`, 'rp-finger'), L('A hammer balanced on a finger', 'Ein Hammer, auf einem Finger balanciert'));
-    },
     fbd(p, v) {
       const a = A(), x0 = 40, y = 80, s = 300 / p.len, k = 60 / p.m2;
       return a.svg(400, 200, a.rect(x0, y - 4, x0 + p.len * s, y + 4, 'rp-crate', 2) + a.path(`M${a.f(x0 + v.x * s)} ${y + 4}l-10 18h20Z`, 'rp-weight') +
@@ -350,12 +277,6 @@
         `$$\\tan\\theta = \\frac{w/2}{h} = \\frac{${tq(p.w / 2, 'm')}}{${tq(p.h, 'm')}} = ${res(v.tan, '')}\\;\\Rightarrow\\; \\theta \\approx ${num(Math.round(Math.atan(v.tan) * 1800 / Math.PI) / 10)}^\\circ$$` +
         `<p>${Math.atan(v.tan) * 180 / Math.PI >= 28 ? L('It passes the test.', 'Er besteht den Test.') : L('Too low: it fails the test (a load on the roof would make it worse).', 'Zu wenig: Er besteht den Test nicht (eine Last auf dem Dach würde es verschlimmern).')}</p>`),
     ],
-    pic(p) {
-      const a = A(), th = 18, cx = 200, cy = 200;
-      const body = `<g transform="rotate(${-th} ${cx - 70} ${cy})">${a.rect(cx - 80, cy - 150, cx + 80, cy - 14, 'rp-bus', 10)}${a.rect(cx - 66, cy - 136, cx + 66, cy - 90, 'rp-glass', 4)}${a.rect(cx - 50, cy - 60, cx + 50, cy - 40, 'rp-weight', 3)}${a.rim(cx - 60, cy - 12, 13)}${a.rim(cx + 60, cy - 12, 13)}${a.circle(cx, cy - 14 - p.h * 50, 6, 'rp-com')}</g>`;
-      return a.svg(420, 260, a.bg(0, 0, 420, 260, 'metal') + `<g transform="rotate(${-th} ${cx - 70} ${cy})">${a.rect(cx - 160, cy, cx + 160, cy + 14, 'rp-weight', 2)}</g>` + body +
-        a.path(`M${cx + 110} 250L${cx + 150} 250L${cx + 150} ${a.f(cy - 30)}Z`, 'rp-concrete') + a.text(cx - 140, 240, L('rear view', 'von hinten'), 'lbl note', 'start'), L('A bus seen from behind on a tilted platform', 'Ein Bus von hinten auf einer geneigten Plattform'));
-    },
     fbd(p) {
       const a = A(), s = Math.min(80, 95 / p.h), y = 185, w = p.w * s, h = p.h * s, x0 = 200 - w / 2;
       return a.svg(400, 230, a.rect(x0, y - h * 1.6, x0 + w, y, 'rp-cabin', 6) + a.circle(x0 + w / 2, y - h, 6, 'rp-com') + a.line([x0 - 20, y], [x0 + w + 20, y], 'rp-edge') +
@@ -385,7 +306,7 @@
     return {
       id: `real${i + 1}-${seed}`, real: i, seed, scenario: `real-${pb.id}`, family: 'real', difficulty: pb.difficulty,
       title: pb.title(), text: `<p>${pb.text(p)}</p><p class="note">${L('Take g = 10 m/s².', 'Rechne mit g = 10 m/s².')}</p>`,
-      fields, comps: [], figure: () => (root.Art ? pb.pic(p, v) : ''), solutionFigure: () => (root.Art ? pb.fbd(p, v) : ''),
+      fields, comps: [], figure: () => (root.TorqueFigures ? root.TorqueFigures[pb.id](p, v) : ''), solutionFigure: () => (root.Art ? pb.fbd(p, v) : ''),
       hints: pb.hints(p, v), solution: pb.steps(p, v), steps: [],
       results: fields.map((fl) => `$${T(...fl.sym)} = ${tq(fl.value, fl.unit)}$`).join(', '),
       p, v,

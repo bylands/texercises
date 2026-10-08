@@ -231,28 +231,31 @@ for (const lang of ['en', 'de']) {
           if (['A', 'B'].some((n) => !near(qOf(`s${n}`).value, D[n].s0 + D[n].v * D.times[D[n].asked]))) fail(`${tag}: wrong positions`);
           if (['A', 'B'].some((n) => D[n].known.includes(D[n].asked))) fail(`${tag}: a known position asked for`);
         }
-        if (kind === 'strobe') {
+        if (kind === 'strobe' || kind === 'strobegraph') {
           if (D.xs.some((x) => x < -7 || x > 7)) fail(`${tag}: dot off the number line`);
           if (D.xs.slice(1).some((x, k) => !near(x - D.xs[k], D.gaps[k]))) fail(`${tag}: gaps disagree with the dots`);
           // constant acceleration: the distances per second change by a each second, and the
           // positions follow s₀ + v₀·t + a·t²/2
           if (D.gaps.slice(1).some((g, k) => !near(g - D.gaps[k], D.acc))) fail(`${tag}: acceleration not constant`);
           if (D.xs.some((x, t) => !near(x, D.xs[0] + D.v0 * t + (D.acc * t * t) / 2))) fail(`${tag}: positions are not s0 + v0 t + a t²/2`);
-          if (d === 3 && !near(qOf('a').value, D.acc)) fail(`${tag}: wrong acceleration`);
+          if (kind === 'strobe' && d === 3 && !near(qOf('a').value, D.acc)) fail(`${tag}: wrong acceleration`);
+          if (kind === 'strobe' && d === 2 && right('fastest')[0] !== (() => { const k = D.gaps.reduce((m, g, i) => (Math.abs(g) > Math.abs(D.gaps[m]) ? i : m), 0); return `${k}–${k + 1}&nbsp;s`; })()) fail(`${tag}: fastest second`);
           if (Math.abs(D.v0) > 6 || Math.abs(D.v0 + D.acc * D.gaps.length) > 6) fail(`${tag}: v off the axis`);
         }
-        if (kind === 'atable') {
+        if (kind === 'atable' || kind === 'atablegraph') {
           // the changes of position per time step change by a · (step)² each step
           const g = D.xs.slice(1).map((x, k) => x - D.xs[k]), st = D.step || 1;
           if (g.slice(1).some((x, k) => !near(x - g[k], D.a * st * st))) fail(`${tag}: acceleration not constant`);
-          if (!near(qOf('a').value, D.a)) fail(`${tag}: wrong acceleration`);
-          if (D.asked.some((k) => !near(qOf(`s${k}`).value, D.xs[k]))) fail(`${tag}: wrong positions`);
-          if (D.asked.some((k) => k >= D.b && k <= D.b + 2)) fail(`${tag}: one of the three neighbours asked for`);
-          if (d === 4 && !near(qOf('vm').value, (D.xs[D.b + 2] - D.xs[D.b]) / (2 * st))) fail(`${tag}: wrong velocity in the middle`);
+          if (kind === 'atable' && !near(qOf('a').value, D.a)) fail(`${tag}: wrong acceleration`);
+          if (kind === 'atable' && D.asked.some((k) => !near(qOf(`s${k}`).value, D.xs[k]))) fail(`${tag}: wrong positions`);
+          if (kind === 'atable' && D.asked.some((k) => k >= D.b && k <= D.b + 2)) fail(`${tag}: one of the three neighbours asked for`);
+          if (kind === 'atable' && d === 4 && !near(qOf('vm').value, (D.xs[D.b + 2] - D.xs[D.b]) / (2 * st))) fail(`${tag}: wrong velocity in the middle`);
           // the strategy: the missing positions are asked before the acceleration
           const keys = ex.questions.map((q) => q.key);
-          if (D.asked.some((k) => keys.indexOf(`s${k}`) > keys.indexOf('a'))) fail(`${tag}: the acceleration is asked before the positions`);
-          if (!qOf('graph') || qOf('graph').options.length !== 4) fail(`${tag}: no graph with four options`);
+          if (kind === 'atable' && D.asked.some((k) => keys.indexOf(`s${k}`) > keys.indexOf('a'))) fail(`${tag}: the acceleration is asked before the positions`);
+          // one kind of question per exercise: the table's questions, or one graph
+          if (kind === 'atable' && qOf('graph')) fail(`${tag}: a graph among the questions`);
+          if (kind === 'atablegraph' && (ex.questions.length !== 1 || qOf('graph').options.length !== 4)) fail(`${tag}: not one graph with four options`);
         }
         if (kind === 'match') {
           // the right graph is the slope of the given one, piece by piece
@@ -261,7 +264,8 @@ for (const lang of ['en', 'de']) {
           if (d >= 3 && D.pieces.some((p) => !near(p.a, (p.v1 - p.v0) / (p.t1 - p.t0)))) fail(`${tag}: wrong a`);
           if (d === 4 && D.pieces.some((p, i) => i && !near(p.v0, D.pieces[i - 1].v1))) fail(`${tag}: v jumps`);
         }
-        if (['table', 'strobe'].includes(kind) && ex.questions.some((q) => q.pics && q.options.length !== 4)) fail(`${tag}: a graph question without four options`);
+        if (['table', 'strobe'].includes(kind) && ex.questions.some((q) => q.pics)) fail(`${tag}: a graph among the questions`);
+        if (['tablegraph', 'strobegraph'].includes(kind) && (ex.questions.length !== 1 || !ex.questions[0].pics || ex.questions[0].options.length !== 4)) fail(`${tag}: not one graph with four options`);
         // every curve of a graph inside its plot (y from 30 to 192 in figs.js)
         const graphs = [ex.figure, ...ex.steps.map((x) => x.figure), ...ex.questions.flatMap((q) => (q.pics ? q.options.map((o) => o.html) : []))];
         for (const g of graphs) {

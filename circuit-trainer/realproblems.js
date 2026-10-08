@@ -2,7 +2,7 @@
 // ideas of this app (series and parallel circuits, V = R I). Each has random values that keep the
 // numbers simple, a picture of the situation (artkit.js) and a circuit diagram for the solution
 // (circuit.js):
-//   { id, difficulty, title(), make(r), solve(p), fields(p), text(p), hints(p), steps(p, v), pic(p), circuit(p, v) }
+//   { id, difficulty, title(), make(r), solve(p), fields(p), text(p), hints(p), steps(p, v), circuit(p, v) } (the picture of the task: figures.js)
 // realOf(i, seed) gives an exercise as the practice ones (generator.js).
 (function (root) {
   'use strict';
@@ -121,17 +121,6 @@
           `$$R = \\frac{${U}_R}{I} = \\frac{${U}_0 - ${U}_\\text{L}}{I} = \\frac{${tq(v.VR, 'V')}}{${num(p.I / 1000)}\\,\\mathrm{A}} ${res(v.R, 'Ω')}$$`),
       ];
     },
-    pic(p) {
-      const a = A();
-      return a.svg(400, 220, a.bg(0, 0, 400, 220, 'metal') +
-        cable('M58 70V34H346V206H306V176') + cable('M82 70V50H140M200 50H270V192H296V176', 'red') + resistor(140, 50, 200) +
-        a.rect(40, 70, 100, 190, 'rp-battery', 5) + a.rect(50, 62, 66, 70, 'rp-terminal', 1) + a.rect(74, 62, 90, 70, 'rp-terminal', 1) +
-        a.text(70, 140, `${num(p.V0)} V`, 'rp-batlbl') + a.text(86, 86, '+', 'rp-batlbl') +
-        a.line([296, 176], [296, 136], 'rp-leg') + a.line([306, 176], [306, 140], 'rp-leg') +
-        a.circle(301, 112, 34, `rp-glow ${p.col.c}`) + a.path('M287 136V112A14 14 0 0 1 315 112V136Z', `rp-led ${p.col.c}`) + a.rect(284, 134, 318, 140, `rp-led ${p.col.c}`, 1) +
-        label(170, 78, L('resistor', 'Widerstand')) + label(301, 70, 'LED'),
-      L('A battery, a resistor and an LED in series', 'Eine Batterie, ein Widerstand und eine LED in Serie'));
-    },
     circuit: (p, v) => series(`$${Vs()}_0$ = ${num(p.V0)} V`, [{ l: val('R', v.R, 'Ω'), v: val(`${Vs()}_R`, v.VR, 'V') }, { led: true, l: 'LED', v: val(`${Vs()}_L`, p.col.VL, 'V') }], `$I$ = ${num(p.I)} mA`),
   };
 
@@ -160,18 +149,6 @@
           `$$I_2 = \\frac{${U}}{R_\\text{K} + R_{\\text{S},2}} = \\frac{230\\,\\mathrm{V}}{${tq(p.Rb, 'kΩ')} + ${tq(p.Rs2, 'kΩ')}} ${res(v.I2, 'mA')}$$` +
           L(`The current is ${sig(v.I2 / v.I1)} times larger, and deadly: dry insulating shoes protect.`, `Der Strom ist ${sig(v.I2 / v.I1)}-mal grösser und lebensgefährlich: Trockene, isolierende Schuhe schützen.`)),
       ];
-    },
-    pic() {
-      const a = A(), x = 230, y = 186;
-      return a.svg(400, 220, a.bg(0, 0, 400, 220) + a.rect(0, 30, 60, y, 'rp-wall', 0) + socket(40, 120) +
-        a.path('M300 186C296 140 318 112 350 112C384 112 398 140 396 186Z', 'rp-hedge') + a.path('M330 186C326 156 344 138 370 140C392 142 400 160 398 186Z', 'rp-hedge') +
-        a.ground(0, 400, y, 'grass', 34) +
-        cable('M44 126C80 150 110 196 160 180C190 170 200 150 218 128') +
-        a.person(x, y, 1.25, { shirt: 'green', hands: [[x - 12, y - 56], [x + 26, y - 92]] }) +
-        a.rect(x + 22, y - 98, x + 60, y - 88, 'rp-dark', 3) + a.line([x + 60, y - 93], [x + 110, y - 100], 'rp-blade') +
-        cable(`M${x + 22} ${y - 93}C${x} ${y - 90} ${x - 20} ${y - 70} ${x - 12} ${y - 56}`) + spark(x - 12, y - 58, 0.9) +
-        label(40, 156, '230 V', 'lbl small'),
-      L('A gardener touching the cut cable of a hedge trimmer', 'Ein Gärtner berührt das durchtrennte Kabel einer Heckenschere'));
     },
     circuit: (p, v) => series(`$${Vs()}$ = 230 V`, [{ l: `$R_\\text{K}$ = ${num(p.Rb)} kΩ` }, { l: `$R_\\text{S}$` }], '$I$', 2.2),
   };
@@ -202,16 +179,6 @@
           L(`Along each wire the potential drops by ${sig(p.r * v.I)} V: the heater gets ${sig(230 - v.VH)} V less than the socket.`, `Entlang jedes Leiters fällt das Potential um ${sig(p.r * v.I)} V ab: Der Heizlüfter bekommt ${sig(230 - v.VH)} V weniger als die Steckdose.`)),
       ];
     },
-    pic() {
-      const a = A(), y = 180;
-      return a.svg(400, 220, a.bg(0, 0, 400, 220) + a.rect(0, 40, 50, y, 'rp-wall', 0) + socket(32, 120) + a.ground(0, 400, y, 'concrete', 40) +
-        cable('M36 126C60 150 52 176 90 176H150C180 176 186 150 168 142C150 134 140 158 162 168C186 178 206 176 240 176H290C306 176 300 150 314 150') +
-        a.circle(130, 154, 22, 'rp-drum') + a.circle(130, 154, 8, 'rp-hub') +
-        a.rect(300, 100, 380, 178, 'rp-device', 6) + [0, 1, 2, 3, 4].map((k) => a.line([312 + 14 * k, 112], [312 + 14 * k, 166], 'rp-coil')).join('') +
-        a.path('M384 112c10 -10 0 -20 10 -30M384 140c10 -10 0 -20 10 -30', 'rp-heat') +
-        label(32, 154, '230 V') + label(340, 94, L('heater', 'Heizlüfter')),
-      L('A heater on a long extension cable', 'Ein Heizlüfter an einem langen Verlängerungskabel'));
-    },
     circuit: (p, v) => series(`$${Vs()}_0$ = 230 V`, [{ l: `$r$ = ${num(p.r)} Ω` }, { l: `$R$ = ${num(p.R)} Ω`, v: val(`${Vs()}_H`, v.VH, 'V') }, { l: `$r$ = ${num(p.r)} Ω` }], val('I', v.I, 'A')),
   };
 
@@ -237,20 +204,6 @@
           `$$I' = \\frac{${U}}{(n - 1)\\,R_1} = \\frac{n}{n - 1}\\,I = \\frac{${p.n}}{${p.n - 1}}\\cdot ${tq(p.I, 'A')} ${res(v.I2, 'A')}$$` +
           L('The current grows a little: the remaining bulbs shine brighter and wear out faster.', 'Der Strom wird etwas grösser: Die übrigen Lämpchen leuchten heller und verschleissen schneller.')),
       ];
-    },
-    pic() {
-      const a = A(), cols = ['red', 'yellow', 'blue', 'green'];
-      const pts = [];
-      for (let k = 0; k < 4; k++) {
-        const y0 = 60 + 34 * k, half = 18 + 22 * k;
-        for (let j = 0; j <= 5; j++) pts.push([200 + (k % 2 ? 1 : -1) * half * (1 - (2 * j) / 5), y0 + 6 * j]);
-      }
-      return a.svg(400, 230, a.bg(0, 0, 400, 230) + a.rect(0, 40, 40, 200, 'rp-wall', 0) + socket(22, 150) + a.ground(0, 400, 200, 'wood', 30) +
-        a.path('M200 22L292 196H108Z', 'rp-tree') + a.path('M200 196V208', 'rp-trunk') +
-        cable(`M26 156C60 190 90 180 ${a.f(pts[0][0])} ${a.f(pts[0][1])}L${pts.map((pt) => pt.map(a.f).join(' ')).join('L')}`, 'thin') +
-        pts.filter((pt, k) => k % 2 === 0).map((pt, k) => bulb(pt[0], pt[1] + 3, 3.4, cols[k % 4])).join('') +
-        a.path('M200 12l3 7h7l-6 4 2 7-6-4-6 4 2-7-6-4h7z', 'rp-star') + label(22, 184, '230 V'),
-      L('Fairy lights on a Christmas tree', 'Eine Lichterkette an einem Weihnachtsbaum'));
     },
     circuit: (p, v) => {
       const s = new (C().Sketch)(), H = 2.2, w = 1.5, n = 4, W = 0.6 + w * n + 1.2;
@@ -287,15 +240,6 @@
           L('Smaller than the smallest single resistance, as always in parallel.', 'Kleiner als der kleinste einzelne Widerstand, wie immer bei Parallelschaltungen.')),
       ];
     },
-    pic() {
-      const a = A(), x0 = 70, y = 176, w = 270;
-      const P = (u, h) => [x0 + u * w, y - h * w];
-      return a.svg(400, 220, a.bg(0, 0, 400, 220, 'night') + a.circle(340, 40, 14, 'rp-moon') + a.ground(0, 400, y, 'snow', 44) +
-        a.path(`M${P(1, 0.25).map(a.f).join(' ')}L400 ${a.f(y - 0.33 * w)}V${a.f(y - 0.06 * w)}Z`, 'rp-beam') +
-        a.car(x0, y, w, 'blue') + a.circle(...P(0.03, 0.23), 12, 'rp-glow red') +
-        [0.33, 0.36, 0.39].map((h) => a.line(P(0.44, h), P(0.55, h), 'rp-heatline')).join(''),
-      L('A car at night with its lights and the rear window heater on', 'Ein Auto in der Nacht mit Licht und Heckscheibenheizung'));
-    },
     circuit: (p, v) => parallel(`$${Vs()}$ = 12 V`, [
       { lamp: true, l: `$R_\\text{S}$ = ${num(p.RH)} Ω` }, { lamp: true, l: `$R_\\text{S}$` },
       { lamp: true, l: `$R_\\text{R}$ = ${num(p.RT)} Ω` }, { lamp: true, l: `$R_\\text{R}$` },
@@ -331,22 +275,6 @@
           L('Any machine with a smaller resistance draws more current, and the fuse blows.', 'Jede Maschine mit kleinerem Widerstand zieht mehr Strom, und die Sicherung löst aus.')),
       ];
     },
-    pic() {
-      const a = A(), y = 150;
-      return a.svg(400, 220, a.bg(0, 0, 400, 220, 'metal') + a.rect(0, y, 400, 220, 'rp-crate', 0) + a.line([0, y], [400, y], 'rp-edge') +
-        a.rect(16, 24, 70, 96, 'rp-device', 4) + a.rect(28, 40, 58, 58, 'rp-dark', 2) + a.rect(40, 62, 46, 80, 'rp-switch', 1) + label(43, 112, L('fuse', 'Sicherung')) +
-        socket(130, 100) + socket(166, 100) + socket(202, 100) +
-        // kettle
-        a.path(`M92 ${y}L98 ${y - 56}H134L140 ${y}Z`, 'rp-device') + a.path(`M134 ${y - 48}C152 ${y - 46} 152 ${y - 16} 138 ${y - 12}`, 'rp-handle-line') + a.path(`M98 ${y - 50}L84 ${y - 60}`, 'rp-handle-line') +
-        a.circle(116, y - 30, 3, 'rp-tail') + a.path('M112 92c6 -8 -4 -14 2 -22M122 92c6 -8 -4 -14 2 -22', 'rp-heat') +
-        // toaster
-        a.rect(178, y - 44, 246, y, 'rp-device', 10) + a.rect(190, y - 44, 202, y - 40, 'rp-dark', 1) + a.rect(220, y - 44, 232, y - 40, 'rp-dark', 1) + a.rect(240, y - 30, 246, y - 18, 'rp-dark', 1) +
-        // coffee machine, still off
-        a.rect(286, y - 80, 350, y, 'rp-dark', 6) + a.rect(298, y - 40, 338, y - 32, 'rp-terminal', 1) + a.rect(306, y - 22, 330, y, 'rp-device', 2) +
-        a.text(318, y - 54, '?', 'rp-batlbl') +
-        cable(`M130 106C130 120 140 ${y - 20} 140 ${y - 20}`, 'white') + cable(`M166 106C166 120 176 ${y - 20} 178 ${y - 20}`, 'white') + cable(`M202 106C210 140 270 120 286 ${y - 14}`, 'white dashed'),
-      L('A kettle, a toaster and a coffee machine on one fuse', 'Wasserkocher, Toaster und Kaffeemaschine an einer Sicherung'));
-    },
     circuit: (p, v) => parallel(`$${Vs()}$ = 230 V`, [{ l: `$R_\\text{W}$ = ${num(p.RK)} Ω` }, { l: `$R_\\text{T}$ = ${num(p.RT)} Ω` }, { l: '$R_3$' }], '$I$', [{ l: L('fuse', 'Sicherung') }]),
   };
 
@@ -371,18 +299,6 @@
           `$$I_\\text{II} = \\frac{${U}}{R_1} + \\frac{${U}}{R_2} = \\frac{230\\,\\mathrm{V}}{${tq(p.R1, 'Ω')}} + \\frac{230\\,\\mathrm{V}}{${tq(p.R2, 'Ω')}} ${res(v.Ip, 'A')}$$` +
           L(`In parallel, the current is ${sig(v.Ip / v.Is)} times larger: setting II heats much more.`, `Parallel ist der Strom ${sig(v.Ip / v.Is)}-mal grösser: Stufe II heizt viel stärker.`)),
       ];
-    },
-    pic() {
-      const a = A();
-      return a.svg(400, 220, a.bg(0, 0, 400, 220, 'metal') +
-        a.path('M70 60H230C260 60 268 72 268 96C268 120 260 132 230 132H70C50 132 44 120 44 96C44 72 50 60 70 60Z', 'rp-device red') +
-        a.path('M268 76H318L326 70V122L318 116H268Z', 'rp-dark') +
-        a.path('M120 132L104 206H146L156 132Z', 'rp-device red') + a.rect(118, 150, 138, 176, 'rp-switch-plate', 3) + a.text(128, 160, 'II', 'rp-switch-lbl') + a.text(128, 174, 'I', 'rp-switch-lbl') +
-        a.path(`M140 96${[0, 1, 2, 3, 4, 5, 6, 7].map(() => 'l6 -14l6 28l6 -14').join('')}`, 'rp-coil') +
-        a.circle(70, 96, 24, 'rp-dark') + a.path('M70 76V116M50 96H90M56 82L84 110M56 110L84 82', 'rp-fanblade') +
-        cable('M125 206C125 214 80 214 40 210', '') +
-        [74, 96, 118].map((y) => a.path(`M338 ${y}c14 -6 26 6 40 0`, 'rp-heat')).join(''),
-      L('A hair dryer with its heating wires and a switch for settings I and II', 'Ein Föhn mit Heizdrähten und einem Schalter für die Stufen I und II'));
     },
     circuit: (p, v) => `<div class="figs">${series(`$${Vs()}$ = 230 V`, [{ l: `$R_1$ = ${num(p.R1)} Ω` }, { l: `$R_2$ = ${num(p.R2)} Ω` }], val('I_{I}', v.Is, 'A'), 2.2)}${parallel(`$${Vs()}$ = 230 V`, [{ l: `$R_1$` }, { l: `$R_2$` }], val('I_{II}', v.Ip, 'A'))}</div>`,
   };
@@ -410,19 +326,6 @@
           L('In a divider, the voltages are in the ratio of the resistances.', 'Bei einem Spannungsteiler stehen die Spannungen im Verhältnis der Widerstände.')),
       ];
     },
-    pic() {
-      const a = A();
-      return a.svg(400, 220, a.bg(0, 0, 400, 220, 'metal') + a.rect(0, 186, 400, 220, 'rp-crate', 0) + a.line([0, 186], [400, 186], 'rp-edge') +
-        a.rect(30, 90, 180, 180, 'rp-pcb', 5) + a.rect(80, 116, 130, 156, 'rp-chip', 2) +
-        [0, 1, 2, 3, 4, 5].map((k) => a.rect(84 + 8 * k, 110, 88 + 8 * k, 116, 'rp-pin', 0) + a.rect(84 + 8 * k, 156, 88 + 8 * k, 162, 'rp-pin', 0)).join('') +
-        [0, 1, 2, 3, 4, 5, 6, 7].map((k) => a.rect(40 + 16 * k, 94, 48 + 16 * k, 102, 'rp-pin', 1)).join('') +
-        resistor(140, 130, 172) + a.text(105, 174, '5 V', 'rp-batlbl') +
-        cable('M156 96V60C220 40 270 50 290 96', 'red thin') + cable('M172 96V70C230 60 260 70 298 96', 'thin') +
-        a.path('M262 100H340L330 184H272Z', 'rp-cup') + a.path('M268 112H334L328 180H274Z', 'rp-tea') + a.path('M340 118C362 118 362 154 334 158', 'rp-handle-line') +
-        a.line([290, 96], [292, 146], 'rp-leg') + a.line([298, 96], [296, 146], 'rp-leg') + a.circle(294, 150, 6, 'rp-thermistor') +
-        a.path('M286 90c6 -8 -4 -14 2 -22M306 90c6 -8 -4 -14 2 -22', 'rp-heat') + label(330, 76, L('thermistor', 'Thermistor')),
-      L('A microcontroller board with a thermistor in a cup of tea', 'Ein Mikrocontroller-Board mit einem Thermistor in einer Tasse Tee'));
-    },
     circuit: (p, v) => series(`$${Vs()}_0$ = 5 V`, [{ l: `$R_1$ = ${num(p.R1)} kΩ`, v: val(`${Vs()}_0 - ${Vs()}_T`, 5 - p.VT, 'V') }, { l: '$R_T$', v: `$${Vs()}_T$ = ${num(p.VT)} V` }], val('I', v.I, 'mA'), 2.4),
   };
 
@@ -447,15 +350,6 @@
         step(L('Internal resistance', 'Innenwiderstand'), L(`Across the internal resistance $r$, the potential drops by $${U}_0 - ${U}_\\text{K}$; the same current flows through it:`, `Über dem Innenwiderstand $r$ fällt das Potential um $${U}_0 - ${U}_\\text{K}$ ab; durch ihn fliesst derselbe Strom:`) +
           `$$r = \\frac{${U}_0 - ${U}_\\text{K}}{I} = \\frac{${U}_0 - ${U}_\\text{K}}{${U}_\\text{K}}\\,R = \\frac{${tq(p.V0, 'V')} - ${tq(p.VK, 'V')}}{${tq(p.VK, 'V')}}\\cdot ${tq(p.R, 'Ω')} ${res(v.r, 'Ω')}$$`),
       ];
-    },
-    pic(p) {
-      const a = A();
-      return a.svg(400, 220, a.bg(0, 0, 400, 220, 'metal') + a.rect(0, 180, 400, 220, 'rp-crate', 0) + a.line([0, 180], [400, 180], 'rp-edge') +
-        a.rect(40, 70, 100, 170, 'rp-battery', 5) + a.rect(52, 62, 64, 70, 'rp-terminal', 1) + a.rect(76, 62, 88, 70, 'rp-terminal', 1) + a.text(70, 130, `${num(p.V0)} V`, 'rp-batlbl') +
-        cable('M58 62V40H240V96', 'red') + cable('M82 62V50H226V96') + a.circle(233, 118, 26, 'rp-glow yellow') + a.circle(233, 112, 16, 'rp-bulbglass') + a.rect(224, 126, 242, 142, 'rp-terminal', 2) + a.rect(212, 142, 254, 150, 'rp-dark', 2) +
-        a.rect(290, 96, 380, 176, 'rp-device', 8) + a.rect(302, 108, 368, 132, 'rp-lcd', 3) + a.text(335, 126, `${num(p.VK)} V`, 'rp-lcdtext') + a.circle(335, 156, 10, 'rp-dark') +
-        cable('M290 128C270 128 266 146 254 146', 'thin') + cable('M290 150C266 166 220 166 212 146', 'red thin'),
-      L('A battery with a lamp and a voltmeter', 'Eine Batterie mit einer Lampe und einem Voltmeter'));
     },
     circuit: (p, v) => {
       const s = new (C().Sketch)(), H = 2.4;
@@ -495,18 +389,6 @@
           L('An ammeter must have a small resistance, a voltmeter a large one.', 'Ein Amperemeter muss einen kleinen Widerstand haben, ein Voltmeter einen grossen.')),
       ];
     },
-    pic(p) {
-      const a = A(), c = [200, 150], R = 100;
-      const at = (deg, r) => [c[0] + r * Math.cos(deg * Math.PI / 180), c[1] - r * Math.sin(deg * Math.PI / 180)];
-      const ticks = [];
-      for (let k = 0; k <= 10; k++) { const d = 140 - 10 * k; ticks.push(a.line(at(d, R - 12), at(d, k % 5 ? R - 4 : R), 'rp-tick')); }
-      return a.svg(400, 220, a.bg(0, 0, 400, 220, 'metal') + a.rect(70, 20, 330, 200, 'rp-device', 10) + a.path(`M${at(145, R + 8).map(a.f).join(' ')}A${R + 8} ${R + 8} 0 0 1 ${at(35, R + 8).map(a.f).join(' ')}L${at(35, 30).map(a.f).join(' ')}A30 30 0 0 0 ${at(145, 30).map(a.f).join(' ')}Z`, 'rp-dial') +
-        ticks.join('') + a.text(...at(140, R + 18), '0', 'rp-ink') + a.text(...at(40, R + 18), '1', 'rp-ink') + a.text(200, 112, 'mA', 'rp-ink') +
-        a.line(c, at(62, R - 4), 'rp-needle') + a.circle(c[0], c[1], 7, 'rp-dark') +
-        a.circle(140, 186, 7, 'rp-terminal') + a.circle(260, 186, 7, 'rp-terminal') + a.text(140, 176, '−', 'rp-ink') + a.text(260, 176, '+', 'rp-ink') +
-        a.text(200, 176, `${num(p.Rm)} Ω`, 'rp-ink'),
-      L('A moving-coil meter for currents up to 1 mA', 'Ein Drehspulmessgerät für Ströme bis 1 mA'));
-    },
     circuit: (p, v) => {
       const s = new (C().Sketch)();
       s.autoDots = true;
@@ -533,7 +415,7 @@
       ptype: 'real', difficulty: pb.difficulty, title: pb.title(), text: `<p>${pb.text(p)}</p>`,
       fields, tol: 0.01,
       // the picture of the situation; with the solution, the circuit diagram
-      figure: (sol) => (sol ? pb.circuit(p, v) : root.Art ? pb.pic(p) : ''),
+      figure: (sol) => (sol ? pb.circuit(p, v) : root.CircuitFigures ? root.CircuitFigures[pb.id](p, v) : ''),
       hints: pb.hints(p), solution: pb.steps(p, v),
       results: fields.map((f) => `$${f.sym} = ${sig(f.value)}\\,${TU[f.unit] || `\\mathrm{${f.unit}}`}$`).join(', '),
       p, v,

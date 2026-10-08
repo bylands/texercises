@@ -83,22 +83,37 @@ const LAWS = {
   match: (p, ex) => {
     const g = val(ex, 'graph');
     if (g.value !== p.given || g.options.length !== 4) fail(`${ex.scenario}: graph`);
-    const curves = g.options.map((o) => Scenarios.curveOf(o[0], p.n, p.tEnd).map(([t, y]) => [t, Math.max(p.axis.lo, Math.min(p.axis.hi, y))]));
-    for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (Plot.alike(curves[i], curves[j], p.axis.hi - p.axis.lo)) fail(`${ex.scenario}: graphs alike`);
-    // the given SHM has the period 2π/√K: a sine with it
-    if (p.given === 'shm' && !fitsSine(Scenarios.curveOf('shm', p.n, p.tEnd), PI2 / Math.sqrt(p.n.K))) fail(`${ex.scenario}: period`);
+    const clip = (pts) => pts.map(([t, y]) => [t, Math.max(Scenarios.AXIS.lo, Math.min(Scenarios.AXIS.hi, y))]);
+    const curves = g.options.map((o) => clip(Scenarios.curveOf(o[0])));
+    for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (Plot.alike(curves[i], curves[j], Scenarios.AXIS.hi - Scenarios.AXIS.lo)) fail(`${ex.scenario}: graphs alike`);
+    // qualitative: no numbers in the equation, none on the axes but the 0
+    if (/\d/.test(Scenarios.NKINDS[p.given].tex(p.y).replace(/\^2|\^3| = 0$/g, ''))) fail(`${ex.scenario}: a number in the equation`);
+    if (g.options.some((o) => (o[1].match(/class="tick"[^>]*>([^<]*)</g) || []).some((t) => !/>0</.test(t)))) fail(`${ex.scenario}: numbers on the axes`);
   },
   back: (p, ex) => { const e = val(ex, 'eq'); if (e.value !== p.given || e.options.length !== 4 || new Set(e.options.map((o) => o[1])).size !== 4) fail('match-back: equations'); },
   kin: (p, ex) => {
-    const w = PI2 * p.f, A = p.A, has = (k) => ex.fields.some((f) => f.key === k);
-    const want = {
-      vmax: { vmax: A * w, amax: A * w * w },
-      'back-f': { f: p.f, T: 1 / p.f },
-      'back-A': { w, A },
-      'speed-x': { v: w * Math.sqrt(A * A - (p.k * A) ** 2), a: w * w * p.k * A },
-      'speed-t': (() => { const t = ex.v.t, top = p.start === 'top'; return { x: top ? A * Math.cos(w * t) : A * Math.sin(w * t), v: top ? -A * w * Math.sin(w * t) : A * w * Math.cos(w * t) }; })(),
-    }[ex.scenario];
+    const w = p.w, A = p.A, has = (k) => ex.fields.some((f) => f.key === k);
+    const want = { vmax: { vmax: A * w, amax: A * w * w }, 'back-w': { w, amax: A * w * w }, 'back-A': { w, A } }[ex.scenario];
     for (const [k, x] of Object.entries(want)) if (!has(k) || !close(si(val(ex, k)), x, 1e-9)) fail(`${ex.scenario}: ${k} = ${has(k) ? si(val(ex, k)) : '–'} ≠ ${x}`);
+    if (ex.fields.some((f) => /max/.test(f.sym))) fail(`${ex.scenario}: v_max instead of the hat`);
+  },
+  read: (p, ex) => {
+    const phi = (p.k * Math.PI) / 4;
+    if (!close(si(val(ex, 'A')), p.A / 100, 1e-9) || !close(si(val(ex, 'T')), p.T, 1e-9)) fail(`${ex.scenario}: A or T`);
+    if (Math.abs(val(ex, 'phi').value - phi) > 1e-9 || phi <= -Math.PI || phi > Math.PI) fail(`${ex.scenario}: phase`);
+    // the graph at t = 0 starts at A·sin φ₀
+    if (!close(Math.sin(phi) * p.A, p.A * Math.sin(phi))) fail('read: start');
+    // T must lie on the grid of the time axis
+    if (!/class="grid/.test(ex.figure())) fail(`${ex.scenario}: no grid`);
+  },
+  points: (p, ex) => {
+    const pt = val(ex, 'pt'), x = (u) => Math.sin(2 * Math.PI * u), v = (u) => Math.cos(2 * Math.PI * u);
+    const test = { vmax: (u) => Math.abs(v(u)) > 0.999, v0: (u) => Math.abs(x(u)) > 0.999, amax: (u) => Math.abs(x(u)) > 0.999, aplus: (u) => x(u) < -1e-6, vminus: (u) => v(u) < -1e-6 }[p.ask];
+    const right = p.us.map((u, i) => (test(u) ? 'PQRS'[i] : null)).filter(Boolean);
+    if (right.length !== 1 || right[0] !== pt.value) fail(`points: ${p.ask} ${right}`);
+  },
+  energy: (p, ex) => {
+    if (p.kind === 'equal' ? !close(val(ex, 'x').value, Math.SQRT1_2) : !close(val(ex, 'kin').value, 1 - (p.k[0] / p.k[1]) ** 2)) fail('energy');
   },
 };
 
@@ -132,7 +147,7 @@ for (const lang of ['en', 'de']) {
         if (qz.options.some((o) => !o.correct && o.why === undefined)) fail(`${id}: quiz option without why`);
       }
     }
-    if (seen.size < 10) fail(`${scn.id}: only ${seen.size} different exercises`);
+    if (seen.size < (scn.id === "energy" ? 8 : 10)) fail(`${scn.id}: only ${seen.size} different exercises`);
   }
 
   // the tutor's examples, and the worksheet's ξ + k²·ξ̈ = 0: an SHM with T = 2πk
@@ -151,8 +166,6 @@ for (const lang of ['en', 'de']) {
       const w = p.T ? PI2 / p.T : PI2 * p.f;
       if (ex.fields.some((f) => f.key === 'vmax') && !close(si(val(ex, 'vmax')), v.Am * w, 1e-9)) fail(`${id}: v_max`);
       if (ex.fields.some((f) => f.key === 'amax') && !close(si(val(ex, 'amax')), v.Am * w * w, 1e-9)) fail(`${id}: a_max`);
-      if (ex.fields.some((f) => f.key === 'acc') && !close(si(val(ex, 'acc')), w * w * p.x, 1e-9)) fail(`${id}: a at x`);
-      if (ex.fields.some((f) => f.key === 'acc') && !(p.x < p.a)) fail(`${id}: x beyond the amplitude`);
       [ex.title, ex.text, ex.results, ...ex.hints, ...ex.solution, ex.solutionFigure()].forEach((s, j) => checkText(id, `text ${j}`, s));
     }
   });

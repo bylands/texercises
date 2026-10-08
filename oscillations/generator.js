@@ -15,7 +15,7 @@
 
   // the right answer of a field, as shown in the results
   function answerHtml(f) {
-    if (f.type === 'num') return `$${f.sym} = ${tq(f.value * (OC.UNITS[f.unit] || [1])[0], f.unit)}$`;
+    if (f.type === 'num') return `$${f.sym} = ${f.show || tq(f.value * (OC.UNITS[f.unit] || [1])[0], f.unit)}$`;
     return (f.options.find((o) => o[0] === f.value) || [, ''])[1];
   }
 

@@ -21,6 +21,7 @@
     <linearGradient id="rp-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity="0.15"/></linearGradient>
     <linearGradient id="rp-night" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c2a44"/><stop offset="1" stop-color="#3d4f6e"/></linearGradient>
     <linearGradient id="rp-snow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--rp-snow1)"/><stop offset="1" style="stop-color:var(--rp-snow2)"/></linearGradient>
+    <pattern id="rp-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" style="fill:var(--card)"/><line x1="0" y1="0" x2="0" y2="7" style="stroke:var(--muted);stroke-width:1"/></pattern>
     <radialGradient id="rp-flame" cx="0.5" cy="0.2" r="0.8"><stop offset="0" stop-color="#fff6c2"/><stop offset="0.45" stop-color="#ffc23d"/><stop offset="1" stop-color="#e8542c"/></radialGradient>
   </defs>`;
 

@@ -181,7 +181,7 @@
         p$(L('This electric repulsion drives the fragments apart: most of the energy of fission comes from it.', 'Diese elektrische Abstossung treibt die Bruchstücke auseinander: Der grösste Teil der Energie der Kernspaltung stammt daraus.'))),
     ],
     pic: () => { const a = A(); return a.svg(420, 220, a.bg(0, 0, 420, 220, 'night') + nucleus(150, 110, 14, 18, 6, 5) + nucleus(275, 110, 10, 13, 6, 7) + `<path class="rp-speedline" d="M90 80h-40M90 110h-50M90 140h-40M335 90h40M335 120h50"/>` +
-      caption(150, 190, L('heavier fragment', 'schwereres Bruchstück')) + caption(275, 190, L('lighter fragment', 'leichteres Bruchstück')), L('The two fragments of a split uranium nucleus fly apart', 'Die beiden Bruchstücke eines gespaltenen Urankerns fliegen auseinander')); },
+      caption(130, 190, L('heavier fragment', 'schwereres Bruchstück')) + caption(300, 190, L('lighter fragment', 'leichteres Bruchstück')), L('The two fragments of a split uranium nucleus fly apart', 'Die beiden Bruchstücke eines gespaltenen Urankerns fliegen auseinander')); },
     fbd: (p, v) => drawing({ scale: 200 / p.d, pts: [{ c: [0, 0], q: 1, lab: `${v.Z1}e` }, { c: [p.d, 0], q: 1, lab: `${v.Z2}e`, cls: 'hl' }], dims: [[[0, 0], [p.d, 0], q(p.d, 'm'), -26]],
       forces: { a: { at: [p.d, 0], F: [1, 0], lab: sv('F'), cls: 'k-1', off: [0, -14] }, b: { at: [0, 0], F: [-1, 0], lab: sv('F'), cls: 'k-1', off: [0, -14] } }, arrow: 55 }, { show: new Set(['a', 'b']) }),
   };

@@ -81,6 +81,22 @@
     return m[2] ? Number(m[1]) / Number(m[2]) : Number(m[1]);
   }
 
+  // A phase as typed: a number of radians, or with π: pi/2, 3pi/4, -π, 0.5π.
+  function parsePhase(s) {
+    s = s.trim().replace(/,/g, '.').replace(/[−–—‒]/g, '-').replace(/\s+/g, '').replace(/rad$/i, '').replace(/pi|π/gi, 'π');
+    const m = s.match(/^([-+]?)(\d*\.?\d*)\*?π(?:\/(\d*\.?\d+))?$/);
+    if (m) return (m[1] === '-' ? -1 : 1) * (m[2] ? Number(m[2]) : 1) * Math.PI / (m[3] ? Number(m[3]) : 1);
+    return parse(s);
+  }
+  // A phase is right up to multiples of 2π (to 0.02 rad); its traps the same way (in degrees: up to 360°).
+  function judgePhase(x, f) {
+    if (Number.isNaN(x)) return { cls: 'bad', msg: ui().number };
+    const wrap = (d, P) => Math.abs(d - P * Math.round(d / P));
+    if (wrap(x - f.value, 2 * Math.PI) < 0.02) return { cls: 'ok', msg: ui().correct };
+    for (const t of f.traps) if (t.flag === 'deg' ? wrap(x - t.value, 360) < 1 : wrap(x - t.value, 2 * Math.PI) < 0.02) return { cls: 'bad', msg: t.why };
+    return { cls: 'bad', msg: ui().wrong };
+  }
+
   // Right within 1 % or when rounded to three digits; otherwise the answer under a typical wrong
   // idea, a sign, a power of ten or a rounding error.
   function judgeNum(x, f) {
@@ -150,7 +166,7 @@
   }
   const empty = (f, val) => (f.type === 'num' ? !String(val).trim() : val == null);
   function judge(f, val) {
-    if (f.type === 'num') return judgeNum(parse(val), f);
+    if (f.type === 'num') return f.phase ? judgePhase(parsePhase(val), f) : judgeNum(parse(val), f);
     if (val === f.value) return { cls: 'ok', msg: ui().correct };
     const o = (f.options || []).find((x) => x[0] === val);
     return { cls: 'bad', msg: (o && o[2]) || ui().wrong };

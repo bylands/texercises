@@ -43,6 +43,7 @@ svg .qc-y { --qc: var(--q-y); }
 svg .qlabel { fill: var(--qc); }
 svg .curve { stroke: var(--qc); stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 svg .tdot { fill: var(--qc); stroke: var(--card); stroke-width: 1.5; }
+svg .pname { fill: var(--ink); font: italic 600 15px var(--serif); paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
 
 /* answers that are no numbers: a choice of words, equations (one below the other) or graphs */
 .field.choice { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
@@ -59,15 +60,6 @@ svg .tdot { fill: var(--qc); stroke: var(--card); stroke-width: 1.5; }
 .choices.pics svg.ygraph { max-width: none; }
 @media (max-width: 560px) { .choices.pics { grid-template-columns: minmax(0, 1fr); } }
 
-/* the pictures of the problems: arrows for the motion */
-svg .rp-motion { color: var(--motion); }
-svg .rp-motion line { stroke: currentColor; stroke-width: 2; }
-svg .rp-motion polygon { fill: currentColor; }
-svg .rp-motion circle { display: none; }
-svg .os-metal { fill: url(#rp-metal); stroke: var(--rp-outline); stroke-width: 1.2; stroke-linejoin: round; }
-svg .os-ghost { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 5 4; }
-svg .os-cloth { fill: #d9b38c; stroke: var(--rp-outline); stroke-width: 1; }
-svg .os-bird { fill: #3f9b5a; stroke: var(--rp-outline); stroke-width: 1.2; stroke-linejoin: round; }
 
 /* arcade: manim's colours */
 #arcade { --q-y: #fc6255; --grid: #1c1c1c; --grid-major: #333; --band: #222; --motion: #58c4dd; }
@@ -75,3 +67,4 @@ svg .os-bird { fill: #3f9b5a; stroke: var(--rp-outline); stroke-width: 1.2; stro
 
 /* a result in the text of a step (in formulas, KaTeX marks it: see ui.css) */
 span.result { background: var(--ok-bg); border-radius: 3px; padding: 0.05em 0.25em; }
+

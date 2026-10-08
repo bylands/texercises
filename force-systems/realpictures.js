@@ -1,6 +1,6 @@
-// Pictures for the real problems (realproblems.js): a picture of the situation for the task, and
-// force diagrams for the solution, drawn with the scenes of draw.js. RealPictures[id] =
-// { pic(p, v), fbd(p, v) }, both HTML (fbd may be several diagrams side by side). In the force
+// Force diagrams for the real problems (realproblems.js), for the solution, drawn with the scenes
+// of draw.js (the pictures of the tasks: figures.js). RealPictures[id] = { fbd(p, v) }, HTML
+// (fbd may be several diagrams side by side). In the force
 // diagrams the arrows are proportional to the forces within each diagram.
 (function (root) {
   'use strict';
@@ -66,16 +66,6 @@
   const movesUp = (p) => p.ph === 'upStart' || p.ph === 'upStop';
 
   P.scale = {
-    pic(p) {
-      const sc = new Scene(300, 300, L('A person on a scale in a lift', 'Eine Person auf einer Waage im Lift'));
-      rect(sc, 40, 40, 200, 260, 'pic-cabin', 4);
-      sc.line(120, 0, 120, 40, 'w rope');
-      rect(sc, 92, 248, 148, 260, 'pic-device', 2);
-      person(sc, 120, 248, 1.6);
-      velo(sc, [232, 130], [0, movesUp(p) ? -1 : 1]);
-      accel(sc, 'a', [262, 130], [0, up(p) ? -1 : 1], FS.q(p.a, 'a'));
-      return picture(sc);
-    },
     fbd(p, v) {
       const sc = new Scene(200, 260, L('Forces on the person', 'Kräfte auf die Person'));
       const b = block(sc, [100, 130], 50, 90, '');
@@ -87,17 +77,6 @@
   };
 
   P.crane = {
-    pic(p) {
-      const sc = new Scene(320, 300, L('A harbour crane lifting a container', 'Ein Hafenkran hebt einen Container'));
-      road(sc, 10, 300, 270);
-      path(sc, 'M60 270V30M20 40H270M60 30L270 40M60 30L20 40', 'pic-crane', [[20, 30], [270, 270]]);
-      rect(sc, 40, 200, 80, 270, 'pic-device', 2);
-      sc.line(230, 40, 230, 140, 'w rope');
-      rect(sc, 185, 140, 275, 185, 'pic-container', 2);
-      path(sc, 'M200 145V180M215 145V180M230 145V180M245 145V180M260 145V180', 'pic-ribs', [[200, 145], [260, 180]]);
-      accel(sc, 'a', [290, 175], [0, -1], FS.q(p.a, 'a'));
-      return picture(sc);
-    },
     fbd(p, v) {
       const sc = new Scene(200, 260, L('Forces on the container', 'Kräfte auf den Container'));
       const b = block(sc, [100, 130], 90, 45, '');
@@ -109,17 +88,6 @@
   };
 
   P.truck = {
-    pic(p) {
-      const sc = new Scene(360, 220, L('A crate on the platform of a truck', 'Eine Kiste auf der Ladefläche eines Lastwagens'));
-      road(sc, 10, 350, 200);
-      rect(sc, 40, 150, 230, 165, 'pic-truck', 2);
-      poly(sc, [[232, 165], [232, 110], [272, 110], [292, 135], [292, 165]], 'pic-truck');
-      poly(sc, [[244, 118], [270, 118], [284, 135], [244, 135]], 'pic-glass');
-      wheel(sc, 80, 182, 17); wheel(sc, 120, 182, 17); wheel(sc, 262, 182, 17);
-      rect(sc, 90, 115, 140, 150, 'pic-crate', 2);
-      accel(sc, 'a', [300, 80], [1, 0], FS.q(p.a, 'a'), [0, -12]);
-      return picture(sc);
-    },
     fbd(p, v) {
       const sc = new Scene(240, 220, L('Forces on the crate', 'Kräfte auf die Kiste'));
       const b = block(sc, [110, 110], 60, 50, '');
@@ -132,15 +100,6 @@
   };
 
   P.braking = {
-    pic(p) {
-      const sc = new Scene(320, 200, L('A car braking hard', 'Ein Auto bremst stark'));
-      road(sc, 10, 310, 170);
-      car(sc, 90, 170, 140);
-      path(sc, 'M40 150H80M30 160H80M50 140H80', 'pic-speed', [[30, 140], [80, 160]]);
-      velo(sc, [200, 50], [1, 0], [0, -12]);
-      accel(sc, 'a', [240, 78], [-1, 0], FS.q(v_a(p), 'a'), [-10, 0]);
-      return picture(sc);
-    },
     fbd(p, v) {
       const sc = new Scene(260, 200, L('Forces on the car', 'Kräfte auf das Auto'));
       const b = block(sc, [120, 100], 100, 50, '');
@@ -156,15 +115,6 @@
   const v_a = (p) => ROAD_MU[p.road] * G;
 
   P.tow = {
-    pic(p) {
-      const sc = new Scene(400, 200, L('A car towing another one', 'Ein Auto schleppt ein anderes ab'));
-      road(sc, 10, 390, 170);
-      car(sc, 20, 170, 130, 'pic-car alt');
-      sc.line(150, 150, 220, 150, 'w rope');
-      car(sc, 220, 170, 140);
-      accel(sc, 'a', [300, 80], [1, 0], aSym, [0, -12]);
-      return picture(sc);
-    },
     fbd(p, v) {
       const r1 = p.mu * p.m1 * G, r2 = p.mu * p.m2 * G;
       const a = new Scene(260, 200, L('Forces on the towing car', 'Kräfte auf das schleppende Auto'));
@@ -181,18 +131,6 @@
   };
 
   P.train = {
-    pic(p) {
-      const sc = new Scene(460, 170, L('A locomotive pulling freight wagons', 'Eine Lokomotive zieht Güterwagen'));
-      road(sc, 10, 450, 150);
-      const wag = (x) => { rect(sc, x, 95, x + 80, 135, 'pic-wagon', 3); wheel(sc, x + 16, 141, 9); wheel(sc, x + 64, 141, 9); };
-      wag(20); wag(110); sc.text(215, 125, '…', 'lbl', 'middle'); wag(240);
-      path(sc, 'M100 125H110M190 125H200M230 125H240M320 125H332', 'pic-coupling', [[100, 125], [332, 125]]);
-      rect(sc, 332, 85, 440, 135, 'pic-truck', 4);
-      rect(sc, 400, 60, 440, 85, 'pic-truck', 2);
-      wheel(sc, 352, 141, 9); wheel(sc, 380, 141, 9); wheel(sc, 420, 141, 9);
-      accel(sc, 'a', [380, 35], [1, 0], aSym, [0, -12]);
-      return picture(sc);
-    },
     fbd(p, v) {
       const a = new Scene(300, 180, L('All wagons together', 'Alle Wagen zusammen'));
       const b1 = block(a, [140, 90], 160, 40, L(`${p.n} wagons`, `${p.n} Wagen`));
@@ -205,13 +143,6 @@
   };
 
   P.skydiver = {
-    pic() {
-      const sc = new Scene(260, 300, L('A skydiver under her parachute', 'Eine Fallschirmspringerin am Fallschirm'));
-      path(sc, 'M40 90Q130 -10 220 90Q175 72 130 78Q85 72 40 90Z', 'pic-canopy', [[40, 30], [220, 90]]);
-      path(sc, 'M40 90L130 190M90 78L130 190M170 78L130 190M220 90L130 190', 'pic-lines', [[40, 78], [220, 190]]);
-      person(sc, 130, 262, 1.3, true);
-      return picture(sc);
-    },
     fbd(p, v) {
       const a = new Scene(200, 260, L('Falling at constant speed', 'Fall mit konstanter Geschwindigkeit'));
       const b1 = block(a, [100, 130], 40, 70, '');
@@ -227,16 +158,6 @@
   };
 
   P.rocket = {
-    pic(p) {
-      const sc = new Scene(220, 320, L('A rocket lifting off', 'Eine Rakete beim Start'));
-      road(sc, 10, 210, 300);
-      poly(sc, [[110, 20], [130, 60], [130, 220], [90, 220], [90, 60]], 'pic-rocket');
-      poly(sc, [[90, 180], [70, 230], [90, 220]], 'pic-fin'); poly(sc, [[130, 180], [150, 230], [130, 220]], 'pic-fin');
-      circle(sc, 110, 90, 10, 'pic-glass');
-      poly(sc, [[95, 222], [125, 222], [118, 262], [110, 290], [102, 262]], 'pic-flame');
-      accel(sc, 'a', [175, 130], [0, -1], FS.q(p.a, 'a'));
-      return picture(sc);
-    },
     fbd(p, v) {
       const a = new Scene(200, 280, L('Forces on the rocket', 'Kräfte auf die Rakete'));
       const b1 = block(a, [100, 140], 40, 110, '');
@@ -259,17 +180,6 @@
   };
 
   P.parking = {
-    pic(p) {
-      const sc = new Scene(380, 280, L('A car parked on a ramp', 'Ein Auto auf einer Rampe'));
-      onSlope(sc, p, 340, (sl, s, c) => {
-        const at = sl.at, w = 120;
-        const q = (d, h) => at(130 + d * w, h * w);
-        poly(sc, [q(0, 0.1), q(0, 0.27), q(0.22, 0.29), q(0.36, 0.43), q(0.72, 0.43), q(0.86, 0.29), q(1, 0.26), q(1, 0.1)], 'pic-car');
-        poly(sc, [q(0.4, 0.29), q(0.42, 0.39), q(0.54, 0.39), q(0.54, 0.29)], 'pic-glass');
-        wheel(sc, ...q(0.2, 0.09), 0.09 * w); wheel(sc, ...q(0.8, 0.09), 0.09 * w);
-      });
-      return picture(sc);
-    },
     fbd(p, v) {
       const sc = new Scene(380, 300, L('Forces on the car', 'Kräfte auf das Auto'));
       onSlope(sc, p, 340, (sl) => {
@@ -283,17 +193,6 @@
   };
 
   P.skier = {
-    pic(p) {
-      const sc = new Scene(380, 280, L('A skier going down a piste', 'Ein Skifahrer auf der Piste'));
-      onSlope(sc, p, 340, (sl) => {
-        const foot = sl.at(170, 0);
-        sc.line(...sl.at(140, 2), ...sl.at(205, 2), 'pic-ski');
-        person(sc, foot[0], foot[1] - 3, 1.2);
-        sc.line(foot[0] - 14, foot[1] - 34, foot[0] - 22, foot[1], 'w');
-        sc.line(foot[0] + 14, foot[1] - 34, foot[0] + 4, foot[1] + 4, 'w');
-      });
-      return picture(sc);
-    },
     fbd(p, v) {
       const sc = new Scene(380, 300, L('Forces on the skier', 'Kräfte auf den Skifahrer'));
       onSlope(sc, p, 340, (sl) => {
@@ -308,20 +207,6 @@
   };
 
   P.sled = {
-    pic() {
-      const sc = new Scene(380, 220, L('Pulling a sled with a child', 'Einen Schlitten mit einem Kind ziehen'));
-      road(sc, 10, 370, 190);
-      path(sc, 'M40 190H150Q165 190 165 178', 'pic-runner', [[40, 178], [165, 190]]);
-      rect(sc, 45, 165, 150, 178, 'pic-crate', 2);
-      circle(sc, 95, 128, 8, 'pic-head');
-      path(sc, 'M95 136V160M95 160L120 165M95 145L110 160', 'pic-limbs', [[95, 136], [120, 165]]);
-      // the rope rises 0.6 of its length: from the sled's front to the hand of the person pulling
-      const E = [150 + 0.8 * 100, 172 - 0.6 * 100];
-      sc.line(150, 172, ...E, 'w rope');
-      person(sc, 258, 190, 1.5);
-      path(sc, `M258 124L${f(E[0])} ${f(E[1])}`, 'pic-limbs', [[E[0], E[1]], [258, 124]]);
-      return picture(sc);
-    },
     fbd(p, v) {
       const sc = new Scene(280, 230, L('Forces on the sled', 'Kräfte auf den Schlitten'));
       const b = block(sc, [120, 120], 90, 40, '');
@@ -334,19 +219,6 @@
   };
 
   P.counterweight = {
-    pic(p) {
-      const sc = new Scene(260, 320, L('A lift cabin and its counterweight', 'Eine Liftkabine und ihr Gegengewicht'));
-      rect(sc, 20, 20, 240, 310, 'pic-shaft', 2);
-      sc.pulley(130, 50, 24);
-      sc.line(106, 50, 106, 160, 'w rope'); sc.line(154, 50, 154, 110, 'w rope');
-      rect(sc, 50, 160, 140, 260, 'pic-cabin', 3);
-      person(sc, 95, 256, 1.2);
-      rect(sc, 140, 110, 168, 170, 'pic-weight', 2);
-      accel(sc, 'aK', [36, 200], [0, 1], aSym, [-8, 0]);
-      accel(sc, 'aG', [205, 160], [0, -1], aSym, [8, 0]);
-      void p;
-      return picture(sc);
-    },
     fbd(p, v) {
       const a = new Scene(200, 260, L('Forces on the cabin', 'Kräfte auf die Kabine'));
       const b1 = block(a, [100, 130], 60, 70, '');
@@ -367,6 +239,7 @@
   // Colours come from CSS variables (style.css), so that dark mode can adjust them.
   const DEFS = `<defs>
     <linearGradient id="rp-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--rp-sky1)"/><stop offset="1" style="stop-color:var(--rp-sky2)"/></linearGradient>
+    <pattern id="rp-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" style="fill:var(--card)"/><line x1="0" y1="0" x2="0" y2="7" style="stroke:var(--muted);stroke-width:1"/></pattern>
     <linearGradient id="rp-metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:var(--rp-metal1)"/><stop offset="0.5" style="stop-color:var(--rp-metal2)"/><stop offset="1" style="stop-color:var(--rp-metal1)"/></linearGradient>
     <linearGradient id="rp-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity="0.15"/></linearGradient>
     <linearGradient id="rp-snow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--rp-snow1)"/><stop offset="1" style="stop-color:var(--rp-snow2)"/></linearGradient>

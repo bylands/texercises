@@ -12,8 +12,7 @@
     omega2: 'period', inverse: 'period', freq: 'period', omegaT: 'period',
     sign: 'sign', order: 'order', power: 'linear', const: 'linear', tsq: 'amp', amp: 'amp',
     shift: 'shift', form: 'form', damp: 'damp',
-    noTwoPi: 'twopi', twopiT: 'twopi', square: 'square',
-    vx: 'vx', linearv: 'vx', rootplus: 'vx', amax: 'vx', swap: 'swap', deg: 'deg',
+    square: 'square', flip: 'square',
   };
   const concepts = () => ({
     period: L('ω, ω² and T mixed up', 'ω, ω² und T verwechselt'),
@@ -24,15 +23,11 @@
     shift: L('a constant only shifts the equilibrium', 'eine Konstante verschiebt nur die Gleichgewichtslage'),
     form: L('harmless features taken for mistakes (letters, notation, rearranging)', 'harmlose Merkmale für Fehler gehalten (Buchstaben, Schreibweise, Umformen)'),
     damp: L('damping: a term with ẏ', 'Dämpfung: ein Term mit ẏ'),
-    twopi: L('ω = 2πf = 2π/T', 'ω = 2πf = 2π/T'),
-    square: L('v_max = Aω, a_max = Aω²', 'v_max = Aω, a_max = Aω²'),
-    vx: L('the speed is largest at the equilibrium', 'die Geschwindigkeit ist in der Gleichgewichtslage am grössten'),
-    swap: L('sine or cosine: where it starts', 'Sinus oder Kosinus: wo es startet'),
-    deg: L('radians, not degrees', 'Bogenmass, nicht Grad'),
+    square: L('v̂ = Aω and â = Aω²', 'v̂ = Aω und â = Aω²'),
   });
 
-  // the exercise types of the arcade: all but the last one (a number with signs at a time)
-  const KINDS = SCENARIOS.map((s) => s.id).filter((id) => id !== 'speed-t');
+  // the exercise types of the arcade: all of them
+  const KINDS = SCENARIOS.map((s) => s.id);
 
   function question(kind, seed) {
     const ex = practiceOf(kind, seed), qz = quiz(ex, seed), f = qz.field, scn = SCENARIOS.find((s) => s.id === kind);
@@ -61,6 +56,6 @@
       example: L('reading ω² as ω', 'ω² als ω zu lesen'),
     }),
     // an oscillation and its equation
-    hero: () => `${root.Scenarios.xGraph({ A: 0.02, f: 0.5, start: 'top' })}<p class="ar-law">$\\ddot y = -\\omega^2\\, y$</p>`,
+    hero: () => `${root.Scenarios.xGraph({ A: 0.02, w: Math.PI, start: 'top' })}<p class="ar-law">$\\ddot y = -\\omega^2\\, y$</p>`,
   };
 })(window);
