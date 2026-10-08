@@ -60,7 +60,7 @@
     const yg = 214, s = 30, k = 0.9, x = 70, yc = yg - 46 * k, yt = yg - p.H * s;
     const hands = [[x - 1, yg - 39 * k], [x + 17, yg - 52 * k]], u = [0.85, -0.53], pole = [[hands[0][0] - 40 * u[0], hands[0][1] - 40 * u[1]], [hands[0][0] + 120 * u[0], hands[0][1] + 120 * u[1]]];
     return svg(430, 250,
-      ground(0, 430, yg) + person(x, yg, k, { shirt: 'red', lean: 7, step: 9, knee: 3, hands }) + line(pole[0][0], pole[0][1], pole[1][0], pole[1][1], 'tb-pole') +
+      ground(0, 430, yg) + person(x, yg, k, { sport: true, ponytail: true, shirt: 'red', lean: 7, step: 9, knee: 3, hands }) + line(pole[0][0], pole[0][1], pole[1][0], pole[1][1], 'tb-pole') +
       F().circle(x + 2, yc, 3.5, 'tb-com') + path(`M${x + 2} ${yc} Q170 ${yc} 220 ${yt + 30} Q260 ${yt - 6} 310 ${yt + 20}`, 'tb-ghost') + F().circle(262, yt + 2, 3.5, 'tb-com') +
       path(`M240 ${yg} V${yt - 4} M300 ${yg} V${yt - 4}`, 'tb-line') + line(240, yt + 4, 300, yt + 4, 'tb-bar') + rect(312, yg - 22, 100, 22, 'tb-blue', 3) +
       vel([x + 24, yc - 42], [1, 0], 40, sym('v'), [6, -8]) +

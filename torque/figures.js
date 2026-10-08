@@ -46,11 +46,18 @@
   function seesaw(p) {
     const { svg, rect, poly, ground, person, dim, text, sym, path } = F();
     const y = 150, x0 = 40, x1 = 380, mid = 210;
-    const sitter = (x, s, shirt, dir) => person(x, y - 5, s, { shirt, dir, hands: [[x - 8 * s, y - 28 * s], [x + 8 * s, y - 28 * s]] });
+    // a child sitting on the plank, both hands on the handle in front (the handle drawn over the
+    // legs, the hands again over the handle)
+    const sitter = (x, s, shirt, dir) => {
+      const hx = x + dir * 21 * s, top = y - 5 - 15 * s, hands = [[hx - dir * 1.5 * s, top + 1.5 * s], [hx + dir * 1.5 * s, top + 1 * s]];
+      return person(x, y - 5, s, { sit: true, shirt, dir, hands }) +
+        path(`M${hx} ${y - 5} V${top - 2 * s} M${hx - 3 * s} ${top - 2 * s} H${hx + 3 * s}`, 'tb-handle') +
+        hands.map(([a, c]) => F().circle(a, c, 2.5 * s, 'tb-skin')).join('');
+    };
     return svg(420, 240,
       ground(0, 420, 205) + poly([[mid, y + 5], [mid - 26, 205], [mid + 26, 205]], 'tb-concrete') +
       rect(x0, y - 5, x1 - x0, 10, 'tb-wood', 2) +
-      sitter(x0 + 18, 0.85, 'red', 1) + sitter(x1 - 18, 0.7, 'green', -1) +
+      sitter(x0 + 16, 1.1, 'red', 1) + sitter(x1 - 16, 0.9, 'green', -1) +
       path(`M${mid + 70} ${y - 6} m-14 0 a14 14 0 1 1 28 0`, 'tb-ghost') + text(mid + 70, y - 30, '?', 'tb-label') +
       dim([mid, y + 8], [mid + 70, y + 8], sym('x'), -24) + dim([x0, y + 30], [mid, y + 30], '2 m', -1) + dim([mid, y + 30], [x1, y + 30], '2 m', -1),
       L('A seesaw with a child at each end; where must the parent sit?', 'Eine Wippe mit einem Kind an jedem Ende; wo muss der Elternteil sitzen?'));

@@ -412,6 +412,11 @@
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
+    // when every field shown is a choice (yes or no, which graph, …), a click checks at once
+    $('#answers').addEventListener('change', (e) => {
+      if (e.target.type !== 'radio' || st.solved || !ex.fields.filter(shown).every((f) => f.type !== 'num')) return;
+      check({ preventDefault() {} });
+    });
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);

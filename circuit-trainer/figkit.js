@@ -116,12 +116,16 @@
       return (e1[0] - e2[0]) * d < 0 ? e1 : e2;
     };
     // o.swim: in swimwear: bare arms, legs and feet, swim trunks in the tint of o.shirt
-    const shirt = o.swim ? 'tb-skin tb-skinlimb' : `tb-shirt ${o.shirt || 'blue'}`, legs = o.swim ? 'tb-skinlimb' : o.pants ? `tb-shirt ${o.pants}` : 'tb-trousers';
+    // o.ponytail: long hair tied back; o.sport: in a sports outfit: a singlet in the tint of o.shirt, bare arms and legs, shorts in
+    // the tint of o.pants (dark blue), running shoes
+    const shirt = o.swim ? 'tb-skin tb-skinlimb' : `tb-shirt ${o.shirt || 'blue'}`, legs = o.swim || o.sport ? 'tb-skinlimb' : o.pants ? `tb-shirt ${o.pants}` : 'tb-trousers';
+    const sleeve = o.sport ? 'tb-skinlimb' : shirt, mid = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    const shorts = o.sport ? limbs([[hips[0], mid(hips[0], knees[0], 0.55), k(7.4)], [hips[1], mid(hips[1], knees[1], 0.55), k(7.4)]], `tb-shirt ${o.pants || 'navy'}`) : '';
     const torso = `M${f(hip[0] - k(6))} ${f(hip[1] + k(2))} C${f(hip[0] - k(6.5))} ${f(hip[1] - k(8))} ${f(sh[0] - k(8.5))} ${f(sh[1] + k(9))} ${f(sh[0] - k(7.5))} ${f(sh[1] + k(2))} ` +
       `Q${f(sh[0] - k(6))} ${f(sh[1] - k(1.5))} ${f(sh[0])} ${f(sh[1] - k(1.5))} Q${f(sh[0] + k(6))} ${f(sh[1] - k(1.5))} ${f(sh[0] + k(7.5))} ${f(sh[1] + k(2))} ` +
       `C${f(sh[0] + k(8.5))} ${f(sh[1] + k(9))} ${f(hip[0] + k(6.5))} ${f(hip[1] - k(8))} ${f(hip[0] + k(6))} ${f(hip[1] + k(2))} Z`;
     const shoe = (p) => { const y = p[1] + k(2.5); return path(`M${f(p[0] - d * k(3))} ${f(y)} L${f(p[0] - d * k(3))} ${f(y - k(3))} Q${f(p[0] + d * k(2))} ${f(y - k(4.4))} ${f(p[0] + d * k(6))} ${f(y - k(1.6))} Q${f(p[0] + d * k(7))} ${f(y)} ${f(p[0] + d * k(5))} ${f(y)} Z`, 'tb-shoe'); };
-    const arm = (i) => { const e = elbow(shs[i], hands[i]); return limbs([[shs[i], e, k(4.6)], [e, hands[i], k(3.8)]], shirt) + circle(hands[i][0], hands[i][1], k(2.5), 'tb-skin'); };
+    const arm = (i) => { const e = elbow(shs[i], hands[i]); return limbs([[shs[i], e, k(4.6)], [e, hands[i], k(3.8)]], sleeve) + circle(hands[i][0], hands[i][1], k(2.5), 'tb-skin'); };
     const hair = `M${f(head[0] - k(6.4))} ${f(head[1] + k(0.5))} A${f(k(6.5))} ${f(k(6.5))} 0 0 1 ${f(head[0] + k(6.4))} ${f(head[1] - k(0.5))} ` +
       `Q${f(head[0] + d * k(1))} ${f(head[1] - k(3.6))} ${f(head[0] - d * k(4))} ${f(head[1] - k(2.4))} L${f(head[0] - d * k(6.4))} ${f(head[1] + k(3))} Z`;
     // a helmet: a shell over the head down to the ears, with a rim; a beanie: knitted, with a bobble
@@ -134,10 +138,10 @@
     return arm(0) +
       limbs([[hips[0], knees[0], k(6.2)], [knees[0], feet[0], k(4.8)], [hips[1], knees[1], k(6.2)], [knees[1], feet[1], k(4.8)]], legs) +
       (o.swim ? feet.map((p) => { const y = p[1] + k(2.5); return path(`M${f(p[0] - d * k(2.5))} ${f(y)} Q${f(p[0] - d * k(2.5))} ${f(y - k(3))} ${f(p[0] + d * k(1))} ${f(y - k(3))} Q${f(p[0] + d * k(5))} ${f(y - k(1.5))} ${f(p[0] + d * k(5.5))} ${f(y)} Z`, 'tb-skin'); }).join('') : feet.map(shoe).join('')) +
-      path(torso, shirt) +
+      shorts + path(torso, shirt) +
       (o.swim ? path(`M${f(hip[0] - k(6.3))} ${f(hip[1] - k(5))} H${f(hip[0] + k(6.3))} L${f(hips[1][0] + k(4.2))} ${f(hip[1] + k(7))} L${f(hip[0] + k(0.6))} ${f(hip[1] + k(5))} L${f(hips[0][0] - k(4.2))} ${f(hip[1] + k(7))} Z`, `tb-shirt ${o.shirt || 'blue'}`) : '') +
       `<rect class="tb-skin" x="${f(sh[0] - k(1.8))}" y="${f(sh[1] - k(5))}" width="${f(k(3.6))}" height="${f(k(4))}"/>` +
-      circle(head[0], head[1], k(6.5), 'tb-skin') + (o.hat ? hat(o.hat) : path(hair, 'tb-hair')) + arm(1);
+      circle(head[0], head[1], k(6.5), 'tb-skin') + (o.hat ? hat(o.hat) : (o.ponytail ? path(`M${f(head[0] - d * k(5))} ${f(head[1] - k(3))} Q${f(head[0] - d * k(12))} ${f(head[1] - k(1))} ${f(head[0] - d * k(10))} ${f(head[1] + k(8))} Q${f(head[0] - d * k(7))} ${f(head[1] + k(2))} ${f(head[0] - d * k(4))} ${f(head[1] + k(1))} Z`, 'tb-hair') : '') + path(hair, 'tb-hair')) + arm(1);
   }
   // a smooth landscape (hills, a track) through its highest and lowest points [[x, y], …]: between
   // two of them a half cosine, flat at each of them, so there are no kinks; smooth(pts)(x) is the
