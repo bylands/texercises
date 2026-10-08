@@ -158,22 +158,76 @@
     .force { fill: none; stroke: #d24a0f; stroke-width: 2.5; }
     .forcehead { fill: #d24a0f; }
     .curve { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-    /* the filter by tag (the tags come from /apps.json, set in the admin panel; several can be
-       chosen) and the order of the cards, like the EN/DE switch */
+    /* the search, the filter icon that opens the filter by mode and by tag (the tags come from
+       /apps.json, set in the admin panel; several can be chosen) and the order of the cards, like
+       the EN/DE switch */
     .tools {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
       gap: 12px 16px;
       padding-bottom: 20px;
     }
+
+    .find { display: flex; gap: 8px; flex: 1 1 260px; max-width: 420px; }
+    .find input {
+      flex: 1;
+      min-width: 0;
+      font: inherit;
+      font-size: 0.95rem;
+      color: var(--ink);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 5px 12px;
+    }
+    .find input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+    .find input::placeholder { color: var(--muted); }
+
+    .funnel {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      color: var(--ink);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .funnel:hover { border-color: var(--accent); }
+    .funnel[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: var(--card); }
+    .funnel svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+    .funnel .count {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      min-width: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: var(--card);
+      border: 2px solid var(--bg);
+      font-size: 0.7rem;
+      font-weight: 700;
+      line-height: 14px;
+    }
+
+    .panel { flex-basis: 100%; display: grid; gap: 10px; }
+    .panel .row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+    .panel .what { width: 4.5rem; color: var(--muted); font-size: 0.9rem; }
+    .panel .filter { flex: 1; }
+    main.apps:not(.with-tags) .tags { display: none; }
+    .none { color: var(--muted); margin-top: 0; margin-bottom: 20px; }
 
     .filter {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
     }
+    .filter button svg { width: 16px; height: 16px; margin: 0 5px -3px 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
     .order { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); margin-left: auto; }
     .order label { position: relative; }
@@ -245,12 +299,24 @@
   </header>
 
   <div class="wrap tools">
-    <nav id="filter" class="filter" data-i18n-label="filter" aria-label="Filter by topic" hidden></nav>
+    <div class="find">
+      <input type="search" id="search" data-i18n-label="search" aria-label="Search the apps and topics" placeholder="Search apps or topics" autocomplete="off">
+      <button type="button" id="funnel" class="funnel" aria-expanded="false" aria-controls="panel" data-i18n-label="filters" aria-label="Filters" title="Filters">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7.5V19l-4-2v-4.5z"/></svg>
+        <span class="count" hidden></span>
+      </button>
+    </div>
     <div id="order" class="order" role="radiogroup" data-i18n-label="order" aria-label="Order of the apps">
       <label><input type="radio" name="order" value="standard" checked><span data-i18n="standard">Standard</span></label>
       <label><input type="radio" name="order" value="recent"><span data-i18n="recent">Recently used</span></label>
     </div>
+    <div id="panel" class="panel" hidden>
+      <div class="row"><span class="what" data-i18n="mode">Mode</span><nav id="modefilter" class="filter" data-i18n-label="modefilter" aria-label="Filter by mode"></nav></div>
+      <div class="row" id="topicrow" hidden><span class="what" data-i18n="topic">Topic</span><nav id="filter" class="filter" data-i18n-label="filter" aria-label="Filter by topic"></nav></div>
+    </div>
   </div>
+
+  <p id="none" class="wrap none" data-i18n="none" hidden>No apps match.</p>
 
   <main class="wrap apps">
     <a class="app" href="/bulb-brightness/" data-modes="tutor practice arcade">
@@ -498,8 +564,11 @@
     // The page in English or German (lang.js, shared with the apps: the same language as there),
     // and the order, tags and filter by tag from /apps.json (written by the admin panel at /admin/):
     // { order: [app], tags: { app: [key] }, labels: { key: { en, de } } }. Without it, the cards
-    // stay as they are in this page. The chosen tags are kept in the address (?topic=key,key: the
-    // cards with any of them), so that a filtered page can be shared in either language. The order
+    // stay as they are in this page. The filters by mode and by tag, and the tags on the cards, show
+    // only while the filter icon is open. The chosen modes and tags are kept in the address
+    // (?mode=real,arcade&topic=key,key: the cards with any of the modes and any of the tags), so
+    // that a filtered page can be shared in either language; it then opens with the filters shown.
+    // The search matches the name of an app or of one of its tags, in English or German. The order
     // is the standard one (the admin panel's) or, if chosen, the most recently used apps first
     // (tp-recent, noted by lang.js in each app); the choice is remembered (tp-hub-order).
     (function () {
@@ -510,9 +579,11 @@
 
       // the German texts of the page; the English ones are those in it
       const UI = {
-        en: { tagline: 'Interactive exercises for physics lessons.', filter: 'Filter by topic', order: 'Order of the apps', standard: 'Standard', recent: 'Recently used' },
-        de: { tagline: 'Interaktive Übungen für den Physikunterricht.', filter: 'Nach Thema filtern', order: 'Reihenfolge der Apps', standard: 'Standard', recent: 'Zuletzt verwendet' },
+        en: { tagline: 'Interactive exercises for physics lessons.', filter: 'Filter by topic', modefilter: 'Filter by mode', mode: 'Mode', topic: 'Topic', filters: 'Filters', search: 'Search the apps and topics', placeholder: 'Search apps or topics', none: 'No apps match.', order: 'Order of the apps', standard: 'Standard', recent: 'Recently used' },
+        de: { tagline: 'Interaktive Übungen für den Physikunterricht.', filter: 'Nach Thema filtern', modefilter: 'Nach Modus filtern', mode: 'Modus', topic: 'Thema', filters: 'Filter', search: 'Apps und Themen durchsuchen', placeholder: 'Apps oder Themen suchen', none: 'Keine passenden Apps.', order: 'Reihenfolge der Apps', standard: 'Standard', recent: 'Zuletzt verwendet' },
       };
+      const search = document.getElementById('search'), funnel = document.getElementById('funnel'), panel = document.getElementById('panel');
+      const modeNav = document.getElementById('modefilter');
       const DE = {
         'bulb-brightness': ['Helligkeit von Lampen', 'Sage voraus, welche Lampen in Serien- und Parallelschaltungen heller leuchten.', 'Stromkreis mit einer Batterie, einer Lampe in Serie und zwei Lampen parallel'],
         'circuit-trainer': ['Widerstandsschaltungen', 'Bestimme Ersatzwiderstände, Ströme und Spannungen Schritt für Schritt.', 'Stromkreis mit einer Batterie, einem Widerstand in Serie und zwei Widerständen parallel'],
@@ -548,43 +619,93 @@
           ul.innerHTML = list.map((m) => `<li title="${modeName(m)}">${icon(m)}<span class="sr">${modeName(m)}</span></li>`).join('');
           c.querySelector('.text p').after(ul);
         });
+        modeNav.replaceChildren(...chips(['', ...Object.keys(MODES)], (m) => (m ? icon(m) + modeName(m).split(':')[0] : L('All', 'Alle')), 'mode', modesOn));
+      }
+      const modesOf = (c) => (c.dataset.modes || '').split(' ');
+
+      // the buttons of a filter: '' is All (no filter), the others toggle a key in the set on
+      function chips(keys, label, kind, on) {
+        return keys.map((k) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.innerHTML = label(k);
+          if (k) b.dataset[kind] = k;
+          b.addEventListener('click', () => toggle(on, k));
+          return b;
+        });
       }
 
       const parts = (c) => [c.querySelector('h2'), c.querySelector('.text p'), c.querySelector('svg')];
       const EN = new Map(cards.map((c) => { const [h, p, svg] = parts(c); return [c, [h.textContent, p.textContent, svg.getAttribute('aria-label')]]; }));
 
-      let cfg = null, topics = new Set();
+      let cfg = null;
+      const topics = new Set(), modesOn = new Set();
+      const listOf = (name) => (new URLSearchParams(location.search).get(name) || '').split(',').filter(Boolean);
+      listOf('mode').filter((m) => MODES[m]).forEach((m) => modesOn.add(m));
+      listOf('topic').forEach((k) => topics.add(k)); // the tags not in /apps.json drop out in tags()
       const tagsOf = (c) => (cfg && Array.isArray(cfg.tags && cfg.tags[idOf(c)]) ? cfg.tags[idOf(c)].filter((k) => typeof k === 'string') : []);
       // a tag's name in the page's language (a tag without names is its own name)
       const nameOf = (k) => { const l = cfg.labels && cfg.labels[k]; return l ? (Lang.get() === 'de' && l.de) || l.en || k : k; };
+      const esc = (s) => s.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+
+      // the search: lower case, without accents (Übung → ubung), every word somewhere in the
+      // card's names, English and German, and those of its tags
+      const fold = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const namesOf = (c) => {
+        const labels = (cfg && cfg.labels) || {};
+        return fold([EN.get(c)[0], (DE[idOf(c)] || [''])[0], ...tagsOf(c).flatMap((k) => [k, (labels[k] || {}).en, (labels[k] || {}).de])].filter(Boolean).join(' '));
+      };
 
       function texts() {
         Lang.apply(UI[Lang.get()]);
+        search.placeholder = UI[Lang.get()].placeholder;
+        funnel.title = UI[Lang.get()].filters;
         cards.forEach((c) => {
           const t = Lang.get() === 'de' && DE[idOf(c)] ? DE[idOf(c)] : EN.get(c), [h, p, svg] = parts(c);
           h.textContent = t[0]; p.textContent = t[1]; svg.setAttribute('aria-label', t[2]);
         });
         modes();
+        show();
       }
 
       function show() {
-        cards.forEach((c) => { c.hidden = topics.size > 0 && !tagsOf(c).some((k) => topics.has(k)); });
-        nav.querySelectorAll('button').forEach((b) => {
-          const k = b.dataset.topic;
-          b.setAttribute('aria-pressed', String(k ? topics.has(k) : topics.size === 0));
+        const words = fold(search.value).split(/\s+/).filter(Boolean);
+        cards.forEach((c) => {
+          c.hidden = (cfg && topics.size > 0 && !tagsOf(c).some((k) => topics.has(k)))
+            || (modesOn.size > 0 && !modesOf(c).some((m) => modesOn.has(m)))
+            || (words.length > 0 && !words.every((w) => namesOf(c).includes(w)));
         });
+        document.getElementById('none').hidden = cards.some((c) => !c.hidden);
+        [[nav, 'topic', topics], [modeNav, 'mode', modesOn]].forEach(([el, kind, on]) => el.querySelectorAll('button').forEach((b) => {
+          const k = b.dataset[kind];
+          b.setAttribute('aria-pressed', String(k ? on.has(k) : on.size === 0));
+        }));
+        const count = funnel.querySelector('.count'), n = (cfg ? topics.size : 0) + modesOn.size;
+        count.hidden = !n;
+        count.textContent = n;
         const url = new URL(location.href);
+        if (modesOn.size) url.searchParams.set('mode', [...modesOn].join(',')); else url.searchParams.delete('mode');
         if (topics.size) url.searchParams.set('topic', [...topics].join(',')); else url.searchParams.delete('topic');
         url.search = url.searchParams.toString().replace(/%2C/g, ','); // ?topic=a,b, readable
         history.replaceState(null, '', url);
       }
-      // a tag on or off; All: no filter
-      function toggle(k) {
-        if (!k) topics.clear();
-        else if (topics.has(k)) topics.delete(k);
-        else topics.add(k);
+      // a mode or tag on or off; All: no filter of that kind
+      function toggle(on, k) {
+        if (!k) on.clear();
+        else if (on.has(k)) on.delete(k);
+        else on.add(k);
         show();
       }
+
+      // the filters, and the tags on the cards, behind the filter icon; open if the address asks for a filter
+      function open(yes) {
+        panel.hidden = !yes;
+        funnel.setAttribute('aria-expanded', String(yes));
+        main.classList.toggle('with-tags', yes);
+      }
+      funnel.addEventListener('click', () => open(panel.hidden));
+      search.addEventListener('input', show);
+      open(modesOn.size > 0 || topics.size > 0);
 
       // the tags of the cards and the filter, in the page's language
       function tags() {
@@ -600,16 +721,9 @@
           c.querySelector('.text').append(ul);
         });
         const all = [...new Set(cards.flatMap(tagsOf))].sort((a, b) => nameOf(a).localeCompare(nameOf(b), Lang.get()));
-        nav.hidden = !all.length;
-        nav.replaceChildren(...['', ...all].map((k) => {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.textContent = k ? nameOf(k) : L('All', 'Alle');
-          if (k) b.dataset.topic = k;
-          b.addEventListener('click', () => toggle(k));
-          return b;
-        }));
-        topics = new Set([...topics].filter((k) => all.includes(k)));
+        document.getElementById('topicrow').hidden = !all.length;
+        nav.replaceChildren(...chips(['', ...all], (k) => (k ? esc(nameOf(k)) : L('All', 'Alle')), 'topic', topics));
+        [...topics].filter((k) => !all.includes(k)).forEach((k) => topics.delete(k));
         show();
       }
 
@@ -637,7 +751,6 @@
         const order = Array.isArray(cfg.order) ? cfg.order : [], byId = new Map(page.map((x) => [idOf(x), x]));
         standard = [...order.filter((id) => byId.has(id)).map((id) => byId.get(id)), ...page.filter((x) => !order.includes(idOf(x)))];
         arrange();
-        topics = new Set((new URLSearchParams(location.search).get('topic') || '').split(',').filter(Boolean));
         tags();
       }
 
