@@ -1,5 +1,6 @@
 // The tutor's worked examples: one per kind of circuit, with round values (R in Ω, L in H, C in F);
-// each is a topic of practice (topics.js), its type the kind of circuit.
+// each is a topic of practice (topics.js), its type the kind of circuit. The last one is the
+// matching exercise (match.js), with stages from two elements to R with an LC pair.
 // The steps themselves come from analysis() in generator.js, as for the practice solutions.
 (function (root) {
   'use strict';
@@ -40,6 +41,17 @@
       idea: { en: 'At resonance only the resistor counts: the maximum of Z is R. L is the slope at the origin, and C follows from ω₀ = 1/√(LC).', de: 'Bei der Resonanz zählt nur der Widerstand: Das Maximum von Z ist R. L ist die Steigung im Ursprung, und C folgt aus ω₀ = 1/√(LC).' },
       circuit: { kind: 'RLC', conn: 'parallel', R: 300, L: 0.1, C: 1e-5 },
       practice: [{ types: ['RLC-parallel'] }],
+    },
+    {
+      // which curve belongs to a circuit (match.js): the worked example has fixed curves to choose from
+      name: { en: 'Circuit → curve', de: 'Schaltung → Kurve' },
+      idea: { en: 'Which curve belongs to a circuit? Reason before you choose: what Z does for small and for large ω, and at the resonance frequency. Each answer rules out curves.', de: 'Welche Kurve gehört zu einer Schaltung? Überlege, bevor du wählst: was Z für kleines und für grosses ω tut, und bei der Resonanzfrequenz. Jede Antwort schliesst Kurven aus.' },
+      match: { net: 'RLC-series', q: 1, cands: ['LC-series', 'RL-series', 'RLC-series', 'RC-series'] },
+      practice: [
+        { name: { en: 'Two elements', de: 'Zwei Bauteile' }, types: ['match-RL-series', 'match-RC-series', 'match-RL-parallel', 'match-RC-parallel'] },
+        { name: { en: 'RLC and LC', de: 'RLC und LC' }, types: ['match-RLC-series', 'match-RLC-parallel', 'match-LC-series', 'match-LC-parallel'] },
+        { name: { en: 'R with an LC pair', de: 'R mit LC-Paar' }, types: ['match-RLC-series-parallel', 'match-RLC-parallel-series'] },
+      ],
     },
   ];
 

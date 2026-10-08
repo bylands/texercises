@@ -24,7 +24,7 @@
     hard: { name: () => L('Hard', 'Schwierig'), kinds: ['series RLC', 'parallel RLC'] },
     mixed: { name: () => L('Mixed', 'Gemischt'), kinds: Object.keys(DIFFICULTY) },
   };
-  const UNKNOWNS = { RL: ['R', 'L'], RC: ['R', 'C'], RLC: ['R', 'L', 'C'] };
+  const UNKNOWNS = { RL: ['R', 'L'], RC: ['R', 'C'], RLC: ['R', 'L', 'C'], LC: ['L', 'C'] }; // LC: matching only (match.js)
   const NICE = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
   const E6 = [1, 1.5, 2.2, 3.3, 4.7, 6.8];
   const E12 = [1, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2];
@@ -48,13 +48,26 @@
 
   // ---------------------------------------------------------------- impedance
   // Series: Z = √(R² + X²), X = ωL − 1/(ωC). Parallel: 1/Z = √(1/R² + B²), B = ωC − 1/(ωL).
+  // Without R (an LC circuit, R null) the R terms drop out. Two more circuits of the matching
+  // exercise (match.js), with R, L and C: 'series-parallel', R in series with the pair L ∥ C
+  // (reactance X = 1/(1/(ωL) − ωC)), and 'parallel-series', R in parallel with the pair L + C
+  // (reactance X = ωL − 1/(ωC)).
   function Z(c, w) {
+    const G = c.R ? 1 / c.R : 0;
     if (c.conn === 'series') {
       const X = (c.L ? w * c.L : 0) - (c.C ? 1 / (w * c.C) : 0);
+      return Math.sqrt((c.R || 0) ** 2 + X * X);
+    }
+    if (c.conn === 'parallel') {
+      const B = (c.C ? w * c.C : 0) - (c.L ? 1 / (w * c.L) : 0);
+      return 1 / Math.sqrt(G * G + B * B);
+    }
+    if (c.conn === 'series-parallel') {
+      const X = 1 / (1 / (w * c.L) - w * c.C);
       return Math.sqrt(c.R * c.R + X * X);
     }
-    const B = (c.C ? w * c.C : 0) - (c.L ? 1 / (w * c.L) : 0);
-    return 1 / Math.sqrt(1 / (c.R * c.R) + B * B);
+    const X = w * c.L - 1 / (w * c.C);
+    return 1 / Math.sqrt(G * G + 1 / (X * X));
   }
   // Slope of the tangent dZ/dω (Ω·s).
   function dZ(c, w) {
@@ -413,7 +426,7 @@
   }
 
   const api = {
-    TOL, GAP, OPTIONS, LEVELS, DIFFICULTY, UNKNOWNS, Z, dZ, feature, quality, axesFor, usable, analysis, shape, mistakes, choices, exercise, generate,
+    rng, TOL, GAP, OPTIONS, LEVELS, DIFFICULTY, UNKNOWNS, Z, dZ, feature, quality, axesFor, usable, analysis, shape, mistakes, choices, exercise, generate,
     q, H, T, digits, sup, p3, niceUp,
   };
   root.Impedance = api;

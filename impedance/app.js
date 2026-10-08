@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const I = window.Impedance, P = window.Plot;
+  const I = window.Impedance, P = window.Plot, M = window.Match, Identify = window.Identify;
   const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
@@ -22,6 +22,9 @@
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
       correct: 'Correct',
+      chooseCurve: 'Choose a curve, then check again.', idFirst: 'First answer the questions above.',
+      whichCurve: 'Which curve?', thenChoose: 'Then choose the curve:', curve: (k) => `Curve ${k}`,
+      matchPrompt: 'Which of the four curves shows the impedance <i>Z</i> of this circuit against the angular frequency <i>ω</i>? First answer the questions: each right answer rules out the curves that do not fit.',
     },
     de: {
       title: 'Impedanzkurven', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', axes: 'Achsen',
@@ -37,6 +40,9 @@
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
       correct: 'Richtig',
+      chooseCurve: 'Wähle eine Kurve und prüfe dann nochmals.', idFirst: 'Beantworte zuerst die Fragen oben.',
+      whichCurve: 'Welche Kurve?', thenChoose: 'Dann wähle die Kurve:', curve: (k) => `Kurve ${k}`,
+      matchPrompt: 'Welche der vier Kurven zeigt die Impedanz <i>Z</i> dieser Schaltung gegen die Kreisfrequenz <i>ω</i>? Beantworte zuerst die Fragen: Jede richtige Antwort schliesst die Kurven aus, die nicht passen.',
     },
   };
   const ui = () => UI[Lang.get()];
@@ -69,8 +75,51 @@
   const figure = (c, ax, ann, mode = axesMode()) => `<div class="fig">${P.schematic(c)}</div><div class="fig gwrap">${P.graph(c, ax, mode, { ann })}</div>`;
   const and = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} ${L('and', 'und')} ${xs[xs.length - 1]}`);
   const list = (items) => `<ul>${items.map((x) => `<li>${x}</li>`).join('')}</ul>`;
-  const circuitName = (c) => (c.conn === 'series' ? L(`Series ${c.kind} circuit`, `${c.kind}-Serieschaltung`) : L(`Parallel ${c.kind} circuit`, `${c.kind}-Parallelschaltung`));
+  const circuitName = (c) => P.name(c);
   const starsOf = (d) => `<span class="stars" role="img" aria-label="${ui().stars(d)}" title="${ui().stars(d)}">${'★'.repeat(d)}${'☆'.repeat(5 - d)}</span>`;
+
+  // ---------------------------------------------------------------- matching (match.js)
+  // The four curves of a matching exercise: the ones that do not fit the answers so far (keys of
+  // the questions) faded; with pick, as radio buttons; marks: labels on the right curve.
+  function curves(e, answered, o = {}) {
+    const R = M.NETS[e.net].kind.includes('R') ? 1 : null; // the level R, where the circuit has a resistor
+    return `<div class="cands"${o.pick ? ` role="radiogroup" aria-label="${ui().whichCurve}"` : ''}>${e.cands.map((id, k) => {
+      const tag = o.pick ? 'label' : 'div', cls = `cand${M.fits(e, k, answered) ? '' : ' out'}`;
+      const svg = P.sketch(M.circuit(id, e.q), o.mode || axesMode(), { w0: 1, zref: 1, R, noW0: !M.resonant(e.net), marks: o.marks && k === e.right ? M.marks(id) : null, label: ui().curve(M.letter(k)) });
+      return `<${tag} class="${cls}" data-k="${k}">${o.pick ? `<input type="radio" name="cand" value="${k}">` : ''}<span class="letter">${M.letter(k)}</span>${svg}</${tag}>`;
+    }).join('')}</div>`;
+  }
+  const matchFigure = (e, answered, o) => `<div class="fig">${P.schematic(M.circuit(e.net, e.q))}</div><div class="fig cands-wrap">${curves(e, answered, o)}</div>`;
+  // the questions answered right so far
+  const answeredOf = () => ex.items.filter((it) => Identify.right(it, st.ident)).map((it) => it.key);
+  const matchSolution = (e) => { const s = M.solution(e); return s.steps.map((x) => `<h4>${x.title}</h4><p>${x.text}</p>`).join('') + `<p>${s.verdict}</p><ul>${s.others.map((x) => `<li>${x}</li>`).join('')}</ul>`; };
+
+  function renderMatch() {
+    $('#title').innerHTML = `${ui().whichCurve} ${starsOf(ex.difficulty)}`;
+    $('#prompt').innerHTML = ui().matchPrompt;
+    $('#schematic').innerHTML = P.schematic(M.circuit(ex.net, ex.q));
+    $('#fields').innerHTML = `<div id="ident"></div><p class="match-head">${ui().thenChoose}</p><div id="cands"></div><p id="cand-fb" class="ident-fb bad" aria-live="polite"></p>`;
+  }
+  // the questions and the curves, keeping the curve chosen
+  function drawMatch() {
+    const sel = document.querySelector('input[name="cand"]:checked');
+    $('#ident').innerHTML = Identify.html(ex.items, st.ident, st.revealed);
+    $('#cands').innerHTML = curves(ex, st.revealed ? M.phases(ex.net) : answeredOf(), { pick: true });
+    if (sel) document.querySelector(`input[name="cand"][value="${sel.value}"]`).checked = true;
+    if (st.checked && st.pick != null) matchFeedback();
+  }
+  // Marks the curve chosen; true if right, null if none is chosen.
+  function matchFeedback() {
+    const sel = document.querySelector('input[name="cand"]:checked');
+    document.querySelectorAll('.cand').forEach((el) => el.classList.remove('ok', 'bad'));
+    $('#cand-fb').innerHTML = '';
+    if (!sel) return null;
+    const k = Number(sel.value), ok = k === ex.right;
+    st.pick = k;
+    sel.closest('.cand').classList.add(ok ? 'ok' : 'bad');
+    if (!ok) $('#cand-fb').innerHTML = M.mismatch(ex, k);
+    return ok;
+  }
 
   // ---------------------------------------------------------------- hints and solution
   // From the worked analysis (generator.js): what the graph does → which feature gives which
@@ -100,18 +149,23 @@
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
-  const PRACTICE = 'imp', typeOf = (e) => `${e.c.kind}-${e.c.conn}`;
+  const PRACTICE = 'imp', typeOf = (e) => (e.match ? `match-${e.net}` : `${e.c.kind}-${e.c.conn}`);
   const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
 
   function open(exercise) {
     finish(); // the student moves on
     ex = exercise;
-    ex.hints = hints();
-    st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null };
+    prepare(ex);
+    st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null, ident: {}, pick: null };
     const hash = `#${ex.id}`;
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
     topics.shown(ex);
+  }
+
+  // the hints, and for a matching exercise its questions, in the current language
+  function prepare(e) {
+    if (e.match) { e.items = M.items(e); e.hints = M.hints(e); } else e.hints = hints();
   }
 
   // A new exercise of the topic chosen (topics.js), of another kind than the current one if possible.
@@ -119,7 +173,11 @@
   // the same exercise again (e.g. in the other language); links of earlier versions name a level
   const again = (e) => topics.parse(e.id) || I.generate(e.id.split('-')[0], Number(e.id.split('-')[1]));
   // an exercise of a kind of circuit: 'RL-series' and so on
-  const ofType = (type, seed) => { const [kind, conn] = type.split('-'); return I.generate(`${conn} ${kind}`, seed); };
+  const ofType = (type, seed) => {
+    if (type.startsWith('match-')) return M.generate(type.slice(6), seed);
+    const [kind, conn] = type.split('-');
+    return I.generate(`${conn} ${kind}`, seed);
+  };
 
   // Narrow screens get a smaller drawing; redraw when that changes.
   const narrow = () => document.querySelector('main').clientWidth < 600;
@@ -132,11 +190,21 @@
   }
 
   function drawGraph() {
+    // a matching exercise has its curves instead of the graph with the probe
+    for (const el of ['#graph', '#readout']) $(el).hidden = !!ex.match;
+    if (ex.match) { $('#graph').innerHTML = ''; $('#pins').hidden = true; drawMatch(); return; }
     $('#graph').innerHTML = P.graph(ex.c, ex.ax, axesMode());
     probe.draw();
   }
 
   function render() {
+    if (ex.match) {
+      probe.reset();
+      renderMatch();
+      drawGraph(); // the questions and the curves
+      finishRender();
+      return;
+    }
     const c = ex.c, ks = I.UNKNOWNS[c.kind];
     $('#title').innerHTML = `${circuitName(c)} ${starsOf(ex.difficulty)}`;
     $('#prompt').innerHTML = L(`The graph shows the impedance <i>Z</i> of the circuit against the angular frequency <i>ω</i>. Find ${and(ks.map((k) => `<i>${k}</i>`))} from the features of the graph and choose the matching values.`,
@@ -152,6 +220,9 @@
         </div>
         <span class="fb" aria-live="polite"></span>
       </div>`).join('');
+    finishRender();
+  }
+  function finishRender() {
     $('#hint-list').innerHTML = '';
     $('#hints').hidden = true;
     $('#solution').hidden = true;
@@ -197,7 +268,7 @@
     const el = $('#status');
     if (st) st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
-    el.textContent = !kind ? '' : kind === 'fill' ? ui().choose
+    el.textContent = !kind ? '' : kind === 'fill' ? (ex && ex.match ? ui().chooseCurve : ui().choose) : kind === 'ident' ? ui().idFirst
       : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (!canReveal() ? ui().tryAgain : ui().canReveal);
   }
@@ -205,7 +276,8 @@
   function check(evt) {
     evt.preventDefault();
     if (st.solved) { fresh(); return; } // the button reads New exercise
-    const r = feedback();
+    if (ex.match && !Identify.ok(ex.items, st.ident)) { showStatus('ident'); return; }
+    const r = ex.match ? matchFeedback() : feedback();
     st.checked = true;
     if (r === null) { showStatus('fill'); return; }
     st.tries++;
@@ -240,12 +312,12 @@
   }
 
   function drawSolution() {
-    $('#sol-figure').innerHTML = figure(ex.c, ex.ax, ex.an.steps.flatMap((s) => s.ann));
+    $('#sol-figure').innerHTML = ex.match ? matchFigure(ex, M.phases(ex.net), { marks: true }) : figure(ex.c, ex.ax, ex.an.steps.flatMap((s) => s.ann));
   }
   function showSolution() {
     drawSolution();
-    $('#sol-steps').innerHTML = solutionSteps(ex);
-    $('#sol-short').innerHTML = results();
+    $('#sol-steps').innerHTML = ex.match ? matchSolution(ex) : solutionSteps(ex);
+    $('#sol-short').innerHTML = ex.match ? L(`The curve is ${M.letter(ex.right)}.`, `Die Kurve ist ${M.letter(ex.right)}.`) : results();
     $('#solution').hidden = false;
     math($('#solution'));
   }
@@ -253,6 +325,7 @@
     if (!canReveal()) return;
     st.revealed = true;
     finish();
+    if (ex.match) drawMatch(); // the questions shown as answered
     showSolution();
     updateButtons();
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -277,7 +350,26 @@
       },
     };
   }
-  const lessons = () => window.Lessons.EXAMPLES.map((d, i) => ({ ...lesson(d), also: topics.also(i) }));
+  // The matching example: the curves, then one frame per question, each fading the curves it
+  // rules out, and the curve that is left.
+  function matchLesson(d) {
+    const e = { ...d.match, match: true, right: d.match.cands.indexOf(d.match.net) }, ks = M.phases(e.net);
+    const title = { lo: L('Small ω', 'Kleines ω'), hi: L('Large ω', 'Grosses ω'), res: L('At the resonance frequency', 'Bei der Resonanzfrequenz') };
+    const ruled = (k) => e.cands.map((x, j) => j).filter((j) => M.fits(e, j, ks.slice(0, ks.indexOf(k))) && !M.fits(e, j, ks.slice(0, ks.indexOf(k) + 1)));
+    const out = (js) => (js.length ? L(`This rules out ${M.and(js.map((j) => `curve ${M.letter(j)}`))}.`, `Das schliesst ${M.and(js.map((j) => `Kurve ${M.letter(j)}`))} aus.`) : '');
+    return {
+      name: d.name[Lang.get()], idea: d.idea[Lang.get()],
+      frames: () => [
+        { text: `<div class="step-rule">${L('The question', 'Die Frage')}</div><p>${L('Which of the four curves shows the impedance of this circuit? Instead of guessing, ask three questions about the curve; each one rules out curves that do not fit.', 'Welche der vier Kurven zeigt die Impedanz dieser Schaltung? Statt zu raten, stellst du drei Fragen an die Kurve; jede schliesst Kurven aus, die nicht passen.')}</p>`,
+          get figure() { return matchFigure(e, []); } },
+        ...ks.map((k, i) => ({ text: `<div class="step-rule">${title[k]}</div><p>${M.reason(e.net, k)}</p><p>${out(ruled(k))}</p>`,
+          get figure() { return matchFigure(e, ks.slice(0, i + 1)); } })),
+        { text: `<div class="step-rule">${L('The curve', 'Die Kurve')}</div><p>${M.solution(e).verdict} ${L('The rules in short: for ω → 0 a coil is a wire and a capacitor a gap, for ω → ∞ the other way round; at ω₀ coil and capacitor in series act like a wire, in parallel like a gap. A gap in series blocks (Z → ∞), a wire in parallel short-circuits (Z → 0).', 'Die Regeln kurz: Für ω → 0 ist eine Spule ein Draht und ein Kondensator ein Unterbruch, für ω → ∞ umgekehrt; bei ω₀ wirken Spule und Kondensator in Serie wie ein Draht, parallel wie ein Unterbruch. Ein Unterbruch in Serie sperrt (Z → ∞), ein Draht parallel schliesst kurz (Z → 0).')}</p>`,
+          get figure() { return matchFigure(e, ks, { marks: true }); } },
+      ],
+    };
+  }
+  const lessons = () => window.Lessons.EXAMPLES.map((d, i) => ({ ...(d.match ? matchLesson(d) : lesson(d)), also: topics.also(i) }));
 
   // ---------------------------------------------------------------- arcade
   // Each question asks for one of R, L, C with the four options of the practice exercise. The
@@ -297,7 +389,31 @@
     const s = an.steps[an.steps.length - 1];
     return s.ann;
   }
+  // Matching questions (kinds m2 to m4, of difficulty 2 to 4: two elements, RLC and LC, R with an
+  // LC pair): the four curves are the options; a wrong one with series and parallel swapped, or
+  // coil and capacitor, is a misconception.
+  function matchQuestion(kind, seed) {
+    const level = Number(kind.slice(1)) - 1, nets = M.IDS.filter((id) => M.NETS[id].level === level);
+    const e = M.generate(nets[seed % nets.length], seed), num = (k) => k + 1;
+    return {
+      title: circuitName(M.circuit(e.net, e.q)),
+      text: `<p>${L('The four options are sketches of <i>Z</i> against <i>ω</i>.', 'Die vier Antworten sind Skizzen von <i>Z</i> gegen <i>ω</i>.')}</p>`,
+      figure: `<div class="fig">${P.schematic(M.circuit(e.net, e.q))}</div>`,
+      ask: L('Which curve belongs to this circuit?', 'Welche Kurve gehört zu dieser Schaltung?'),
+      options: e.cands.map((id, k) => ({
+        html: P.sketch(M.circuit(id, e.q), 'lin', { w0: 1, zref: 1, R: M.NETS[e.net].kind.includes('R') ? 1 : null, noW0: !M.resonant(e.net), label: ui().curve(k + 1) }),
+        correct: k === e.right, flag: id === M.dual(e.net) ? 'dual' : id === M.swapLC(e.net) ? 'swap' : 'other', why: k === e.right ? '' : M.mismatch(e, k, num),
+      })),
+      key: `${e.net}|${e.cands.join(',')}`,
+      explain: () => {
+        const sol = M.solution(e);
+        return `<div class="figs">${matchFigure(e, M.phases(e.net), { marks: true, mode: 'lin' })}</div><div class="steps">${sol.steps.map((x) => `<h4>${x.title}</h4><p>${x.text}</p>`).join('')}` +
+          `<p>${L(`The curve is option ${e.right + 1}.`, `Die Kurve ist Antwort ${e.right + 1}.`)}</p></div>`;
+      },
+    };
+  }
   function arcadeQuestion(kind, seed) {
+    if (kind[0] === 'm') return matchQuestion(kind, seed);
     const d = Number(kind.slice(1)), kinds = KINDS.filter((k) => I.DIFFICULTY[k] === d);
     const e = I.generate(kinds[seed % kinds.length], seed);
     const f = e.fields[Math.floor(seed / kinds.length) % e.fields.length];
@@ -313,9 +429,9 @@
   }
   const arcadeSource = {
     id: 'imp',
-    kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })),
+    kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })).concat([2, 3, 4].map((d) => ({ id: `m${d}`, difficulty: d }))),
     question: arcadeQuestion,
-    concept: { '2pi': 'twopi', inverse: 'inverse', secant: 'tangent', tangent: 'tangent', chord: 'tangent', corner: 'corner', sqrt2: 'corner', 'corner-z': 'corner', side: 'corner', reactance: 'resonance', square: 'square' },
+    concept: { '2pi': 'twopi', inverse: 'inverse', secant: 'tangent', tangent: 'tangent', chord: 'tangent', corner: 'corner', sqrt2: 'corner', 'corner-z': 'corner', side: 'corner', reactance: 'resonance', square: 'square', dual: 'serpar', swap: 'coilcap' },
     concepts: () => ({
       twopi: L('a 2π too many', 'ein 2π zu viel'),
       inverse: L('the slope upside down', 'die Steigung als Kehrwert'),
@@ -323,11 +439,13 @@
       corner: L('Z at the corner taken for R', 'Z bei der Grenzfrequenz für R gehalten'),
       resonance: L('the reactance at resonance taken for R', 'der Blindwiderstand bei Resonanz für R gehalten'),
       square: L('the square in ω₀ = 1/√(LC) forgotten', 'das Quadrat in ω₀ = 1/√(LC) vergessen'),
+      serpar: L('series and parallel swapped', 'Serie und parallel vertauscht'),
+      coilcap: L('coil and capacitor swapped', 'Spule und Kondensator vertauscht'),
     }),
     intro: () => ({
-      tag: L('Read <i>R</i>, <i>L</i> and <i>C</i> off impedance curves: as many as you can in <b>5 minutes</b>.', 'Lies <i>R</i>, <i>L</i> und <i>C</i> an Impedanzkurven ab: so viele wie möglich in <b>5 Minuten</b>.'),
-      rule: L('Questions get harder as you go. The graph shows the helper lines you need; read the value off and choose one of four answers, or press 1–4.',
-        'Die Fragen werden nach und nach schwieriger. Der Graph zeigt die nötigen Hilfslinien; lies den Wert ab und wähle eine von vier Antworten oder drücke 1–4.'),
+      tag: L('Read <i>R</i>, <i>L</i> and <i>C</i> off impedance curves, and match circuits to their curves: as many as you can in <b>5 minutes</b>.', 'Lies <i>R</i>, <i>L</i> und <i>C</i> an Impedanzkurven ab und ordne Schaltungen ihren Kurven zu: so viele wie möglich in <b>5 Minuten</b>.'),
+      rule: L('Questions get harder as you go. Read a value off the graph, using the helper lines shown, or pick the curve that belongs to a circuit; choose one of four answers, or press 1–4.',
+        'Die Fragen werden nach und nach schwieriger. Lies einen Wert am Graphen ab, mit den gezeigten Hilfslinien, oder wähle die Kurve, die zu einer Schaltung gehört; wähle eine von vier Antworten oder drücke 1–4.'),
       example: L('an extra 2π', 'ein zusätzliches 2π'),
     }),
     // the series RLC example with all its helper lines, and its impedance
@@ -350,15 +468,21 @@
     applyStatic();
     showScore();
     if (ex) {
-      const chosen = ex.fields.map((f) => { const r = document.querySelector(`input[name="opt-${f.key}"]:checked`); return r ? r.value : null; });
-      const keep = st;
+      const fields = ex.fields || [];
+      const chosen = fields.map((f) => { const r = document.querySelector(`input[name="opt-${f.key}"]:checked`); return r ? r.value : null; });
+      const pick = document.querySelector('input[name="cand"]:checked');
+      const keep = st, status = st.status; // render() clears the status line
       ex = again(ex);
-      ex.hints = hints();
+      prepare(ex);
       render();
       st = keep;
-      ex.fields.forEach((f, k) => { if (chosen[k] != null) document.querySelector(`input[name="opt-${f.key}"][value="${chosen[k]}"]`).checked = true; });
-      if (st.checked) feedback();
-      showStatus(st.status);
+      ex.fields && ex.fields.forEach((f, k) => { if (chosen[k] != null) document.querySelector(`input[name="opt-${f.key}"][value="${chosen[k]}"]`).checked = true; });
+      if (ex.match) {
+        drawMatch();
+        if (pick) document.querySelector(`input[name="cand"][value="${pick.value}"]`).checked = true;
+        if (st.checked) matchFeedback();
+      } else if (st.checked) feedback();
+      showStatus(status);
       showHints();
       if (st.revealed) showSolution();
       if ($('#task').hidden) { $('#hints').hidden = true; $('#solution').hidden = true; }
@@ -427,7 +551,7 @@
     probe = window.createProbe($('#graph'), () => ({ c: ex.c, ax: ex.ax, mode: axesMode() }), $('#readout'), $('#pins'));
     topics = window.Topics.create({
       app: PRACTICE,
-      topics: window.Lessons.EXAMPLES.map((e) => ({ name: () => e.name[Lang.get()], stages: e.practice.map((st) => ({ name: null, types: st.types })) })),
+      topics: window.Lessons.EXAMPLES.map((e) => ({ name: () => e.name[Lang.get()], stages: e.practice.map((st) => ({ name: st.name ? () => st.name[Lang.get()] : null, types: st.types })) })),
       make: ofType, typeOf,
       onChange: fresh,
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
@@ -443,9 +567,16 @@
     $('#answers').addEventListener('submit', check);
     // A new choice clears the feedback on the old one.
     $('#fields').addEventListener('change', (evt) => {
+      if (evt.target.name === 'cand') { document.querySelectorAll('.cand').forEach((el) => el.classList.remove('ok', 'bad')); $('#cand-fb').innerHTML = ''; return; }
       const row = evt.target.closest('.field');
+      if (!row) return;
       row.className = 'field';
       row.querySelector('.fb').textContent = '';
+    });
+    // the questions of a matching exercise: a right answer fades the curves that do not fit, a
+    // wrong one counts as an attempt
+    Identify.attach($('#fields'), () => (ex && ex.match ? ex.items : []), () => st.ident, (right) => {
+      if (right) drawMatch(); else { st.tries++; updateButtons(); }
     });
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);

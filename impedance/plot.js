@@ -225,11 +225,32 @@
     return `<circle class="c" cx="${x}" cy="${y}" r="13"/><path class="w" d="M${x - 7},${y} q3.5,-6 7,0 t7,0"/>`;
   }
 
+  // The name of a circuit, e.g. "Series RL circuit".
+  function name(c) {
+    if (c.conn === 'series-parallel') return L('R in series with L ∥ C', 'R in Serie mit L ∥ C');
+    if (c.conn === 'parallel-series') return L('R in parallel with L and C in series', 'R parallel zu L und C in Serie');
+    return c.conn === 'series' ? L(`Series ${c.kind} circuit`, `${c.kind}-Serieschaltung`) : L(`Parallel ${c.kind} circuit`, `${c.kind}-Parallelschaltung`);
+  }
+
   function schematic(c) {
     const ks = I.UNKNOWNS[c.kind], n = ks.length;
-    const name = c.conn === 'series' ? L(`Series ${c.kind} circuit`, `${c.kind}-Serieschaltung`) : L(`Parallel ${c.kind} circuit`, `${c.kind}-Parallelschaltung`);
     let out = '', w;
-    if (c.conn === 'series') {
+    if (c.conn === 'series-parallel') {
+      // R on the top wire, then the pair L ∥ C as two branches on the right
+      const top = 30, bot = 110, left = 30, xs = [left + 124, left + 186];
+      w = xs[1] + 36;
+      out += `<path class="w" d="M${left},${top} H${xs[1]} M${left},${bot} H${xs[1]} M${left},${top} V${bot}"/>` + source(left, (top + bot) / 2) + part('R', left + 62, top, false);
+      ['L', 'C'].forEach((k, i) => { out += `<line class="w" x1="${xs[i]}" y1="${top}" x2="${xs[i]}" y2="${bot}"/>` + part(k, xs[i], (top + bot) / 2, true); });
+      out += `<circle class="dot" cx="${xs[0]}" cy="${top}" r="3"/><circle class="dot" cx="${xs[0]}" cy="${bot}" r="3"/>`;
+    } else if (c.conn === 'parallel-series') {
+      // R in one branch, L and C one above the other in the second
+      const top = 18, bot = 106, left = 30, xs = [left + 64, left + 126];
+      w = xs[1] + 36;
+      out += `<path class="w" d="M${left},${top} H${xs[1]} M${left},${bot} H${xs[1]} M${left},${top} V${bot}"/>` + source(left, (top + bot) / 2);
+      xs.forEach((x) => { out += `<line class="w" x1="${x}" y1="${top}" x2="${x}" y2="${bot}"/>`; });
+      out += part('R', xs[0], (top + bot) / 2, true) + part('L', xs[1], 42, true) + part('C', xs[1], 84, true);
+      out += `<circle class="dot" cx="${xs[0]}" cy="${top}" r="3"/><circle class="dot" cx="${xs[0]}" cy="${bot}" r="3"/>`;
+    } else if (c.conn === 'series') {
       const top = 32, bot = 108, left = 30, right = left + 40 + 64 * n;
       w = right + 24;
       out += `<path class="w" d="M${left},${top} H${right} V${bot} H${left} Z"/>` + source(left, (top + bot) / 2);
@@ -244,10 +265,55 @@
         if (i < n - 1) out += `<circle class="dot" cx="${xs[i]}" cy="${top}" r="3"/><circle class="dot" cx="${xs[i]}" cy="${bot}" r="3"/>`;
       });
     }
-    return `<svg class="schematic" viewBox="0 0 ${w} 124" width="${w}" height="124" role="img" aria-label="${name}">${out}</svg>`;
+    return `<svg class="schematic" viewBox="0 0 ${w} 124" width="${w}" height="124" role="img" aria-label="${name(c)}">${out}</svg>`;
   }
 
-  const api = { get W() { return W; }, get H() { return H; }, ML, MT, get PW() { return PW; }, get PH() { return PH; }, setNarrow, scales, graph, probeMark, readout, omegaAt, schematic };
+  // ---------------------------------------------------------------- sketch
+  // A qualitative graph of Z(ω) for the matching exercise (match.js): no numbers, only the level
+  // o.R (dashed, labelled R; left out without o.R) and the resonance frequency o.w0 (labelled ω₀;
+  // left out with o.noW0). Linear axes 0 … 4ω₀ and 0 … 3R, log-log ω₀/20 … 20ω₀ and R/20 … 20R
+  // (o.w0 and o.zref set the scale even where no R or ω₀ is shown). o.marks: labels at the left
+  // end lo and the right end hi ({ text, v: what Z goes to }), and at ω₀ res (text), for the solution.
+  const SK = { W: 280, H: 180, L: 34, R: 18, T: 18, B: 30 };
+  function sketch(c, mode, o) {
+    const pw = SK.W - SK.L - SK.R, ph = SK.H - SK.T - SK.B, x0 = SK.L, y0 = SK.T + ph, id = `sk${++uid}`;
+    const w0 = o.w0, zr = o.zref, log = mode === 'log';
+    const x = log ? (w) => x0 + ((lg(w / w0) + lg(20)) / (2 * lg(20))) * pw : (w) => x0 + (w / (4 * w0)) * pw;
+    const y = log ? (z) => y0 - ((lg(z / zr) + lg(20)) / (2 * lg(20))) * ph : (z) => y0 - (z / (3 * zr)) * ph;
+    const wAt = log ? (px) => w0 * 20 ** (2 * (px - x0) / pw - 1) : (px) => Math.max(((px - x0) / pw) * 4 * w0, w0 * 1e-4);
+    const pts = [];
+    for (let px = x0; px <= x0 + pw + 1e-9; px += 1) {
+      const z = I.Z(c, wAt(px));
+      const py = !(z > 0) ? y0 + 40 : Math.max(SK.T - 40, Math.min(y0 + 40, y(z)));
+      pts.push(`${f1(px)},${f1(py)}`);
+    }
+    let out = `<defs><clipPath id="${id}"><rect x="${x0}" y="${SK.T - 6}" width="${pw + 6}" height="${ph + 6}"/></clipPath></defs>`;
+    const tx = (px, py, t, anchor, cls = 'axis') => `<text class="${cls}" x="${f1(px)}" y="${f1(py)}" text-anchor="${anchor}">${t}</text>`;
+    if (o.R) out += `<line class="aline" x1="${x0}" y1="${f1(y(o.R))}" x2="${x0 + pw}" y2="${f1(y(o.R))}"/>` + tx(x0 - 7, y(o.R) + 5, '<tspan class="it">R</tspan>', 'end');
+    if (!o.noW0) out += `<line class="aline" x1="${f1(x(w0))}" y1="${SK.T}" x2="${f1(x(w0))}" y2="${y0}"/>` + tx(x(w0), y0 + 18, '<tspan class="it">ω</tspan><tspan class="sub" dy="4">0</tspan>', 'middle');
+    if (!log) out += tx(x0 - 7, y0 + 5, '0', 'end');
+    out += `<path class="w" d="M${x0},${y0} H${x0 + pw + 8} M${x0 + pw + 2},${y0 - 4} L${x0 + pw + 8},${y0} L${x0 + pw + 2},${y0 + 4} M${x0},${y0} V${SK.T - 10} M${x0 - 4},${SK.T - 4} L${x0},${SK.T - 10} L${x0 + 4},${SK.T - 4}"/>`;
+    out += tx(x0 + pw + 6, y0 + 20, '<tspan class="it">ω</tspan>', 'end') + tx(x0 + 8, SK.T - 2, '<tspan class="it">Z</tspan>', 'start');
+    out += `<g clip-path="url(#${id})"><path class="curve" d="M${pts.join(' L')}"/></g>`;
+    // labels for the solution, by what the curve does at each end (v: '0', 'R' or 'inf'): beside
+    // where it leaves the plot at the top, on the bottom edge where it has risen from 0, else just
+    // above it; at ω₀ next to the point
+    const yc = (px) => y(I.Z(c, wAt(px)));
+    const m = o.marks || {}, px0 = x0 + 6, px1 = x0 + pw - 2;
+    const place = (e, left) => {
+      const dir = left ? 1 : -1, from = left ? px0 : px1, anchor = left ? 'start' : 'end';
+      const scan = (ok) => { for (let px = from; Math.abs(px - from) < pw * 0.6; px += dir * 2) if (ok(px)) return px; return from; };
+      if (e.v === 'inf') return label(scan((px) => yc(px) > SK.T + 2) + dir * 6, SK.T + 12, e.text, anchor);
+      if (e.v === '0' && left) return label(scan((px) => yc(px) < y0 - 20) + 4, y0 - 6, e.text, anchor);
+      return label(from, Math.max(SK.T + 12, Math.min(y0 - 8, yc(from + dir * 12) - 8)), e.text, anchor);
+    };
+    if (m.lo) out += place(m.lo, true);
+    if (m.hi) out += place(m.hi, false);
+    if (m.res) { const yr = Math.max(SK.T + 14, Math.min(y0 - 8, yc(x(w0)))); out += `<circle class="apt" cx="${f1(x(w0))}" cy="${f1(yr)}" r="4.5"/>` + label(x(w0) + 8, yr < SK.T + 40 ? yr + 20 : yr - 10, m.res, 'start'); }
+    return `<svg class="sketch" viewBox="0 0 ${SK.W} ${SK.H}" role="img" aria-label="${o.label || L('Impedance against angular frequency', 'Impedanz gegen Kreisfrequenz')}">${out}</svg>`;
+  }
+
+  const api = { get W() { return W; }, get H() { return H; }, ML, MT, get PW() { return PW; }, get PH() { return PH; }, setNarrow, scales, graph, probeMark, readout, omegaAt, schematic, name, sketch };
   root.Plot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -81,6 +81,23 @@ svg .pin-n { fill: var(--accent); font-size: 11px; font-weight: 700; font-family
 .field.ok input:checked + span { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
 .field.bad input:checked + span { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
 #hint-list ul { margin: 4px 0; padding-left: 1.2em; }
+
+/* which curve belongs to the circuit (match.js): the four sketches, faded once ruled out */
+.cands-wrap { flex: 1 1 100%; }
+.cands { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 4px 0 8px; }
+.cand { position: relative; display: block; border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 4px 6px 2px; transition: opacity 0.2s, border-color 0.2s; }
+.cand input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.cand .letter { position: absolute; right: 10px; top: 6px; font-weight: 700; color: var(--accent); }
+.sketch { display: block; width: 100%; height: auto; }
+svg .axis .sub { font-size: 10px; }
+label.cand:hover { border-color: var(--accent); }
+.cand:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.cand:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cand.out { opacity: 0.3; }
+.cand.ok { border-color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok); }
+.cand.bad { border-color: var(--bad); box-shadow: inset 0 0 0 1px var(--bad); }
+.match-head { margin: 16px 0 4px; font-weight: 600; }
+#cand-fb:empty { display: none; }
 #hint-list ul li { margin: 6px 0; }
 
 @media (max-width: 600px) {
