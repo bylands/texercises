@@ -149,7 +149,8 @@
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
-  const PRACTICE = 'imp', typeOf = (e) => (e.match ? `match-${e.net}` : `${e.c.kind}-${e.c.conn}`);
+  // (imp2: the topics were regrouped, so practice starts afresh rather than in the wrong topic)
+  const PRACTICE = 'imp2', typeOf = (e) => (e.match ? `match-${e.net}` : `${e.c.kind}-${e.c.conn}`);
   const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
 
   function open(exercise) {
@@ -369,7 +370,7 @@
       ],
     };
   }
-  const lessons = () => window.Lessons.EXAMPLES.map((d, i) => ({ ...(d.match ? matchLesson(d) : lesson(d)), also: topics.also(i) }));
+  const lessons = () => window.Lessons.EXAMPLES.map((d) => ({ ...(d.match ? matchLesson(d) : lesson(d)), also: topics.also(d.topic) }));
 
   // ---------------------------------------------------------------- arcade
   // Each question asks for one of R, L, C with the four options of the practice exercise. The
@@ -450,7 +451,7 @@
     }),
     // the series RLC example with all its helper lines, and its impedance
     hero: () => {
-      const c = window.Lessons.EXAMPLES[4].circuit, ax = I.axesFor(c), an = I.analysis(c, ax);
+      const c = window.Lessons.EXAMPLES.find((e) => e.circuit && e.circuit.kind === 'RLC' && e.circuit.conn === 'series').circuit, ax = I.axesFor(c), an = I.analysis(c, ax);
       return `<div class="figs"><div class="fig gwrap">${P.graph(c, ax, 'lin', { ann: an.steps.flatMap((s) => s.ann) })}</div></div>` +
         '<p class="ar-law">$Z = \\sqrt{R^2 + \\left(\\omega L - \\frac{1}{\\omega C}\\right)^2}$</p>';
     },
@@ -551,7 +552,12 @@
     probe = window.createProbe($('#graph'), () => ({ c: ex.c, ax: ex.ax, mode: axesMode() }), $('#readout'), $('#pins'));
     topics = window.Topics.create({
       app: PRACTICE,
-      topics: window.Lessons.EXAMPLES.map((e) => ({ name: () => e.name[Lang.get()], stages: e.practice.map((st) => ({ name: st.name ? () => st.name[Lang.get()] : null, types: st.types })) })),
+      topics: window.Lessons.TOPICS.map((t) => ({
+        name: () => t.name[Lang.get()],
+        stages: t.stages.map((st) => ({ name: () => st.name[Lang.get()], types: st.types })),
+        // the worked example of the step (or of the topic, for all steps)
+        example: (k) => { const i = t.stages[k] && t.stages[k].example != null ? t.stages[k].example : t.example; return { i, name: () => window.Lessons.EXAMPLES[i].name[Lang.get()] }; },
+      })),
       make: ofType, typeOf,
       onChange: fresh,
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
@@ -584,7 +590,11 @@
     window.addEventListener('resize', relayout);
     P.setNarrow(narrow());
 
-    tutor = window.createTutor(lessons(), { after: () => math($('#tutor')), done: practise, practise: (i) => { topics.go(i); setMode('practice'); fresh(); } });
+    tutor = window.createTutor(lessons(), { after: () => math($('#tutor')), done: practise, practise: (i) => {
+      // the step of this example, where it has one
+      const t = window.Lessons.EXAMPLES[i].topic, k = window.Lessons.TOPICS[t].stages.findIndex((st) => st.example === i);
+      topics.go(t, k >= 0 ? k : null); setMode('practice'); fresh();
+    } });
     arcade = Arcade.create(arcadeSource, { math, markScrollable, stored, store });
     $('#modes').addEventListener('change', () => {
       if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();

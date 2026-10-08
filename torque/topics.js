@@ -6,7 +6,10 @@
 // come up more often (practice.js).
 //   const T = Topics.create({
 //     app,                    the app's storage prefix
-//     topics: [{ name(), stages: [{ name(), types: [type] }] }],   in the order of the tutor
+//     topics: [{ name(), stages: [{ name(), types: [type] }], example }],   in the order of the tutor;
+//                             example (optional): { i, name() }, or a function of the step giving
+//                             it, the worked example of the topic where the tutor has more
+//                             examples than there are topics (by default topic t has example t)
 //     make(type, seed),       an exercise of a type
 //     typeOf(ex),             the type of an exercise
 //     onChange(),             the student chose another topic or stage (start a new exercise)
@@ -29,8 +32,8 @@
 //                             of T.next and T.parse carry ptopic and pstage
 //   T.solved(st)              the current exercise is solved; once per exercise (st.won), not after
 //                             the solution was shown. Returns a text when the stage is done.
-//   T.go(i)                   practise topic i (from the tutor), at the stage reached
-//   T.also(i)                 HTML for the tutor: what the practice of example i covers
+//   T.go(t, s)                practise topic t (from the tutor), at stage s or else the stage reached
+//   T.also(t)                 HTML for the tutor: what the practice of topic t covers
 (function (root) {
   'use strict';
 
@@ -87,6 +90,7 @@
       plans.set(id, steps);
       return steps;
     }
+    const workedOf = (t, s = 0) => { const e = o.topics[t].example; return typeof e === 'function' ? e(s) : e || { i: t, name: o.topics[t].name }; };
     const reached = (t) => Math.min((progress[t] || {}).stage || 0, stagesOf(t).length - 1);
     const typesOf = (t, s) => (t < 0 ? all : stagesOf(t)[Math.min(s, stagesOf(t).length - 1)].types);
     const stageName = (t, s) => stagesOf(t)[s].name();
@@ -107,10 +111,10 @@
         `<option value="-1"${t < 0 ? ' selected' : ''}>${X.mixed}</option>`;
       const stages = stagesOf(t).length > 1 ? `<div class="levels small stages" role="radiogroup" aria-label="${X.stage}">${stagesOf(t).map((s, i) =>
         `<label><input type="radio" name="stage" value="${i}"${i === cur.stage ? ' checked' : ''}><span>${i < reached(t) ? '✓ ' : ''}${i + 1} · ${esc(stageName(t, i))}</span></label>`).join('')}</div>` : '';
-      const w = t < 0 ? shownTopic : t;
+      const w = t < 0 ? shownTopic : t, wk = w >= 0 ? workedOf(w, t < 0 ? 0 : cur.stage) : null;
       const last = t < 0 || cur.stage >= stagesOf(t).length - 1;
       el.innerHTML = `<label class="topic-pick"><span>${X.topic}</span><select id="topic-pick">${opts}</select></label>${stages}` +
-        (w >= 0 && o.tutor ? `<button type="button" class="linklike worked">📖 ${esc(X.worked(w + 1, o.topics[w].name()))}</button>` : '') +
+        (w >= 0 && o.tutor ? `<button type="button" class="linklike worked">📖 ${esc(X.worked(wk.i + 1, wk.name()))}</button>` : '') +
         (runOut ? `<p class="topic-note">${last ? X.noneLast : X.none}</p>` : '');
     }
 
@@ -131,7 +135,7 @@
           else return;
           o.onChange();
         });
-        el.addEventListener('click', (evt) => { if (evt.target.closest('.worked')) o.tutor(cur.topic < 0 ? shownTopic : cur.topic); });
+        el.addEventListener('click', (evt) => { if (evt.target.closest('.worked')) o.tutor(cur.topic < 0 ? workedOf(shownTopic).i : workedOf(cur.topic, cur.stage).i); });
         render();
       },
       relabel: render,
@@ -188,7 +192,7 @@
         render();
         return msg;
       },
-      go(i) { choose(i, reached(i)); },
+      go(i, s) { choose(i, s == null ? reached(i) : s); },
       also(i) {
         const st = stagesOf(i).filter((x) => !x.all);
         if (st.length < 2) return '';
