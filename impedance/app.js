@@ -24,6 +24,8 @@
       correct: 'Correct',
       chooseCurve: 'Choose a curve, then check again.', idFirst: 'First answer the questions above.',
       whichCurve: 'Which curve?', thenChoose: 'Then choose the curve:', curve: (k) => `Curve ${k}`,
+      whichCircuit: 'Which circuit?', thenChooseCircuit: 'Then choose the circuit:', circuit: (k) => `Circuit ${k}`, chooseCircuit: 'Choose a circuit, then check again.',
+      inversePrompt: 'The curve shows the impedance <i>Z</i> of a circuit against the angular frequency <i>ω</i>. Which of the four circuits is it? First answer the questions: each right answer rules out the circuits that do not fit.',
       matchPrompt: 'Which of the four curves shows the impedance <i>Z</i> of this circuit against the angular frequency <i>ω</i>? First answer the questions: each right answer rules out the curves that do not fit.',
     },
     de: {
@@ -42,6 +44,8 @@
       correct: 'Richtig',
       chooseCurve: 'Wähle eine Kurve und prüfe dann nochmals.', idFirst: 'Beantworte zuerst die Fragen oben.',
       whichCurve: 'Welche Kurve?', thenChoose: 'Dann wähle die Kurve:', curve: (k) => `Kurve ${k}`,
+      whichCircuit: 'Welche Schaltung?', thenChooseCircuit: 'Dann wähle die Schaltung:', circuit: (k) => `Schaltung ${k}`, chooseCircuit: 'Wähle eine Schaltung und prüfe dann nochmals.',
+      inversePrompt: 'Die Kurve zeigt die Impedanz <i>Z</i> einer Schaltung gegen die Kreisfrequenz <i>ω</i>. Welche der vier Schaltungen ist es? Beantworte zuerst die Fragen: Jede richtige Antwort schliesst die Schaltungen aus, die nicht passen.',
       matchPrompt: 'Welche der vier Kurven zeigt die Impedanz <i>Z</i> dieser Schaltung gegen die Kreisfrequenz <i>ω</i>? Beantworte zuerst die Fragen: Jede richtige Antwort schliesst die Kurven aus, die nicht passen.',
     },
   };
@@ -79,30 +83,39 @@
   const starsOf = (d) => `<span class="stars" role="img" aria-label="${ui().stars(d)}" title="${ui().stars(d)}">${'★'.repeat(d)}${'☆'.repeat(5 - d)}</span>`;
 
   // ---------------------------------------------------------------- matching (match.js)
-  // The four curves of a matching exercise: the ones that do not fit the answers so far (keys of
-  // the questions) faded; with pick, as radio buttons; marks: labels on the right curve.
+  // The four options of a matching exercise, curves or (inverse) circuits: the ones that do not fit
+  // the answers so far (keys of the questions) faded; with pick, as radio buttons; marks: labels on
+  // the right curve.
+  // A curve: with the level R and ω₀ where the circuit shown has them; the curve given in the
+  // inverse has neither, which would tell whether there is a resistor or a resonance.
+  const sketchOf = (e, id, o, label, marks) => P.sketch(M.circuit(id, e.q), o.mode || axesMode(), {
+    w0: 1, zref: 1, R: !e.inverse && M.NETS[e.net].kind.includes('R') ? 1 : null, noW0: e.inverse || !M.resonant(e.net), marks, label,
+  });
   function curves(e, answered, o = {}) {
-    const R = M.NETS[e.net].kind.includes('R') ? 1 : null; // the level R, where the circuit has a resistor
-    return `<div class="cands"${o.pick ? ` role="radiogroup" aria-label="${ui().whichCurve}"` : ''}>${e.cands.map((id, k) => {
+    const name = e.inverse ? ui().circuit : ui().curve;
+    return `<div class="cands${e.inverse ? ' circuits' : ''}"${o.pick ? ` role="radiogroup" aria-label="${e.inverse ? ui().whichCircuit : ui().whichCurve}"` : ''}>${e.cands.map((id, k) => {
       const tag = o.pick ? 'label' : 'div', cls = `cand${M.fits(e, k, answered) ? '' : ' out'}`;
-      const svg = P.sketch(M.circuit(id, e.q), o.mode || axesMode(), { w0: 1, zref: 1, R, noW0: !M.resonant(e.net), marks: o.marks && k === e.right ? M.marks(id) : null, label: ui().curve(M.letter(k)) });
+      const svg = e.inverse ? P.schematic(M.circuit(id, e.q)) : sketchOf(e, id, o, name(M.letter(k)), o.marks && k === e.right ? M.marks(id) : null);
       return `<${tag} class="${cls}" data-k="${k}">${o.pick ? `<input type="radio" name="cand" value="${k}">` : ''}<span class="letter">${M.letter(k)}</span>${svg}</${tag}>`;
     }).join('')}</div>`;
   }
-  const matchFigure = (e, answered, o) => `<div class="fig">${P.schematic(M.circuit(e.net, e.q))}</div><div class="fig cands-wrap">${curves(e, answered, o)}</div>`;
+  // the circuit (or the curve) given, and the options
+  const given = (e, o = {}) => (e.inverse ? `<div class="fig curve-big">${sketchOf(e, e.net, o, L('The curve', 'Die Kurve'), o.marks ? M.marks(e.net) : null)}</div>` : `<div class="fig">${P.schematic(M.circuit(e.net, e.q))}</div>`);
+  const matchFigure = (e, answered, o = {}) => `${given(e, o)}<div class="fig cands-wrap">${curves(e, answered, o)}</div>`;
   // the questions answered right so far
   const answeredOf = () => ex.items.filter((it) => Identify.right(it, st.ident)).map((it) => it.key);
   const matchSolution = (e) => { const s = M.solution(e); return s.steps.map((x) => `<h4>${x.title}</h4><p>${x.text}</p>`).join('') + `<p>${s.verdict}</p><ul>${s.others.map((x) => `<li>${x}</li>`).join('')}</ul>`; };
 
   function renderMatch() {
-    $('#title').innerHTML = `${ui().whichCurve} ${starsOf(ex.difficulty)}`;
-    $('#prompt').innerHTML = ui().matchPrompt;
-    $('#schematic').innerHTML = P.schematic(M.circuit(ex.net, ex.q));
-    $('#fields').innerHTML = `<div id="ident"></div><p class="match-head">${ui().thenChoose}</p><div id="cands"></div><p id="cand-fb" class="ident-fb bad" aria-live="polite"></p>`;
+    $('#title').innerHTML = `${ex.inverse ? ui().whichCircuit : ui().whichCurve} ${starsOf(ex.difficulty)}`;
+    $('#prompt').innerHTML = ex.inverse ? ui().inversePrompt : ui().matchPrompt;
+    $('#fields').innerHTML = `<div id="ident"></div><p class="match-head">${ex.inverse ? ui().thenChooseCircuit : ui().thenChoose}</p><div id="cands"></div><p id="cand-fb" class="ident-fb bad" aria-live="polite"></p>`;
   }
   // the questions and the curves, keeping the curve chosen
   function drawMatch() {
     const sel = document.querySelector('input[name="cand"]:checked');
+    // the circuit given, or in the inverse the curve (redrawn when the axes change)
+    $('#schematic').outerHTML = given(ex).replace('class="fig', 'id="schematic" class="fig');
     $('#ident').innerHTML = Identify.html(ex.items, st.ident, st.revealed);
     $('#cands').innerHTML = curves(ex, st.revealed ? M.phases(ex.net) : answeredOf(), { pick: true });
     if (sel) document.querySelector(`input[name="cand"][value="${sel.value}"]`).checked = true;
@@ -150,7 +163,7 @@
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
   // (imp2: the topics were regrouped, so practice starts afresh rather than in the wrong topic)
-  const PRACTICE = 'imp2', typeOf = (e) => (e.match ? `match-${e.net}` : `${e.c.kind}-${e.c.conn}`);
+  const PRACTICE = 'imp2', typeOf = (e) => (e.match ? `${e.inverse ? 'inv' : 'match'}-${e.net}` : `${e.c.kind}-${e.c.conn}`);
   const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
 
   function open(exercise) {
@@ -176,6 +189,7 @@
   // an exercise of a kind of circuit: 'RL-series' and so on
   const ofType = (type, seed) => {
     if (type.startsWith('match-')) return M.generate(type.slice(6), seed);
+    if (type.startsWith('inv-')) return M.generate(type.slice(4), seed, true);
     const [kind, conn] = type.split('-');
     return I.generate(`${conn} ${kind}`, seed);
   };
@@ -210,6 +224,7 @@
     $('#title').innerHTML = `${circuitName(c)} ${starsOf(ex.difficulty)}`;
     $('#prompt').innerHTML = L(`The graph shows the impedance <i>Z</i> of the circuit against the angular frequency <i>ω</i>. Find ${and(ks.map((k) => `<i>${k}</i>`))} from the features of the graph and choose the matching values.`,
       `Der Graph zeigt die Impedanz <i>Z</i> der Schaltung gegen die Kreisfrequenz <i>ω</i>. Bestimme ${and(ks.map((k) => `<i>${k}</i>`))} aus den Merkmalen des Graphen und wähle die passenden Werte.`);
+    $('#schematic').className = 'fig'; // after a curve → circuit exercise, it held the curve
     $('#schematic').innerHTML = P.schematic(c);
     probe.reset();
     drawGraph();
@@ -269,7 +284,7 @@
     const el = $('#status');
     if (st) st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
-    el.textContent = !kind ? '' : kind === 'fill' ? (ex && ex.match ? ui().chooseCurve : ui().choose) : kind === 'ident' ? ui().idFirst
+    el.textContent = !kind ? '' : kind === 'fill' ? (ex && ex.match ? (ex.inverse ? ui().chooseCircuit : ui().chooseCurve) : ui().choose) : kind === 'ident' ? ui().idFirst
       : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (!canReveal() ? ui().tryAgain : ui().canReveal);
   }
@@ -318,7 +333,7 @@
   function showSolution() {
     drawSolution();
     $('#sol-steps').innerHTML = ex.match ? matchSolution(ex) : solutionSteps(ex);
-    $('#sol-short').innerHTML = ex.match ? L(`The curve is ${M.letter(ex.right)}.`, `Die Kurve ist ${M.letter(ex.right)}.`) : results();
+    $('#sol-short').innerHTML = !ex.match ? results() : ex.inverse ? L(`The circuit is ${M.letter(ex.right)}.`, `Die Schaltung ist ${M.letter(ex.right)}.`) : L(`The curve is ${M.letter(ex.right)}.`, `Die Kurve ist ${M.letter(ex.right)}.`);
     $('#solution').hidden = false;
     math($('#solution'));
   }
@@ -354,18 +369,21 @@
   // The matching example: the curves, then one frame per question, each fading the curves it
   // rules out, and the curve that is left.
   function matchLesson(d) {
-    const e = { ...d.match, match: true, right: d.match.cands.indexOf(d.match.net) }, ks = M.phases(e.net);
+    const e = { ...d.match, match: true, right: d.match.cands.indexOf(d.match.net) }, ks = M.phases(e.net), inv = !!e.inverse;
+    const opt = (j) => (inv ? L(`circuit ${M.letter(j)}`, `Schaltung ${M.letter(j)}`) : L(`curve ${M.letter(j)}`, `Kurve ${M.letter(j)}`));
     const title = { lo: L('Small ω', 'Kleines ω'), hi: L('Large ω', 'Grosses ω'), res: L('At the resonance frequency', 'Bei der Resonanzfrequenz') };
     const ruled = (k) => e.cands.map((x, j) => j).filter((j) => M.fits(e, j, ks.slice(0, ks.indexOf(k))) && !M.fits(e, j, ks.slice(0, ks.indexOf(k) + 1)));
-    const out = (js) => (js.length ? L(`This rules out ${M.and(js.map((j) => `curve ${M.letter(j)}`))}.`, `Das schliesst ${M.and(js.map((j) => `Kurve ${M.letter(j)}`))} aus.`) : '');
+    const out = (js) => (js.length ? L(`This rules out ${M.and(js.map(opt))}.`, `Das schliesst ${M.and(js.map(opt))} aus.`) : '');
     return {
       name: d.name[Lang.get()], idea: d.idea[Lang.get()],
       frames: () => [
-        { text: `<div class="step-rule">${L('The question', 'Die Frage')}</div><p>${L('Which of the four curves shows the impedance of this circuit? Instead of guessing, ask three questions about the curve; each one rules out curves that do not fit.', 'Welche der vier Kurven zeigt die Impedanz dieser Schaltung? Statt zu raten, stellst du drei Fragen an die Kurve; jede schliesst Kurven aus, die nicht passen.')}</p>`,
+        { text: `<div class="step-rule">${L('The question', 'Die Frage')}</div><p>${inv
+          ? L('Which of the four circuits has this impedance curve? Instead of guessing, read the curve at both ends and at its minimum or maximum, and ask what each tells you about the circuit; each answer rules out circuits that do not fit.', 'Welche der vier Schaltungen hat diese Impedanzkurve? Statt zu raten, liest du die Kurve an beiden Enden und bei ihrem Minimum oder Maximum ab und fragst, was das über die Schaltung verrät; jede Antwort schliesst Schaltungen aus, die nicht passen.')
+          : L('Which of the four curves shows the impedance of this circuit? Instead of guessing, ask three questions about the curve; each one rules out curves that do not fit.', 'Welche der vier Kurven zeigt die Impedanz dieser Schaltung? Statt zu raten, stellst du drei Fragen an die Kurve; jede schliesst Kurven aus, die nicht passen.')}</p>`,
           get figure() { return matchFigure(e, []); } },
-        ...ks.map((k, i) => ({ text: `<div class="step-rule">${title[k]}</div><p>${M.reason(e.net, k)}</p><p>${out(ruled(k))}</p>`,
+        ...ks.map((k, i) => ({ text: `<div class="step-rule">${title[k]}</div><p>${inv ? M.inverseText(k, M.features(e.net)[k]).value : M.reason(e.net, k)}</p><p>${out(ruled(k))}</p>`,
           get figure() { return matchFigure(e, ks.slice(0, i + 1)); } })),
-        { text: `<div class="step-rule">${L('The curve', 'Die Kurve')}</div><p>${M.solution(e).verdict} ${L('The rules in short: for ω → 0 a coil is a wire and a capacitor a gap, for ω → ∞ the other way round; at ω₀ coil and capacitor in series act like a wire, in parallel like a gap. A gap in series blocks (Z → ∞), a wire in parallel short-circuits (Z → 0).', 'Die Regeln kurz: Für ω → 0 ist eine Spule ein Draht und ein Kondensator ein Unterbruch, für ω → ∞ umgekehrt; bei ω₀ wirken Spule und Kondensator in Serie wie ein Draht, parallel wie ein Unterbruch. Ein Unterbruch in Serie sperrt (Z → ∞), ein Draht parallel schliesst kurz (Z → 0).')}</p>`,
+        { text: `<div class="step-rule">${L('The curve', 'Die Kurve')}</div><p>${M.solution(e).verdict} ${inv ? L('Backwards, the same rules:', 'Rückwärts gelten dieselben Regeln:') : ''} ${L('The rules in short: for ω → 0 a coil is a wire and a capacitor a gap, for ω → ∞ the other way round; at ω₀ coil and capacitor in series act like a wire, in parallel like a gap. A gap in series blocks (Z → ∞), a wire in parallel short-circuits (Z → 0).', 'Die Regeln kurz: Für ω → 0 ist eine Spule ein Draht und ein Kondensator ein Unterbruch, für ω → ∞ umgekehrt; bei ω₀ wirken Spule und Kondensator in Serie wie ein Draht, parallel wie ein Unterbruch. Ein Unterbruch in Serie sperrt (Z → ∞), ein Draht parallel schliesst kurz (Z → 0).')}</p>`,
           get figure() { return matchFigure(e, ks, { marks: true }); } },
       ],
     };
@@ -393,28 +411,29 @@
   // Matching questions (kinds m2 to m4, of difficulty 2 to 4: two elements, RLC and LC, R with an
   // LC pair): the four curves are the options; a wrong one with series and parallel swapped, or
   // coil and capacitor, is a misconception.
+  // Backwards (kinds i3 to i5: the curve is given, the options are circuits) one level harder.
   function matchQuestion(kind, seed) {
-    const level = Number(kind.slice(1)) - 1, nets = M.IDS.filter((id) => M.NETS[id].level === level);
-    const e = M.generate(nets[seed % nets.length], seed), num = (k) => k + 1;
+    const inv = kind[0] === 'i', level = Number(kind.slice(1)) - (inv ? 2 : 1), nets = M.IDS.filter((id) => M.NETS[id].level === level);
+    const e = M.generate(nets[seed % nets.length], seed, inv), num = (k) => k + 1;
     return {
-      title: circuitName(M.circuit(e.net, e.q)),
-      text: `<p>${L('The four options are sketches of <i>Z</i> against <i>ω</i>.', 'Die vier Antworten sind Skizzen von <i>Z</i> gegen <i>ω</i>.')}</p>`,
-      figure: `<div class="fig">${P.schematic(M.circuit(e.net, e.q))}</div>`,
-      ask: L('Which curve belongs to this circuit?', 'Welche Kurve gehört zu dieser Schaltung?'),
+      title: inv ? ui().whichCircuit : circuitName(M.circuit(e.net, e.q)),
+      text: `<p>${inv ? L('The curve shows <i>Z</i> against <i>ω</i>; the four options are circuits.', 'Die Kurve zeigt <i>Z</i> gegen <i>ω</i>; die vier Antworten sind Schaltungen.') : L('The four options are sketches of <i>Z</i> against <i>ω</i>.', 'Die vier Antworten sind Skizzen von <i>Z</i> gegen <i>ω</i>.')}</p>`,
+      figure: given(e, { mode: 'lin' }),
+      ask: inv ? L('Which circuit has this curve?', 'Welche Schaltung hat diese Kurve?') : L('Which curve belongs to this circuit?', 'Welche Kurve gehört zu dieser Schaltung?'),
       options: e.cands.map((id, k) => ({
-        html: P.sketch(M.circuit(id, e.q), 'lin', { w0: 1, zref: 1, R: M.NETS[e.net].kind.includes('R') ? 1 : null, noW0: !M.resonant(e.net), label: ui().curve(k + 1) }),
+        html: inv ? P.schematic(M.circuit(id, e.q)) : sketchOf(e, id, { mode: 'lin' }, ui().curve(k + 1), null),
         correct: k === e.right, flag: id === M.dual(e.net) ? 'dual' : id === M.swapLC(e.net) ? 'swap' : 'other', why: k === e.right ? '' : M.mismatch(e, k, num),
       })),
       key: `${e.net}|${e.cands.join(',')}`,
       explain: () => {
         const sol = M.solution(e);
         return `<div class="figs">${matchFigure(e, M.phases(e.net), { marks: true, mode: 'lin' })}</div><div class="steps">${sol.steps.map((x) => `<h4>${x.title}</h4><p>${x.text}</p>`).join('')}` +
-          `<p>${L(`The curve is option ${e.right + 1}.`, `Die Kurve ist Antwort ${e.right + 1}.`)}</p></div>`;
+          `<p>${inv ? L(`The circuit is option ${e.right + 1}.`, `Die Schaltung ist Antwort ${e.right + 1}.`) : L(`The curve is option ${e.right + 1}.`, `Die Kurve ist Antwort ${e.right + 1}.`)}</p></div>`;
       },
     };
   }
   function arcadeQuestion(kind, seed) {
-    if (kind[0] === 'm') return matchQuestion(kind, seed);
+    if (kind[0] === 'm' || kind[0] === 'i') return matchQuestion(kind, seed);
     const d = Number(kind.slice(1)), kinds = KINDS.filter((k) => I.DIFFICULTY[k] === d);
     const e = I.generate(kinds[seed % kinds.length], seed);
     const f = e.fields[Math.floor(seed / kinds.length) % e.fields.length];
@@ -430,7 +449,7 @@
   }
   const arcadeSource = {
     id: 'imp',
-    kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })).concat([2, 3, 4].map((d) => ({ id: `m${d}`, difficulty: d }))),
+    kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })).concat([2, 3, 4].map((d) => ({ id: `m${d}`, difficulty: d })), [3, 4, 5].map((d) => ({ id: `i${d}`, difficulty: d }))),
     question: arcadeQuestion,
     concept: { '2pi': 'twopi', inverse: 'inverse', secant: 'tangent', tangent: 'tangent', chord: 'tangent', corner: 'corner', sqrt2: 'corner', 'corner-z': 'corner', side: 'corner', reactance: 'resonance', square: 'square', dual: 'serpar', swap: 'coilcap' },
     concepts: () => ({

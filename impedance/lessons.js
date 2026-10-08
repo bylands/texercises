@@ -15,6 +15,13 @@
       match: { net: 'RLC-series', q: 1, cands: ['LC-series', 'RL-series', 'RLC-series', 'RC-series'] },
     },
     {
+      // backwards: which circuit has this curve; each question rules out one circuit
+      topic: 0,
+      name: { en: 'Curve → circuit', de: 'Kurve → Schaltung' },
+      idea: { en: 'Which circuit has this curve? Read the curve at both ends and at its minimum or maximum, and ask what can block the whole current there, or short-circuit everything.', de: 'Welche Schaltung hat diese Kurve? Lies die Kurve an beiden Enden und bei ihrem Minimum oder Maximum ab und frage, was dort den ganzen Strom sperren oder alles kurzschliessen kann.' },
+      match: { net: 'RLC-parallel-series', q: 1, inverse: true, cands: ['LC-series', 'RL-series', 'RLC-series-parallel', 'RLC-parallel-series'] },
+    },
+    {
       topic: 1,
       name: { en: 'Series RL', de: 'RL in Serie' },
       idea: { en: 'The impedance starts at R and grows with ω. R is read at ω = 0, L from the slope of the graph for large ω.', de: 'Die Impedanz beginnt bei R und wächst mit ω. R liest man bei ω = 0 ab, L aus der Steigung des Graphen für grosses ω.' },
@@ -56,27 +63,28 @@
   // an example of its own links to that one.
   const TOPICS = [
     {
-      name: { en: 'Circuit → curve', de: 'Schaltung → Kurve' }, example: 0,
+      name: { en: 'Circuits and curves', de: 'Schaltungen und Kurven' }, example: 0,
       stages: [
         { name: { en: 'Two elements', de: 'Zwei Bauteile' }, types: ['match-RL-series', 'match-RC-series', 'match-RL-parallel', 'match-RC-parallel'] },
         { name: { en: 'RLC and LC', de: 'RLC und LC' }, types: ['match-RLC-series', 'match-RLC-parallel', 'match-LC-series', 'match-LC-parallel'] },
         { name: { en: 'R with an LC pair', de: 'R mit LC-Paar' }, types: ['match-RLC-series-parallel', 'match-RLC-parallel-series'] },
+        { name: { en: 'Curve → circuit', de: 'Kurve → Schaltung' }, types: ['RL-series', 'RC-series', 'RL-parallel', 'RC-parallel', 'RLC-series', 'RLC-parallel', 'LC-series', 'LC-parallel', 'RLC-series-parallel', 'RLC-parallel-series'].map((id) => `inv-${id}`), example: 1 },
       ],
     },
     {
-      name: { en: 'Series circuits', de: 'Serieschaltungen' }, example: 1,
+      name: { en: 'Series circuits', de: 'Serieschaltungen' }, example: 2,
       stages: [
-        { name: { en: 'RL', de: 'RL' }, types: ['RL-series'], example: 1 },
-        { name: { en: 'RC', de: 'RC' }, types: ['RC-series'], example: 2 },
-        { name: { en: 'RLC', de: 'RLC' }, types: ['RLC-series'], example: 3 },
+        { name: { en: 'RL', de: 'RL' }, types: ['RL-series'], example: 2 },
+        { name: { en: 'RC', de: 'RC' }, types: ['RC-series'], example: 3 },
+        { name: { en: 'RLC', de: 'RLC' }, types: ['RLC-series'], example: 4 },
       ],
     },
     {
-      name: { en: 'Parallel circuits', de: 'Parallelschaltungen' }, example: 4,
+      name: { en: 'Parallel circuits', de: 'Parallelschaltungen' }, example: 5,
       stages: [
-        { name: { en: 'RL', de: 'RL' }, types: ['RL-parallel'], example: 4 },
-        { name: { en: 'RC', de: 'RC' }, types: ['RC-parallel'], example: 5 },
-        { name: { en: 'RLC', de: 'RLC' }, types: ['RLC-parallel'], example: 6 },
+        { name: { en: 'RL', de: 'RL' }, types: ['RL-parallel'], example: 5 },
+        { name: { en: 'RC', de: 'RC' }, types: ['RC-parallel'], example: 6 },
+        { name: { en: 'RLC', de: 'RLC' }, types: ['RLC-parallel'], example: 7 },
       ],
     },
   ];

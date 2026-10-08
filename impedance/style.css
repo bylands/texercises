@@ -98,6 +98,10 @@ label.cand:hover { border-color: var(--accent); }
 .cand.bad { border-color: var(--bad); box-shadow: inset 0 0 0 1px var(--bad); }
 .match-head { margin: 16px 0 4px; font-weight: 600; }
 #cand-fb:empty { display: none; }
+/* curve → circuit: the curve given, and circuits as the options */
+.curve-big { flex: 0 1 440px; }
+.cands.circuits .cand { display: flex; justify-content: center; padding: 18px 8px 8px; }
+.cands.circuits .schematic { max-width: 100%; height: auto; }
 #hint-list ul li { margin: 6px 0; }
 
 @media (max-width: 600px) {

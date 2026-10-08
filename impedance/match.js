@@ -1,4 +1,5 @@
-// Which curve belongs to the circuit? The student sees a circuit and four sketches of Z(ω) (plot.js
+// Which curve belongs to the circuit, or (inverse) which circuit to the curve? In the first, the
+// student sees a circuit and four sketches of Z(ω) (plot.js
 // sketch(): no numbers, only the level R and the resonance frequency ω₀) and first reasons: what Z
 // does for ω → 0 and for ω → ∞, and at ω₀ = 1/√(LC) if the circuit has both a coil and a
 // capacitor. Each right answer rules out the curves that do not fit, until one is left.
@@ -17,7 +18,10 @@
 //                          with a pair L ∥ C or L + C)
 //   features(id)           { lo: '0' | 'R' | 'inf', hi: …, res: 'none' | 'minR' | 'maxR' | 'zero' | 'inf' }
 //   circuit(id, q)         the circuit with R = 1 Ω, L = q H, C = 1/q F: ω₀ = 1 rad/s for all
-//   generate(id, seed)     { match: true, net, q, cands: [id] (four), right (index), difficulty, p }
+//   generate(id, seed, inverse)  { match: true, inverse, net, q, cands: [id] (four), right
+//                          (index), difficulty, p }; inverse: the curve is given and the circuits
+//                          are the options (curve → circuit), its questions what the curve tells
+//                          about the circuit
 //   items(ex)              the reasoning questions for identify.js (keys lo, hi and res)
 //   fits(ex, k, state)     whether candidate k agrees with the answers given so far
 //   mismatch(ex, k)        why candidate k is not the curve (its first feature that differs)
@@ -100,6 +104,13 @@
     },
   };
 
+  // the same in a German subordinate clause (verb last)
+  const DOES_DE_SUB = {
+    lo: { 0: 'bei 0 beginnt', R: 'bei <i>R</i> beginnt', inf: 'von unendlich herunterkommt' },
+    hi: { 0: 'gegen 0 fällt', R: 'sich <i>R</i> nähert', inf: 'über alle Grenzen wächst' },
+    res: { none: 'kein Minimum und kein Maximum hat', minR: 'bei <i>ω</i>₀ das Minimum <i>R</i> hat', maxR: 'bei <i>ω</i>₀ das Maximum <i>R</i> hat', zero: 'bei <i>ω</i>₀ auf 0 fällt', inf: 'bei <i>ω</i>₀ gegen unendlich schiesst' },
+  };
+
   // How the coil and the capacitor of circuit id behave in phase lo or hi.
   function facts(id, phase) {
     const coil = phase === 'lo' ? L('the coil acts like a wire (<i>ωL</i> → 0)', 'wirkt die Spule wie ein Draht (<i>ωL</i> → 0)') : L('the coil acts like a gap (<i>ωL</i> → ∞)', 'wirkt die Spule wie ein Unterbruch (<i>ωL</i> → ∞)');
@@ -151,7 +162,7 @@
   const phases = (id) => (resonant(id) ? ORDER : ['lo', 'hi']);
   const shared = (a, b) => phases(a).filter((k) => features(a)[k] === features(b)[k]);
 
-  function generate(id, seed) {
+  function generate(id, seed, inverse) {
     const r = I.rng(seed), n = NETS[id];
     const shuffle = (xs) => { const a = [...xs]; for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(r.next() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; } return a; };
     const q = r.pick([0.7, 0.8, 1, 1.2, 1.4]);
@@ -167,12 +178,14 @@
     }
     for (const x of pool) if (picked.length < 3 && !picked.includes(x)) picked.push(x);
     const cands = shuffle([id, ...picked.slice(0, 3)]);
-    return { match: true, net: id, q, cands, right: cands.indexOf(id), difficulty: DIFFICULTY[n.level], p: { net: id, others: [...picked].sort() } };
+    // backwards (from the curve to the circuit) is one star harder
+    return { match: true, inverse: !!inverse, net: id, q, cands, right: cands.indexOf(id), difficulty: Math.min(5, DIFFICULTY[n.level] + (inverse ? 1 : 0)), p: { net: id, others: [...picked].sort(), inverse: !!inverse } };
   }
 
   // The reasoning questions (identify.js): their options, the explanation of a wrong one, and the
   // reasoning once right.
   function items(ex) {
+    if (ex.inverse) return inverseItems(ex);
     const id = ex.net, f = features(id), noR = !has(id, 'R');
     const end = (k) => ({
       key: k,
@@ -194,6 +207,62 @@
     return out;
   }
 
+  // ---------------------------------------------------------------- curve → circuit
+  // What the curve tells about the circuit, per phase and feature: the option and, once right, the
+  // reasoning. For ω → 0 only a capacitor can block and only a coil short-circuit; for ω → ∞ the
+  // other way round; at ω₀ the pair of coil and capacitor does.
+  function inverseText(phase, v) {
+    if (phase === 'res') {
+      return {
+        minR: { opt: L('Coil and capacitor in series with each other and with <i>R</i>', 'Spule und Kondensator in Serie zueinander und zu <i>R</i>'),
+          value: L('A minimum <i>Z</i> = <i>R</i> at <i>ω</i>₀: there only <i>R</i> counts, and away from <i>ω</i>₀ a reactance adds to it. So coil and capacitor are in series with each other (together a wire at <i>ω</i>₀) and with <i>R</i>.',
+            'Ein Minimum <i>Z</i> = <i>R</i> bei <i>ω</i>₀: Dort zählt nur <i>R</i>, und neben <i>ω</i>₀ kommt ein Blindwiderstand dazu. Spule und Kondensator sind also in Serie zueinander (zusammen ein Draht bei <i>ω</i>₀) und zu <i>R</i>.') },
+        maxR: { opt: L('Coil and capacitor parallel to each other and to <i>R</i>', 'Spule und Kondensator parallel zueinander und zu <i>R</i>'),
+          value: L('A maximum <i>Z</i> = <i>R</i> at <i>ω</i>₀: there only <i>R</i> counts, and away from <i>ω</i>₀ some current also passes beside <i>R</i>. So coil and capacitor are parallel to each other (together a gap at <i>ω</i>₀) and to <i>R</i>.',
+            'Ein Maximum <i>Z</i> = <i>R</i> bei <i>ω</i>₀: Dort zählt nur <i>R</i>, und neben <i>ω</i>₀ fliesst auch Strom neben <i>R</i> vorbei. Spule und Kondensator sind also parallel zueinander (zusammen ein Unterbruch bei <i>ω</i>₀) und zu <i>R</i>.') },
+        zero: { opt: L('Coil and capacitor in series with each other, parallel to everything else', 'Spule und Kondensator in Serie zueinander, parallel zu allem anderen'),
+          value: L('<i>Z</i> = 0 at <i>ω</i>₀: something short-circuits everything. At <i>ω</i>₀ coil and capacitor in series act like a wire, so they are in series with each other and parallel to everything else.',
+            '<i>Z</i> = 0 bei <i>ω</i>₀: Etwas schliesst alles kurz. Bei <i>ω</i>₀ wirken Spule und Kondensator in Serie wie ein Draht, sie sind also in Serie zueinander und parallel zu allem anderen.') },
+        inf: { opt: L('Coil and capacitor parallel to each other, in series with everything else', 'Spule und Kondensator parallel zueinander, in Serie zu allem anderen'),
+          value: L('<i>Z</i> → ∞ at <i>ω</i>₀: something blocks the whole current. At <i>ω</i>₀ coil and capacitor in parallel act like a gap, so they are parallel to each other and in series with everything else.',
+            '<i>Z</i> → ∞ bei <i>ω</i>₀: Etwas sperrt den ganzen Strom. Bei <i>ω</i>₀ wirken Spule und Kondensator parallel wie ein Unterbruch, sie sind also parallel zueinander und in Serie zu allem anderen.') },
+      }[v];
+    }
+    const lo = phase === 'lo', cap = { en: 'capacitor', a: 'ein Kondensator', no: 'kein Kondensator' }, coil = { en: 'coil', a: 'eine Spule', no: 'keine Spule' };
+    const blocker = lo ? cap : coil, shorter = lo ? coil : cap, up = (x) => x[0].toUpperCase() + x.slice(1);
+    const when = lo ? L('for <i>ω</i> → 0', 'für <i>ω</i> → 0') : L('for <i>ω</i> → ∞', 'für <i>ω</i> → ∞');
+    const small = lo ? L('small', 'kleines') : L('large', 'grosses');
+    return {
+      inf: { opt: L(`A ${blocker.en} in series with everything else`, `${up(blocker.a)} in Serie zu allem anderen`),
+        value: L(`<i>Z</i> → ∞ ${when}: something blocks the whole current. For ${small} <i>ω</i> only a ${blocker.en} acts like a gap, so a ${blocker.en} is in series with everything else.`,
+          `<i>Z</i> → ∞ ${when}: Etwas sperrt den ganzen Strom. Für ${small} <i>ω</i> wirkt nur ${blocker.a} wie ein Unterbruch, also ist ${blocker.a} in Serie zu allem anderen.`) },
+      0: { opt: L(`A ${shorter.en} parallel to everything else`, `${up(shorter.a)} parallel zu allem anderen`),
+        value: L(`<i>Z</i> → 0 ${when}: something short-circuits everything. For ${small} <i>ω</i> only a ${shorter.en} acts like a wire, so a ${shorter.en} is parallel to everything else.`,
+          `<i>Z</i> → 0 ${when}: Etwas schliesst alles kurz. Für ${small} <i>ω</i> wirkt nur ${shorter.a} wie ein Draht, also ist ${shorter.a} parallel zu allem anderen.`) },
+      R: { opt: L('Neither: only a resistor is left', 'Weder noch: Nur ein Widerstand bleibt'),
+        value: L(`<i>Z</i> → <i>R</i> ${when}: nothing blocks the whole current and nothing short-circuits everything, so only a resistor counts. There is a resistor, no ${blocker.en} is in series with everything else, and no ${shorter.en} is parallel to everything else.`,
+          `<i>Z</i> → <i>R</i> ${when}: Nichts sperrt den ganzen Strom, und nichts schliesst alles kurz, also zählt nur ein Widerstand. Es gibt einen Widerstand, ${blocker.no} ist in Serie zu allem anderen, und ${shorter.no} ist parallel zu allem anderen.`) },
+    }[v];
+  }
+
+  function inverseItems(ex) {
+    const id = ex.net, f = features(id);
+    const why = (k) => (k === 'lo'
+      ? L('For <i>ω</i> → 0 the coil acts like a wire and the capacitor like a gap. What does the curve do there: does it grow without bound, fall to 0, or level off?', 'Für <i>ω</i> → 0 wirkt die Spule wie ein Draht und der Kondensator wie ein Unterbruch. Was macht die Kurve dort: wächst sie über alle Grenzen, fällt sie auf 0, oder wird sie flach?')
+      : k === 'hi' ? L('For <i>ω</i> → ∞ the coil acts like a gap and the capacitor like a wire. What does the curve do there: does it grow without bound, fall to 0, or level off?', 'Für <i>ω</i> → ∞ wirkt die Spule wie ein Unterbruch und der Kondensator wie ein Draht. Was macht die Kurve dort: wächst sie über alle Grenzen, fällt sie auf 0, oder wird sie flach?')
+        : `${RES_FACT()} ${L('In series coil and capacitor then act together like a wire, in parallel like a gap.', 'In Serie wirken Spule und Kondensator dann zusammen wie ein Draht, parallel wie ein Unterbruch.')}`);
+    const what = {
+      lo: L('1 · What does the curve for <i>ω</i> → 0 tell you about the circuit?', '1 · Was verrät die Kurve für <i>ω</i> → 0 über die Schaltung?'),
+      hi: L('2 · And the curve for <i>ω</i> → ∞?', '2 · Und die Kurve für <i>ω</i> → ∞?'),
+      res: L('3 · And its minimum or maximum at <i>ω</i>₀?', '3 · Und ihr Minimum oder Maximum bei <i>ω</i>₀?'),
+    };
+    return phases(id).map((k) => ({
+      key: k, what: what[k],
+      options: (k === 'res' ? ['minR', 'maxR', 'zero', 'inf'] : ['inf', '0', 'R']).map((v) => ({ html: inverseText(k, v).opt, right: f[k] === v, why: why(k) })),
+      value: inverseText(k, f[k]).value,
+    }));
+  }
+
   // Whether candidate k agrees with the features answered right so far (state: { key: option }).
   function fits(ex, k, answered) {
     const f = features(ex.cands[k]), t = features(ex.net);
@@ -206,6 +275,10 @@
   // called (by default its letter; the arcade numbers its options).
   function mismatch(ex, k, name = letter) {
     const f = features(ex.cands[k]), t = features(ex.net), key = ORDER.find((x) => f[x] !== t[x]);
+    if (ex.inverse) {
+      return L(`Circuit ${name(k)} gives a curve that ${DOES[key][f[key]]()}, but this curve ${DOES[key][t[key]]()}.`,
+        `Schaltung ${name(k)} ergibt eine Kurve, die ${DOES_DE_SUB[key][f[key]]}, aber diese Kurve ${DOES[key][t[key]]()}.`);
+    }
     return L(`Curve ${name(k)} ${DOES[key][f[key]]()}, but the curve of this circuit ${DOES[key][t[key]]()}.`,
       `Kurve ${name(k)} ${DOES[key][f[key]]()}, aber die Kurve dieser Schaltung ${DOES[key][t[key]]()}.`);
   }
@@ -221,6 +294,11 @@
     if (resonant(id)) {
       out.push(L('At <i>ω</i>₀ = 1/√(<i>LC</i>) the reactances of coil and capacitor are equal and cancel: in series the two act together like a wire, in parallel like a gap.',
         'Bei <i>ω</i>₀ = 1/√(<i>LC</i>) sind die Blindwiderstände von Spule und Kondensator gleich gross und heben sich auf: In Serie wirken die beiden zusammen wie ein Draht, parallel wie ein Unterbruch.'));
+    }
+    if (ex.inverse) {
+      out.push(L('Read the curve at both ends, and its minimum or maximum if it has one. Then ask what can block the whole current there, or short-circuit everything.', 'Lies die Kurve an beiden Enden ab, und ihr Minimum oder Maximum, falls sie eines hat. Frage dann, was dort den ganzen Strom sperren oder alles kurzschliessen kann.'));
+      out.push(`${L('This curve:', 'Diese Kurve:')}<ul>${phases(id).map((k) => `<li>${inverseText(k, f[k]).value}</li>`).join('')}</ul>${L('Look for the circuit that fits all of this.', 'Suche die Schaltung, die zu all dem passt.')}`);
+      return out;
     }
     const list = phases(id).map((k) => `<li>${{ lo: L('For <i>ω</i> → 0', 'Für <i>ω</i> → 0'), hi: L('For <i>ω</i> → ∞', 'Für <i>ω</i> → ∞'), res: L('At <i>ω</i>₀', 'Bei <i>ω</i>₀') }[k]}: ${k === 'res' ? RES[f.res]() : Zis[f[k]]}</li>`).join('');
     out.push(`${L('For this circuit:', 'Für diese Schaltung:')}<ul>${list}</ul>${L('Look for the curve that does all of this.', 'Suche die Kurve, die all das tut.')}`);
@@ -241,13 +319,13 @@
     const id = ex.net;
     const title = { lo: L('Small ω', 'Kleines ω'), hi: L('Large ω', 'Grosses ω'), res: L('At the resonance frequency', 'Bei der Resonanzfrequenz') };
     return {
-      steps: phases(id).map((k) => ({ title: title[k], text: reason(id, k) })),
-      verdict: L(`Only curve ${letter(ex.right)} does all of this.`, `Nur Kurve ${letter(ex.right)} tut all das.`),
+      steps: phases(id).map((k) => ({ title: title[k], text: ex.inverse ? inverseText(k, features(id)[k]).value : reason(id, k) })),
+      verdict: ex.inverse ? L(`Only circuit ${letter(ex.right)} fits all of this.`, `Nur Schaltung ${letter(ex.right)} passt zu all dem.`) : L(`Only curve ${letter(ex.right)} does all of this.`, `Nur Kurve ${letter(ex.right)} tut all das.`),
       others: ex.cands.map((x, k) => k).filter((k) => k !== ex.right).map((k) => mismatch(ex, k)),
     };
   }
 
-  const api = { and, NETS, IDS, DIFFICULTY, features, circuit, generate, items, fits, mismatch, reason, hints, solution, marks, phases, dual, swapLC, letter, resonant };
+  const api = { inverseText, and, NETS, IDS, DIFFICULTY, features, circuit, generate, items, fits, mismatch, reason, hints, solution, marks, phases, dual, swapLC, letter, resonant };
   root.Match = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

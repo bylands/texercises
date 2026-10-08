@@ -1,4 +1,5 @@
-// Verifies the matching exercise (match.js): run with `node impedance/test/check-match.js`.
+// Verifies the matching exercises (match.js), circuit → curve and curve → circuit: run with
+// `node impedance/test/check-match.js`.
 // It checks that
 // - the features of every circuit (what Z does for ω → 0, for ω → ∞ and at ω₀), worked out by the
 //   rules taught, agree with Z(ω), and that no two circuits share all of them,
@@ -8,7 +9,7 @@
 //   minimum or maximum R of RLC in series or in parallel),
 // - every question has exactly one right option, and every text is complete in both languages,
 // - sketches and schematics of every circuit render in both axis modes,
-// - the worked example of the tutor rules out one curve per question.
+// - the worked examples of the tutor rule out one option per question.
 'use strict';
 
 const Lang = require('../lang.js');
@@ -48,8 +49,8 @@ let n = 0;
 for (const lang of ['en', 'de']) {
   Lang.set(lang, true);
   for (const id of M.IDS) {
-    for (let seed = 1; seed <= 300; seed++) {
-      const ex = M.generate(id, seed), tag = `${lang} ${id}-${seed}`;
+    for (let seed = 1; seed <= 600; seed++) {
+      const inverse = seed > 300, ex = M.generate(id, seed, inverse), tag = `${lang} ${inverse ? 'inv' : 'match'} ${id}-${seed}`;
       n++;
       if (new Set(ex.cands).size !== 4 || ex.cands[ex.right] !== id) fail(`${tag}: curves ${ex.cands}`);
       const all = M.phases(id), fitting = ex.cands.filter((x, k) => M.fits(ex, k, all));
@@ -67,6 +68,7 @@ for (const lang of ['en', 'de']) {
       }
       const sol = M.solution(ex);
       if (sol.others.length !== 3 || bad(JSON.stringify(sol)) || bad(M.hints(ex).join(''))) fail(`${tag}: solution or hints`);
+      if (inverse && /\b(Curve|Kurve) [A-D]\b/.test(sol.others.join(''))) fail(`${tag}: the options are circuits`);
     }
   }
 }
@@ -83,13 +85,14 @@ for (const id of M.IDS) {
   }
 }
 
-// the worked example: four curves, one ruled out by each question, one left
-const ex = EXAMPLES.find((e) => e.match), m = ex.match, e = { ...m, right: m.cands.indexOf(m.net) };
-const ks = M.phases(m.net);
-ks.forEach((k, i) => {
-  const before = m.cands.filter((x, j) => M.fits(e, j, ks.slice(0, i))).length, after = m.cands.filter((x, j) => M.fits(e, j, ks.slice(0, i + 1))).length;
-  if (before - after !== 1) fail(`worked example: question ${k} rules out ${before - after} curves`);
-});
+// the worked examples: four options, one ruled out by each question, one left
+for (const ex of EXAMPLES.filter((x) => x.match)) {
+  const m = ex.match, e = { ...m, right: m.cands.indexOf(m.net) }, ks = M.phases(m.net);
+  ks.forEach((k, i) => {
+    const before = m.cands.filter((x, j) => M.fits(e, j, ks.slice(0, i))).length, after = m.cands.filter((x, j) => M.fits(e, j, ks.slice(0, i + 1))).length;
+    if (before - after !== 1) fail(`worked example ${ex.name.en}: question ${k} rules out ${before - after} options`);
+  });
+}
 
 if (failures) { console.error(`\n${failures} failures`); process.exit(1); }
 console.log('Matching OK');
