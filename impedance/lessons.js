@@ -59,7 +59,9 @@
     },
   ];
 
-  // The topics of practice (topics.js), each with the worked example it starts from; a step with
+  // the circuits of the matching exercises (match.js)
+  const NETS = ['RL-series', 'RC-series', 'RL-parallel', 'RC-parallel', 'RLC-series', 'RLC-parallel', 'LC-series', 'LC-parallel', 'RLC-series-parallel', 'RLC-parallel-series'];
+    // The topics of practice (topics.js), each with the worked example it starts from; a step with
   // an example of its own links to that one.
   const TOPICS = [
     {
@@ -68,7 +70,10 @@
         { name: { en: 'Two elements', de: 'Zwei Bauteile' }, types: ['match-RL-series', 'match-RC-series', 'match-RL-parallel', 'match-RC-parallel'] },
         { name: { en: 'RLC and LC', de: 'RLC und LC' }, types: ['match-RLC-series', 'match-RLC-parallel', 'match-LC-series', 'match-LC-parallel'] },
         { name: { en: 'R with an LC pair', de: 'R mit LC-Paar' }, types: ['match-RLC-series-parallel', 'match-RLC-parallel-series'] },
-        { name: { en: 'Curve → circuit', de: 'Kurve → Schaltung' }, types: ['RL-series', 'RC-series', 'RL-parallel', 'RC-parallel', 'RLC-series', 'RLC-parallel', 'LC-series', 'LC-parallel', 'RLC-series-parallel', 'RLC-parallel-series'].map((id) => `inv-${id}`), example: 1 },
+        { name: { en: 'Curve → circuit', de: 'Kurve → Schaltung' }, types: NETS.map((id) => `inv-${id}`), example: 1 },
+        // directly, without the questions
+        { name: { en: 'Circuit → curve, directly', de: 'Schaltung → Kurve, direkt' }, types: NETS.map((id) => `pickmatch-${id}`), example: 0 },
+        { name: { en: 'Curve → circuit, directly', de: 'Kurve → Schaltung, direkt' }, types: NETS.map((id) => `pickinv-${id}`), example: 1 },
       ],
     },
     {

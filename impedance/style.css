@@ -62,6 +62,10 @@ svg .pin-n { fill: var(--accent); font-size: 11px; font-weight: 700; font-family
 .field .sym { text-align: right; }
 .field .fb { grid-column: 2; font-size: 0.9rem; }
 .field .fb:empty { display: none; }
+/* a problem's fields say what they are, and their symbols are wider */
+.field:has(.what) { grid-template-columns: auto minmax(0, 1fr); }
+.field .what { grid-column: 1 / -1; font-size: 0.95rem; color: var(--muted); }
+svg .curve2 { stroke: var(--zc); stroke-width: 1.8; stroke-dasharray: 7 5; fill: none; opacity: 0.6; }
 .opts { display: flex; flex-wrap: wrap; gap: 6px; }
 .opts label { position: relative; }
 .opts input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
@@ -88,10 +92,16 @@ svg .pin-n { fill: var(--accent); font-size: 11px; font-weight: 700; font-family
 .cands { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 4px 0 8px; }
 .cand { position: relative; display: block; border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 4px 6px 2px; transition: opacity 0.2s, border-color 0.2s; }
 .cand .letter { position: absolute; right: 10px; top: 6px; font-weight: 700; color: var(--accent); }
+.cand input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; } /* the direct versions: the option is picked */
+label.cand:hover { border-color: var(--accent); }
+.cand:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.cand:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .sketch { display: block; width: 100%; height: auto; }
 svg .axis .sub { font-size: 10px; }
 .cand.out { opacity: 0.3; }
 .cand.ok { border-color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok); }
+.cand.bad { border-color: var(--bad); box-shadow: inset 0 0 0 1px var(--bad); }
+#cand-fb:empty { display: none; }
 .match-head { margin: 16px 0 4px; font-weight: 600; }
 /* curve → circuit: the curve given, and circuits as the options */
 .curve-big { flex: 0 1 440px; }

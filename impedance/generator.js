@@ -52,7 +52,10 @@
   // exercise (match.js), with R, L and C: 'series-parallel', R in series with the pair L ∥ C
   // (reactance X = 1/(1/(ωL) − ωC)), and 'parallel-series', R in parallel with the pair L + C
   // (reactance X = ωL − 1/(ωC)).
+  // A device of a problem (realproblems.js) gives its impedance as a function c.fn of the variable
+  // of its axis, there the frequency f in Hz.
   function Z(c, w) {
+    if (c.fn) return c.fn(w);
     const G = c.R ? 1 / c.R : 0;
     if (c.conn === 'series') {
       const X = (c.L ? w * c.L : 0) - (c.C ? 1 / (w * c.C) : 0);
@@ -71,6 +74,7 @@
   }
   // Slope of the tangent dZ/dω (Ω·s).
   function dZ(c, w) {
+    if (c.fn) { const h = w * 1e-6; return (c.fn(w + h) - c.fn(w - h)) / (2 * h); }
     if (c.conn === 'series') {
       const X = (c.L ? w * c.L : 0) - (c.C ? 1 / (w * c.C) : 0);
       const dX = (c.L || 0) + (c.C ? 1 / (w * w * c.C) : 0);
@@ -137,13 +141,16 @@
     return (x < 0 ? '−' : '') + s;
   }
   const UNITS = {
-    ohm: { html: 'Ω', tex: '\\Omega', prefixes: [0, 3] },
+    ohm: { html: 'Ω', tex: '\\Omega', prefixes: [0, 3, 6] },
     H: { html: 'H', tex: '\\mathrm{H}', prefixes: [-6, -3, 0] },
-    F: { html: 'F', tex: '\\mathrm{F}', prefixes: [-9, -6, -3] },
+    F: { html: 'F', tex: '\\mathrm{F}', prefixes: [-15, -12, -9, -6, -3] },
+    Hz: { html: 'Hz', tex: '\\mathrm{Hz}', prefixes: [0, 3, 6] },
+    m: { html: 'm', tex: '\\mathrm{m}', prefixes: [0] },
     ohms: { html: 'Ω·s', tex: '\\Omega\\,\\mathrm{s}', prefixes: [-6, -3, 0] },
   };
-  const PREFIX = { '-9': ['n', '\\mathrm{n}'], '-6': ['µ', '\\mu'], '-3': ['m', '\\mathrm{m}'], 0: ['', ''], 3: ['k', '\\mathrm{k}'] };
-  // A value with a unit and n significant digits: { html, tex }. Units: ohm, H, F, ohms (Ω·s) and w (rad/s).
+  const PREFIX = { '-15': ['f', '\\mathrm{f}'], '-12': ['p', '\\mathrm{p}'], 6: ['M', '\\mathrm{M}'], '-9': ['n', '\\mathrm{n}'], '-6': ['µ', '\\mu'], '-3': ['m', '\\mathrm{m}'], 0: ['', ''], 3: ['k', '\\mathrm{k}'] };
+  // A value with a unit and n significant digits: { html, tex }. Units: ohm, H, F, ohms (Ω·s), Hz, m
+  // and w (rad/s).
   function q(x, unit, n = 3) {
     if (unit === 'w') {
       if (Math.abs(x) < 1e4) return { html: `${digits(x)} rad/s`, tex: `${digits(x).replace('−', '-')}\\,\\mathrm{rad/s}` };

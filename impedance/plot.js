@@ -20,26 +20,30 @@
   let uid = 0;
 
   // ---------------------------------------------------------------- axes
-  // Scales of the plot area for axes ax and mode 'lin' | 'log': x(ω), y(Z), w(px) and the
-  // smallest ω that can be drawn (ω = 0 is drawn as a tiny ω on linear axes).
+  // The ranges of the axes in a mode: 'lin' (ax.lin: 0 or wlo … wmax, 0 … ztop), 'log' (ax.log:
+  // w0 … w1, z0 … z1, whole decades for the exercises), and for the problems 'semilog' (ax.semi:
+  // log w0 … w1, linear 0 … ztop, as in a loudspeaker's datasheet) and 'ylog' (ax.ylog: linear
+  // wlo … wmax, log z0 … z1, a narrow window of frequencies). ax.x (optional): the variable of
+  // the horizontal axis, { name, unit }, e.g. the frequency f in Hz; by default ω in rad/s.
+  function range(ax, mode) {
+    if (mode === 'log') return { xlog: true, ylog: true, x0: ax.log.w0, x1: ax.log.w1, y0: ax.log.z0, y1: ax.log.z1 };
+    if (mode === 'semilog') return { xlog: true, ylog: false, x0: ax.semi.w0, x1: ax.semi.w1, y0: 0, y1: ax.semi.ztop };
+    if (mode === 'ylog') return { xlog: false, ylog: true, x0: ax.ylog.wlo, x1: ax.ylog.wmax, y0: ax.ylog.z0, y1: ax.ylog.z1 };
+    return { xlog: false, ylog: false, x0: ax.lin.wlo || 0, x1: ax.lin.wmax, y0: 0, y1: ax.lin.ztop };
+  }
+  // Scales of the plot area for axes ax and a mode: x(ω), y(Z), w(px), z(py) and the smallest ω
+  // that can be drawn (ω = 0 is drawn as a tiny ω on linear axes).
   function scales(ax, mode) {
-    if (mode === 'log') {
-      const { w0, w1, z0, z1 } = ax.log;
-      return {
-        x: (w) => ML + ((lg(w) - lg(w0)) / (lg(w1) - lg(w0))) * PW,
-        y: (z) => MT + (1 - (lg(z) - lg(z0)) / (lg(z1) - lg(z0))) * PH,
-        w: (px) => w0 * (w1 / w0) ** ((px - ML) / PW),
-        z: (py) => z0 * (z1 / z0) ** (1 - (py - MT) / PH),
-        wmin: w0, wmax: w1,
-      };
-    }
-    const { wmax, ztop } = ax.lin;
+    const r = range(ax, mode);
+    const X = r.xlog ? lg : (v) => v, Xi = r.xlog ? (v) => 10 ** v : (v) => v;
+    const Y = r.ylog ? lg : (v) => v, Yi = r.ylog ? (v) => 10 ** v : (v) => v;
+    const [a0, a1, b0, b1] = [X(r.x0), X(r.x1), Y(r.y0), Y(r.y1)];
     return {
-      x: (w) => ML + (w / wmax) * PW,
-      y: (z) => MT + (1 - z / ztop) * PH,
-      w: (px) => ((px - ML) / PW) * wmax,
-      z: (py) => (1 - (py - MT) / PH) * ztop,
-      wmin: wmax * 1e-5, wmax,
+      x: (w) => ML + ((X(w) - a0) / (a1 - a0)) * PW,
+      y: (z) => MT + (1 - (Y(z) - b0) / (b1 - b0)) * PH,
+      w: (px) => Xi(a0 + ((px - ML) / PW) * (a1 - a0)),
+      z: (py) => Yi(b0 + (1 - (py - MT) / PH) * (b1 - b0)),
+      wmin: r.x0 > 0 ? r.x0 : r.x1 * 1e-5, wmax: r.x1, r,
     };
   }
   const STEPS = [1, 2, 2.5, 5, 10];
@@ -49,40 +53,43 @@
     return 10 ** (e + 1);
   }
   const trim = (x) => String(Number(x.toPrecision(6))).replace('-', '−');
+  const PREF = { 0: '', 3: 'k', 6: 'M' };
 
   // Grid, ticks and axis labels.
   function grid(ax, mode, s) {
     let out = '';
-    const bottom = MT + PH, right = ML + PW;
-    if (mode === 'log') {
-      const { w0, w1, z0, z1 } = ax.log;
-      for (let d = w0; d < w1 * 1.001; d *= 10) {
-        for (let m = 1; m < 10 && d * m <= w1 * 1.001; m++) out += `<line class="grid${m === 1 ? ' major' : ''}" x1="${f1(s.x(d * m))}" y1="${MT}" x2="${f1(s.x(d * m))}" y2="${bottom}"/>`;
-        out += `<text class="tick" x="${f1(s.x(d))}" y="${bottom + 17}" text-anchor="middle">10${I.sup(Math.round(lg(d)))}</text>`;
+    const bottom = MT + PH, right = ML + PW, r = s.r;
+    const xv = ax.x || { name: 'ω', unit: 'rad/s' }, hz = xv.unit === 'Hz';
+    const vline = (v, major) => `<line class="grid${major ? ' major' : ''}" x1="${f1(s.x(v))}" y1="${MT}" x2="${f1(s.x(v))}" y2="${bottom}"/>`;
+    const hline = (v, major) => `<line class="grid${major ? ' major' : ''}" x1="${ML}" y1="${f1(s.y(v))}" x2="${right}" y2="${f1(s.y(v))}"/>`;
+    const xtick = (v, t) => `<text class="tick" x="${f1(s.x(v))}" y="${bottom + 17}" text-anchor="middle">${t}</text>`;
+    const ytick = (v, t) => `<text class="tick" x="${ML - 6}" y="${f1(s.y(v) + 4)}" text-anchor="end">${t}</text>`;
+    // decades with their minor lines, labelled 10ⁿ
+    const decades = (v0, v1, line, tick) => {
+      let o = '';
+      for (let d = 10 ** Math.floor(lg(v0) + 1e-9); d < v1 * 1.001; d *= 10) {
+        for (let m = 1; m < 10; m++) if (d * m >= v0 * 0.999 && d * m <= v1 * 1.001) o += line(d * m, m === 1);
+        if (d >= v0 * 0.999) o += tick(d, `10${I.sup(Math.round(lg(d)))}`);
       }
-      for (let d = z0; d < z1 * 1.001; d *= 10) {
-        for (let m = 1; m < 10 && d * m <= z1 * 1.001; m++) out += `<line class="grid${m === 1 ? ' major' : ''}" x1="${ML}" y1="${f1(s.y(d * m))}" x2="${right}" y2="${f1(s.y(d * m))}"/>`;
-        out += `<text class="tick" x="${ML - 6}" y="${f1(s.y(d) + 4)}" text-anchor="end">10${I.sup(Math.round(lg(d)))}</text>`;
-      }
-      out += `<text class="axis" x="${right}" y="${H - 6}" text-anchor="end"><tspan class="it">ω</tspan> in rad/s</text>`;
-      out += `<text class="axis" x="6" y="${MT - 8}"><tspan class="it">Z</tspan> in Ω</text>`;
-      return out;
+      return o;
+    };
+    let xunit = xv.unit, zunit = 'Ω';
+    if (r.xlog) out += decades(r.x0, r.x1, vline, xtick);
+    else {
+      // in Hz with a prefix (kHz, MHz); in rad/s with a power of ten
+      const e = hz ? (r.x1 >= 1e6 ? 6 : r.x1 >= 1e3 ? 3 : 0) : r.x1 >= 1e4 ? 3 * Math.floor(lg(r.x1) / 3) : 0;
+      const sw = step(r.x1 - r.x0);
+      for (let k = Math.ceil(r.x0 / sw - 1e-9); k * sw <= r.x1 * 1.0001; k++) out += vline(k * sw, k === 0) + xtick(k * sw, trim((k * sw) / 10 ** e));
+      if (e) xunit = hz ? `${PREF[e]}Hz` : `10${I.sup(e)} rad/s`;
     }
-    const { wmax, ztop } = ax.lin;
-    const ew = wmax >= 1e4 ? 3 * Math.floor(lg(wmax) / 3) : 0, ez = ztop >= 2000 ? 3 : 0;
-    const sw = step(wmax), sz = step(ztop);
-    for (let k = 0; k * sw <= wmax * 1.0001; k++) {
-      const w = k * sw;
-      out += `<line class="grid${k === 0 ? ' major' : ''}" x1="${f1(s.x(w))}" y1="${MT}" x2="${f1(s.x(w))}" y2="${bottom}"/>`;
-      out += `<text class="tick" x="${f1(s.x(w))}" y="${bottom + 17}" text-anchor="middle">${trim(w / 10 ** ew)}</text>`;
+    if (r.ylog) out += decades(r.y0, r.y1, hline, ytick);
+    else {
+      const ez = r.y1 >= 2e6 ? 6 : r.y1 >= 2000 ? 3 : 0, sz = step(r.y1);
+      for (let k = 0; k * sz <= r.y1 * 1.0001; k++) out += hline(k * sz, k === 0) + ytick(k * sz, trim((k * sz) / 10 ** ez));
+      zunit = `${PREF[ez]}Ω`;
     }
-    for (let k = 0; k * sz <= ztop * 1.0001; k++) {
-      const z = k * sz;
-      out += `<line class="grid${k === 0 ? ' major' : ''}" x1="${ML}" y1="${f1(s.y(z))}" x2="${right}" y2="${f1(s.y(z))}"/>`;
-      out += `<text class="tick" x="${ML - 6}" y="${f1(s.y(z) + 4)}" text-anchor="end">${trim(z / 10 ** ez)}</text>`;
-    }
-    out += `<text class="axis" x="${right}" y="${H - 6}" text-anchor="end"><tspan class="it">ω</tspan> in ${ew ? `10${I.sup(ew)} ` : ''}rad/s</text>`;
-    out += `<text class="axis" x="6" y="${MT - 8}"><tspan class="it">Z</tspan> in ${ez ? 'k' : ''}Ω</text>`;
+    out += `<text class="axis" x="${right}" y="${H - 6}" text-anchor="end"><tspan class="it">${xv.name}</tspan> in ${xunit}</text>`;
+    out += `<text class="axis" x="6" y="${MT - 8}"><tspan class="it">Z</tspan> in ${zunit}</text>`;
     return out;
   }
 
@@ -99,16 +106,16 @@
     return pts.length > 1 ? `M${pts.join(' L')}` : '';
   }
 
-  // Tangent to the curve at ω: a straight line on linear axes, a power law on log-log axes.
+  // Tangent to the curve at ω: a straight line in the plot (on log axes, in the logarithm), so a
+  // power law on log-log axes.
   function tangentPath(c, ax, mode, s, w) {
     w = Math.max(w, s.wmin);
-    const z = I.Z(c, w), d = I.dZ(c, w);
-    if (mode === 'log') {
-      const p = (w * d) / z;
-      return path(s, (u) => z * (u / w) ** p, w / 6, w * 6);
-    }
-    const span = 0.3 * ax.lin.wmax;
-    return path(s, (u) => z + d * (u - w), w - span, w + span);
+    const z = I.Z(c, w), d = I.dZ(c, w), r = s.r;
+    const X = r.xlog ? Math.log : (v) => v, slope = d * (r.ylog ? 1 / z : 1) * (r.xlog ? w : 1);
+    const at = (u) => { const Yv = (r.ylog ? Math.log(z) : z) + slope * (X(u) - X(w)); return r.ylog ? Math.exp(Yv) : Yv; };
+    if (r.xlog) return path(s, at, w / 6, w * 6);
+    const span = 0.3 * (r.x1 - r.x0);
+    return path(s, at, w - span, w + span);
   }
 
   // Label of an annotation; X_sub is written with a subscript.
@@ -155,7 +162,8 @@
     }
   }
 
-  // The graph of circuit c: opts.ann (annotations), opts.label (aria label).
+  // The graph of circuit c: opts.ann (annotations), opts.label (aria label), opts.extra (more
+  // circuits, drawn dashed for comparison).
   // The <g class="probe"> layer is filled by probeMark().
   function graph(c, ax, mode, opts) {
     const o = opts || {}, s = scales(ax, mode), id = `clip${++uid}`;
@@ -164,7 +172,7 @@
       `<defs><clipPath id="${id}"><rect x="${ML}" y="${MT}" width="${PW}" height="${PH}"/></clipPath></defs>` +
       grid(ax, mode, s) +
       `<rect class="frame" x="${ML}" y="${MT}" width="${PW}" height="${PH}"/>` +
-      `<g clip-path="url(#${id})"><path class="curve" d="${path(s, (w) => I.Z(c, w))}"/>${anns}</g>` +
+      `<g clip-path="url(#${id})">${(o.extra || []).map((x) => `<path class="curve2" d="${path(s, (w) => I.Z(x, w))}"/>`).join('')}<path class="curve" d="${path(s, (w) => I.Z(c, w))}"/>${anns}</g>` +
       `<g class="probe" clip-path="url(#${id})"></g></svg>`;
   }
 
