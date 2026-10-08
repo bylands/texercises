@@ -9,7 +9,8 @@
 //                    show: ['sum'] and/or ['parts'], mark, trace (a y(t) graph at that place
 //                    growing alongside), dots, virtual (the mirror crests behind the end) }),
 //                    with play/pause and a slider; it plays once when shown (not with reduced
-//                    motion). Returns { stop }.
+//                    motion), pausing for a moment at a.hold (e.g. the time an exercise asks
+//                    about). Returns { stop }.
 (function (root) {
   'use strict';
 
@@ -108,7 +109,7 @@
     if (a.show.includes('sum')) curves.push({ f: (x) => W.y(sc, x, t), cls: 'main' });
     // the speed arrows of the crests still (partly) on the rope
     const arrows = a.arrows ? sc.pulses.filter((p) => { const l = p.x0 + p.dir * p.v * t; return l + p.sh.w > 0 && l < (E != null ? E : W.X); }).map((p) => W.arrowOf(p, t, { up: p.sgn < 0 })) : [];
-    const spec = { axis: 'x', lo: 0, hi, Y: a.Y || (sc.end && sc.end.type === 'free' ? 11 : 6), curves, end: sc.end, arrows, marks: [...(a.mark != null ? [{ x: a.mark, label: '' }] : []), ...(a.mark2 != null ? [{ x: a.mark2, label: '' }] : [])], dots: (a.dots || []).map((d) => ({ x: d.x, y: W.y(sc, d.x, t), label: d.label })), label: W.tLabel(Math.max(0, Math.round(t * 10) / 10)), virtual: a.virtual && E != null ? E : null };
+    const spec = { axis: 'x', lo: 0, hi, Y: a.Y || (sc.end && sc.end.type === 'free' ? 11 : 6), curves, end: sc.end, arrows, marks: [...(a.mark != null ? [{ x: a.mark, label: '' }] : []), ...(a.mark2 != null ? [{ x: a.mark2, label: '' }] : [])], dots: (a.dots || []).map((d) => ({ x: d.x, y: W.y(sc, d.x, t), label: d.label })), label: W.tLabel(Math.round(t * 10) / 10), virtual: a.virtual && E != null ? E : null };
     let html = graph(spec, { label: L('Animation of the rope', 'Animation des Seils') });
     if (a.trace != null) {
       html += graph({ axis: 't', lo: 0, hi: Math.max(a.t1, 1), Y: spec.Y, curves: [{ f: (tt) => (tt <= t ? W.y(sc, a.trace, tt) : null), cls: 'main' }], end: null, label: `x = ${W.num(a.trace)} m` }, { label: L('y(t) at the marked place', 'y(t) am markierten Ort') });
@@ -121,18 +122,24 @@
       const span = a.t1 - a.t0, rate = Math.max(1, span / 4); // a run takes at most about 4 s
       el.innerHTML = `<div class="anim"><div class="frames"></div><div class="anim-bar"><button type="button" class="play" aria-label="${L('Play', 'Abspielen')}">▶</button><input type="range" min="0" max="1000" value="0" aria-label="${L('Time', 'Zeit')}"></div></div>`;
       const frames = el.querySelector('.frames'), btn = el.querySelector('.play'), slider = el.querySelector('input');
-      let t = a.t0, raf = 0, last = 0, playing = false;
+      let t = a.t0, raf = 0, last = 0, playing = false, held = false, timer = 0;
       const show = () => { frames.innerHTML = frame(a, t); slider.value = String(Math.round(((t - a.t0) / span) * 1000)); };
-      const stop = () => { playing = false; cancelAnimationFrame(raf); btn.textContent = '▶'; btn.setAttribute('aria-label', L('Play', 'Abspielen')); };
+      const stop = () => { playing = false; clearTimeout(timer); cancelAnimationFrame(raf); btn.textContent = '▶'; btn.setAttribute('aria-label', L('Play', 'Abspielen')); };
       const step = (now) => {
         if (!playing) return;
         if (last) t = Math.min(a.t1, t + ((now - last) / 1000) * rate);
         last = now;
+        // a moment's pause at the time held (once per run)
+        if (a.hold != null && !held && t >= a.hold) {
+          held = true; t = a.hold; show();
+          timer = setTimeout(() => { if (playing) { last = 0; raf = requestAnimationFrame(step); } }, 1500);
+          return;
+        }
         show();
         if (t >= a.t1) { stop(); return; }
         raf = requestAnimationFrame(step);
       };
-      const play = () => { if (t >= a.t1) t = a.t0; playing = true; last = 0; btn.textContent = '❚❚'; btn.setAttribute('aria-label', L('Pause', 'Pause')); raf = requestAnimationFrame(step); };
+      const play = () => { if (t >= a.t1) { t = a.t0; held = false; } if (a.hold != null && t < a.hold) held = false; playing = true; last = 0; btn.textContent = '❚❚'; btn.setAttribute('aria-label', L('Pause', 'Pause')); raf = requestAnimationFrame(step); };
       btn.addEventListener('click', () => (playing ? stop() : play()));
       slider.addEventListener('input', () => { stop(); t = a.t0 + (Number(slider.value) / 1000) * span; show(); });
       show();

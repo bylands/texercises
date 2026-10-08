@@ -97,7 +97,7 @@
   const snap = (f, o = {}) => ({ axis: 'x', lo: 0, hi: o.hi || X, Y: o.Y || Y, curves: [{ f, cls: o.cls || 'main' }, ...(o.more || [])], end: o.end || null, arrows: o.arrows || [], marks: o.marks || [], dots: o.dots || [], label: o.label || '', virtual: o.virtual });
   const graphT = (f, T, o = {}) => ({ axis: 't', lo: 0, hi: T, Y: o.Y || Y, curves: [{ f, cls: o.cls || 'main' }, ...(o.more || [])], end: null, arrows: [], marks: o.marks || [], dots: [], label: o.label || '' });
   const arrowOf = (p, t, o = {}) => ({ x: leftAt(p, t) + p.sh.w / 2, dir: p.dir, v: p.v, up: o.up });
-  const tLabel = (t) => L(`t = ${num(t)} s`, `t = ${num(t)} s`);
+  const tLabel = (t) => `t = ${num(Math.abs(t) < 1e-9 ? 0 : t).replace('-', '−')} s`; // a lead-in runs at negative times
   // a signature of a curve, for telling options apart
   const sig = (spec) => spec.curves.map((c) => { const out = []; for (let k = 0; k <= 160; k++) out.push(Math.round(c.f(spec.lo + ((spec.hi - spec.lo) * k) / 160) * 4)); return `${c.cls}:${out.join(',')}`; }).join('|') + (spec.end ? spec.end.type : '');
 
@@ -130,6 +130,10 @@
 
   // a level of an exercise: 'lin' (straight pieces) or 'smooth'
   const shapeFor = (r, level, o = {}) => (level === 'smooth' ? r.pick(Object.values(SMOOTH)) : r.pick(Object.values(LIN).filter((s) => !o.draw || s.draw)));
+
+  // the time when two crests running towards each other have passed each other completely, and a
+  // little more (the end of a solution's animation)
+  const apart = (a, b) => (b.x0 + b.sh.w - a.x0) / (a.v + b.v) + 0.5;
 
   // ---------------------------------------------------------------- propagation
   function move(r, level) {
@@ -343,7 +347,7 @@
         kind: 'sup', level, difficulty: level === 'lin' ? 3 : 4, sc, t,
         text: L(`Two crests run towards each other, both at ${num(v)} m/s. The diagram shows the rope at t = 0. Which diagram shows it at t = ${num(t)} s?`, `Zwei Wellenbuckel laufen aufeinander zu, beide mit ${num(v)} m/s. Das Diagramm zeigt das Seil zur Zeit t = 0. Welches Diagramm zeigt es zur Zeit t = ${num(t)} s?`),
         fig: snap((x) => ev(pa, x, 0) + ev(pb, x, 0), { arrows: [arrowOf(pa, 0), arrowOf(pb, 0, { up: pb.sgn < 0 })], label: tLabel(0) }),
-        anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: t, show: ['parts', 'sum'] },
+        anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: apart(pa, pb), show: ['parts', 'sum'], hold: t },
         questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
         hints: [L(`First draw each crest where it is at t = ${num(t)} s: each has moved ${num(v * t)} m.`, `Zeichne zuerst jeden Buckel dort, wo er bei t = ${num(t)} s ist: Jeder hat sich um ${num(v * t)} m bewegt.`), RULE.sup()],
         solution: [L(`Each crest moves ${num(v * t)} m. Where they overlap, the displacements add.`, `Jeder Buckel bewegt sich um ${num(v * t)} m. Wo sie sich überlagern, addieren sich die Auslenkungen.`), RULE.sup()],
@@ -420,7 +424,7 @@
         kind: 'reflsum', level, difficulty: level === 'lin' ? 4 : 5, sc, t,
         text: L(`A crest runs to the right at ${num(v)} m/s towards ${endWord(et)} at x = ${num(E)} m. The diagram shows the rope at t = 0. Which diagram shows it at t = ${num(t)} s, while the crest is being reflected?`, `Ein Wellenbuckel läuft mit ${num(v)} m/s nach rechts auf ${endWord(et)} bei x = ${num(E)} m zu. Das Diagramm zeigt das Seil zur Zeit t = 0. Welches Diagramm zeigt es zur Zeit t = ${num(t)} s, während der Buckel reflektiert wird?`),
         fig: snap(onRope(sc), { hi: E, end: sc.end, arrows: [arrowOf(p, 0)], label: tLabel(0) }),
-        anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: t, show: ['parts', 'sum'], virtual: true },
+        anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: tb + 0.5, show: ['parts', 'sum'], virtual: true, hold: t },
         questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
         hints: [RULE.mirror(), L(`At t = ${num(t)} s, draw the incoming crest (partly beyond the end) and its mirror image; on the rope, add them.`, `Zeichne für t = ${num(t)} s den einlaufenden Buckel (teils hinter dem Ende) und sein Spiegelbild; auf dem Seil addierst du sie.`), RULE.fixed()],
         solution: [RULE.mirror(), RULE.fixed(), L('On the rope the incoming and the reflected part add up.', 'Auf dem Seil addieren sich der einlaufende und der reflektierte Teil.')],
@@ -515,7 +519,7 @@
       return {
         kind: 'draw', task, level: 'lin', difficulty: task === 'refl' ? 3 : 4, sc, t, xs, target,
         text, fig: snap((x) => y(sc, x, 0), { hi, end: sc.end, arrows: sc.pulses.map((p) => arrowOf(p, 0, { up: p.sgn < 0 })), label: tLabel(0) }),
-        anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: t, show: task === 'refl' ? ['sum'] : ['parts', 'sum'], virtual: task !== 'sup' },
+        anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: task === 'refl' ? t : task === 'sup' ? apart(...sc.pulses) : (sc.end.x - sc.pulses[0].x0) / sc.pulses[0].v + 0.5, show: task === 'refl' ? ['sum'] : ['parts', 'sum'], virtual: task !== 'sup', hold: task === 'refl' ? null : t },
         draw: { hi, end: sc.end, label: tLabel(t) },
         questions: [],
         hints: [task === 'sup' ? RULE.sup() : RULE.mirror(), L(`First move each crest to t = ${num(t)} s (1 m per second), then add the heights at each grid line.`, `Verschiebe zuerst jeden Buckel auf t = ${num(t)} s (1 m pro Sekunde), dann addiere die Höhen bei jeder Gitterlinie.`), ...(task === 'sup' ? [] : [RULE.fixed()])],

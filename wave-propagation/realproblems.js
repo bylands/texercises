@@ -187,7 +187,7 @@
         ],
         hints: [W.RULE.sup(), L('A straight spring can still be moving.', 'Eine gerade Feder kann sich trotzdem bewegen.')],
         solution: [why, energy],
-        solAnim: { sc, t0: 0, t1: 2 * tm, show: ['parts', 'sum'] },
+        solAnim: { sc, t0: 0, t1: 2 * tm, show: ['parts', 'sum'], hold: tm },
         pic: 'slinky',
       };
     },
