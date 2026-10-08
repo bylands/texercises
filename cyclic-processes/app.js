@@ -314,7 +314,7 @@
       frames: () => {
         const c = RECT(), fig = D.diagram({ cycle: c, diagram: 'VT' });
         return [
-          frame(L('The cycle', 'Der Kreisprozess'), `<p>${L('The worksheet’s V(T) diagram: a rectangle. Vertical lines are isotherms (T constant), horizontal lines isochores (V constant).', 'Das V(T)-Diagramm des Arbeitsblatts: ein Rechteck. Senkrechte Linien sind Isothermen (T konstant), waagrechte Isochoren (V konstant).')}</p>`, fig),
+          frame(L('The cycle', 'Der Kreisprozess'), `<p>${L('In the V(T) diagram this cycle is a rectangle. Vertical lines are isotherms (T constant), horizontal lines isochores (V constant).', 'Im V(T)-Diagramm ist dieser Kreisprozess ein Rechteck. Senkrechte Linien sind Isothermen (T konstant), waagrechte Isochoren (V konstant).')}</p>`, fig),
           ...c.segs.map((s) => frame(`${C.nameOf(s.from)} → ${C.nameOf(s.to)}`, `<p>${C.summary(c, s)}</p><p>${s.type === 'isochoric' ? L('At constant V, p changes by the same factor as T.', 'Bei konstantem V ändert sich p um denselben Faktor wie T.') : L('At constant T, p changes by the inverse factor of V.', 'Bei konstantem T ändert sich p um den Kehrwert des Faktors von V.')}</p>`, fig)),
         ];
       },
@@ -338,7 +338,7 @@
         const rows = [['A', 100, 3, 300], ['B', 300, 1, 300], ['C', 300, 0.5, 150], ['D', 50, 3, 150]];
         const tab = (n) => `<table class="states"><thead><tr><th></th><th><i>p</i> in kPa</th><th><i>V</i> in L</th><th><i>T</i> in K</th></tr></thead><tbody>${rows.map((r, i) => `<tr><th>${r[0]}</th>${r.slice(1).map((x) => `<td>${i <= n ? x : '<b>?</b>'}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
         return [
-          frame(L('The task', 'Die Aufgabe'), `<p>${L('From the worksheet: A with 100 kPa, 3 L, 300 K; isothermal compression to a third of the volume → B; isobaric cooling to half the temperature → C; isothermal expansion to the starting volume → D.', 'Vom Arbeitsblatt: A mit 100 kPa, 3 L, 300 K; isotherme Kompression auf 1/3 des Volumens → B; isobare Abkühlung auf die halbe Temperatur → C; isotherme Expansion auf das Anfangsvolumen → D.')}</p>`, tab(0)),
+          frame(L('The task', 'Die Aufgabe'), `<p>${L('A with 100 kPa, 3 L, 300 K; isothermal compression to a third of the volume → B; isobaric cooling to half the temperature → C; isothermal expansion to the starting volume → D.', 'A mit 100 kPa, 3 L, 300 K; isotherme Kompression auf 1/3 des Volumens → B; isobare Abkühlung auf die halbe Temperatur → C; isotherme Expansion auf das Anfangsvolumen → D.')}</p>`, tab(0)),
           frame('B', `<p>${L('Isothermal: T stays 300 K; V to a third, 1 L; p three times, 300 kPa.', 'Isotherm: T bleibt 300 K; V auf einen Drittel, 1 L; p dreimal so gross, 300 kPa.')}</p>`, tab(1)),
           frame('C', `<p>${L('Isobaric: p stays 300 kPa; T to half, 150 K; V by the same factor, 0.5 L.', 'Isobar: p bleibt 300 kPa; T auf die Hälfte, 150 K; V um denselben Faktor, 0.5 L.')}</p>`, tab(2)),
           frame('D', `<p>${L('Isothermal: T stays 150 K; V from 0.5 L to 3 L, six times; p to a sixth, 50 kPa. Check: pV/T is the same in every row, 1 kPa·L/K. And D → A: V stays 3 L, so it is isochoric heating.', 'Isotherm: T bleibt 150 K; V von 0.5 L auf 3 L, sechsmal; p auf einen Sechstel, 50 kPa. Kontrolle: pV/T ist in jeder Zeile gleich, 1 kPa·L/K. Und D → A: V bleibt 3 L, also eine isochore Erwärmung.')}</p>`, tab(3)),

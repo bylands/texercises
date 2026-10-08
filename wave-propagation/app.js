@@ -252,7 +252,7 @@
       frames: () => {
         const p = WS(), sc = { pulses: [p], end: null };
         return [
-          frame(L('The crest', 'Der Buckel'), `<p>${L('The worksheet’s crest: a block 5 cm high, then a slope down to −5 cm, from x = 1 m to x = 3 m. It runs to the right at 2 m/s.', 'Der Buckel vom Arbeitsblatt: ein Block von 5 cm Höhe, dann eine Rampe hinunter bis −5 cm, von x = 1 m bis x = 3 m. Er läuft mit 2 m/s nach rechts.')}</p>`, anim({ sc, t0: 0, t1: 2.5, show: ['sum'] })),
+          frame(L('The crest', 'Der Buckel'), `<p>${L('A crest made of straight pieces: a block 5 cm high, then a slope down to −5 cm, from x = 1 m to x = 3 m. It runs to the right at 2 m/s.', 'Ein Buckel aus geraden Stücken: ein Block von 5 cm Höhe, dann eine Rampe hinunter bis −5 cm, von x = 1 m bis x = 3 m. Er läuft mit 2 m/s nach rechts.')}</p>`, anim({ sc, t0: 0, t1: 2.5, show: ['sum'] })),
           frame(L('Distance = speed × time', 'Strecke = Geschwindigkeit × Zeit'), `<p>${W.RULE.move()} ${L('After 0.5 s it is 1 m further, after 1 s 2 m further.', 'Nach 0.5 s ist er 1 m weiter, nach 1 s 2 m weiter.')}</p>`,
             fig(P.graph(W.snap((x) => W.ev(p, x, 0), { label: W.tLabel(0), more: [{ f: (x) => W.ev(p, x, 0.5), cls: 'part' }, { f: (x) => W.ev(p, x, 1), cls: 'part2' }] }))) + `<p class="legend"><span class="k-main">t = 0</span> · <span class="k-part">t = 0.5 s</span> · <span class="k-part2">t = 1 s</span></p>`),
           frame(L('The rope moves up and down', 'Das Seil bewegt sich auf und ab'), `<p>${W.RULE.medium()}</p><p>${L('Watch the three points: each only moves up and down, while the crest passes.', 'Beobachte die drei Punkte: Jeder bewegt sich nur auf und ab, während der Buckel vorbeiläuft.')}</p>`,
@@ -266,7 +266,7 @@
       frames: () => {
         const p = WS(), sc = { pulses: [p], end: null };
         return [
-          frame(L('Watching one place', 'Einen Ort beobachten'), `<p>${L('The worksheet asks for the y(t) graph at x = 4 m. Here without the end, so that only the crest passes: watch the graph grow as it passes x = 4 m.', 'Das Arbeitsblatt fragt nach dem y(t)-Bild bei x = 4 m. Hier ohne das Ende, damit nur der Buckel vorbeiläuft: Sieh zu, wie das Bild entsteht, während er x = 4 m passiert.')}</p>`, anim({ sc, t0: 0, t1: 2, show: ['sum'], mark: 4, trace: 4 })),
+          frame(L('Watching one place', 'Einen Ort beobachten'), `<p>${L('How does the rope at x = 4 m move as the crest passes? Watch its y(t) graph grow alongside.', 'Wie bewegt sich das Seil bei x = 4 m, während der Buckel vorbeiläuft? Sieh zu, wie sein y(t)-Bild daneben entsteht.')}</p>`, anim({ sc, t0: 0, t1: 2, show: ['sum'], mark: 4, trace: 4 })),
           frame(L('The front comes first', 'Die Front kommt zuerst'), `<p>${W.RULE.yt()}</p><p>${L('The front (at x = 3 m) reaches 4 m after 0.5 s: the slope from −5 cm comes first. The block follows; the back (x = 1 m) passes after 1.5 s. The crest is 2 m long and runs 2 m/s: it takes 1 s to pass.', 'Die Front (bei x = 3 m) erreicht 4 m nach 0.5 s: Zuerst kommt die Rampe von −5 cm. Der Block folgt; der Rücken (x = 1 m) passiert nach 1.5 s. Der Buckel ist 2 m lang und läuft 2 m/s: Er braucht 1 s zum Vorbeilaufen.')}</p>`,
             fig(P.graph(W.graphT((t) => W.ev(p, 4, t), 3, { label: 'x = 4 m' })))),
         ];
@@ -292,7 +292,7 @@
         return [
           frame(L('A fixed end', 'Ein festes Ende'), `<p>${L('The rope is tied to a wall at x = 5 m: the end cannot move.', 'Das Seil ist bei x = 5 m an einer Wand festgemacht: Das Ende kann sich nicht bewegen.')} ${W.RULE.fixed()}</p>`, anim({ sc: fixed, t0: 0, t1: 3.5, show: ['sum'], Y: 11 })),
           frame(L('The mirror trick', 'Der Spiegeltrick'), `<p>${W.RULE.mirror()}</p><p>${L('Behind the end (shaded) runs the mirror crest, upside down at a fixed end; on the rope the two add up, so the end stays at 0.', 'Hinter dem Ende (schattiert) läuft der Spiegelbuckel, bei einem festen Ende auf dem Kopf; auf dem Seil addieren sich die beiden, sodass das Ende bei 0 bleibt.')}</p>`, anim({ sc: fixed, t0: 0, t1: 3.5, show: ['parts', 'sum'], virtual: true, Y: 11 })),
-          frame(L('A free end', 'Ein loses Ende'), `<p>${L('As on the worksheet, the end at x = 5 m is free (a ring on a pole): the mirror crest is upright, and the crest comes back upright. At the end the two add: it moves twice as far.', 'Wie auf dem Arbeitsblatt ist das Ende bei x = 5 m lose (ein Ring an einer Stange): Der Spiegelbuckel steht aufrecht, und der Buckel kommt aufrecht zurück. Am Ende addieren sich die beiden: Es bewegt sich doppelt so weit.')}</p>`, anim({ sc: free, t0: 0, t1: 3.5, show: ['parts', 'sum'], virtual: true, Y: 11 })),
+          frame(L('A free end', 'Ein loses Ende'), `<p>${L('Now the end at x = 5 m is free (a ring on a pole): the mirror crest is upright, and the crest comes back upright. At the end the two add: it moves twice as far.', 'Jetzt ist das Ende bei x = 5 m lose (ein Ring an einer Stange): Der Spiegelbuckel steht aufrecht, und der Buckel kommt aufrecht zurück. Am Ende addieren sich die beiden: Es bewegt sich doppelt so weit.')}</p>`, anim({ sc: free, t0: 0, t1: 3.5, show: ['parts', 'sum'], virtual: true, Y: 11 })),
         ];
       },
     },
@@ -302,10 +302,10 @@
       frames: () => {
         const p = WS(), sc = { pulses: [p], end: { x: 5, type: 'free' } }, t = 1.5;
         return [
-          frame(L('The worksheet at t = 1.5 s', 'Das Arbeitsblatt bei t = 1.5 s'), `<p>${L('After 1.5 s the crest has run 3 m: its front reached the end at t = 1 s and has come back 1 m; the block is still arriving. Green: the incoming part; orange: the reflected part (the mirror crest); blue: the rope, their sum.', 'Nach 1.5 s ist der Buckel 3 m gelaufen: Seine Front erreichte das Ende bei t = 1 s und ist 1 m zurückgekommen; der Block kommt noch an. Grün: der einlaufende Teil; orange: der reflektierte Teil (der Spiegelbuckel); blau: das Seil, ihre Summe.')}</p>`,
+          frame(L('The rope at t = 1.5 s', 'Das Seil bei t = 1.5 s'), `<p>${L('After 1.5 s the crest has run 3 m: its front reached the end at t = 1 s and has come back 1 m; the block is still arriving. Green: the incoming part; orange: the reflected part (the mirror crest); blue: the rope, their sum.', 'Nach 1.5 s ist der Buckel 3 m gelaufen: Seine Front erreichte das Ende bei t = 1 s und ist 1 m zurückgekommen; der Block kommt noch an. Grün: der einlaufende Teil; orange: der reflektierte Teil (der Spiegelbuckel); blau: das Seil, ihre Summe.')}</p>`,
             fig(P.graph(W.snap((x) => W.y(sc, x, t), { hi: 5, end: sc.end, Y: 11, label: W.tLabel(t), more: [{ f: (x) => W.yIn(sc, x, t), cls: 'part' }, { f: (x) => W.yRef(sc, x, t), cls: 'part2' }] })))),
           frame(L('The whole reflection', 'Die ganze Reflexion'), `<p>${W.RULE.mirror()}</p>`, anim({ sc, t0: 0, t1: 3, show: ['parts', 'sum'], virtual: true, Y: 11 })),
-          frame(L('The y(t) graph at x = 4 m', 'Das y(t)-Bild bei x = 4 m'), `<p>${L('The worksheet’s first task, with the free end: at x = 4 m the crest passes, and its reflection comes back over it. The graph is the sum of both.', 'Die erste Aufgabe des Arbeitsblatts, mit dem losen Ende: Bei x = 4 m läuft der Buckel vorbei, und seine Reflexion kommt über ihn zurück. Das Bild ist die Summe beider.')}</p>`,
+          frame(L('The y(t) graph at x = 4 m', 'Das y(t)-Bild bei x = 4 m'), `<p>${L('With the free end, the rope at x = 4 m sees the crest pass and then its reflection come back over it. Its y(t) graph is the sum of both.', 'Mit dem losen Ende sieht das Seil bei x = 4 m den Buckel vorbeilaufen und dann seine Reflexion über ihn zurückkommen. Sein y(t)-Bild ist die Summe beider.')}</p>`,
             anim({ sc, t0: 0, t1: 3, show: ['sum'], mark: 4, trace: 4, Y: 11 })),
         ];
       },
