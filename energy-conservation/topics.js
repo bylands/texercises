@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // Practice by topic: each topic belongs to a worked example of the tutor and has stages, from
 // exercises like the example to variations that add new ideas. Two exercises of a stage solved
 // without looking at the solution (hints are fine) move practice on to the next stage; the student

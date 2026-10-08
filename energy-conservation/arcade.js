@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // Arcade mode: as many questions as possible in five minutes, of increasing difficulty, each with
 // four options; one try each and no hints. A right answer earns 100 points per level of difficulty
 // and a speed bonus of up to as much again. A wrong option that stems from a typical wrong idea is

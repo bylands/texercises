@@ -1,4 +1,4 @@
-/* Shared look of the teachingphysics.ch apps: colours, header, toolbar, levels, cards, buttons,
+/* Shared look of the learningphysics.ch apps: colours, header, toolbar, levels, cards, buttons,
    answer fields, tutor and arcade. The canonical copy lives in shared/; sync.sh copies it into
    every app as ui.css, so do not edit an app's copy. App-specific styles go in the app's style.css,
    loaded after this file. */
@@ -61,7 +61,7 @@ body {
 .wrap { max-width: 920px; margin: 0 auto; padding-inline: 16px; }
 
 /* header: title, score, language */
-/* the title, after a link back to the landing page: Teaching Physics / Force Systems */
+/* the title, after a link back to the landing page: Learning Physics / Force Systems */
 .brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
 .brand .home { color: var(--muted); text-decoration: none; font-size: 0.95rem; }
 .brand .home:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }

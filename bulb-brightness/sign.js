@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // A ± button for number fields. Number fields (inputmode="decimal") open the number pad on
 // phones, and the iPhone's has no minus key; so every such field gets a button next to it that
 // switches the sign of its value (shown on touch screens only, see ui.css). The button does not

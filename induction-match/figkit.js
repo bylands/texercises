@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // Figures in the manner of a physics textbook, for the problems: thin even ink outlines, a few
 // muted tints and brushed metal, hatched ground, people drawn simply, motion as slim double
 // arrows, forces as red arrows, lengths as dimension lines. The classes tb-* are in ui.css, so

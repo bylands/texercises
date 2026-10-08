@@ -1,4 +1,4 @@
-# Tests every app on each push to main and, only if all tests pass, deploys teachingphysics.ch
+# Tests every app on each push to main and, only if all tests pass, deploys learningphysics.ch
 # with deploy.sh. The deploy key belongs to the server user tpdeploy, which may only run rsync into
 # the web root (rrsync, see deploy.sh); the server's host key is pinned in .github/known_hosts.
 # Work that is not ready to go live stays on a branch: only main is deployed.

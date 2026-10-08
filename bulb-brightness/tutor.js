@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // Tutor mode: worked examples of increasing difficulty, explained step by step. The app gives
 // the examples as { name, idea, frames() }, where frames() returns [{ text, figure }] (HTML);
 // every frame marks in its figure what the text talks about. A frame's figure may be a getter,

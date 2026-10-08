@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // Practice adapts to the student: exercise types that were hard come up more often, until they
 // are solved easily. For each app, the browser keeps { type: { n, s } } under `${app}-types`,
 // s a moving average of the scores in [0, 1] (0: right at once … 1: solution needed); a type is

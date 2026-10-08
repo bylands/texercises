@@ -6,7 +6,7 @@
 #   sudo install -D -m 644 hubadmin.py /opt/hub-admin/hubadmin.py
 #   sudo cp hub-admin.service /etc/systemd/system/ && sudo systemctl enable --now hub-admin
 [Unit]
-Description=Teaching Physics hub admin (tags and order of the apps)
+Description=Learning Physics hub admin (tags and order of the apps)
 After=network.target
 
 [Service]

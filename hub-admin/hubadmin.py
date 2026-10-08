@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Admin panel of the teachingphysics.ch hub: tags (e.g. physics topics) and the order of the apps.
+"""Admin panel of the learningphysics.ch hub: tags (e.g. physics topics) and the order of the apps.
 
 The hub page (hub/index.html, served as /) shows a card per app; it reads /apps.json and puts the
 cards in its order, shows their tags, and lets visitors filter by tag. This service, served at
@@ -393,7 +393,7 @@ def page(title: str, body: str, script: bool = False) -> str:
 </head>
 <body>
   <header class="wrap">
-    <p class="crumb"><a href="/">Teaching Physics</a> / Admin</p>
+    <p class="crumb"><a href="/">Learning Physics</a> / Admin</p>
     <h1>{escape(title)}</h1>
   </header>
   <main class="wrap">{body}</main>
@@ -624,7 +624,7 @@ ADMIN_JS = r"""
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    p = argparse.ArgumentParser(description="Admin panel of the teachingphysics.ch hub (tags and order of the apps).")
+    p = argparse.ArgumentParser(description="Admin panel of the learningphysics.ch hub (tags and order of the apps).")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8040)
     p.add_argument("--password-file", type=Path, required=True, help="the teacher password hash (crosswords-web set-password)")

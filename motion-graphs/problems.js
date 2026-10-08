@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // The problems mode: problems from everyday life and technology, told as stories, chosen in a
 // menu (solved ones have a ✓), each with new numbers on request. A problem comes back with the
 // numbers it had last time, so that a solved one shows its solution again. Ids: real<i+1>-<seed>.

@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // Labels of shrunken pictures. A picture (an <svg> with a viewBox) drawn narrower than its size in
 // user units, as on a phone, shrinks its text too; fit.js enlarges every label so that it is at
 // least MIN px tall on screen (but at most MAX times its size), and leaves the drawing as it is.

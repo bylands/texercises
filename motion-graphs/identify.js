@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // The step before the calculation: the student identifies a quantity (e.g. which expression is the
 // component of the weight along the slope) by choosing one of a few options; a right choice shows
 // its value, computed by the app (sine, cosine or π need no calculator then), a wrong one says why

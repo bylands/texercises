@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh): the page
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh): the page
 // language, English or German. It comes from ?lang=de in the address, else the last choice in any
 // of the apps (they share their storage), else the browser's language.
 //   Lang.L(en, de)        the text in the current language

@@ -1,4 +1,4 @@
-// Shared by the teachingphysics.ch apps (canonical copy in shared/, copied by sync.sh).
+// Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // Pictures of everyday situations for the problems modes, as SVG strings in px (y down), in the
 // style of Force Systems' real problems: soft backgrounds, filled figures, vehicles with rims and
 // shadows, and force arrows in the apps' colours. The colours are CSS classes rp-* (ui.css).
