@@ -747,6 +747,9 @@ svg.tb .tb-limb.tb-trousers { stroke: var(--tb-trousers); }
 svg.tb .tb-shirt { fill: var(--tb-shirt); stroke: var(--ink); stroke-width: 1.2; stroke-linejoin: round; }
 svg.tb .tb-limb.tb-shirt { stroke: var(--tb-shirt); fill: none; }
 svg.tb .tb-shirt.red { --tb-shirt: #eaa79b; } svg.tb .tb-shirt.orange { --tb-shirt: #f3c89c; } svg.tb .tb-shirt.green { --tb-shirt: #b2d6b8; } svg.tb .tb-shirt.blue { --tb-shirt: #a9c4e4; }
+svg.tb .tb-shirt.navy { --tb-shirt: #6f7f99; } svg.tb .tb-shirt.purple { --tb-shirt: #c7b3dc; } svg.tb .tb-shirt.yellow { --tb-shirt: #f3dc98; }
+svg.tb .tb-helmet { fill: #eaa79b; stroke: var(--ink); stroke-width: 1.2; } svg.tb .tb-helmetrim { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linecap: round; }
+svg.tb .tb-beanie { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
 svg.tb .tb-shoe { fill: #4a5058; stroke: var(--ink); stroke-width: 1; stroke-linejoin: round; }
 svg.tb .tb-hair { fill: var(--tb-hair); stroke: var(--ink); stroke-width: 1; }
 svg.tb .tb-tree { fill: #b2d6b8; stroke: var(--ink); stroke-width: 1.2; stroke-linejoin: round; }
@@ -764,6 +767,7 @@ svg.tb .tb-com { fill: var(--card); stroke: var(--ink); stroke-width: 1.6; }
   svg.tb .tb-force { color: #ff8a80; } svg.tb .tb-force.w { color: #f2b45c; } svg.tb .tb-force.n { color: #7fd49a; }
   svg.tb .tb-shirt.red { --tb-shirt: #8e5249; } svg.tb .tb-shirt.orange { --tb-shirt: #8c6440; } svg.tb .tb-shirt.green { --tb-shirt: #456c4f; } svg.tb .tb-shirt.blue { --tb-shirt: #3f5b7c; }
   svg.tb .tb-tree, svg.tb .tb-green { fill: #456c4f; } svg.tb .tb-wood { fill: #7a6448; } svg.tb .tb-concrete { fill: #3d4147; } svg.tb .tb-dark { fill: #8f979f; }
+  svg.tb .tb-shirt.navy { --tb-shirt: #3a465a; } svg.tb .tb-shirt.purple { --tb-shirt: #5e4d73; } svg.tb .tb-shirt.yellow { --tb-shirt: #8a7a45; } svg.tb .tb-helmet { fill: #8e5249; }
   svg.tb .tb-red { fill: #8e5249; } svg.tb .tb-yellow { fill: #8a7a45; } svg.tb .tb-blue { fill: #3f5b7c; }
 }
 svg.tb .tb-chain { fill: none; stroke: var(--ink); stroke-width: 2.4; stroke-dasharray: 3 2; }
@@ -832,3 +836,7 @@ svg.tb .tb-needle { stroke: #c0392b; stroke-width: 2.2; stroke-linecap: round; }
   svg.tb :is(.tb-spark, .tb-heat, .tb-coil, .tb-needle, .tb-beam.red) { stroke: #ff8a80; } svg.tb .tb-current { stroke: #ff8a80; }
 }
 svg.tb .tb-skin { stroke: var(--ink); stroke-width: 1.1; }
+svg.tb .tb-membrane { fill: none; stroke: var(--ink); stroke-width: 2.2; }
+svg.tb .tb-grain { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
+svg.tb .tb-ballred { fill: #eaa79b; stroke: var(--ink); stroke-width: 1.3; }
+@media (prefers-color-scheme: dark) { svg.tb .tb-ballred { fill: #8e5249; } }

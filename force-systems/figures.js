@@ -114,7 +114,7 @@
     const at = [o[0] + 150 * Math.cos(a), o[1] + 150 * Math.sin(a)], u = [Math.cos(a), Math.sin(a)];
     return svg(430, 250,
       poly([o, bot, [o[0], bot[1]]], 'tb-snowfill') +
-      turn((a * 180) / Math.PI, at[0], at[1], person(at[0], at[1] - 3, 1, { shirt: 'red', knee: 6, lean: 6, hands: [[at[0] - 14, at[1] - 34], [at[0] + 18, at[1] - 34]] }) + line(at[0] - 26, at[1] - 2, at[0] + 30, at[1] - 2, 'tb-ski')) +
+      turn((a * 180) / Math.PI, at[0], at[1], person(at[0], at[1] - 3, 1, { shirt: 'red', pants: 'navy', hat: 'helmet', knee: 8, lean: 16, hands: [[at[0] - 2, at[1] - 36], [at[0] + 26, at[1] - 38]] }) + line(at[0] - 26, at[1] - 2, at[0] + 30, at[1] - 2, 'tb-ski')) +
       vel([at[0] + 50 * u[0] - 10, at[1] + 50 * u[1] - 40], u, 50, [6, 10]) +
       dim(o, bot, sym('ℓ'), -24) + dim([o[0] - 6, o[1]], [o[0] - 6, bot[1]], sym('h'), -1),
       L('A skier gliding down a piste that drops h over the length ℓ', 'Ein Skifahrer gleitet eine Piste hinunter, die auf der Länge ℓ um h abfällt'));
@@ -123,12 +123,13 @@
   // ---------------------------------------------------------------- 11 pulling a sled
   function sled() {
     const { svg, path, rect, person, dim, ground, text, line } = F();
-    const tie = [170, 168], hand = [320, 108];
+    // to scale (about 55 px per m): the rope 1 m long, the hand 60 cm above the knot, over the shoulder
+    const tie = [200, 168], hand = [256, 126];
     return svg(430, 240,
-      ground(0, 430, 200) + path('M60 196 H200 Q214 196 214 184', 'tb-runner') + rect(70, 168, 110, 14, 'tb-wood', 3) + path('M90 182 V196 M160 182 V196', 'tb-line') +
-      person(110, 168, 0.7, { shirt: 'green', hands: [[100, 140], [124, 140]] }) +
-      line(tie[0], tie[1], hand[0], hand[1], 'tb-rope') + person(330, 200, 1.2, { shirt: 'blue', dir: 1, lean: 6, hands: [[hand[0], hand[1]], [hand[0] + 4, hand[1] + 4]] }) +
-      dim(tie, hand, '1 m', 14) + dim([hand[0] + 70, tie[1]], [hand[0] + 70, hand[1]], '60 cm', 0) + line(tie[0], tie[1], hand[0] + 76, tie[1], 'tb-eq') + line(hand[0], hand[1], hand[0] + 76, hand[1], 'tb-eq'),
+      ground(0, 430, 200) + path('M90 196 H230 Q244 196 244 184', 'tb-runner') + rect(100, 168, 110, 14, 'tb-wood', 3) + path('M120 182 V196 M190 182 V196', 'tb-line') +
+      person(120, 168, 0.85, { sit: true, shirt: 'green', pants: 'navy', hat: 'helmet', lean: 3, hands: [[136, 160], [142, 161]] }) +
+      line(tie[0], tie[1], hand[0], hand[1], 'tb-rope') + person(272, 200, 1.2, { shirt: 'red', pants: 'navy', hat: 'beanie', dir: 1, lean: 6, hands: [[hand[0], hand[1]], null] }) +
+      dim(tie, hand, '1 m', 14) + dim([hand[0] + 96, tie[1]], [hand[0] + 96, hand[1]], '60 cm', 0) + line(tie[0], tie[1], hand[0] + 102, tie[1], 'tb-eq') + line(hand[0], hand[1], hand[0] + 102, hand[1], 'tb-eq'),
       L('Pulling a sled on a rope across level snow', 'Einen Schlitten an einem Seil über ebenen Schnee ziehen'));
   }
 

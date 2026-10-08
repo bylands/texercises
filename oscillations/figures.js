@@ -10,7 +10,6 @@
   const L = (en, de) => root.OC.L(en, de);
 
   // y on a sine water surface
-  const wave = (x, y0, a, lam, ph) => y0 - a * Math.cos((2 * Math.PI * (x - ph)) / lam);
 
   // ---------------------------------------------------------------- tuning fork
   function forkPath(dx = 0) {
@@ -25,118 +24,6 @@
     motion(150, 44, 182, 44) + motion(238, 44, 270, 44) +
     [0, 1, 2].map((k) => path(`M${292 + 14 * k} ${70 - 6 * k} q${12 + 4 * k} ${30 + 6 * k} 0 ${60 + 12 * k}`, 'tb-sound')).join(''),
     L('A tuning fork with its prongs in their extreme positions', 'Eine Stimmgabel mit ihren Zinken in den äussersten Lagen'));
-
-  // ---------------------------------------------------------------- boat on waves
-  function boatAt(x, y, cls) {
-    // a small sailing boat, its waterline at (x, y)
-    const hull = `M${x - 40} ${y - 10} L${x + 42} ${y - 10} L${x + 30} ${y + 6} L${x - 30} ${y + 6} Z`;
-    const mast = `M${x} ${y - 10} V${y - 74}`, sail = `M${x + 3} ${y - 70} L${x + 3} ${y - 14} L${x + 36} ${y - 14} Z`, jib = `M${x - 3} ${y - 66} L${x - 3} ${y - 14} L${x - 30} ${y - 14} Z`;
-    return cls === 'ghost' ? path(`${hull}${mast}${sail}${jib}`, 'tb-ghost')
-      : path(sail, 'tb-sail') + path(jib, 'tb-sail') + path(mast, 'tb-line') + path(hull, 'tb-hull') + path(`M${x - 38} ${y - 6} H${x + 39}`, 'tb-trim');
-  }
-  function boat() {
-    const y0 = 150, a = 16, lam = 220, ph = 140;
-    const pts = []; for (let x = 0; x <= 420; x += 4) pts.push(`${x},${f(wave(x, y0, a, lam, ph))}`);
-    const water = `M0 220 L${pts.join(' L')} L420 220 Z`;
-    const crest = y0 - a, trough = y0 + a;
-    return svg(420, 240,
-      boatAt(140, crest + 2) + path(water, 'tb-water') + path(`M${pts.join(' L')}`, 'tb-surface') +
-      line(20, crest, 400, crest, 'tb-eq') + line(20, trough, 400, trough, 'tb-eq') +
-      boatAt(250, trough, 'ghost') +
-      motion(345, crest - 2, 345, trough + 2),
-      L('A sailing boat on a wave crest; dashed, the same boat in the trough', 'Ein Segelboot auf einem Wellenberg; gestrichelt dasselbe Boot im Wellental'));
-  }
-
-  // ---------------------------------------------------------------- car on its springs
-  function carBody(dy, cls) {
-    const y = (v) => f(v + dy);
-    const d = `M60 ${y(150)} L60 ${y(126)} Q62 ${y(116)} 76 ${y(114)} L128 ${y(110)} L162 ${y(80)} Q168 ${y(76)} 178 ${y(76)} L262 ${y(76)} Q272 ${y(76)} 280 ${y(84)} L310 ${y(110)} L346 ${y(114)} Q360 ${y(118)} 362 ${y(130)} L362 ${y(150)} ` +
-      `L330 ${y(150)} A28 28 0 0 0 274 ${y(150)} L146 ${y(150)} A28 28 0 0 0 90 ${y(150)} Z`;
-    if (cls === 'ghost') return path(d, 'tb-ghost');
-    const glass = `M140 ${y(110)} L168 ${y(84)} L212 ${y(84)} L212 ${y(110)} Z M220 ${y(110)} L220 ${y(84)} L268 ${y(84)} L292 ${y(110)} Z`;
-    return path(d, 'tb-body') + path(glass, 'tb-glass') + path(`M216 ${y(112)} V${y(146)} M64 ${y(132)} H90 M330 ${y(132)} H358`, 'tb-trim');
-  }
-  function car() {
-    const wheel = (x) => circle(x, 178, 24, 'tb-tyre') + circle(x, 178, 13, 'tb-metal') + circle(x, 178, 3, 'tb-line-fill');
-    return svg(420, 240,
-      ground(20, 400, 202) +
-      carBody(-10, 'ghost') +
-      spring(118, 124, 172, 5, 7) + spring(302, 124, 172, 5, 7) +
-      carBody(0) + wheel(118) + wheel(302) +
-      motion(392, 70, 392, 130),
-      L('A car whose body bounces on its springs', 'Ein Auto, dessen Karosserie auf den Federn auf und ab federt'));
-  }
-
-
-  // ---------------------------------------------------------------- loudspeaker (cross-section)
-  function speakerCone(dx, cls) {
-    const x = (v) => f(v + dx);
-    const cone = `M${x(196)} 104 L${x(262)} 46 M${x(196)} 136 L${x(262)} 194`;
-    if (cls === 'ghost') return path(`${cone} M${x(196)} 104 V136`, 'tb-ghost');
-    return path(`M${x(196)} 104 L${x(262)} 46 L${x(262)} 194 L${x(196)} 136 Z`, 'tb-cone') + path(`M${x(196)} 106 Q${x(208)} 120 ${x(196)} 134`, 'tb-body') +
-      path(`M${x(262)} 46 q8 -6 12 2 M${x(262)} 194 q8 6 12 -2`, 'tb-line');
-  }
-  const speaker = () => svg(420, 240,
-    `<rect class="tb-metal" x="120" y="86" width="40" height="68" rx="3"/><rect class="tb-magnet" x="160" y="92" width="14" height="56"/>` +
-    `<rect class="tb-coil" x="174" y="104" width="22" height="32"/>` +
-    path('M174 92 L270 36 M174 148 L270 204', 'tb-frame') +
-    speakerCone(12, 'ghost') + speakerCone(0) +
-    motion(214, 214, 254, 214) +
-    [0, 1, 2].map((k) => path(`M${300 + 14 * k} ${84 - 8 * k} q${12 + 4 * k} ${36 + 8 * k} 0 ${72 + 16 * k}`, 'tb-sound')).join(''),
-    L('A loudspeaker in cross-section: magnet, coil and cone; dashed, the cone pushed forward', 'Ein Lautsprecher im Querschnitt: Magnet, Spule und Membran; gestrichelt die nach vorne geschobene Membran'));
-
-  // ---------------------------------------------------------------- toothbrush
-  function brushHead(dy, cls) {
-    const y = (v) => f(v + dy);
-    const neck = `M250 ${y(126)} Q290 ${y(120)} 318 ${y(118)} L350 ${y(117)} Q360 ${y(117)} 360 ${y(124)} Q360 ${y(131)} 350 ${y(131)} L318 ${y(132)} Q290 ${y(134)} 250 ${y(136)}`;
-    if (cls === 'ghost') return path(`${neck} M322 ${y(118)} V${y(98)} H356 V${y(118)}`, 'tb-ghost');
-    let b = ''; for (let x = 324; x <= 354; x += 4) b += `M${x} ${y(117)} V${y(99)}`;
-    return path(neck, 'tb-metal') + path(b, 'tb-bristle');
-  }
-  const brush = () => svg(420, 240,
-    brushHead(-12, 'ghost') +
-    path('M60 118 Q60 108 74 108 L240 116 Q256 117 256 131 Q256 145 240 146 L74 154 Q60 154 60 144 Z', 'tb-body') +
-    `<rect class="tb-button" x="150" y="122" width="26" height="14" rx="7"/>` + path('M96 112 V150', 'tb-trim') +
-    brushHead(0) + motion(380, 92, 380, 132),
-    L('An electric toothbrush; dashed, its head in the highest position', 'Eine elektrische Zahnbürste; gestrichelt ihr Kopf in der höchsten Lage'));
-
-  // ---------------------------------------------------------------- hummingbird
-  const wing = (down) => (down
-    ? 'M212 120 Q236 150 226 206 Q212 178 196 128 Z'
-    : 'M212 116 Q232 70 220 22 Q204 56 194 112 Z');
-  const bird = () => svg(420, 240,
-    path(wing(true), 'tb-ghost') +
-    path('M168 132 L128 160 L136 142 L122 138 Z', 'tb-feather') +
-    path('M160 132 Q170 108 206 106 Q232 106 246 116 Q252 130 236 140 Q206 154 172 146 Q160 142 160 132 Z', 'tb-bird') +
-    circle(246, 108, 13, 'tb-bird') + path('M258 106 L320 96 L258 112 Z', 'tb-line-fill') + circle(250, 105, 2.2, 'tb-eye') +
-    path('M190 140 Q206 150 224 138', 'tb-trim') + path(wing(false), 'tb-wing') +
-    motion(150, 34, 150, 196),
-    L('A hovering hummingbird with its wing up; dashed, the wing down', 'Ein schwebender Kolibri mit erhobenem Flügel; gestrichelt der gesenkte Flügel'));
-
-  // ---------------------------------------------------------------- sewing machine needle
-  function needleBar(dy, cls) {
-    const y = (v) => f(v + dy);
-    if (cls === 'ghost') return path(`M206 ${y(84)} V${y(150)} M210 ${y(150)} V${y(182)}`, 'tb-ghost');
-    return `<rect class="tb-metal" x="202" y="${y(70)}" width="12" height="70" rx="2"/>` + `<rect class="tb-metal" x="200" y="${y(136)}" width="16" height="12" rx="2"/>` +
-      path(`M208 ${y(148)} L208 ${y(184)} L207 ${y(190)} L209 ${y(190)} L208 ${y(184)}`, 'tb-needle') + `<ellipse class="tb-eye-hole" cx="208" cy="${y(178)}" rx="1" ry="3"/>`;
-  }
-  const needle = () => svg(420, 240,
-    path('M80 30 H330 Q346 30 346 46 V70 H80 Z', 'tb-body') + path('M60 214 H380 V226 H60 Z', 'tb-body') +
-    needleBar(-30, 'ghost') + needleBar(0) +
-    `<rect class="tb-metal" x="186" y="196" width="44" height="6" rx="2"/>` + path('M120 208 H300', 'tb-cloth') + path('M120 204 H300 V210 H120 Z', 'tb-fabric') +
-    motion(250, 92, 250, 182),
-    L('The needle of a sewing machine above the cloth; dashed, its highest position', 'Die Nadel einer Nähmaschine über dem Stoff; gestrichelt ihre höchste Lage'));
-
-  // ---------------------------------------------------------------- house in an earthquake
-  function house(dx, cls) {
-    const x = (v) => f(v + dx);
-    const walls = `M${x(150)} 180 V110 H${x(270)} V180 Z`, roof = `M${x(138)} 112 L${x(210)} 56 L${x(282)} 112 Z`;
-    if (cls === 'ghost') return path(walls + roof, 'tb-ghost');
-    return path(walls, 'tb-wall') + path(roof, 'tb-roof') + `<rect class="tb-glass" x="${x(166)}" y="124" width="30" height="26"/><rect class="tb-glass" x="${x(224)}" y="124" width="30" height="26"/>` +
-      `<rect class="tb-door" x="${x(198)}" y="146" width="24" height="34"/>` + path(`M${x(181)} 124 V150 M${x(166)} 137 H${x(196)} M${x(239)} 124 V150 M${x(224)} 137 H${x(254)}`, 'tb-trim');
-  }
-  const quake = () => svg(420, 240, house(-14, 'ghost') + house(14, 'ghost') + ground(40, 380, 180) + house(0) + motion(150, 206, 270, 206),
-    L('A house on shaking ground; dashed, its extreme positions', 'Ein Haus auf schwankendem Boden; gestrichelt seine äussersten Lagen'));
 
   // ---------------------------------------------------------------- skyscraper
   const tower = () => {
@@ -197,5 +84,44 @@
       L('The potential energy of a spring as a parabola, the total energy as a line, and their split at the given displacement', 'Die potentielle Energie einer Feder als Parabel, die Gesamtenergie als Gerade, und ihre Aufteilung bei der gegebenen Auslenkung'));
   }
 
-  root.Figures = { fork, boat, car, speaker, brush, bird, needle, quake, tower, atoms, bouncer, energyWell };
+  // ---------------------------------------------------------------- salt on a loudspeaker
+  // a loudspeaker on its back, its membrane up, grains of salt on it; dashed, the membrane at
+  // its highest and lowest
+  function salt() {
+    const membrane = (dy, cls) => path(`M120 ${110 + dy} Q210 ${150 + dy} 300 ${110 + dy}`, cls);
+    return svg(420, 240,
+      path('M100 106 L320 106 L290 176 H130 Z', 'tb-cone') + `<rect class="tb-metal" x="170" y="176" width="80" height="36" rx="3"/>` + `<rect class="tb-magnet" x="180" y="212" width="60" height="10"/>` +
+      membrane(-10, 'tb-ghost') + membrane(10, 'tb-ghost') + membrane(0, 'tb-membrane') +
+      [[170, 112], [198, 96], [226, 104], [250, 90], [186, 82]].map(([x, y]) => `<rect class="tb-grain" x="${x - 2.5}" y="${y - 2.5}" width="5" height="5" transform="rotate(30 ${x} ${y})"/>`).join('') +
+      motion(340, 92, 340, 136) + ground(40, 380, 222),
+      L('A loudspeaker on its back with grains of salt on its membrane; dashed, the membrane at its highest and lowest', 'Ein Lautsprecher auf dem Rücken mit Salzkörnern auf der Membran; gestrichelt die Membran in ihrer höchsten und tiefsten Lage'));
+  }
+
+  // ---------------------------------------------------------------- the tide in a harbour
+  // a quay wall with a tide gauge, the levels at high and low tide dashed, a boat on the water
+  function tide(R, h) {
+    const yh = 70, yl = 190, s = (yl - yh) / R, yb = yl - h * s;
+    const { force } = root.Fig;
+    let gauge = ''; for (let k = 0; k <= R; k++) gauge += `M300 ${f(yl - k * s)} h10`;
+    return svg(430, 240,
+      `<rect class="tb-water" x="0" y="${yh}" width="290" height="${240 - yh}"/>` + path(`M0 ${yh} H290`, 'tb-surface') +
+      `<rect class="tb-concrete" x="290" y="30" width="140" height="210"/>` + path(gauge, 'tb-line') + path(`M300 ${yl} V${yh}`, 'tb-line') +
+      line(10, yl, 290, yl, 'tb-eq') + line(150, yb, 290, yb, 'tb-eq') +
+      root.Fig.dim([340, yl], [340, yh], root.Fig.sym('R'), 0) + root.Fig.dim([270, yl], [270, yb], root.Fig.sym('h'), -1) +
+      text(14, yh - 8, L('high tide (now)', 'Flut (jetzt)'), 'tb-cap', 'start') + text(14, yl - 6, L('low tide', 'Ebbe'), 'tb-cap', 'start') +
+      path(`M150 ${yh - 10} L250 ${yh - 10} L238 ${yh + 8} L162 ${yh + 8} Z`, 'tb-hull') + path(`M200 ${yh - 10} V${yh - 64}`, 'tb-line') + path(`M203 ${yh - 60} L203 ${yh - 14} L234 ${yh - 14} Z`, 'tb-sail'),
+      L('A harbour at high tide: the water levels at high and low tide, and the level the boat needs', 'Ein Hafen bei Flut: die Wasserstände bei Flut und Ebbe, und der Stand, den das Boot braucht'));
+  }
+
+  // ---------------------------------------------------------------- a bouncing ball
+  function ball() {
+    const y0 = 210, top = 50, w = 70;
+    let d = ''; for (let k = 0; k < 4; k++) { const x = 40 + 2 * w * k; d += `M${x} ${y0} Q${x + w} ${2 * top - y0} ${x + 2 * w} ${y0}`; }
+    return svg(430, 240,
+      ground(20, 420, y0 + 10) + path(d, 'tb-ghost') + circle(40 + w, top + 2, 10, 'tb-ballred') + line(40 + w, top, 400, top, 'tb-eq') +
+      root.Fig.dim([400, y0 + 10], [400, top - 8], root.Fig.sym('h'), 0) + motion(40 + w + 20, top + 30, 40 + w + 20, top + 80),
+      L('A ball bouncing on the floor; dashed, its path', 'Ein Ball hüpft auf dem Boden; gestrichelt seine Bahn'));
+  }
+
+  root.Figures = { fork, tower, atoms, bouncer, energyWell, salt, tide, ball };
 })(typeof window !== 'undefined' ? window : globalThis);

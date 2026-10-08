@@ -39,8 +39,8 @@
     return svg(430, 250,
       ground(0, 430, 220) + wall(30, 20, 220, 'left') + socket(52, 120) +
       wire('M66 122 Q120 200 200 200 Q230 200 238 170') + path('M238 170 l10 -10 M244 176 l8 -12', 'tb-spark') +
-      person(270, 220, 1.4, { shirt: 'green', dir: -1, lean: 12, hands: [[244, 166], [256, 150]] }) +
-      path('M248 160 Q266 140 268 120 L270 160 L262 214', 'tb-current') + path('M260 222 l-8 6 M270 222 l8 6', 'tb-current') +
+      person(270, 220, 1.4, { shirt: 'green', dir: -1, lean: 12, hands: [null, [244, 166]] }) +
+      path('M246 162 L248 142 Q258 140 264 150 L266 168 L262 214', 'tb-current') + path('M260 222 l-8 6 M270 222 l8 6', 'tb-current') +
       rect(330, 196, 70, 24, 'tb-green', 6) + text(365, 188, L('hedge trimmer', 'Heckenschere'), 'tb-cap') +
       text(110, 238, '230 V', 'tb-label') + text(420, 70, L('current through the body', 'Strom durch den Körper'), 'tb-cap', 'end'),
       L('A gardener touching the cut cable of a hedge trimmer; the current flows through the body into the ground', 'Ein Gärtner berührt das durchgeschnittene Kabel einer Heckenschere; der Strom fliesst durch den Körper in den Boden'));
@@ -61,11 +61,13 @@
   // ---------------------------------------------------------------- 4 fairy lights
   function lights(p) {
     const { svg, path, wall, text } = F();
+    // a bulb hanging from the wire in its socket, the wire running through the socket
+    const hanging = (x, yw) => F().rect(x - 3.5, yw - 2, 7, 9, 'tb-metal', 1) + F().circle(x, yw + 13, 6.5, 'tb-bulb');
     const xs = Array.from({ length: 11 }, (z, k) => 90 + 30 * k), y = (x) => 70 + 50 * Math.sin(((x - 90) / 300) * Math.PI);
     return svg(430, 220,
       wall(30, 20, 200, 'left') + socket(52, 110) + wire(`M66 112 Q78 ${y(90) - 10} 90 ${f(y(90))}`) +
       wire(`M${xs.map((x) => `${x} ${f(y(x))}`).join(' L')}`) +
-      xs.slice(1, -1).map((x) => bulb(x, y(x) + 14, 7)).join('') + text(xs[5], y(xs[5]) + 46, '…', 'tb-label') +
+      xs.slice(1, -1).map((x) => hanging(x, y(x))).join('') + text(xs[5], y(xs[5]) + 46, '…', 'tb-label') +
       text(250, 200, L(`${p.n} bulbs in series`, `${p.n} Lämpchen in Serie`), 'tb-cap') + text(52, 82, '230 V', 'tb-label'),
       L('A string of fairy lights: small bulbs in series on the mains', 'Eine Lichterkette: kleine Lämpchen in Serie am Netz'));
   }

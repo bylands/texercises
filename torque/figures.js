@@ -134,13 +134,13 @@
   // ---------------------------------------------------------------- 9 a diving board
   function board(p) {
     const { svg, rect, path, circle, person, dim, sym, text } = F();
-    const x0 = 40, y = 110, s = 280 / p.len, sup = x0 + p.b * s, tip = x0 + 280;
-    return svg(430, 250,
-      rect(0, y + 34, sup + 30, 106, 'tb-concrete') + rect(sup + 30, 170, 430 - sup - 30, 80, 'tb-water') + path(`M${sup + 30} 170 H430`, 'tb-surface') +
+    const x0 = 40, y = 140, s = 280 / p.len, sup = x0 + p.b * s, tip = x0 + 280;
+    return svg(430, 270,
+      rect(0, y + 34, sup + 70, 96, 'tb-concrete') + rect(sup + 70, y + 64, 360 - sup, 66, 'tb-water') + path(`M${sup + 70} ${y + 64} H430`, 'tb-surface') +
       rect(x0 - 6, y + 5, 16, 29, 'tb-dark') + rect(sup - 7, y + 5, 14, 29, 'tb-dark') +
       rect(x0 - 8, y - 5, 290, 10, 'tb-metal', 3) + circle(x0 + 2, y, 3.5, 'tb-line-fill') +
-      person(tip - 10, y - 5, 1.2, { shirt: 'red', hands: [[tip - 18, y - 112], [tip - 2, y - 112]] }) +
-      dim([x0, y + 12], [sup, y + 12], sym('b'), -1) + dim([x0, y - 40], [tip, y - 40], sym('ℓ'), 0) +
+      person(tip - 10, y - 5, 1.15, { shirt: 'red', swim: true, hands: [[tip - 17, y - 104], [tip - 3, y - 104]] }) +
+      dim([x0, y + 12], [sup, y + 12], sym('b'), -1) + dim([x0, y + 50], [tip, y + 50], sym('ℓ'), 0) +
       text(x0 + 2, y - 12, L('bolt', 'Bolzen'), 'tb-label', 'start'),
       L('A diving board held by a bolt and resting on a support, a diver at its tip', 'Ein Sprungbrett, mit einem Bolzen befestigt und auf einer Stütze aufliegend, ein Springer an der Spitze'));
   }

@@ -26,9 +26,9 @@
   // Units: a quantity is kept in SI; shown in a unit with its factor.
   const UNITS = {
     m: [1, 'm', '\\mathrm{m}'], cm: [1e-2, 'cm', '\\mathrm{cm}'], mm: [1e-3, 'mm', '\\mathrm{mm}'], 'μm': [1e-6, 'μm', '\\mu\\mathrm{m}'], pm: [1e-12, 'pm', '\\mathrm{pm}'],
-    s: [1, 's', '\\mathrm{s}'], ms: [1e-3, 'ms', '\\mathrm{ms}'],
+    s: [1, 's', '\\mathrm{s}'], ms: [1e-3, 'ms', '\\mathrm{ms}'], h: [3600, 'h', '\\mathrm{h}'],
     Hz: [1, 'Hz', '\\mathrm{Hz}'], kHz: [1e3, 'kHz', '\\mathrm{kHz}'],
-    'rad/s': [1, 'rad/s', '\\mathrm{s^{-1}}'], rad: [1, 'rad', '\\mathrm{rad}'], 'm/s': [1, 'm/s', '\\mathrm{m/s}'], 'cm/s': [1e-2, 'cm/s', '\\mathrm{cm/s}'], 'mm/s': [1e-3, 'mm/s', '\\mathrm{mm/s}'],
+    'rad/s': [1, 'rad/s', '\\mathrm{s^{-1}}'], rad: [1, 'rad', '\\mathrm{rad}'], 'm/s': [1, 'm/s', '\\mathrm{m/s}'], 'cm/s': [1e-2, 'cm/s', '\\mathrm{cm/s}'], 'mm/s': [1e-3, 'mm/s', '\\mathrm{mm/s}'], 'm/h': [1 / 3600, 'm/h', '\\mathrm{m/h}'],
     'm/s²': [1, 'm/s²', '\\mathrm{m/s^2}'], '': [1, '', ''],
   };
   const inUnit = (x, u) => x / UNITS[u][0];

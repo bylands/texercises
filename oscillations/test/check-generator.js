@@ -13,7 +13,7 @@
 
 const Lang = require('../lang.js');
 require('../core.js'); require('../equations.js'); require('../plot.js'); require('../scenarios.js'); require('../generator.js'); require('../lessons.js');
-global.window = globalThis; require('../realproblems.js');
+global.window = globalThis; require('../figkit.js'); require('../figures.js'); require('../realproblems.js');
 const { OC, Equations: Eq, Scenarios, Osc, Lessons, OscProblems, Plot } = globalThis;
 
 let failures = 0, checked = 0;
@@ -157,21 +157,32 @@ for (const lang of ['en', 'de']) {
   const T1 = val(w1, 'T');
   if (val(w1, 'shm').value !== 'yes' || !T1 || T1.options.find((o) => o[0] === T1.value)[1] !== '$T = 2\\pi\\cdot k$') fail('worksheet: ξ + k²·ξ̈ = 0 has T = 2πk');
 
-  // the problems
+  // the problems, each worked out again here
+  const PI = Math.PI, g = 9.81;
+  const LAWP = {
+    fork: (p) => ({ vmax: p.a * 2 * PI * p.f, amax: p.a * (2 * PI * p.f) ** 2, g: (p.a * (2 * PI * p.f) ** 2) / g }),
+    tower: (p) => ({ vmax: p.a * 2 * PI / p.T, amax: p.a * (2 * PI / p.T) ** 2 }),
+    atoms: (p) => ({ vmax: p.a * 2 * PI * p.f, amax: p.a * (2 * PI * p.f) ** 2 }),
+    quake: (p) => ({ amax: p.A * (2 * PI / p.T) ** 2, g: (p.A * (2 * PI / p.T) ** 2) / g }),
+    salt: (p) => ({ f: Math.sqrt(g / p.A) / (2 * PI), A2: g / (2 * PI * p.f2) ** 2 }),
+    tide: (p) => { const A = p.R / 2, w = 2 * PI / (12.4 * 3600); return { t: Math.acos((p.h - A) / A) / w, vmax: A * w }; },
+    bouncer: (p) => ({ vmax: p.a * 2 * PI / p.T, y: Math.sqrt(3) / 2 * p.a }),
+    ball: (p) => ({ T: 2 * Math.sqrt(2 * p.h / g), T4: 4 * Math.sqrt(2 * p.h / g) }),
+  };
   OscProblems.PROBLEMS.forEach((pb, i) => {
+    if (!LAWP[pb.id]) fail(`problem ${pb.id}: no check`);
     for (let seed = 1; seed <= 30; seed++) {
-      const ex = OscProblems.realOf(i, seed), id = `${lang}/${pb.id}/${seed}`, p = ex.p, v = ex.v;
+      const ex = OscProblems.realOf(i, seed), id = `${lang}/${pb.id}/${seed}`, want = LAWP[pb.id] ? LAWP[pb.id](ex.p) : {};
       checked++;
-      ex.fields.forEach((f) => { if (!(Number.isFinite(f.value) && f.value > 0)) fail(`${id}: ${f.key} = ${f.value}`); });
-      const w = p.T ? PI2 / p.T : PI2 * p.f;
-      if (ex.fields.some((f) => f.key === 'vmax') && !close(si(val(ex, 'vmax')), v.Am * w, 1e-9)) fail(`${id}: v_max`);
-      if (ex.fields.some((f) => f.key === 'amax') && !close(si(val(ex, 'amax')), v.Am * w * w, 1e-9)) fail(`${id}: a_max`);
+      ex.fields.forEach((f) => {
+        if (f.type === 'choice') { if (f.options.filter((o) => o[0] === f.value).length !== 1 || f.options.some((o) => o[0] !== f.value && !o[2])) fail(`${id}: ${f.key}`); return; }
+        if (!(Number.isFinite(f.value) && f.value > 0)) fail(`${id}: ${f.key} = ${f.value}`);
+        if (!(f.key in want) || !close(si(f), want[f.key], 1e-9)) fail(`${id}: ${f.key} = ${si(f)}, not ${want[f.key]}`);
+      });
       [ex.title, ex.text, ex.results, ...ex.hints, ...ex.solution, ex.solutionFigure()].forEach((s, j) => checkText(id, `text ${j}`, s));
     }
   });
 }
-const fork = OscProblems.realOf(0, 1);
-if (!close(si(val(fork, 'amax')), fork.p.a * (PI2 * fork.p.f) ** 2, 1e-9)) fail('tuning fork');
 
 console.log(failures ? `${failures} failures in ${checked} exercises` : `All checks passed (${checked} exercises).`);
 process.exit(failures ? 1 : 0);
