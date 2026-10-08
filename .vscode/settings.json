@@ -1,0 +1,4 @@
+{
+  // show files ignored by git (screenshots/, models/) in search, Quick Open and the @ file picker
+  "search.useIgnoreFiles": false
+}
