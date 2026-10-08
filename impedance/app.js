@@ -9,9 +9,9 @@
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Impedance Curves', mode: 'Mode', difficulty: 'Difficulty', example: 'Example', axes: 'Axes', real: 'Problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
-      tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise', lin: 'Linear', log: 'Log-log',
-      tutorNote: 'Use the arrow keys ← → to step through. In the graph, dashed lines are asymptotes and helper lines, the tangent is drawn in <span class="k-tan">orange</span>. Switch to log-log axes above to see the same steps there.',
+      title: 'Impedance Curves', mode: 'Mode', difficulty: 'Difficulty', example: 'Example', real: 'Problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
+      tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
+      tutorNote: 'Use the arrow keys ← → to step through. In the graph, dashed lines are asymptotes and helper lines, the tangent is drawn in <span class="k-tan">orange</span>.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       levels: { easy: 'Easy', medium: 'Medium', hard: 'Hard', mixed: 'Mixed' },
@@ -31,9 +31,9 @@
       matchPrompt: 'Which of the four curves shows the impedance <i>Z</i> of this circuit against the angular frequency <i>ω</i>? Answer the questions: each right answer rules out the curves that do not fit, until one is left.',
     },
     de: {
-      title: 'Impedanzkurven', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', axes: 'Achsen', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
-      tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe', lin: 'Linear', log: 'Doppelt log.',
-      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Im Graphen sind gestrichelte Linien Asymptoten und Hilfslinien, die Tangente ist <span class="k-tan">orange</span>. Wechsle oben zu doppelt logarithmischen Achsen, um dieselben Schritte dort zu sehen.',
+      title: 'Impedanzkurven', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
+      tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
+      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Im Graphen sind gestrichelte Linien Asymptoten und Hilfslinien, die Tangente ist <span class="k-tan">orange</span>.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       levels: { easy: 'Einfach', medium: 'Mittel', hard: 'Schwierig', mixed: 'Gemischt' },
@@ -79,7 +79,7 @@
   }
   const markScrollable = () => {};
 
-  const axesMode = () => (document.querySelector('input[name="axes"]:checked') || {}).value || 'lin';
+  const axesMode = () => 'lin'; // the exercises have linear axes; a problem has its own (modeOf)
   const figure = (c, ax, ann, mode = axesMode()) => `<div class="fig">${P.schematic(c)}</div><div class="fig gwrap">${P.graph(c, ax, mode, { ann })}</div>`;
   const and = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} ${L('and', 'und')} ${xs[xs.length - 1]}`);
   const list = (items) => `<ul>${items.map((x) => `<li>${x}</li>`).join('')}</ul>`;
@@ -119,7 +119,7 @@
   }
   // the questions and the options
   function drawMatch() {
-    // the circuit given, or in the inverse the curve (redrawn when the axes change)
+    // the circuit given, or in the inverse the curve
     $('#schematic').outerHTML = given(ex).replace('class="fig', 'id="schematic" class="fig');
     $('#ident').innerHTML = Identify.html(ex.items, st.ident, st.revealed);
     if (ex.direct) {
@@ -222,12 +222,13 @@
     $('#graph').innerHTML = P.graph(ex.c, ex.ax, modeOf(ex), { extra: ex.extra });
     probe.draw();
   }
-  // the axes of the graph: a problem's own, else the switch
+  // the axes of the graph: a problem's own, else linear
   const modeOf = (e) => (e.real != null ? e.ax.mode : axesMode());
 
   function render() {
     if (ex.real != null) { renderReal(); return; }
     if (ex.match) {
+      $('#graph').innerHTML = ''; // the probe would redraw on the graph of the exercise before
       probe.reset();
       renderMatch();
       drawGraph(); // the questions and the curves
@@ -548,7 +549,6 @@
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('imp-mode', m);
     document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); }); // practice and problems share the card
-    $('#axes').hidden = m === 'arcade' || m === 'real'; // a problem has its own axes
     $('#tutor').hidden = m !== 'tutor';
     $('#arcade').hidden = m !== 'arcade';
     if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
@@ -608,7 +608,6 @@
     document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
     applyStatic();
     Lang.wire(switchLang);
-    document.querySelector(`input[name="axes"][value="${stored('imp-axes', 'lin')}"]`).checked = true;
 
     probe = window.createProbe($('#graph'), () => ({ c: ex.c, ax: ex.ax, mode: modeOf(ex) }), $('#readout'), $('#pins'));
     topics = window.Topics.create({
@@ -627,12 +626,6 @@
     problems = window.Problems.create({
       app: PRACTICE, problems: window.ImpProblems.PROBLEMS, make: window.ImpProblems.realOf,
       open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
-    $('#axes').addEventListener('change', () => {
-      store('imp-axes', axesMode());
-      if (ex) drawGraph();
-      if (ex && st.revealed) drawSolution();
-      if (tutor.shown()) tutor.refresh();
     });
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);

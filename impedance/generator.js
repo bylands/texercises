@@ -5,8 +5,8 @@
 //
 // A circuit is { kind: 'RL' | 'RC' | 'RLC', conn: 'series' | 'parallel', R (Ω), L (H), C (F) }
 // (L or C null when missing). Its axes are fixed by its characteristic frequency (R/L, 1/(RC) or
-// ω₀): linear axes 0 … wmax, 0 … ztop that show every feature the method needs, and log-log
-// axes over whole decades. analysis() gives the worked method (steps with annotations for the
+// ω₀): linear axes 0 … wmax, 0 … ztop that show every feature the method needs (and log-log
+// axes over whole decades, no longer offered in the app). analysis() gives the worked method (steps with annotations for the
 // graph, hints, the estimated values), shared by the tutor, the hints and the solution.
 (function (root) {
   'use strict';

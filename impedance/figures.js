@@ -61,13 +61,20 @@
     L('A phone on a wireless charging pad; the coil in the pad and its magnetic field', 'Ein Handy auf einer kabellosen Ladefläche; die Spule in der Ladefläche und ihr Magnetfeld'));
 
   // ---------------------------------------------------------------- a body-fat scale
-  const scale = () => svg(320, 250,
-    root.Fig.person(160, 208, 0.9, { shirt: 'green' }) +
-    rect(96, 208, 128, 16, 'tb-body', 6) + rect(104, 210, 34, 6, 'tb-metal', 2) + rect(182, 210, 34, 6, 'tb-metal', 2) +
-    rect(144, 213, 32, 8, 'tb-lcd', 2) + line(20, 224, 300, 224, 'tb-line') +
-    path('M121 206 C121 150 160 140 160 140 C160 140 199 150 199 206', 'tb-current') +
-    cap(262, 200, L('electrodes', 'Elektroden')) + cap(160, 244, L('a tiny current through the legs', 'ein winziger Strom durch die Beine')),
-    L('A person on a body-fat scale; a tiny current flows from one foot through the legs to the other', 'Eine Person auf einer Körperfettwaage; ein winziger Strom fliesst von einem Fuss durch die Beine zum anderen'));
+  // A person (about 180 px tall, barefoot, feet apart) on a scale, each foot on its electrode; the
+  // current runs up one leg and down the other.
+  const scale = () => {
+    const sc = 2.4, x = 160, y = 214, st = 8.5 * sc, feet = [x - st, x + st];
+    const pad = (fx) => rect(fx - 6 * sc, y - 1, 14.5 * sc, 4, 'tb-metal', 2); // under the sole, a little longer than the foot
+    const hipY = y - 40 * sc, legs = `M${feet[0] + 1} ${y - 8} L${x - 4} ${hipY + 8} Q${x} ${hipY - 2} ${x + 4} ${hipY + 8} L${feet[1] + 1} ${y - 8}`;
+    return svg(320, 262,
+      rect(x - 70, y + 2, 140, 16, 'tb-body', 6) + pad(feet[0]) + pad(feet[1]) + rect(x - 14, y + 7, 28, 8, 'tb-lcd', 2) + line(20, y + 18, 300, y + 18, 'tb-line') +
+      root.Fig.person(x, y + 2, sc, { shirt: 'green', barefoot: true, step: 8.5 }) +
+      path(legs, 'tb-current') +
+      path(`M${feet[1] + 22} ${y + 4} L${x + 92} ${y - 20}`, 'tb-thin') + cap(x + 96, y - 24, L('electrodes', 'Elektroden'), 'start') +
+      cap(x, y + 36, L('a tiny current through the legs', 'ein winziger Strom durch die Beine')),
+      L('A person standing barefoot on a body-fat scale, each foot on an electrode; a tiny current flows up one leg and down the other', 'Eine Person steht barfuss auf einer Körperfettwaage, jeder Fuss auf einer Elektrode; ein winziger Strom fliesst durch ein Bein hinauf und durch das andere hinunter'));
+  };
 
   // ---------------------------------------------------------------- a metal detector over a coin
   const detector = () => svg(380, 220,

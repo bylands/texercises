@@ -115,7 +115,7 @@
       if (h[1] < a[1] + k(4)) return Math.abs(e1[0] - sh[0]) > Math.abs(e2[0] - sh[0]) ? e1 : e2;
       return (e1[0] - e2[0]) * d < 0 ? e1 : e2;
     };
-    // o.swim: in swimwear: bare arms, legs and feet, swim trunks in the tint of o.shirt
+    // o.swim: in swimwear: bare arms, legs and feet, swim trunks in the tint of o.shirt; o.barefoot: bare feet (e.g. on a scale)
     // o.ponytail: long hair tied back; o.sport: in a sports outfit: a singlet in the tint of o.shirt, bare arms and legs, shorts in
     // the tint of o.pants (dark blue), running shoes
     const shirt = o.swim ? 'tb-skin tb-skinlimb' : `tb-shirt ${o.shirt || 'blue'}`, legs = o.swim || o.sport ? 'tb-skinlimb' : o.pants ? `tb-shirt ${o.pants}` : 'tb-trousers';
@@ -137,7 +137,7 @@
     };
     return arm(0) +
       limbs([[hips[0], knees[0], k(6.2)], [knees[0], feet[0], k(4.8)], [hips[1], knees[1], k(6.2)], [knees[1], feet[1], k(4.8)]], legs) +
-      (o.swim ? feet.map((p) => { const y = p[1] + k(2.5); return path(`M${f(p[0] - d * k(2.5))} ${f(y)} Q${f(p[0] - d * k(2.5))} ${f(y - k(3))} ${f(p[0] + d * k(1))} ${f(y - k(3))} Q${f(p[0] + d * k(5))} ${f(y - k(1.5))} ${f(p[0] + d * k(5.5))} ${f(y)} Z`, 'tb-skin'); }).join('') : feet.map(shoe).join('')) +
+      (o.swim || o.barefoot ? feet.map((p) => { const y = p[1] + k(2.5); return path(`M${f(p[0] - d * k(2.5))} ${f(y)} Q${f(p[0] - d * k(2.5))} ${f(y - k(3))} ${f(p[0] + d * k(1))} ${f(y - k(3))} Q${f(p[0] + d * k(5))} ${f(y - k(1.5))} ${f(p[0] + d * k(5.5))} ${f(y)} Z`, 'tb-skin'); }).join('') : feet.map(shoe).join('')) +
       shorts + path(torso, shirt) +
       (o.swim ? path(`M${f(hip[0] - k(6.3))} ${f(hip[1] - k(5))} H${f(hip[0] + k(6.3))} L${f(hips[1][0] + k(4.2))} ${f(hip[1] + k(7))} L${f(hip[0] + k(0.6))} ${f(hip[1] + k(5))} L${f(hips[0][0] - k(4.2))} ${f(hip[1] + k(7))} Z`, `tb-shirt ${o.shirt || 'blue'}`) : '') +
       `<rect class="tb-skin" x="${f(sh[0] - k(1.8))}" y="${f(sh[1] - k(5))}" width="${f(k(3.6))}" height="${f(k(4))}"/>` +
