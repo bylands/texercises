@@ -476,8 +476,9 @@
     }));
     const bigger = a < b ? [a, b] : [b, a], hi = numbered[bigger[1] - 1].c > numbered[bigger[0] - 1].c ? bigger[1] : bigger[0];
     const qv = v[pair], why = orderWhy(pair, d);
+    // asked only once the kinds are right: it names the kind of two lines
     const orderQ = {
-      type: 'choice', key: 'order', label: L(`Lines ${bigger[0]} and ${bigger[1]} are both ${kinds[pair]()}s: which has the larger ${QTY[qv]()}?`, `Die Linien ${bigger[0]} und ${bigger[1]} sind beide ${kinds[pair]()}n: Welche hat ${qv === 'p' ? 'den grösseren Druck' : qv === 'V' ? 'das grössere Volumen' : 'die grössere Temperatur'}?`),
+      type: 'choice', key: 'order', after: true, label: L(`Lines ${bigger[0]} and ${bigger[1]} are both ${kinds[pair]()}s: which has the larger ${QTY[qv]()}?`, `Die Linien ${bigger[0]} und ${bigger[1]} sind beide ${kinds[pair]()}n: Welche hat ${qv === 'p' ? 'den grösseren Druck' : qv === 'V' ? 'das grössere Volumen' : 'die grössere Temperatur'}?`),
       options: bigger.map((k) => ({ label: L(`line ${k}`, `Linie ${k}`), ok: k === hi, why })),
     };
     return {

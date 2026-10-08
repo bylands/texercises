@@ -15,7 +15,7 @@
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
       fill: 'Answer every question, then check again.', ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
-      correct: 'Correct', option: (k) => `Option ${k}`, place: (n) => `Click where state ${n} lies:`, placed: 'All states placed.', missed: 'This one is correct too.',
+      correct: 'Correct', next: 'Correct so far. Now the last question:', option: (k) => `Option ${k}`, place: (n) => `Click where state ${n} lies:`, placed: 'All states placed.', missed: 'This one is correct too.',
       tutorNote: 'Use the arrow keys ← → to step through.',
     },
     de: {
@@ -26,7 +26,7 @@
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
       fill: 'Beantworte jede Frage und prüfe dann nochmals.', ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
-      correct: 'Richtig', option: (k) => `Antwort ${k}`, place: (n) => `Klicke dorthin, wo der Zustand ${n} liegt:`, placed: 'Alle Zustände gesetzt.', missed: 'Auch diese ist richtig.',
+      correct: 'Richtig', next: 'Bis hierher richtig. Jetzt noch die letzte Frage:', option: (k) => `Antwort ${k}`, place: (n) => `Klicke dorthin, wo der Zustand ${n} liegt:`, placed: 'Alle Zustände gesetzt.', missed: 'Auch diese ist richtig.',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter.',
     },
   };
@@ -196,7 +196,7 @@
     const el = $('#status');
     if (st) st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
-    el.textContent = !kind ? '' : kind === 'fill' ? ui().fill
+    el.textContent = !kind ? '' : kind === 'next' ? ui().next : kind === 'fill' ? ui().fill
       : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (!canReveal() ? ui().tryAgain : ui().canReveal);
   }
@@ -204,11 +204,25 @@
     evt.preventDefault();
     if (st.solved) { fresh(); return; }
     const r = feedback();
+    // a question held back (e.g. which of two isotherms is hotter, which tells their kind): shown
+    // once all others are answered right; that step is no attempt
+    const held = ex.kind !== 'draw' && ex.questions.find((q) => q.after && $(`.field[data-key="${q.key}"]`).hidden);
+    if (held && r === null && !anyWrong() && ex.questions.every((q) => q === held || q.type !== 'choice' || document.querySelector(`input[name="q-${q.key}"]:checked`))) {
+      unveil(held);
+      showStatus('next');
+      return;
+    }
     st.checked = true;
     if (r === null) { showStatus('fill'); return; }
     st.tries++;
     if (r) solved(); else showStatus('bad');
     updateButtons();
+  }
+  function unveil(q) {
+    st.unveiled = q.key;
+    const row = $(`.field[data-key="${q.key}"]`);
+    row.hidden = false;
+    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   function solved() {
     if (!st.revealed) {
@@ -252,6 +266,7 @@
     st.revealed = true;
     finish();
     if (ex.kind === 'draw') { st.placed = ex.cycle.states.length + 1; drawFigure(); $('.field[data-key="back"]').hidden = false; }
+    ex.questions.filter((q) => q.after).forEach((q) => { $(`.field[data-key="${q.key}"]`).hidden = false; });
     showSolution();
     updateButtons();
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -408,6 +423,7 @@
       st = keep;
       drawFigure();
       if (ex.kind === 'draw' && st.placed > ex.steps.length) $('.field[data-key="back"]').hidden = false;
+      if (st.unveiled) $(`.field[data-key="${st.unveiled}"]`).hidden = false;
       chosen.forEach(([n, v]) => { const x = document.querySelector(`input[name="${n}"][value="${v}"]`); if (x) x.checked = true; });
       if (st.checked) feedback();
       showStatus(status);

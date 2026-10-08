@@ -1,8 +1,9 @@
 // Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // Practice by topic: each topic belongs to a worked example of the tutor and has stages, from
-// exercises like the example to variations that add new ideas. Two exercises of a stage solved
-// without looking at the solution (hints are fine) move practice on to the next stage; the student
-// can also choose a stage, or all topics mixed. Within a stage, exercise types that were hard
+// exercises like the example to variations that add new ideas. Two exercises of a stage solved at
+// the first try without hints (st.tries === 1, st.hints === 0, as the apps count "first try without
+// hints") move practice on to the next stage; an exercise solved otherwise does not count, and the
+// student is told so. The student can also choose a stage, or all topics mixed. Within a stage, exercise types that were hard
 // come up more often (practice.js).
 //   const T = Topics.create({
 //     app,                    the app's storage prefix
@@ -31,7 +32,8 @@
 //   T.shown(ex)               an exercise is shown (for the link to its worked example); exercises
 //                             of T.next and T.parse carry ptopic and pstage
 //   T.solved(st)              the current exercise is solved; once per exercise (st.won), not after
-//                             the solution was shown. Returns a text when the stage is done.
+//                             the solution was shown, and a win only at the first try without hints.
+//                             Returns a text when the stage is done, or when the solve did not count.
 //   T.go(t, s)                practise topic t (from the tutor), at stage s or else the stage reached
 //   T.also(t)                 HTML for the tutor: what the practice of topic t covers
 (function (root) {
@@ -40,9 +42,9 @@
   const WINS = 2;
   const TX = {
     en: { topic: 'Topic', mixed: 'All topics (mixed)', stage: 'Step', worked: (i, n) => `Worked example ${i} · ${n}`, like: 'like the example',
-      done: (n) => `Well done! Next step: ${n}.`, allSteps: 'all steps', none: 'You have seen all the exercises of this step: move on to the next step or to another topic.', noneLast: 'You have seen all the exercises of this step: move on to another topic.', last: 'Well done! You have reached the last step of this topic; practise on, or choose another topic.', also: 'Practice:' },
+      done: (n) => `Well done! Next step: ${n}.`, notClean: 'To move on to the next step, solve two exercises of this step at the first try without hints.', allSteps: 'all steps', none: 'You have seen all the exercises of this step: move on to the next step or to another topic.', noneLast: 'You have seen all the exercises of this step: move on to another topic.', last: 'Well done! You have reached the last step of this topic; practise on, or choose another topic.', also: 'Practice:' },
     de: { topic: 'Thema', mixed: 'Alle Themen (gemischt)', stage: 'Schritt', worked: (i, n) => `Beispiel ${i} · ${n}`, like: 'wie im Beispiel',
-      done: (n) => `Gut gemacht! Nächster Schritt: ${n}.`, allSteps: 'alle Schritte', none: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit dem nächsten Schritt oder einem anderen Thema weiter.', noneLast: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit einem anderen Thema weiter.', last: 'Gut gemacht! Du hast den letzten Schritt dieses Themas erreicht; übe weiter oder wähle ein anderes Thema.', also: 'Üben:' },
+      done: (n) => `Gut gemacht! Nächster Schritt: ${n}.`, notClean: 'Für den nächsten Schritt löse zwei Aufgaben dieses Schritts beim ersten Versuch ohne Tipps.', allSteps: 'alle Schritte', none: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit dem nächsten Schritt oder einem anderen Thema weiter.', noneLast: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit einem anderen Thema weiter.', last: 'Gut gemacht! Du hast den letzten Schritt dieses Themas erreicht; übe weiter oder wähle ein anderes Thema.', also: 'Üben:' },
   };
   const tx = () => TX[root.Lang && root.Lang.get() === 'de' ? 'de' : 'en'];
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -177,6 +179,8 @@
         st.won = true;
         const t = ex.ptopic, p = progress[t] || { stage: 0, wins: 0 };
         if (ex.pstage !== p.stage) return ''; // practising an earlier stage again, or one ahead
+        // only a solve at the first try without hints counts (the last stage has nothing to move on to)
+        if (st.tries !== 1 || st.hints > 0) return p.stage < stagesOf(t).length - 1 ? tx().notClean : '';
         p.wins = (p.wins || 0) + 1;
         let msg = '';
         if (p.wins >= WINS) {
