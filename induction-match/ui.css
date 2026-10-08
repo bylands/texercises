@@ -747,7 +747,7 @@ svg.tb .tb-limb.tb-trousers { stroke: var(--tb-trousers); }
 svg.tb .tb-shirt { fill: var(--tb-shirt); stroke: var(--ink); stroke-width: 1.2; stroke-linejoin: round; }
 svg.tb .tb-limb.tb-shirt { stroke: var(--tb-shirt); fill: none; }
 svg.tb .tb-shirt.red { --tb-shirt: #eaa79b; } svg.tb .tb-shirt.orange { --tb-shirt: #f3c89c; } svg.tb .tb-shirt.green { --tb-shirt: #b2d6b8; } svg.tb .tb-shirt.blue { --tb-shirt: #a9c4e4; }
-svg.tb .tb-shoe { fill: var(--ink); }
+svg.tb .tb-shoe { fill: #4a5058; stroke: var(--ink); stroke-width: 1; stroke-linejoin: round; }
 svg.tb .tb-hair { fill: var(--tb-hair); stroke: var(--ink); stroke-width: 1; }
 svg.tb .tb-tree { fill: #b2d6b8; stroke: var(--ink); stroke-width: 1.2; stroke-linejoin: round; }
 svg.tb .tb-trunk { fill: none; stroke: var(--ink); stroke-width: 2.5; }
@@ -831,3 +831,4 @@ svg.tb .tb-needle { stroke: #c0392b; stroke-width: 2.2; stroke-linecap: round; }
   svg.tb .tb-led.red { fill: #8e5249; } svg.tb .tb-led.green { fill: #456c4f; } svg.tb .tb-led.blue { fill: #3f5b7c; }
   svg.tb :is(.tb-spark, .tb-heat, .tb-coil, .tb-needle, .tb-beam.red) { stroke: #ff8a80; } svg.tb .tb-current { stroke: #ff8a80; }
 }
+svg.tb .tb-skin { stroke: var(--ink); stroke-width: 1.1; }

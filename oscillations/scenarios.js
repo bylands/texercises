@@ -60,7 +60,7 @@
   // the wrong answer carries the idea behind it: a shifted equilibrium taken for no SHM, or the
   // mistake not seen
   const yesNo = (p) => {
-    const f = byId(p.eq.form), again = L('Bring it into the form ÿ = −ω²·y (or compare the solution with y = A·cos(ωt + φ₀)) and look again.', 'Bring sie in die Form ÿ = −ω²·y (oder vergleiche die Lösung mit y = A·cos(ωt + φ₀)) und schau nochmals.');
+    const f = byId(p.eq.form), again = L('Bring it into the form ÿ = −ω²·y (or compare the solution with y = A·cos(ωt − φ₀)) and look again.', 'Bring sie in die Form ÿ = −ω²·y (oder vergleiche die Lösung mit y = A·cos(ωt − φ₀)) und schau nochmals.');
     const noFlag = f.shifted ? 'shift' : f.kind === 'ode' && f.level >= 2 ? 'form' : null;
     return [['yes', L('yes', 'ja'), again, f.shm ? null : f.mistake], ['no', L('no', 'nein'), f.shifted ? L(`A constant only shifts the equilibrium, here to $${eqm(p)}$: around it, the motion is harmonic.`, `Eine Konstante verschiebt nur die Gleichgewichtslage, hier nach $${eqm(p)}$: Um sie herum ist die Bewegung harmonisch.`) : again, f.shm ? noFlag : null]];
   };
@@ -112,8 +112,8 @@
     out.push(step(L('The test', 'Der Test'), p$(f.kind === 'ode'
       ? L('A simple harmonic motion has an equation of motion of the form $\\ddot y = -\\omega^2\\cdot y$: the acceleration is proportional to the displacement and points back to the equilibrium. Solve the equation for the second derivative.',
         'Eine harmonische Schwingung hat eine Bewegungsgleichung der Form $\\ddot y = -\\omega^2\\cdot y$: Die Beschleunigung ist proportional zur Auslenkung und zeigt zur Gleichgewichtslage zurück. Löse die Gleichung nach der zweiten Ableitung auf.')
-      : L('A simple harmonic motion is a motion $y(t) = A\\cdot\\cos(\\omega\\, t + \\varphi_0)$ (a sine is a cosine shifted in time): a constant amplitude, and a phase that grows evenly with $t$.',
-        'Eine harmonische Schwingung ist eine Bewegung $y(t) = A\\cdot\\cos(\\omega\\, t + \\varphi_0)$ (ein Sinus ist ein zeitlich verschobener Kosinus): eine konstante Amplitude und eine Phase, die gleichmässig mit $t$ wächst.'))));
+      : L('A simple harmonic motion is a motion $y(t) = A\\cdot\\cos(\\omega\\, t - \\varphi_0)$ (a sine is a cosine shifted in time): a constant amplitude, and a phase that grows evenly with $t$.',
+        'Eine harmonische Schwingung ist eine Bewegung $y(t) = A\\cdot\\cos(\\omega\\, t - \\varphi_0)$ (ein Sinus ist ein zeitlich verschobener Kosinus): eine konstante Amplitude und eine Phase, die gleichmässig mit $t$ wächst.'))));
     if (f.shm) {
       const sum = f.id === 'c1c2' ? p$(L('A sum of a cosine and a sine with the same $\\omega$ is again a cosine with this $\\omega$ (with another amplitude and phase).', 'Eine Summe von Kosinus und Sinus mit demselben $\\omega$ ist wieder ein Kosinus mit diesem $\\omega$ (mit anderer Amplitude und Phase).')) : '';
       const shift = f.shifted ? p$(L(`The constant only shifts the equilibrium to $${eqm(p)}$: around it, the body oscillates harmonically. It is an SHM.`, `Die Konstante verschiebt nur die Gleichgewichtslage nach $${eqm(p)}$: Um sie herum schwingt der Körper harmonisch. Es ist eine harmonische Schwingung.`)) : '';
@@ -132,7 +132,7 @@
   const eqHints = (p) => {
     const f = byId(p.eq.form), s = Eq.sym(p.eq);
     return [
-      L('An SHM: $\\ddot y = -\\omega^2\\cdot y$ (the acceleration proportional to the displacement, opposite to it), or $y(t) = A\\cdot\\cos(\\omega\\, t + \\varphi_0)$.', 'Eine harmonische Schwingung: $\\ddot y = -\\omega^2\\cdot y$ (die Beschleunigung proportional zur Auslenkung, ihr entgegen), oder $y(t) = A\\cdot\\cos(\\omega\\, t + \\varphi_0)$.'),
+      L('An SHM: $\\ddot y = -\\omega^2\\cdot y$ (the acceleration proportional to the displacement, opposite to it), or $y(t) = A\\cdot\\cos(\\omega\\, t - \\varphi_0)$.', 'Eine harmonische Schwingung: $\\ddot y = -\\omega^2\\cdot y$ (die Beschleunigung proportional zur Auslenkung, ihr entgegen), oder $y(t) = A\\cdot\\cos(\\omega\\, t - \\varphi_0)$.'),
       f.shm ? (f.kind === 'ode' ? L(`Solve for the second derivative: $${f.std(s)}$.`, `Löse nach der zweiten Ableitung auf: $${f.std(s)}$.`) : L(`Compare with $${f.std(s)}$.`, `Vergleiche mit $${f.std(s)}$.`))
         : L('Check the sign, the order of the derivative, the power of the displacement, and how t enters.', 'Prüfe das Vorzeichen, die Ordnung der Ableitung, die Potenz der Auslenkung und wie t vorkommt.'),
       f.shm ? L(`Here $\\omega = ${f.w(s)}$, and $T = 2\\pi/\\omega$.`, `Hier ist $\\omega = ${f.w(s)}$, und $T = 2\\pi/\\omega$.`) : MISTAKES[f.mistake].short(),
@@ -181,7 +181,7 @@
       p.eqs.map((e, i) => { const f = byId(e.form); return [String(i), `$${Eq.tex(e)}$`, f.shm ? '' : MISTAKES[f.mistake].short(), f.shm ? null : f.mistake]; }), { stack: true })],
     text: () => L('Only one of these equations describes a simple harmonic motion. Which one?', 'Nur eine dieser Gleichungen beschreibt eine harmonische Schwingung. Welche?'),
     hints: () => [
-      L('An SHM: $\\ddot y = -\\omega^2\\cdot y$, or $y(t) = A\\cdot\\cos(\\omega\\, t + \\varphi_0)$.', 'Eine harmonische Schwingung: $\\ddot y = -\\omega^2\\cdot y$, oder $y(t) = A\\cdot\\cos(\\omega\\, t + \\varphi_0)$.'),
+      L('An SHM: $\\ddot y = -\\omega^2\\cdot y$, or $y(t) = A\\cdot\\cos(\\omega\\, t - \\varphi_0)$.', 'Eine harmonische Schwingung: $\\ddot y = -\\omega^2\\cdot y$, oder $y(t) = A\\cdot\\cos(\\omega\\, t - \\varphi_0)$.'),
       L('Check each one: the sign, the order of the derivative, the power of the displacement, how t enters.', 'Prüfe jede: das Vorzeichen, die Ordnung der Ableitung, die Potenz der Auslenkung, wie t vorkommt.'),
     ],
     steps: (p) => [step(L('One by one', 'Eine nach der anderen'), `<ul class="eqlist">${p.eqs.map((e) => { const f = byId(e.form); return `<li>$${Eq.tex(e)}$: ${f.shm ? `<span class="result">${L('an SHM', 'harmonisch')}</span>` : MISTAKES[f.mistake].short()}</li>`; }).join('')}</ul>`)],
@@ -312,14 +312,14 @@
   };
 
   // ================================================================ 3 kinematics
-  // y(t) = A·sin(ωt), the angular frequency ω given (no 2π to work out): v̂ = A·ω, â = A·ω².
+  // y(t) = A·cos(ωt), the angular frequency ω given (no 2π to work out): v̂ = A·ω, â = A·ω².
   const AS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20].map((x) => x / 100); // m
   const WS = [2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20]; // s⁻¹
   const unitOfA = (A) => (A < 0.01 ? 'mm' : 'cm');
   const VH = '\\hat v', AH = '\\hat a', W = (w) => `${tnum(w)}\\,\\mathrm{s^{-1}}`;
   const xGraph = (p, o = {}) => {
-    const f = p.w ? p.w / PI2 : p.f, w = PI2 * f, T = 1 / f, tEnd = 2 * T, cm = p.A * 100, ph = p.start === 'top' ? Math.PI / 2 : 0;
-    const pts = Array.from({ length: 201 }, (z, k) => { const t = (k * tEnd) / 200; return [t, cm * Math.sin(w * t + ph)]; });
+    const f = p.w ? p.w / PI2 : p.f, w = PI2 * f, T = 1 / f, tEnd = 2 * T, cm = p.A * 100;
+    const pts = Array.from({ length: 201 }, (z, k) => { const t = (k * tEnd) / 200; return [t, cm * Math.cos(w * t)]; });
     return `<div class="fig">${Plot.graph([{ pts }], { tEnd, name: 'y', unit: 'cm', axis: Plot.niceAxis([-cm * 1.05, cm * 1.05]), label: L('Displacement against time', 'Auslenkung gegen die Zeit'), ...o })}</div>`;
   };
   const WHYK = {
@@ -329,7 +329,8 @@
   };
   const pickAW = (r) => ({ A: pick(r, AS), w: pick(r, WS) });
   const given = (p) => L(`an amplitude of ${q(p.A, unitOfA(p.A))} and an angular frequency of ${q(p.w, '')} s⁻¹`, `einer Amplitude von ${q(p.A, unitOfA(p.A))} und einer Kreisfrequenz von ${q(p.w, '')} s⁻¹`);
-  const peaks = (p, view, key) => (view.show && view.show.has(key) ? (key === 'eq' ? [[0, 0], [Math.PI / p.w, 0]] : [[(Math.PI / 2) / p.w, p.A * 100], [(1.5 * Math.PI) / p.w, -p.A * 100]]) : []);
+  // the moments at the equilibrium ('eq') or at the turning points ('top') of y = A·cos(ωt)
+  const peaks = (p, view, key) => (view.show && view.show.has(key) ? (key === 'eq' ? [[Math.PI / 2 / p.w, 0], [(1.5 * Math.PI) / p.w, 0]] : [[0, p.A * 100], [Math.PI / p.w, -p.A * 100]]) : []);
 
   const vmax = {
     id: 'vmax', difficulty: 2, kind: 'kin',
@@ -341,13 +342,13 @@
     fields: (p) => [num$('vmax', VH, speedUnit(p.A * p.w), L('largest speed', 'grösste Geschwindigkeit')), num$('amax', AH, 'm/s²', L('largest acceleration', 'grösste Beschleunigung'))],
     text: (p) => L(`A body oscillates harmonically with ${given(p)}. What are its largest speed and its largest acceleration?`, `Ein Körper schwingt harmonisch mit ${given(p)}. Wie gross sind seine grösste Geschwindigkeit und seine grösste Beschleunigung?`),
     hints: () => [
-      L('From $y(t) = A\\cdot\\sin(\\omega t)$: $v(t) = A\\omega\\cdot\\cos(\\omega t)$ and $a(t) = -A\\omega^2\\cdot\\sin(\\omega t)$. Cosine and sine are at most 1.', 'Aus $y(t) = A\\cdot\\sin(\\omega t)$: $v(t) = A\\omega\\cdot\\cos(\\omega t)$ und $a(t) = -A\\omega^2\\cdot\\sin(\\omega t)$. Kosinus und Sinus sind höchstens 1.'),
+      L('From $y(t) = A\\cdot\\cos(\\omega t)$: $v(t) = -A\\omega\\cdot\\sin(\\omega t)$ and $a(t) = -A\\omega^2\\cdot\\cos(\\omega t)$. Sine and cosine are at most 1 in size.', 'Aus $y(t) = A\\cdot\\cos(\\omega t)$: $v(t) = -A\\omega\\cdot\\sin(\\omega t)$ und $a(t) = -A\\omega^2\\cdot\\cos(\\omega t)$. Sinus und Kosinus sind dem Betrag nach höchstens 1.'),
       L('$\\hat v = A\\,\\omega$ and $\\hat a = A\\,\\omega^2$, the amplitude in metres.', '$\\hat v = A\\,\\omega$ und $\\hat a = A\\,\\omega^2$, die Amplitude in Metern.'),
     ],
     steps: (p, v) => [
-      step(L('The largest speed', 'Die grösste Geschwindigkeit'), p$(L('With $y(t) = A\\cdot\\sin(\\omega t)$, the velocity is $v(t) = A\\omega\\cdot\\cos(\\omega t)$: largest where the cosine is ±1, at the equilibrium.', 'Mit $y(t) = A\\cdot\\sin(\\omega t)$ ist die Geschwindigkeit $v(t) = A\\omega\\cdot\\cos(\\omega t)$: am grössten, wo der Kosinus ±1 ist, in der Gleichgewichtslage.')) +
+      step(L('The largest speed', 'Die grösste Geschwindigkeit'), p$(L('With $y(t) = A\\cdot\\cos(\\omega t)$, the velocity is $v(t) = -A\\omega\\cdot\\sin(\\omega t)$: largest in size where the sine is ±1, at the equilibrium.', 'Mit $y(t) = A\\cdot\\cos(\\omega t)$ ist die Geschwindigkeit $v(t) = -A\\omega\\cdot\\sin(\\omega t)$: dem Betrag nach am grössten, wo der Sinus ±1 ist, in der Gleichgewichtslage.')) +
         `$$\\hat v = A\\,\\omega = ${tq(p.A, 'm')}\\cdot ${W(p.w)} = ${res(tq(v.vmax, speedUnit(v.vmax)))}$$`, ['eq']),
-      step(L('The largest acceleration', 'Die grösste Beschleunigung'), p$(L('The acceleration $a(t) = -A\\omega^2\\cdot\\sin(\\omega t)$ is largest at the turning points.', 'Die Beschleunigung $a(t) = -A\\omega^2\\cdot\\sin(\\omega t)$ ist an den Umkehrpunkten am grössten.')) +
+      step(L('The largest acceleration', 'Die grösste Beschleunigung'), p$(L('The acceleration $a(t) = -A\\omega^2\\cdot\\cos(\\omega t)$ is largest in size at the turning points.', 'Die Beschleunigung $a(t) = -A\\omega^2\\cdot\\cos(\\omega t)$ ist dem Betrag nach an den Umkehrpunkten am grössten.')) +
         `$$\\hat a = A\\,\\omega^2 = ${tq(p.A, 'm')}\\cdot (${W(p.w)})^2 = ${res(tq(v.amax, 'm/s²'))}$$`, ['top']),
     ],
     figure: (p, v, view) => (view.task ? '' : xGraph(p, { dots: [...peaks(p, view, 'eq'), ...peaks(p, view, 'top')] })),
@@ -389,8 +390,9 @@
   };
 
   // ================================================================ 4 amplitude, period and phase
-  // y(t) = A·sin(ωt + φ₀), −π < φ₀ ≤ π; the graph with numbers: A, T and φ₀ to read off.
-  // ★3: φ₀ a multiple of π/2; ★4: of π/4 (from y(0) = A·sin φ₀ and the direction at t = 0).
+  // y(t) = A·cos(ωt − φ₀), −π < φ₀ ≤ π; the graph with numbers: A, T and φ₀ to read off.
+  // ★3: φ₀ a multiple of π/2; ★4: of π/4 (from y(0) = A·cos φ₀ and the direction at t = 0: y
+  // rises where sin φ₀ > 0). The first crest is at t = φ₀/ω (modulo T).
   const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));
   // k·π/4 as TeX
   function piTex(k) {
@@ -408,42 +410,42 @@
       make: (r) => ({ A: pick(r, RA), T: pick(r, RT), k: pick(r, ks) }),
       solve: (p, o = {}) => {
         const phi = (p.k * Math.PI) / 4;
-        return { A: (o.peak ? 2 : 1) * p.A / 100, T: o.half ? p.T / 2 : p.T, phi: o.sign ? -phi : o.cos ? phi - Math.PI / 2 : o.deg ? (phi * 180) / Math.PI : phi };
+        return { A: (o.peak ? 2 : 1) * p.A / 100, T: o.half ? p.T / 2 : p.T, phi: o.sign ? -phi : o.sin ? Math.PI / 2 - phi : o.deg ? (phi * 180) / Math.PI : phi };
       },
-      traps: ['peak', 'half', 'sign', 'cos', 'deg'],
+      traps: ['peak', 'half', 'sign', 'sin', 'deg'],
       why: {
         peak: () => L('That is the distance from the highest to the lowest point: 2A. The amplitude is the largest displacement from the equilibrium.', 'Das ist der Abstand vom höchsten zum tiefsten Punkt: 2A. Die Amplitude ist die grösste Auslenkung aus der Gleichgewichtslage.'),
         half: () => L('That is only half a period, from a crest to a trough. One period goes from a crest to the next crest.', 'Das ist nur eine halbe Periode, von einem Berg zu einem Tal. Eine Periode geht von einem Berg zum nächsten Berg.'),
-        sign: () => L('Check the direction at t = 0: does y increase or decrease there? sin(ωt + φ₀) increases where the cosine of the phase is positive.', 'Prüfe die Richtung bei t = 0: Nimmt y dort zu oder ab? sin(ωt + φ₀) nimmt zu, wo der Kosinus der Phase positiv ist.'),
-        cos: () => L('That would be the phase for y(t) = A·cos(ωt + φ₀). Here the sine is asked for: sin(ωt + φ₀).', 'Das wäre die Phase für y(t) = A·cos(ωt + φ₀). Hier ist der Sinus gefragt: sin(ωt + φ₀).'),
+        sign: () => L('Check the sign: with y(t) = A·cos(ωt − φ₀), the first crest comes at t = φ₀/ω, so φ₀ > 0 means the graph is shifted to the right (y rises at t = 0).', 'Prüfe das Vorzeichen: Mit y(t) = A·cos(ωt − φ₀) kommt der erste Berg bei t = φ₀/ω, φ₀ > 0 heisst also: Der Graph ist nach rechts verschoben (y steigt bei t = 0).'),
+        sin: () => L('That would be the phase for y(t) = A·sin(ωt + φ). Here the cosine is asked for: A·cos(ωt − φ₀).', 'Das wäre die Phase für y(t) = A·sin(ωt + φ). Hier ist der Kosinus gefragt: A·cos(ωt − φ₀).'),
         deg: () => L('That is in degrees. The phase is asked in radians: 90° = π/2.', 'Das ist in Grad. Die Phase ist im Bogenmass gefragt: 90° = π/2.'),
       },
       fields: (p) => [num$('A', 'A', 'cm', L('amplitude', 'Amplitude')), num$('T', 'T', 's', L('period', 'Periode')),
         { ...num$('phi', '\\varphi_0', 'rad', L('phase', 'Phase'), true), phase: true, show: piTex(p.k) }],
-      text: () => L('The graph shows a harmonic oscillation. Write it as y(t) = A·sin(ωt + φ₀) with −π &lt; φ₀ ≤ π: what are the amplitude A, the period T and the phase φ₀? (Type the phase as pi/2, -3pi/4, …)',
-        'Der Graph zeigt eine harmonische Schwingung. Schreib sie als y(t) = A·sin(ωt + φ₀) mit −π &lt; φ₀ ≤ π: Wie gross sind die Amplitude A, die Periode T und die Phase φ₀? (Tippe die Phase als pi/2, -3pi/4, …)'),
+      text: () => L('The graph shows a harmonic oscillation. Write it as y(t) = A·cos(ωt − φ₀) with −π &lt; φ₀ ≤ π: what are the amplitude A, the period T and the phase φ₀? (Type the phase as pi/2, -3pi/4, …)',
+        'Der Graph zeigt eine harmonische Schwingung. Schreib sie als y(t) = A·cos(ωt − φ₀) mit −π &lt; φ₀ ≤ π: Wie gross sind die Amplitude A, die Periode T und die Phase φ₀? (Tippe die Phase als pi/2, -3pi/4, …)'),
       hints: (p) => [
         L('The amplitude is the largest displacement from the equilibrium (the line y = 0).', 'Die Amplitude ist die grösste Auslenkung aus der Gleichgewichtslage (der Linie y = 0).'),
         L('The period is the time from one crest to the next.', 'Die Periode ist die Zeit von einem Berg zum nächsten.'),
-        L('At t = 0: y(0) = A·sin φ₀, and y increases if cos φ₀ > 0, decreases if cos φ₀ < 0.', 'Bei t = 0: y(0) = A·sin φ₀, und y nimmt zu, wenn cos φ₀ > 0, ab, wenn cos φ₀ < 0.'),
+        L('At t = 0: y(0) = A·cos φ₀, and y increases if sin φ₀ > 0, decreases if sin φ₀ < 0. (Or: the first crest is at t = φ₀/ω.)', 'Bei t = 0: y(0) = A·cos φ₀, und y nimmt zu, wenn sin φ₀ > 0, ab, wenn sin φ₀ < 0. (Oder: Der erste Berg ist bei t = φ₀/ω.)'),
       ],
       steps: (p) => {
-        const phi = (p.k * Math.PI) / 4, x0 = p.A * Math.sin(phi), up = Math.cos(phi) > 1e-9, down = Math.cos(phi) < -1e-9;
-        const tc = (((Math.PI / 2 - phi) / (2 * Math.PI)) % 1 + 1) % 1 * p.T; // the first crest
+        const phi = (p.k * Math.PI) / 4, c0 = Math.abs(Math.cos(phi)) < 1e-9 ? 0 : Math.cos(phi), x0 = p.A * c0, up = Math.sin(phi) > 1e-9, down = Math.sin(phi) < -1e-9;
         return [
           step(L('The amplitude', 'Die Amplitude'), p$(L(`The largest displacement from y = 0: <span class="result">A = ${num(p.A)} cm</span>.`, `Die grösste Auslenkung aus y = 0: <span class="result">A = ${num(p.A)} cm</span>.`)), ['crest']),
           step(L('The period', 'Die Periode'), p$(L(`From one crest to the next: <span class="result">T = ${num(p.T)} s</span> (so ω = 2π/T = ${num(PI2 / p.T)} s⁻¹).`, `Von einem Berg zum nächsten: <span class="result">T = ${num(p.T)} s</span> (also ω = 2π/T = ${num(PI2 / p.T)} s⁻¹).`)), ['period']),
-          step(L('The phase', 'Die Phase'), p$(L(`At t = 0 the graph is at y(0) = ${num(sig(x0, 2))} cm${up ? ' and rising' : down ? ' and falling' : p.k === 2 ? ', a crest' : ', a trough'}. So sin φ₀ = y(0)/A = ${num(sig(x0 / p.A, 2))}${up ? ' with cos φ₀ > 0' : down ? ' with cos φ₀ < 0' : ''}:`,
-            `Bei t = 0 ist der Graph bei y(0) = ${num(sig(x0, 2))} cm${up ? ' und steigt' : down ? ' und fällt' : p.k === 2 ? ', ein Berg' : ', ein Tal'}. Also sin φ₀ = y(0)/A = ${num(sig(x0 / p.A, 2))}${up ? ' mit cos φ₀ > 0' : down ? ' mit cos φ₀ < 0' : ''}:`)) +
-            `$$\\varphi_0 = ${res(piTex(p.k))},\\qquad y(t) = ${num(p.A)}\\,\\mathrm{cm}\\cdot\\sin\\!\\left(\\frac{2\\pi}{${num(p.T)}\\,\\mathrm{s}}\\,t ${p.k ? (p.k > 0 ? '+' : '-') + ' ' + piTex(Math.abs(p.k)) : ''}\\right)$$`, ['start']),
+          step(L('The phase', 'Die Phase'), p$(L(`At t = 0 the graph is at y(0) = ${num(sig(x0, 2))} cm${up ? ' and rising' : down ? ' and falling' : p.k === 0 ? ', a crest' : ', a trough'}. So cos φ₀ = y(0)/A = ${num(sig(x0 / p.A, 2))}${up ? ' with sin φ₀ > 0' : down ? ' with sin φ₀ < 0' : ''}:`,
+            `Bei t = 0 ist der Graph bei y(0) = ${num(sig(x0, 2))} cm${up ? ' und steigt' : down ? ' und fällt' : p.k === 0 ? ', ein Berg' : ', ein Tal'}. Also cos φ₀ = y(0)/A = ${num(sig(x0 / p.A, 2))}${up ? ' mit sin φ₀ > 0' : down ? ' mit sin φ₀ < 0' : ''}:`)) +
+            `$$\\varphi_0 = ${res(piTex(p.k))},\\qquad y(t) = ${num(p.A)}\\,\\mathrm{cm}\\cdot\\cos\\!\\left(\\frac{2\\pi}{${num(p.T)}\\,\\mathrm{s}}\\,t ${p.k ? (p.k > 0 ? '-' : '+') + ' ' + piTex(Math.abs(p.k)) : ''}\\right)$$` +
+            p$(L('Check: the crests come at t = φ₀/ω + n·T: the graph is the cosine shifted to the right by φ₀/ω (to the left if φ₀ < 0).', 'Kontrolle: Die Berge kommen bei t = φ₀/ω + n·T: Der Graph ist der Kosinus, um φ₀/ω nach rechts verschoben (nach links, wenn φ₀ < 0).')), ['start', 'crest']),
         ];
       },
       figure: (p, v, view) => {
         const phi = (p.k * Math.PI) / 4, tEnd = 2 * p.T, sh = view.show || new Set();
-        const pts = Array.from({ length: 241 }, (z, j) => { const t = (j * tEnd) / 240; return [t, p.A * Math.sin((PI2 * t) / p.T + phi)]; });
-        const tc = ((((Math.PI / 2 - phi) / PI2) % 1) + 1) % 1 * p.T;
+        const pts = Array.from({ length: 241 }, (z, j) => { const t = (j * tEnd) / 240; return [t, p.A * Math.cos((PI2 * t) / p.T - phi)]; });
+        const tc = (((phi / PI2) % 1) + 1) % 1 * p.T; // the first crest
         return `<div class="fig">${Plot.graph([{ pts }], { tEnd, tStep: tickFor(p.T), name: 'y', unit: 'cm', axis: Plot.niceAxis([-p.A * 1.15, p.A * 1.15]),
-          dots: [...(sh.has('crest') ? [[tc, p.A]] : []), ...(sh.has('start') ? [[0, p.A * Math.sin(phi)]] : [])], marks: sh.has('period') ? [tc, tc + p.T].filter((t) => t <= tEnd + 1e-9) : [],
+          dots: [...(sh.has('crest') ? [[tc, p.A]] : []), ...(sh.has('start') ? [[0, p.A * Math.cos(phi)]] : [])], marks: sh.has('period') ? [tc, tc + p.T].filter((t) => t <= tEnd + 1e-9) : [],
           label: L('Displacement against time', 'Auslenkung gegen die Zeit') })}</div>`;
       },
     };
@@ -452,7 +454,7 @@
   const read4 = readScenario('read-4', 4, [1, 3, -1, -3]);
 
   // ================================================================ 5 where on the graph
-  // y(t) = A·sin(ωt) with four named points; one question, one point the answer.
+  // y(t) = A·sin(ωt) (no formula shown) with four named points; one question, one point the answer.
   const PTS = ['P', 'Q', 'R', 'S'];
   const ASK = {
     vmax: { q: () => L('At which point is the body fastest?', 'In welchem Punkt ist der Körper am schnellsten?'), ok: (u) => Math.abs(Math.cos(PI2 * u)) > 0.999 },

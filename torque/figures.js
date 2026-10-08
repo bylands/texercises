@@ -139,7 +139,7 @@
       rect(0, y + 34, sup + 30, 106, 'tb-concrete') + rect(sup + 30, 170, 430 - sup - 30, 80, 'tb-water') + path(`M${sup + 30} 170 H430`, 'tb-surface') +
       rect(x0 - 6, y + 5, 16, 29, 'tb-dark') + rect(sup - 7, y + 5, 14, 29, 'tb-dark') +
       rect(x0 - 8, y - 5, 290, 10, 'tb-metal', 3) + circle(x0 + 2, y, 3.5, 'tb-line-fill') +
-      person(tip - 10, y - 5, 1.2, { shirt: 'red', hands: [[tip - 20, y - 86], [tip, y - 86]] }) +
+      person(tip - 10, y - 5, 1.2, { shirt: 'red', hands: [[tip - 18, y - 112], [tip - 2, y - 112]] }) +
       dim([x0, y + 12], [sup, y + 12], sym('b'), -1) + dim([x0, y - 40], [tip, y - 40], sym('ℓ'), 0) +
       text(x0 + 2, y - 12, L('bolt', 'Bolzen'), 'tb-label', 'start'),
       L('A diving board held by a bolt and resting on a support, a diver at its tip', 'Ein Sprungbrett, mit einem Bolzen befestigt und auf einer Stütze aufliegend, ein Springer an der Spitze'));
@@ -147,19 +147,22 @@
 
   // ---------------------------------------------------------------- 10 the tilt test of a bus
   function bus(p) {
-    const { svg, path, rect, circle, dim, sym, text, poly } = F();
-    const th = rad(22), o = [40, 232], s = 52, W = p.w * s, Hh = 3 * s, u = [Math.cos(th), -Math.sin(th)], n = [Math.sin(th), Math.cos(th)];
-    const P = (a, b) => [o[0] + 110 * u[0] + a * u[0] - b * n[0], o[1] + 110 * u[1] + a * u[1] - b * n[1]];
-    const body = [P(0, 14), P(W, 14), P(W, Hh), P(0, Hh)].map((q) => q.map((v) => +v.toFixed(1)));
-    const com = P(W / 2, p.h * s);
+    const { svg, path, rect, circle, dim, sym, text, poly, line } = F();
+    // the bus seen from behind, drawn upright on the platform's surface (y = 0 there, x along it),
+    // then turned with the platform by θ about the platform's lowest corner
+    const th = 22, t = rad(th), o = [40, 232], s = 52, W = p.w * s, Hh = 2.9 * s, x0 = 120;
+    const toWorld = (a, b) => [o[0] + a * Math.cos(t) + b * Math.sin(t), o[1] - a * Math.sin(t) + b * Math.cos(t)]; // (along, down) → screen
+    const com = toWorld(x0 + W / 2, -p.h * s), foot = [com[0], o[1]];
+    const tyre = (a) => rect(a, -30, 22, 30, 'tb-tyre', 5);
+    const upright = rect(x0 - 6, -Hh, W + 12, Hh - 24, 'tb-yellow', 8) + rect(x0 + 6, -Hh + 12, W - 12, 50, 'tb-glass', 4) +
+      rect(x0 + 2, -44, 18, 10, 'tb-red', 2) + rect(x0 + W - 20, -44, 18, 10, 'tb-red', 2) + rect(x0 + W / 2 - 18, -42, 36, 10, 'tb-concrete', 2) +
+      rect(x0 - 8, -30, W + 16, 8, 'tb-dark', 3) + tyre(x0) + tyre(x0 + W - 22);
+    const dims = dim(toWorld(x0 + 11, 0), toWorld(x0 + W - 11, 0), sym('w'), -20) + dim(toWorld(x0 + W / 2, 0), com, sym('h'), -16);
     return svg(430, 250,
-      poly([o, [o[0] + 360 * u[0], o[1] + 360 * u[1]], [o[0] + 360 * u[0], o[1]]], 'tb-concrete') +
-      poly(body, 'tb-yellow') + poly([P(12, Hh - 12), P(W - 12, Hh - 12), P(W - 12, Hh - 52), P(12, Hh - 52)], 'tb-glass') +
-      circle(...P(16, 14), 13, 'tb-tyre') + circle(...P(W - 16, 14), 13, 'tb-tyre') +
-      circle(com[0], com[1], 7, 'tb-com') + path(`M${com[0] - 7} ${com[1]} h14 M${com[0]} ${com[1] - 7} v14`, 'tb-line') +
-      path(`M${com[0]} ${com[1]} V${o[1]}`, 'tb-ghost') +
-      dim(P(0, 0), P(W, 0), sym('w'), -18) + dim(P(W / 2, 0), com, sym('h'), -14) +
-      path(`M${o[0] + 60} ${o[1]} A60 60 0 0 0 ${o[0] + 60 * u[0]} ${o[1] + 60 * u[1]}`, 'tb-line') + text(o[0] + 70, o[1] - 8, 'θ', 'tb-label', 'start'),
+      poly([o, [o[0] + 360 * Math.cos(t), o[1] - 360 * Math.sin(t)], [o[0] + 360 * Math.cos(t), o[1]]], 'tb-concrete') +
+      `<g transform="rotate(${-th} ${o[0]} ${o[1]}) translate(${o[0]} ${o[1]})">${upright}</g>` +
+      circle(com[0], com[1], 7, 'tb-com') + path(`M${com[0] - 7} ${com[1]} h14 M${com[0]} ${com[1] - 7} v14`, 'tb-line') + line(com[0], com[1] + 7, foot[0], foot[1], 'tb-ghost') +
+      dims + path(`M${o[0] + 60} ${o[1]} A60 60 0 0 0 ${o[0] + 60 * Math.cos(t)} ${o[1] - 60 * Math.sin(t)}`, 'tb-line') + text(o[0] + 70, o[1] - 8, 'θ', 'tb-label', 'start'),
       L('A bus on a tilted platform, seen from behind, with its centre of mass', 'Ein Bus auf einer geneigten Plattform, von hinten gesehen, mit seinem Schwerpunkt'));
   }
 

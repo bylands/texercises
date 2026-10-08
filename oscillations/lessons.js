@@ -26,10 +26,10 @@
       idea: { en: 'Read the form of the equation: an oscillation needs ÿ = −ω²·y; a term with ẏ damps or drives it, a constant shifts the equilibrium, a plus sign or only ẏ gives no oscillation.', de: 'Lies die Form der Gleichung: Eine Schwingung braucht ÿ = −ω²·y; ein Term mit ẏ dämpft oder treibt sie an, eine Konstante verschiebt die Gleichgewichtslage, ein Pluszeichen oder nur ẏ gibt keine Schwingung.' },
     },
     {
-      scenario: 'read-3', p: { A: 3, T: 2, k: 2 },
+      scenario: 'read-3', p: { A: 3, T: 2, k: -2 },
       practice: [{ types: ['read-3'] }, { en: 'phases in steps of π/4', de: 'Phasen in Schritten von π/4', types: ['read-4'] }],
       name: { en: 'Amplitude, period and phase', de: 'Amplitude, Periode und Phase' },
-      idea: { en: 'y(t) = A·sin(ωt + φ₀): the amplitude is the largest displacement, the period the time from crest to crest, and the phase follows from y(0) = A·sin φ₀ and the direction at t = 0.', de: 'y(t) = A·sin(ωt + φ₀): Die Amplitude ist die grösste Auslenkung, die Periode die Zeit von Berg zu Berg, und die Phase folgt aus y(0) = A·sin φ₀ und der Richtung bei t = 0.' },
+      idea: { en: 'y(t) = A·cos(ωt − φ₀): the amplitude is the largest displacement, the period the time from crest to crest, and the phase φ₀ = ω·t₁, where t₁ is the time of the first crest.', de: 'y(t) = A·cos(ωt − φ₀): Die Amplitude ist die grösste Auslenkung, die Periode die Zeit von Berg zu Berg, und die Phase ist φ₀ = ω·t₁, wobei t₁ die Zeit des ersten Bergs ist.' },
     },
     {
       scenario: 'points', p: { ask: 'aplus', us: [0.25, 0.625, 1, 1.375] },
@@ -41,7 +41,7 @@
       scenario: 'vmax', p: { A: 0.02, w: 4 },
       practice: [{ types: ['vmax'] }, { en: 'the other way round', de: 'umgekehrt', types: ['back-w', 'back-A'] }],
       name: { en: 'Fastest and strongest', de: 'Am schnellsten, am stärksten' },
-      idea: { en: 'y = A·sin(ωt): the velocity A·ω·cos(ωt) is largest at the equilibrium, v̂ = A·ω; the acceleration −A·ω²·sin(ωt) at the turning points, â = A·ω².', de: 'y = A·sin(ωt): Die Geschwindigkeit A·ω·cos(ωt) ist in der Gleichgewichtslage am grössten, v̂ = A·ω; die Beschleunigung −A·ω²·sin(ωt) an den Umkehrpunkten, â = A·ω².' },
+      idea: { en: 'y = A·cos(ωt): the velocity −A·ω·sin(ωt) is largest at the equilibrium, v̂ = A·ω; the acceleration −A·ω²·cos(ωt) at the turning points, â = A·ω².', de: 'y = A·cos(ωt): Die Geschwindigkeit −A·ω·sin(ωt) ist in der Gleichgewichtslage am grössten, v̂ = A·ω; die Beschleunigung −A·ω²·cos(ωt) an den Umkehrpunkten, â = A·ω².' },
     },
     {
       scenario: 'energy', p: { kind: 'share', k: [1, 2] },

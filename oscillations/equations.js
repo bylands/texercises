@@ -1,6 +1,6 @@
 // Equations of motion and their solutions: which of them describe a simple harmonic motion (SHM),
 // as on the worksheet "S2 Charakteristische Differentialgleichung". An SHM is a motion
-// y(t) = A·cos(ω·t + φ₀) (around an equilibrium, which may be shifted); its equation of motion
+// y(t) = A·cos(ω·t − φ₀) (around an equilibrium, which may be shifted); its equation of motion
 // can be brought into the form ÿ = −ω²·y (or ÿ = −ω²·(y − y₀)), and its period is T = 2π/ω.
 // Every form of equation has
 //   { id, kind: 'ode' | 'sol', level (★1–3), shm, tex(s) (KaTeX, s: the symbols, see symbols()),
@@ -112,7 +112,7 @@
     { id: 'sinphi', kind: 'sol', level: 2, shm: true, noVar: '\\varphi', tex: (s) => `${s.Yt} = A\\cdot\\sin(${s.c}\\cdot t + \\varphi_0)`,
       std: (s) => `${s.y}(t) = A\\cdot\\sin(\\omega\\, t + \\varphi_0)`, w: (s) => s.c, T: T_SOL, period: (P) => (2 * Math.PI) / P.c, motion: (P) => ({ sol: (t) => P.A * sin(P.c * t + P.phi) }) },
     { id: 'c1c2', kind: 'sol', level: 2, shm: true, tex: (s) => `${s.Yt} = C_1\\cdot\\cos(${s.c}\\cdot t) - C_2\\cdot\\sin(${s.c}\\cdot t)`,
-      std: (s) => `${s.y}(t) = A\\cdot\\cos(\\omega\\, t + \\varphi_0)`, w: (s) => s.c, T: T_SOL, period: (P) => (2 * Math.PI) / P.c, motion: (P) => ({ sol: (t) => P.C1 * cos(P.c * t) - P.C2 * sin(P.c * t) }) },
+      std: (s) => `${s.y}(t) = A\\cdot\\cos(\\omega\\, t - \\varphi_0)`, w: (s) => s.c, T: T_SOL, period: (P) => (2 * Math.PI) / P.c, motion: (P) => ({ sol: (t) => P.C1 * cos(P.c * t) - P.C2 * sin(P.c * t) }) },
     { id: 'Tform', kind: 'sol', level: 2, shm: true, tex: (s) => `${s.Yt} = A\\cdot\\cos\\!\\left(\\frac{2\\pi\\, t}{${s.c}}\\right)`,
       std: (s) => `${s.y}(t) = A\\cdot\\cos(\\omega\\, t)`, w: (s) => `\\frac{2\\pi}{${s.c}}`,
       T: (s) => [s.c, [`\\frac{2\\pi}{${s.c}}`, 'omegaT'], [`2\\pi\\cdot ${s.c}`, 'inverse'], [`\\frac{${s.c}}{2\\pi}`, 'freq']],

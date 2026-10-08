@@ -17,12 +17,12 @@
   const wT$ = (T) => `\\omega = \\frac{2\\pi}{T} = \\frac{2\\pi}{${tq(T, 's')}} = ${tnum(PI2 / T)}\\,\\mathrm{s^{-1}}`;
   const vmax$ = (Am, w, u) => `\\hat v = A\\,\\omega = ${tq(Am, 'm')}\\cdot ${tnum(w)}\\,\\mathrm{s^{-1}} = ${res(tq(Am * w, u))}`;
   const amax$ = (Am, w) => `\\hat a = A\\,\\omega^2 = ${tq(Am, 'm')}\\cdot (${tnum(w)}\\,\\mathrm{s^{-1}})^2 = ${res(tq(Am * w * w, 'm/s²'))}`;
-  const HINT_MAX = () => L('From $y = A\\sin(\\omega t)$: $\\hat v = A\\,\\omega$ and $\\hat a = A\\,\\omega^2$, with $\\omega = 2\\pi f = 2\\pi/T$.', 'Aus $y = A\\sin(\\omega t)$: $\\hat v = A\\,\\omega$ und $\\hat a = A\\,\\omega^2$, mit $\\omega = 2\\pi f = 2\\pi/T$.');
+  const HINT_MAX = () => L('From $y = A\\cos(\\omega t)$: $\\hat v = A\\,\\omega$ and $\\hat a = A\\,\\omega^2$, with $\\omega = 2\\pi f = 2\\pi/T$.', 'Aus $y = A\\cos(\\omega t)$: $\\hat v = A\\,\\omega$ und $\\hat a = A\\,\\omega^2$, mit $\\omega = 2\\pi f = 2\\pi/T$.');
   const HINT_SI = () => L('Lengths in metres, times in seconds.', 'Längen in Metern, Zeiten in Sekunden.');
   // the displacement against time, two periods, with the times of the solution marked
   function xfig(Am, T, o = {}) {
     const u = Am >= 0.1 ? 'm' : Am >= 1e-3 ? (Am >= 0.01 ? 'cm' : 'mm') : 'pm', k = OC.UNITS[u][0], Au = Am / k;
-    const pts = Array.from({ length: 201 }, (z, j) => { const t = (j * 2 * T) / 200; return [t / T, Au * Math.sin((PI2 * t) / T)]; });
+    const pts = Array.from({ length: 201 }, (z, j) => { const t = (j * 2 * T) / 200; return [t / T, Au * Math.cos((PI2 * t) / T)]; });
     return `<div class="fig">${Plot.graph([{ pts }], { tEnd: 2, tStep: 0.5, name: 'y', unit: u, axis: Plot.niceAxis([-Au * 1.05, Au * 1.05]), label: L('Displacement against time (t in periods)', 'Auslenkung gegen die Zeit (t in Perioden)'), dots: (o.dots || []).map(([t, x]) => [t / T, x / k]), tLabel: '<tspan class="it">t</tspan> / <tspan class="it">T</tspan>' })}</div>`;
   }
 

@@ -83,30 +83,48 @@
     return path(body, `tb-body${o.cls ? ` ${o.cls}` : ''}`) + path(glass, 'tb-glass') + path(`M${X(216)} ${Y(112)} V${Y(146)}`, 'tb-trim') +
       (o.noWheels ? '' : wheel(x0 + 58 * k, wy, 24 * k) + wheel(x0 + 242 * k, wy, 24 * k));
   }
-  // a limb: an outlined thick polyline through pts
-  const limb = (pts, w, cls) => { const d = `M${pts.map((p) => `${f(p[0])} ${f(p[1])}`).join(' L')}`; return path(d, 'tb-limb-out', ` style="stroke-width:${f(w + 2.4)}"`) + path(d, `tb-limb ${cls}`, ` style="stroke-width:${f(w)}"`); };
+  // limbs: segments [[a, b, w], …] drawn as one outlined shape: all outlines first, then all fills,
+  // so the joints are seamless and round
+  const limbs = (segs, cls) => {
+    const d = (a, b) => `M${f(a[0])} ${f(a[1])} L${f(b[0])} ${f(b[1])}`;
+    return segs.map(([a, b, w]) => path(d(a, b), 'tb-limb-out', ` style="stroke-width:${f(w + 2.2)}"`)).join('') +
+      segs.map(([a, b, w]) => path(d(a, b), `tb-limb ${cls}`, ` style="stroke-width:${f(w)}"`)).join('');
+  };
+  const limb = (pts, w, cls) => limbs(pts.slice(1).map((p, i) => [pts[i], p, w]), cls);
   // a person standing at (x, y) (between the feet), about 80·s px tall, facing o.dir (1 right,
-  // −1 left); o.hands: where the two hands are, o.lean: the upper body leaning forward (px),
-  // o.knee: the knees bent forward (px), o.step: the feet apart (px), o.shirt: a tint class
+  // −1 left); o.hands: where the two hands are (the back one first), o.lean: the upper body leaning
+  // forward (px), o.knee: the knees bent forward (px), o.step: the feet apart (px), o.shirt: a tint
   function person(x, y, s = 1, o = {}) {
-    const k = (v) => v * s, d = o.dir || 1, lean = (o.lean || 0) * s * d, knee = (o.knee || 0) * s * d, st = (o.step || 6) * s;
-    const hip = [x + lean * 0.3, y - k(38)], sh = [x + lean, y - k(62)], neck = [sh[0], sh[1] - k(4)];
-    const feet = [[x - st, y], [x + st, y]], knees = feet.map((p) => [(p[0] + hip[0]) / 2 + knee, (p[1] + hip[1]) / 2]);
-    const hands = o.hands || [[sh[0] - k(6), sh[1] + k(26)], [sh[0] + k(6), sh[1] + k(26)]];
-    const elbow = (h) => [(sh[0] + h[0]) / 2 + (h[1] > sh[1] + k(8) ? -d * k(2) : 0), (sh[1] + h[1]) / 2 + k(3)];
+    const k = (v) => v * s, d = o.dir || 1, lean = (o.lean || 0) * s * d, knee = (o.knee || 0) * s * d, st = (o.step || 4.5) * s;
+    const hip = [x + lean * 0.25, y - k(40)], sh = [x + lean, y - k(62)], head = [sh[0] + d * k(1.2), sh[1] - k(10.5)];
+    const feet = [[x - st, y - k(2.5)], [x + st, y - k(2.5)]], hips = [[hip[0] - k(2.6), hip[1]], [hip[0] + k(2.6), hip[1]]];
+    const knees = feet.map((p, i) => [(p[0] + hips[i][0]) / 2 + knee, (p[1] + hips[i][1]) / 2]);
+    const shs = [[sh[0] - d * k(5.5), sh[1] + k(2.5)], [sh[0] + d * k(5.5), sh[1] + k(2.5)]];
+    const hands = o.hands || [[sh[0] - d * k(5), sh[1] + k(28)], [sh[0] + d * k(5), sh[1] + k(28)]];
+    // the elbow: where an arm of two equal halves (13.5 each) bends; a raised arm bends outwards
+    // (away from the body), a lowered one slightly backwards
+    const elbow = (a, h) => {
+      const m = [(a[0] + h[0]) / 2, (a[1] + h[1]) / 2], L0 = Math.hypot(h[0] - a[0], h[1] - a[1]) || 1, bend = Math.sqrt(Math.max(0, k(13.5) ** 2 - (L0 / 2) ** 2));
+      const n = [-(h[1] - a[1]) / L0, (h[0] - a[0]) / L0], e1 = [m[0] + n[0] * bend, m[1] + n[1] * bend], e2 = [m[0] - n[0] * bend, m[1] - n[1] * bend];
+      if (h[1] < a[1] + k(4)) return Math.abs(e1[0] - sh[0]) > Math.abs(e2[0] - sh[0]) ? e1 : e2;
+      return (e1[0] - e2[0]) * d < 0 ? e1 : e2;
+    };
     const shirt = `tb-shirt ${o.shirt || 'blue'}`;
-    const torso = `M${f(hip[0] - k(7))} ${f(hip[1] + k(2))} Q${f(sh[0] - k(9))} ${f(sh[1] + k(12))} ${f(sh[0] - k(8))} ${f(sh[1] + k(2))} Q${f(sh[0])} ${f(sh[1] - k(3))} ${f(sh[0] + k(8))} ${f(sh[1] + k(2))} Q${f(sh[0] + k(9))} ${f(sh[1] + k(12))} ${f(hip[0] + k(7))} ${f(hip[1] + k(2))} Z`;
-    return limb([feet[0], knees[0], hip], k(6.5), 'tb-trousers') + limb([feet[1], knees[1], hip], k(6.5), 'tb-trousers') +
-      feet.map((p) => `<ellipse class="tb-shoe" cx="${f(p[0] + d * k(3))}" cy="${f(p[1] - k(1.6))}" rx="${f(k(5))}" ry="${f(k(2.4))}"/>`).join('') +
-      limb([[sh[0] - d * k(5), sh[1] + k(3)], elbow(hands[0]), hands[0]], k(5), shirt) +
-      path(torso, shirt) +
-      limb([[sh[0] + d * k(5), sh[1] + k(3)], elbow(hands[1]), hands[1]], k(5), shirt) +
-      hands.map((h) => circle(h[0], h[1], k(2.8), 'tb-skin')).join('') +
-      circle(neck[0] + d * k(1), neck[1] - k(7), k(8), 'tb-skin') +
-      path(`M${f(neck[0] + d * k(1) - k(8))} ${f(neck[1] - k(8))} A${f(k(8))} ${f(k(8))} 0 0 1 ${f(neck[0] + d * k(1) + k(8))} ${f(neck[1] - k(8))} Q${f(neck[0])} ${f(neck[1] - k(12))} ${f(neck[0] + d * k(1) - k(8))} ${f(neck[1] - k(8))} Z`, 'tb-hair');
+    const torso = `M${f(hip[0] - k(6))} ${f(hip[1] + k(2))} C${f(hip[0] - k(6.5))} ${f(hip[1] - k(8))} ${f(sh[0] - k(8.5))} ${f(sh[1] + k(9))} ${f(sh[0] - k(7.5))} ${f(sh[1] + k(2))} ` +
+      `Q${f(sh[0] - k(6))} ${f(sh[1] - k(1.5))} ${f(sh[0])} ${f(sh[1] - k(1.5))} Q${f(sh[0] + k(6))} ${f(sh[1] - k(1.5))} ${f(sh[0] + k(7.5))} ${f(sh[1] + k(2))} ` +
+      `C${f(sh[0] + k(8.5))} ${f(sh[1] + k(9))} ${f(hip[0] + k(6.5))} ${f(hip[1] - k(8))} ${f(hip[0] + k(6))} ${f(hip[1] + k(2))} Z`;
+    const shoe = (p) => path(`M${f(p[0] - d * k(3))} ${f(y)} L${f(p[0] - d * k(3))} ${f(y - k(3))} Q${f(p[0] + d * k(2))} ${f(y - k(4.4))} ${f(p[0] + d * k(6))} ${f(y - k(1.6))} Q${f(p[0] + d * k(7))} ${f(y)} ${f(p[0] + d * k(5))} ${f(y)} Z`, 'tb-shoe');
+    const arm = (i) => { const e = elbow(shs[i], hands[i]); return limbs([[shs[i], e, k(4.6)], [e, hands[i], k(3.8)]], shirt) + circle(hands[i][0], hands[i][1], k(2.5), 'tb-skin'); };
+    const hair = `M${f(head[0] - k(6.4))} ${f(head[1] + k(0.5))} A${f(k(6.5))} ${f(k(6.5))} 0 0 1 ${f(head[0] + k(6.4))} ${f(head[1] - k(0.5))} ` +
+      `Q${f(head[0] + d * k(1))} ${f(head[1] - k(3.6))} ${f(head[0] - d * k(4))} ${f(head[1] - k(2.4))} L${f(head[0] - d * k(6.4))} ${f(head[1] + k(3))} Z`;
+    return arm(0) +
+      limbs([[hips[0], knees[0], k(6.2)], [knees[0], feet[0], k(4.8)], [hips[1], knees[1], k(6.2)], [knees[1], feet[1], k(4.8)]], 'tb-trousers') +
+      feet.map(shoe).join('') + path(torso, shirt) +
+      `<rect class="tb-skin" x="${f(sh[0] - k(1.8))}" y="${f(sh[1] - k(5))}" width="${f(k(3.6))}" height="${f(k(4))}"/>` +
+      circle(head[0], head[1], k(6.5), 'tb-skin') + path(hair, 'tb-hair') + arm(1);
   }
   const tree = (x, y, h) => path(`M${f(x)} ${f(y - h)} L${f(x + h * 0.3)} ${f(y - h * 0.15)} H${f(x - h * 0.3)} Z`, 'tb-tree') + path(`M${f(x)} ${f(y - h * 0.15)} V${f(y)}`, 'tb-trunk');
 
-  root.Fig = { f, svg, path, line, circle, rect, poly, text, sym, motion, force, dim, ground, wall, spring, wheel, car, person, limb, tree };
+  root.Fig = { f, svg, path, line, circle, rect, poly, text, sym, motion, force, dim, ground, wall, spring, wheel, car, person, limb, limbs, tree };
   if (typeof module !== 'undefined') module.exports = root.Fig;
 })(typeof window !== 'undefined' ? window : globalThis);
