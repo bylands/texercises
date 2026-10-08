@@ -17,7 +17,7 @@ DRY=""
 [ "${1:-}" = "--dry-run" ] && DRY="--dry-run"
 
 # local folder:path on the server (the energy app is served at /coe)
-APPS="bulb-brightness circuit-trainer force-concepts force-systems impedance induction-match motion-graphs rl-switch torque coulomb oscillations energy-conservation:coe privacy katex"
+APPS="bulb-brightness circuit-trainer force-concepts force-systems impedance induction-match motion-graphs rl-switch torque coulomb oscillations cyclic-processes energy-conservation:coe privacy katex"
 
 shared/sync.sh --check >/dev/null || { echo "Shared files differ: run shared/sync.sh first." >&2; exit 1; }
 
