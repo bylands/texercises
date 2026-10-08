@@ -1,0 +1,543 @@
+// Wave crests on a rope: the model and the exercises.
+//
+// A crest is a profile P(u) over its length w (u = 0 at its left end), made of straight pieces
+// (LIN: easier, with corners on a grid of 0.5 m and 1 cm, some with jumps as on the worksheet) or
+// smooth (SMOOTH: advanced). A pulse is { sh, x0, dir, v, sgn, rev }: its left end at x0 at t = 0,
+// moving right (dir 1) or left (dir −1) at v, upside down if sgn = −1, reversed (front and back
+// swapped) if rev. It moves without changing: y(x, t) = sgn·P(x − x0 − dir·v·t).
+// A scene is { pulses, end: { x, type: 'fixed' | 'free' } or null, X (the rope from 0 to X) }.
+// A reflection at the end E is the mirror image of the pulse, running towards the rope from
+// behind the end: reversed, at 2E − x, and upside down at a fixed end. On the rope (x ≤ E) the
+// displacement is the sum of the incoming and the reflected pulses: at a fixed end always 0, at a
+// free end twice the incoming one. Units: x in m, y in cm, t in s, v in m/s.
+//
+// The exercises (EXERCISES): each { kind, level, text, fig (the given diagram), anim (an
+// animation of the lead-in, up to the state given), solAnim, questions, hints, solution,
+// difficulty }. Diagrams are specs for plot.js: { axis: 'x' | 't', lo, hi, Y, curves: [{ f, cls }],
+// end, arrows, marks, dots, label }, f a function of x or t. The wrong options come from typical
+// mistakes: the wrong distance or direction, a crest that turns round, a y(t) graph not reversed,
+// the larger instead of the sum, a reflection with the wrong sign or not reversed.
+(function (root) {
+  'use strict';
+
+  const Lang = root.Lang || (typeof require === 'function' ? require('./lang.js') : null);
+  const L = (en, de) => (Lang ? Lang.L(en, de) : en);
+
+  // ---------------------------------------------------------------- random numbers
+  function rng(seed) {
+    let a = seed >>> 0;
+    const next = () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const pick = (arr) => arr[Math.floor(next() * arr.length)];
+    const shuffle = (arr) => { const b = [...arr]; for (let k = b.length - 1; k > 0; k--) { const j = Math.floor(next() * (k + 1)); [b[k], b[j]] = [b[j], b[k]]; } return b; };
+    return { next, pick, shuffle, int: (lo, hi) => lo + Math.floor(next() * (hi - lo + 1)) };
+  }
+  const eq = (a, b) => Math.abs(a - b) < 1e-9;
+  const num = (x) => String(Number(x.toPrecision(3))); // 1.5, 2, 0.25
+
+  // ---------------------------------------------------------------- crests
+  // straight pieces: corners [u, y] (u in m from the left end, y in cm); jumps where u repeats
+  const LIN = {
+    ws: { pts: [[0, 0], [0, 5], [1, 5], [1, 0], [2, -5], [2, 0]] },        // the worksheet's
+    ramp: { pts: [[0, 0], [2, 4], [2, 0]] },
+    stairs: { pts: [[0, 0], [0, 2], [1, 2], [1, 4], [1.5, 4], [1.5, 0]] },
+    tri: { pts: [[0, 0], [0.5, 4], [2.5, 0]], draw: true },
+    trap: { pts: [[0, 0], [0.5, 2], [1.5, 2], [2.5, 0]], draw: true },
+    zig: { pts: [[0, 0], [1, 4], [1.5, 0], [2, -2], [2.5, 0]], draw: true },
+  };
+  for (const s of Object.values(LIN)) { s.w = s.pts[s.pts.length - 1][0]; s.lin = true; }
+  const S2 = (u) => Math.sin(Math.PI * u) ** 2;
+  const SMOOTH = {
+    skew: { w: 2.5, f: (u) => 4 * S2((u / 2.5) ** 0.55) },
+    dip: { w: 3, f: (u) => (u < 1.8 ? 4 * S2(u / 1.8) : -2 * S2((u - 1.8) / 1.2)) },
+    twin: { w: 3, f: (u) => (u < 1.6 ? 4 * S2(u / 1.6) : 2 * S2((u - 1.6) / 1.4)) },
+  };
+  for (const s of Object.values(SMOOTH)) s.lin = false;
+  function prof(sh, u) {
+    if (u < 0 || u > sh.w) return 0;
+    if (!sh.lin) return sh.f(u);
+    const p = sh.pts;
+    for (let i = 0; i < p.length - 1; i++) {
+      const [u0, y0] = p[i], [u1, y1] = p[i + 1];
+      if (u1 > u0 && u >= u0 && u <= u1) return y0 + ((y1 - y0) * (u - u0)) / (u1 - u0);
+    }
+    return 0;
+  }
+
+  // ---------------------------------------------------------------- pulses and scenes
+  const pulse = (sh, x0, dir, v, o = {}) => ({ sh, x0, dir, v, sgn: o.sgn || 1, rev: !!o.rev });
+  const leftAt = (p, t) => p.x0 + p.dir * p.v * t;
+  function ev(p, x, t) {
+    const s = x - leftAt(p, t);
+    if (s < -1e-12 || s > p.sh.w + 1e-12) return 0;
+    return p.sgn * prof(p.sh, p.rev ? p.sh.w - s : s);
+  }
+  // the mirror image of a pulse at the end E: reversed, behind the end, running the other way,
+  // upside down at a fixed end
+  const image = (p, E, type) => ({ ...p, x0: 2 * E - (p.x0 + p.sh.w), dir: -p.dir, rev: !p.rev, sgn: p.sgn * (type === 'fixed' ? -1 : 1) });
+  const images = (sc) => (sc.end ? sc.pulses.map((p) => image(p, sc.end.x, sc.end.type)) : []);
+  // the displacement on the rope: the pulses and their reflections (only for x ≤ E)
+  function y(sc, x, t) {
+    if (sc.end && x > sc.end.x + 1e-9) return 0;
+    let s = 0;
+    for (const p of sc.pulses) s += ev(p, x, t);
+    for (const p of images(sc)) s += ev(p, x, t);
+    return s;
+  }
+  const yIn = (sc, x, t) => (sc.end && x > sc.end.x + 1e-9 ? 0 : sc.pulses.reduce((a, p) => a + ev(p, x, t), 0));
+  const yRef = (sc, x, t) => (sc.end && x > sc.end.x + 1e-9 ? 0 : images(sc).reduce((a, p) => a + ev(p, x, t), 0));
+
+  // ---------------------------------------------------------------- diagrams
+  const X = 8, Y = 6;
+  const snap = (f, o = {}) => ({ axis: 'x', lo: 0, hi: o.hi || X, Y: o.Y || Y, curves: [{ f, cls: o.cls || 'main' }, ...(o.more || [])], end: o.end || null, arrows: o.arrows || [], marks: o.marks || [], dots: o.dots || [], label: o.label || '', virtual: o.virtual });
+  const graphT = (f, T, o = {}) => ({ axis: 't', lo: 0, hi: T, Y: o.Y || Y, curves: [{ f, cls: o.cls || 'main' }, ...(o.more || [])], end: null, arrows: [], marks: o.marks || [], dots: [], label: o.label || '' });
+  const arrowOf = (p, t, o = {}) => ({ x: leftAt(p, t) + p.sh.w / 2, dir: p.dir, v: p.v, up: o.up });
+  const tLabel = (t) => L(`t = ${num(t)} s`, `t = ${num(t)} s`);
+  // a signature of a curve, for telling options apart
+  const sig = (spec) => spec.curves.map((c) => { const out = []; for (let k = 0; k <= 160; k++) out.push(Math.round(c.f(spec.lo + ((spec.hi - spec.lo) * k) / 160) * 4)); return `${c.cls}:${out.join(',')}`; }).join('|') + (spec.end ? spec.end.type : '');
+
+  // Four options from the right diagram and candidates [{ spec, why, tag }]: the first that look
+  // different from all the others.
+  function pickFrom(r, right, cands) {
+    const opts = [{ fig: right, ok: true, why: '' }], seen = new Set([sig(right)]);
+    for (const c of cands) {
+      if (opts.length === 4) break;
+      const s = sig(c.spec);
+      if (seen.has(s)) continue;
+      seen.add(s);
+      opts.push({ fig: c.spec, ok: false, why: c.why, tag: c.tag });
+    }
+    return r.shuffle(opts);
+  }
+
+  // ---------------------------------------------------------------- texts
+  const dirWord = (d) => (d > 0 ? L('to the right', 'nach rechts') : L('to the left', 'nach links'));
+  const endWord = (type) => (type === 'fixed' ? L('a fixed end', 'ein festes Ende') : L('a free end', 'ein loses Ende'));
+  const RULE = {
+    move: () => L('A crest moves without changing its shape: in the time t it moves the distance v·t.', 'Ein Wellenbuckel bewegt sich, ohne seine Form zu ändern: In der Zeit t legt er die Strecke v·t zurück.'),
+    yt: () => L('At a fixed place, the front of the crest arrives first: the y(t) graph shows the crest reversed, front first.', 'An einem festen Ort kommt die Front des Buckels zuerst an: Das y(t)-Bild zeigt den Buckel seitenverkehrt, die Front zuerst.'),
+    dur: () => L('The crest of length ℓ takes the time ℓ/v to pass a place.', 'Der Buckel der Länge ℓ braucht die Zeit ℓ/v, um an einem Ort vorbeizulaufen.'),
+    sup: () => L('Where crests overlap, their displacements add (superposition); afterwards each runs on unchanged.', 'Wo sich Buckel überlagern, addieren sich ihre Auslenkungen (Superposition); danach läuft jeder unverändert weiter.'),
+    fixed: () => L('At a fixed end the crest is reflected upside down; at a free end it comes back upright. In both, its front and back swap: the front is reflected first.', 'An einem festen Ende wird der Buckel umgedreht (nach unten) reflektiert, an einem losen Ende kommt er aufrecht zurück. In beiden Fällen vertauschen sich Front und Rücken: Die Front wird zuerst reflektiert.'),
+    mirror: () => L('Mirror trick: imagine a second crest behind the end, the mirror image of the incoming one, running towards it; at a fixed end it is also upside down. On the rope, add both.', 'Spiegeltrick: Stell dir hinter dem Ende einen zweiten Buckel vor, das Spiegelbild des einlaufenden, der ihm entgegenläuft; bei einem festen Ende steht er zudem auf dem Kopf. Auf dem Seil addierst du beide.'),
+    medium: () => L('The rope only moves up and down. A point of the rope takes on, a moment later, the displacement the rope now has just behind it, upstream of the wave.', 'Das Seil bewegt sich nur auf und ab. Ein Punkt des Seils nimmt einen Moment später die Auslenkung an, die das Seil jetzt direkt hinter ihm hat, auf der Seite, von der die Welle kommt.'),
+  };
+
+  // a level of an exercise: 'lin' (straight pieces) or 'smooth'
+  const shapeFor = (r, level, o = {}) => (level === 'smooth' ? r.pick(Object.values(SMOOTH)) : r.pick(Object.values(LIN).filter((s) => !o.draw || s.draw)));
+
+  // ---------------------------------------------------------------- propagation
+  function move(r, level) {
+    for (;;) {
+      const sh = shapeFor(r, level), dir = r.pick([1, -1]), v = r.pick([1, 2]), t = r.pick([0.5, 1, 1.5, 2]);
+      const d = v * t, w = sh.w;
+      const x0 = dir > 0 ? r.pick([0.5, 1]) : X - w - r.pick([0.5, 1]);
+      if (x0 + dir * d < 0 || x0 + w + dir * d > X) continue;
+      const p = pulse(sh, x0, dir, v), sc = { pulses: [p], end: null };
+      const at = (pp, tt) => (x) => ev(pp, x, tt);
+      const right = snap(at(p, t), { label: tLabel(t) });
+      const cands = r.shuffle([
+        { spec: snap(at(p, 2 * t), { label: tLabel(t) }), tag: 'dist', why: L(`That is where it is after ${num(2 * t)} s: in ${num(t)} s it moves ${num(v)} m/s · ${num(t)} s = ${num(d)} m.`, `Dort ist er nach ${num(2 * t)} s: In ${num(t)} s legt er ${num(v)} m/s · ${num(t)} s = ${num(d)} m zurück.`) },
+        { spec: snap(at(p, t / 2), { label: tLabel(t) }), tag: 'dist', why: L(`Too short a distance: in ${num(t)} s it moves ${num(d)} m.`, `Eine zu kurze Strecke: In ${num(t)} s legt er ${num(d)} m zurück.`) },
+        { spec: snap(at({ ...p, dir: -dir }, t), { label: tLabel(t) }), tag: 'dir', why: L(`The crest moves ${dirWord(dir)}.`, `Der Buckel läuft ${dirWord(dir)}.`) },
+        { spec: snap(at({ ...p, rev: true }, t), { label: tLabel(t) }), tag: 'turn', why: RULE.move() },
+        { spec: snap(at({ ...p, sgn: -1 }, t), { label: tLabel(t) }), tag: 'flip', why: RULE.move() },
+      ]);
+      return {
+        kind: 'move', level, difficulty: level === 'lin' ? 1 : 2, sc, t,
+        text: L(`A crest runs ${dirWord(dir)} along a rope at ${num(v)} m/s. The diagram shows the rope at t = 0. Which diagram shows it at t = ${num(t)} s?`, `Ein Wellenbuckel läuft mit ${num(v)} m/s ${dirWord(dir)} über ein Seil. Das Diagramm zeigt das Seil zur Zeit t = 0. Welches Diagramm zeigt es zur Zeit t = ${num(t)} s?`),
+        fig: snap(at(p, 0), { arrows: [arrowOf(p, 0)], label: tLabel(0) }),
+        anim: { sc, t0: -1, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: t, show: ['sum'] },
+        questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
+        hints: [RULE.move(), L(`Distance: ${num(v)} m/s · ${num(t)} s = ${num(d)} m ${dirWord(dir)}. Follow one corner of the crest.`, `Strecke: ${num(v)} m/s · ${num(t)} s = ${num(d)} m ${dirWord(dir)}. Verfolge eine Ecke des Buckels.`)],
+        solution: [L(`In ${num(t)} s the crest moves ${num(v)} m/s · ${num(t)} s = ${num(d)} m ${dirWord(dir)}, unchanged.`, `In ${num(t)} s bewegt sich der Buckel um ${num(v)} m/s · ${num(t)} s = ${num(d)} m ${dirWord(dir)}, unverändert.`)],
+        solFig: right, p: { k: 'move', x0, dir, v, t, w },
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------- y(t) at a place, and back
+  // The crest moving right towards the place xp: the times its front and back pass.
+  function ytSetup(r, level) {
+    for (;;) {
+      const sh = shapeFor(r, level), v = r.pick([1, 2]), x0 = r.pick([0, 0.5, 1]), xp = r.pick([4, 4.5, 5, 5.5, 6]);
+      const tf = (xp - (x0 + sh.w)) / v, tb = (xp - x0) / v;
+      if (tf <= 0.2) continue;
+      const T = Math.ceil((tb + sh.w / v + 0.5) * 2) / 2; // room for a crest arriving one length late (an option)
+      if (T > 9) continue;
+      return { sh, v, x0, xp, tf, tb, T, p: pulse(sh, x0, 1, v) };
+    }
+  }
+  function yt(r, level) {
+    const { sh, v, x0, xp, tf, tb, T, p } = ytSetup(r, level), sc = { pulses: [p], end: null };
+    const f = (t) => ev(p, xp, t), w = sh.w;
+    const right = graphT(f, T, { label: L(`x = ${num(xp)} m`, `x = ${num(xp)} m`) });
+    const lab = right.label;
+    const cands = r.shuffle([
+      { spec: graphT((t) => f(tf + tb - t), T, { label: lab }), tag: 'copy', why: RULE.yt() },
+      { spec: graphT((t) => f(t - w / v), T, { label: lab }), tag: 'back', why: L(`The front reaches x = ${num(xp)} m first, at t = ${num(tf)} s; the back follows ${num(w / v)} s later.`, `Die Front erreicht x = ${num(xp)} m zuerst, bei t = ${num(tf)} s; der Rücken folgt ${num(w / v)} s später.`) },
+      { spec: graphT((t) => f(tf + (t - tf) / 2), T, { label: lab }), tag: 'dur', why: RULE.dur() },
+      { spec: graphT((t) => -f(t), T, { label: lab }), tag: 'flip', why: L('The rope at that place is displaced the same way as the crest: upwards where the crest is up.', 'Das Seil an diesem Ort wird gleich ausgelenkt wie der Buckel: nach oben, wo der Buckel oben ist.') },
+      { spec: graphT((t) => f(tf + tb - t + 0.5), T, { label: lab }), tag: 'copy', why: RULE.yt() },
+    ]);
+    return {
+      kind: 'yt', level, difficulty: level === 'lin' ? 2 : 3, sc,
+      text: L(`A crest runs to the right at ${num(v)} m/s. The diagram shows the rope at t = 0. Which graph shows the displacement y(t) of the rope at x = ${num(xp)} m?`, `Ein Wellenbuckel läuft mit ${num(v)} m/s nach rechts. Das Diagramm zeigt das Seil zur Zeit t = 0. Welcher Graph zeigt die Auslenkung y(t) des Seils bei x = ${num(xp)} m?`),
+      fig: snap((x) => ev(p, x, 0), { arrows: [arrowOf(p, 0)], marks: [{ x: xp, label: `${num(xp)} m` }], label: tLabel(0) }),
+      anim: { sc, t0: -1, t1: 0, show: ['sum'], mark: xp }, solAnim: { sc, t0: 0, t1: T, show: ['sum'], mark: xp, trace: xp },
+      questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
+      hints: [RULE.yt(), L(`The front reaches x = ${num(xp)} m after (${num(xp)} m − ${num(x0 + w)} m)/(${num(v)} m/s) = ${num(tf)} s.`, `Die Front erreicht x = ${num(xp)} m nach (${num(xp)} m − ${num(x0 + w)} m)/(${num(v)} m/s) = ${num(tf)} s.`), RULE.dur()],
+      solution: [L(`The front arrives at t = ${num(tf)} s, the back leaves at t = ${num(tb)} s: the crest takes ${num(w)} m / ${num(v)} m/s = ${num(w / v)} s to pass.`, `Die Front kommt bei t = ${num(tf)} s an, der Rücken verlässt den Ort bei t = ${num(tb)} s: Der Buckel braucht ${num(w)} m / ${num(v)} m/s = ${num(w / v)} s, um vorbeizulaufen.`), RULE.yt()],
+      solFig: right, p: { k: 'yt', x0, xp, v, w },
+    };
+  }
+  // y(t) given → the snapshot at a time
+  function ty(r, level) {
+    const { sh, v, x0, xp, tf, tb, T, p } = ytSetup(r, level), sc = { pulses: [p], end: null }, w = sh.w;
+    // a time when the crest is on the rope, whole
+    const times = [];
+    for (let t = 0.5; t <= 6; t += 0.5) if (x0 + v * t >= 0 && x0 + w + v * t <= X) times.push(t);
+    const t1 = r.pick(times);
+    const at = (pp, tt) => (x) => ev(pp, x, tt);
+    const right = snap(at(p, t1), { label: tLabel(t1) });
+    const cands = r.shuffle([
+      { spec: snap(at({ ...p, rev: true }, t1), { label: tLabel(t1) }), tag: 'copy', why: RULE.yt() },
+      { spec: snap(at(p, t1 + w / v), { label: tLabel(t1) }), tag: 'back', why: L(`At x = ${num(xp)} m the front arrives at t = ${num(tf)} s: that fixes where the crest is.`, `Bei x = ${num(xp)} m kommt die Front bei t = ${num(tf)} s an: Das legt fest, wo der Buckel ist.`) },
+      { spec: snap(at(p, t1 - 0.5), { label: tLabel(t1) }), tag: 'time', why: L(`Go from the time the front passes x = ${num(xp)} m, at ${num(v)} m/s.`, `Geh von der Zeit aus, zu der die Front x = ${num(xp)} m passiert, mit ${num(v)} m/s.`) },
+      { spec: snap(at({ ...p, sgn: -1 }, t1), { label: tLabel(t1) }), tag: 'flip', why: L('Up in the y(t) graph is up on the rope.', 'Oben im y(t)-Bild ist oben auf dem Seil.') },
+      { spec: snap(at(p, t1 + 0.5), { label: tLabel(t1) }), tag: 'time', why: L(`Go from the time the front passes x = ${num(xp)} m, at ${num(v)} m/s.`, `Geh von der Zeit aus, zu der die Front x = ${num(xp)} m passiert, mit ${num(v)} m/s.`) },
+    ]);
+    return {
+      kind: 'ty', level, difficulty: level === 'lin' ? 3 : 4, sc,
+      text: L(`A crest runs to the right at ${num(v)} m/s. The graph shows the displacement y(t) of the rope at x = ${num(xp)} m. Which diagram shows the rope at t = ${num(t1)} s?`, `Ein Wellenbuckel läuft mit ${num(v)} m/s nach rechts. Der Graph zeigt die Auslenkung y(t) des Seils bei x = ${num(xp)} m. Welches Diagramm zeigt das Seil zur Zeit t = ${num(t1)} s?`),
+      fig: graphT((t) => ev(p, xp, t), T, { label: L(`x = ${num(xp)} m`, `x = ${num(xp)} m`) }),
+      anim: null, solAnim: { sc, t0: 0, t1, show: ['sum'], mark: xp },
+      questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
+      hints: [RULE.yt(), L(`The front passes x = ${num(xp)} m at t = ${num(tf)} s. Where is it at t = ${num(t1)} s?`, `Die Front passiert x = ${num(xp)} m bei t = ${num(tf)} s. Wo ist sie bei t = ${num(t1)} s?`)],
+      solution: [L(`The y(t) graph starts with the front, at t = ${num(tf)} s. At t = ${num(t1)} s the front is at ${num(xp)} m + ${num(v)} m/s · (${num(t1)} s − ${num(tf)} s) = ${num(x0 + w + v * t1)} m; the crest lies behind it, the right way round.`, `Das y(t)-Bild beginnt mit der Front, bei t = ${num(tf)} s. Bei t = ${num(t1)} s ist die Front bei ${num(xp)} m + ${num(v)} m/s · (${num(t1)} s − ${num(tf)} s) = ${num(x0 + w + v * t1)} m; der Buckel liegt dahinter, seitenrichtig.`)],
+      solFig: right, p: { k: 'ty', x0, xp, v, w, t1 },
+    };
+  }
+
+  // ---------------------------------------------------------------- how the rope moves
+  function medium(r, level) {
+    for (;;) {
+      const sh = shapeFor(r, level), dir = r.pick([1, -1]), v = 2, x0 = r.pick([2.5, 3]), p = pulse(sh, x0, dir, v);
+      // the velocity of the rope: −dir·v·dy/dx; candidates inside straight pieces or clear slopes
+      const slope = (x) => (ev(p, x + 1e-3, 0) - ev(p, x - 1e-3, 0)) / 2e-3, vel = (x) => -dir * v * slope(x);
+      const xs = [];
+      for (let x = 0.25; x < X; x += 0.25) {
+        const s = slope(x), inside = x > x0 + 0.05 && x < x0 + sh.w - 0.05;
+        if (inside && Math.abs(s) > 1.5 && Math.abs(slope(x - 0.12) - s) < 0.4 * Math.abs(s) && Math.abs(slope(x + 0.12) - s) < 0.4 * Math.abs(s)) xs.push({ x, m: vel(x) > 0 ? 'up' : 'down' });
+        else if (Math.abs(s) < 1e-6 && Math.abs(slope(x - 0.15)) < 1e-6 && Math.abs(slope(x + 0.15)) < 1e-6) xs.push({ x, m: 'rest' });
+      }
+      const ups = xs.filter((q) => q.m === 'up'), downs = xs.filter((q) => q.m === 'down'), rests = xs.filter((q) => q.m === 'rest' && q.x > x0 - 1 && q.x < x0 + sh.w + 1);
+      if (!ups.length || !downs.length) continue;
+      const chosen = [r.pick(ups), r.pick(downs), r.pick([...ups, ...downs].filter((q) => !eq(q.x, 0))), ...(rests.length ? [r.pick(rests)] : [])];
+      const uniq = [];
+      for (const q of chosen) if (uniq.every((u) => Math.abs(u.x - q.x) >= 0.5)) uniq.push(q);
+      if (uniq.length < 3) continue;
+      uniq.sort((a, b) => a.x - b.x);
+      const names = 'PQRS';
+      const word = { up: () => L('moves up', 'bewegt sich nach oben'), down: () => L('moves down', 'bewegt sich nach unten'), rest: () => L('is at rest', 'ist in Ruhe') };
+      const sc = { pulses: [p], end: null };
+      return {
+        kind: 'medium', level, difficulty: level === 'lin' ? 2 : 3, sc,
+        text: L(`A crest runs ${dirWord(dir)} along a rope. How does each marked point of the rope move at this moment?`, `Ein Wellenbuckel läuft ${dirWord(dir)} über ein Seil. Wie bewegt sich jeder markierte Punkt des Seils in diesem Moment?`),
+        fig: snap((x) => ev(p, x, 0), { arrows: [arrowOf(p, 0)], dots: uniq.map((q, i) => ({ x: q.x, y: ev(p, q.x, 0), label: names[i] })) }),
+        anim: { sc, t0: -1, t1: 0, show: ['sum'], dots: uniq.map((q, i) => ({ x: q.x, label: names[i] })) },
+        solAnim: { sc, t0: 0, t1: 0.6, show: ['sum'], dots: uniq.map((q, i) => ({ x: q.x, label: names[i] })) },
+        questions: uniq.map((q, i) => ({
+          type: 'choice', key: names[i], label: names[i],
+          options: ['up', 'down', 'rest'].map((m) => ({ label: word[m](), ok: m === q.m, why: `${RULE.medium()} ${q.m === 'rest' ? L(`Around ${names[i]} the rope is flat: it stays where it is.`, `Um ${names[i]} ist das Seil flach: Es bleibt, wo es ist.`) : L(`Just ${dir > 0 ? 'left' : 'right'} of ${names[i]} the rope is ${q.m === 'up' ? 'higher' : 'lower'}: ${names[i]} ${word[q.m]()}.`, `Gleich ${dir > 0 ? 'links' : 'rechts'} von ${names[i]} ist das Seil ${q.m === 'up' ? 'höher' : 'tiefer'}: ${names[i]} ${word[q.m]()}.`)}` })),
+        })),
+        hints: [RULE.medium(), L('Imagine the crest shifted a little further: is the rope at the point higher or lower then?', 'Stell dir den Buckel ein Stück weiter vor: Ist das Seil am Punkt dann höher oder tiefer?')],
+        solution: [RULE.medium(), L('The points at the front of the crest rise, those at its back fall; where the rope is flat, it is at rest for the moment.', 'Die Punkte an der Front des Buckels steigen, die an seinem Rücken sinken; wo das Seil flach ist, ist es im Moment in Ruhe.')],
+        p: { k: 'medium', x0, dir, sh: sh.w },
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------- speed and timing
+  const opts4 = (r, right, wrongs, unit) => {
+    const out = [{ value: right, ok: true, why: '' }];
+    for (const w of wrongs) if (out.length < 4 && w.value > 0 && out.every((o) => Math.abs(Math.log(w.value / o.value)) > Math.log(1.15))) out.push({ ...w, ok: false });
+    for (const k of [2, 0.5, 3, 1.5]) if (out.length < 4 && out.every((o) => Math.abs(Math.log((right * k) / o.value)) > Math.log(1.15))) out.push({ value: right * k, ok: false, why: wrongs[0] ? wrongs[0].why : '', tag: 'other' });
+    return out.sort((a, b) => a.value - b.value).map((o) => ({ ...o, label: `${num(o.value)} ${unit}` }));
+  };
+  function speed(r, variant) {
+    const sh = shapeFor(r, r.pick(['lin', 'smooth'])), v = r.pick([0.5, 1, 2]), w = sh.w;
+    if (variant === 'x') {
+      const x0 = r.pick([0, 0.5]), t1 = r.pick([0.5, 1]), dt = r.pick([1, 1.5, 2]), t2 = t1 + dt, p = pulse(sh, x0, 1, v);
+      if (x0 + w + v * t2 > X) return speed(r, variant);
+      const sc = { pulses: [p], end: null }, d = v * dt;
+      const why = L(`The crest moved ${num(d)} m in ${num(dt)} s: v = ${num(d)} m / ${num(dt)} s = ${num(v)} m/s.`, `Der Buckel hat sich in ${num(dt)} s um ${num(d)} m bewegt: v = ${num(d)} m / ${num(dt)} s = ${num(v)} m/s.`);
+      return {
+        kind: 'speed', variant, level: 'mixed', difficulty: 2, sc,
+        text: L(`The two diagrams show a rope at t = ${num(t1)} s and at t = ${num(t2)} s. How fast does the crest move?`, `Die zwei Diagramme zeigen ein Seil zur Zeit t = ${num(t1)} s und zur Zeit t = ${num(t2)} s. Wie schnell läuft der Buckel?`),
+        fig: [snap((x) => ev(p, x, t1), { label: tLabel(t1) }), snap((x) => ev(p, x, t2), { label: tLabel(t2) })],
+        anim: null, solAnim: { sc, t0: t1, t1: t2, show: ['sum'] },
+        questions: [{ type: 'choice', key: 'v', label: 'v', options: opts4(r, v, [{ value: (x0 + w + v * t2) / t2, tag: 'total', why: L(`That divides the position of the front by the time. Use how far it moved between the two times: ${why}`, `Das teilt die Lage der Front durch die Zeit. Nimm, wie weit er sich zwischen den zwei Zeiten bewegt hat: ${why}`) }, { value: dt / d, tag: 'inverse', why }, { value: d / t2, tag: 'total', why }], 'm/s') }],
+        hints: [L('Follow one corner of the crest from one diagram to the other.', 'Verfolge eine Ecke des Buckels von einem Diagramm zum anderen.'), 'v = Δx/Δt'],
+        solution: [why], p: { k: 'speed-x', x0, v, t1, dt, w },
+      };
+    }
+    if (variant === 't') {
+      const x0 = 0, x1 = r.pick([3, 3.5, 4]), x2 = x1 + r.pick([1, 2, 3]), p = pulse(sh, x0, 1, v);
+      const t1f = (x1 - w) / v, t2f = (x2 - w) / v, T = Math.ceil(((x2 - x0) / v + 0.5) * 2) / 2;
+      if (t1f < 0 || T > 9) return speed(r, variant);
+      const sc = { pulses: [p], end: null }, dt = t2f - t1f;
+      const why = L(`The front passes x = ${num(x1)} m at ${num(t1f)} s and x = ${num(x2)} m at ${num(t2f)} s: v = ${num(x2 - x1)} m / ${num(dt)} s = ${num(v)} m/s.`, `Die Front passiert x = ${num(x1)} m bei ${num(t1f)} s und x = ${num(x2)} m bei ${num(t2f)} s: v = ${num(x2 - x1)} m / ${num(dt)} s = ${num(v)} m/s.`);
+      return {
+        kind: 'speed', variant, level: 'mixed', difficulty: 3, sc,
+        text: L(`The two graphs show the displacement y(t) of a rope at x = ${num(x1)} m and at x = ${num(x2)} m, as a crest passes. How fast does the crest move?`, `Die zwei Graphen zeigen die Auslenkung y(t) eines Seils bei x = ${num(x1)} m und bei x = ${num(x2)} m, während ein Buckel vorbeiläuft. Wie schnell läuft der Buckel?`),
+        fig: [graphT((t) => ev(p, x1, t), T, { label: `x = ${num(x1)} m` }), graphT((t) => ev(p, x2, t), T, { label: `x = ${num(x2)} m` })],
+        anim: null, solAnim: { sc, t0: 0, t1: T, show: ['sum'], mark: x1, mark2: x2 },
+        questions: [{ type: 'choice', key: 'v', label: 'v', options: opts4(r, v, [{ value: (x2 - x1) / (w / v), tag: 'dur', why: L(`That uses how long the crest takes to pass. Use the delay between the two places: ${why}`, `Das verwendet, wie lange der Buckel zum Vorbeilaufen braucht. Nimm die Verzögerung zwischen den zwei Orten: ${why}`) }, { value: dt / (x2 - x1), tag: 'inverse', why }, { value: x2 / t2f, tag: 'total', why }], 'm/s') }],
+        hints: [L('Compare when the same feature (e.g. the front) appears in the two graphs.', 'Vergleiche, wann dasselbe Merkmal (z. B. die Front) in den zwei Graphen erscheint.'), 'v = Δx/Δt'],
+        solution: [why], p: { k: 'speed-t', x1, x2, v, w },
+      };
+    }
+    // the length of the crest from its y(t) graph
+    const x0 = 0, xp = r.pick([4, 5]), p = pulse(sh, x0, 1, v), T = Math.ceil((xp / v + 0.5) * 2) / 2;
+    if (T > 9) return speed(r, variant);
+    const sc = { pulses: [p], end: null }, dur = w / v;
+    const why = L(`The crest takes ${num(dur)} s to pass x = ${num(xp)} m: its length is ℓ = v·Δt = ${num(v)} m/s · ${num(dur)} s = ${num(w)} m.`, `Der Buckel braucht ${num(dur)} s, um an x = ${num(xp)} m vorbeizulaufen: Seine Länge ist ℓ = v·Δt = ${num(v)} m/s · ${num(dur)} s = ${num(w)} m.`);
+    return {
+      kind: 'speed', variant: 'len', level: 'mixed', difficulty: 2, sc,
+      text: L(`A crest runs along a rope at ${num(v)} m/s. The graph shows the displacement y(t) at x = ${num(xp)} m. How long is the crest?`, `Ein Wellenbuckel läuft mit ${num(v)} m/s über ein Seil. Der Graph zeigt die Auslenkung y(t) bei x = ${num(xp)} m. Wie lang ist der Buckel?`),
+      fig: graphT((t) => ev(p, xp, t), T, { label: `x = ${num(xp)} m` }),
+      anim: null, solAnim: { sc, t0: 0, t1: T, show: ['sum'], mark: xp },
+      questions: [{ type: 'choice', key: 'len', label: 'ℓ', options: opts4(r, w, [{ value: dur / v, tag: 'inverse', why }, { value: dur, tag: 'time', why: L(`That is the time the crest takes, in s. Its length: ${why}`, `Das ist die Zeit, die der Buckel braucht, in s. Seine Länge: ${why}`) }, { value: v / dur, tag: 'inverse', why }], 'm') }],
+      hints: [L('Read how long the rope at that place is displaced.', 'Lies ab, wie lange das Seil an diesem Ort ausgelenkt ist.'), 'ℓ = v·Δt'],
+      solution: [why], p: { k: 'speed-len', xp, v, w },
+    };
+  }
+
+  // ---------------------------------------------------------------- superposition
+  function sup(r, level) {
+    for (;;) {
+      const a = shapeFor(r, level), b = shapeFor(r, level), v = r.pick([1, 2]);
+      const pa = pulse(a, r.pick([0, 0.5]), 1, v), pb = pulse(b, X - b.w - r.pick([0, 0.5]), -1, v, { sgn: r.pick([1, -1]) });
+      // a time when they overlap by at least 1 m
+      const gap0 = pb.x0 - (pa.x0 + a.w), times = [];
+      for (let t = 0.5; t <= 4; t += 0.5) { const ov = 2 * v * t - gap0; if (ov >= 1 && ov <= Math.min(a.w, b.w) + 0.5) times.push(t); }
+      if (!times.length) continue;
+      const t = r.pick(times), sc = { pulses: [pa, pb], end: null };
+      const f = (x) => ev(pa, x, t) + ev(pb, x, t), A = (x) => ev(pa, x, t), B = (x) => ev(pb, x, t);
+      const right = snap(f, { label: tLabel(t) });
+      const big = (x) => (Math.abs(A(x)) >= Math.abs(B(x)) ? A(x) : B(x));
+      const cands = r.shuffle([
+        { spec: snap(big, { label: tLabel(t) }), tag: 'max', why: RULE.sup() },
+        { spec: snap(A, { label: tLabel(t), more: [{ f: B, cls: 'main' }] }), tag: 'apart', why: L('Where the crests overlap, the rope has one displacement: the sum of both.', 'Wo sich die Buckel überlagern, hat das Seil eine einzige Auslenkung: die Summe beider.') },
+        { spec: snap((x) => ev(pa, x, t + 0.5) + ev(pb, x, t + 0.5), { label: tLabel(t) }), tag: 'time', why: L(`In ${num(t)} s each crest moves ${num(v * t)} m.`, `In ${num(t)} s bewegt sich jeder Buckel um ${num(v * t)} m.`) },
+        { spec: snap((x) => ev(pa, x, t) - ev(pb, x, t), { label: tLabel(t) }), tag: 'sign', why: RULE.sup() },
+        { spec: snap((x) => ev(pa, x, t - 0.5) + ev(pb, x, t - 0.5), { label: tLabel(t) }), tag: 'time', why: L(`In ${num(t)} s each crest moves ${num(v * t)} m.`, `In ${num(t)} s bewegt sich jeder Buckel um ${num(v * t)} m.`) },
+      ]);
+      return {
+        kind: 'sup', level, difficulty: level === 'lin' ? 3 : 4, sc, t,
+        text: L(`Two crests run towards each other, both at ${num(v)} m/s. The diagram shows the rope at t = 0. Which diagram shows it at t = ${num(t)} s?`, `Zwei Wellenbuckel laufen aufeinander zu, beide mit ${num(v)} m/s. Das Diagramm zeigt das Seil zur Zeit t = 0. Welches Diagramm zeigt es zur Zeit t = ${num(t)} s?`),
+        fig: snap((x) => ev(pa, x, 0) + ev(pb, x, 0), { arrows: [arrowOf(pa, 0), arrowOf(pb, 0, { up: pb.sgn < 0 })], label: tLabel(0) }),
+        anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: t, show: ['parts', 'sum'] },
+        questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
+        hints: [L(`First draw each crest where it is at t = ${num(t)} s: each has moved ${num(v * t)} m.`, `Zeichne zuerst jeden Buckel dort, wo er bei t = ${num(t)} s ist: Jeder hat sich um ${num(v * t)} m bewegt.`), RULE.sup()],
+        solution: [L(`Each crest moves ${num(v * t)} m. Where they overlap, the displacements add.`, `Jeder Buckel bewegt sich um ${num(v * t)} m. Wo sie sich überlagern, addieren sich die Auslenkungen.`), RULE.sup()],
+        solFig: snap(f, { label: tLabel(t), more: [{ f: A, cls: 'part' }, { f: B, cls: 'part2' }] }), p: { k: 'sup', a: pa.x0, b: pb.x0, v, t, s: pb.sgn },
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------- reflection
+  // a crest running right towards the end at E
+  function reflSetup(r, level, type, o = {}) {
+    for (;;) {
+      const sh = shapeFor(r, level, o), v = r.pick([1, 2]), E = r.pick([6, 6.5, 7]), x0 = r.pick([0, 0.5, 1]);
+      if (x0 + sh.w > E - 1) continue;
+      const p = pulse(sh, x0, 1, v), sc = { pulses: [p], end: { x: E, type: type || r.pick(['fixed', 'free']) } };
+      return { sh, v, E, x0, p, sc, w: sh.w, tf: (E - x0 - sh.w) / v, tb: (E - x0) / v };
+    }
+  }
+  const onRope = (sc) => (x) => y(sc, x, 0);
+  function refl(r, level, type) {
+    for (;;) {
+      const { sh, v, E, p, sc, w, tb } = reflSetup(r, level, type);
+      // after the whole crest has been reflected, the reflected crest still on the rope
+      const times = [];
+      for (let t = 0.5; t <= 10; t += 0.5) if (t > tb + 0.01 && E - v * (t - tb) - w >= 0) times.push(t);
+      if (!times.length) continue;
+      const t = r.pick(times), et = sc.end.type, other = et === 'fixed' ? 'free' : 'fixed';
+      const refOnly = (o = {}) => (x) => {
+        const im = image(p, E, o.type || et), q = o.notRev ? { ...im, rev: !im.rev } : im;
+        return x > E ? 0 : ev(q, x, t + (o.dt || 0));
+      };
+      const fig = (f) => snap(f, { hi: E, end: sc.end, label: tLabel(t) });
+      const right = fig(refOnly());
+      const cands = r.shuffle([
+        { spec: snap(refOnly({ type: other }), { hi: E, end: sc.end, label: tLabel(t) }), tag: 'sign', why: RULE.fixed() },
+        { spec: fig(refOnly({ notRev: true })), tag: 'order', why: L('The front reaches the end first and so is reflected first: on the way back it leads again, so the crest comes back reversed.', 'Die Front erreicht das Ende zuerst und wird darum zuerst reflektiert: Auf dem Rückweg geht sie wieder voran, der Buckel kommt also seitenverkehrt zurück.') },
+        { spec: snap(refOnly({ type: other, notRev: true }), { hi: E, end: sc.end, label: tLabel(t) }), tag: 'sign', why: RULE.fixed() },
+        { spec: fig(refOnly({ dt: 1 })), tag: 'time', why: L(`The crest needs (${num(E)} m − x)/v to reach the end and as long again to come back to x.`, `Der Buckel braucht (${num(E)} m − x)/v bis zum Ende und gleich lang zurück bis x.`) },
+        { spec: fig(refOnly({ dt: -0.5 })), tag: 'time', why: L(`The crest needs (${num(E)} m − x)/v to reach the end and as long again to come back to x.`, `Der Buckel braucht (${num(E)} m − x)/v bis zum Ende und gleich lang zurück bis x.`) },
+      ]);
+      return {
+        kind: 'refl', level, difficulty: level === 'lin' ? 3 : 4, sc, t,
+        text: L(`A crest runs to the right at ${num(v)} m/s towards ${endWord(et)} at x = ${num(E)} m. The diagram shows the rope at t = 0. Which diagram shows it at t = ${num(t)} s?`, `Ein Wellenbuckel läuft mit ${num(v)} m/s nach rechts auf ${endWord(et)} bei x = ${num(E)} m zu. Das Diagramm zeigt das Seil zur Zeit t = 0. Welches Diagramm zeigt es zur Zeit t = ${num(t)} s?`),
+        fig: snap(onRope(sc), { hi: E, end: sc.end, arrows: [arrowOf(p, 0)], label: tLabel(0) }),
+        anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: t, show: ['sum'] },
+        questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
+        hints: [RULE.fixed(), L(`The whole crest has reached the end after ${num(tb)} s; then it runs back at ${num(v)} m/s.`, `Der ganze Buckel hat das Ende nach ${num(tb)} s erreicht; dann läuft er mit ${num(v)} m/s zurück.`), RULE.mirror()],
+        solution: [RULE.fixed(), L(`At t = ${num(t)} s the crest has run ${num(v * t)} m: to the end and ${num(v * t - (E - p.x0 - w))} m back (its front).`, `Bei t = ${num(t)} s hat der Buckel ${num(v * t)} m zurückgelegt: bis zum Ende und ${num(v * t - (E - p.x0 - w))} m zurück (seine Front).`)],
+        solFig: right, p: { k: 'refl', x0: p.x0, E, v, t, et },
+      };
+    }
+  }
+  // the reflection while the crest is still partly arriving: the sum
+  function reflsum(r, level, type) {
+    for (;;) {
+      const { v, E, p, sc, w, tf, tb } = reflSetup(r, level, type);
+      const times = [];
+      for (let t = 0.5; t <= 10; t += 0.5) if (t > tf + 0.2 && t < tb - 0.2) times.push(t);
+      if (!times.length) continue;
+      const t = r.pick(times), et = sc.end.type, other = et === 'fixed' ? 'free' : 'fixed';
+      const sum = (s) => (x) => y(s, x, t);
+      const fig = (f, o = {}) => snap(f, { hi: E, end: sc.end, label: tLabel(t), more: o.more });
+      const scOther = { ...sc, end: { x: E, type: other } };
+      const notRev = (x) => (x > E ? 0 : ev(p, x, t) + ev({ ...image(p, E, et), rev: !image(p, E, et).rev }, x, t));
+      const right = fig(sum(sc));
+      const cands = r.shuffle([
+        { spec: fig(sum(scOther)), tag: 'sign', why: RULE.fixed() },
+        { spec: fig((x) => yIn(sc, x, t), { more: [{ f: (x) => yRef(sc, x, t), cls: 'main' }] }), tag: 'apart', why: L('Where the incoming and the reflected part overlap, the rope has one displacement: their sum.', 'Wo sich der einlaufende und der reflektierte Teil überlagern, hat das Seil eine einzige Auslenkung: ihre Summe.') },
+        { spec: fig(notRev), tag: 'order', why: RULE.fixed() },
+        { spec: fig((x) => y(sc, x, t + 0.5)), tag: 'time', why: L(`At t = ${num(t)} s the front has run ${num(v * t)} m.`, `Bei t = ${num(t)} s ist die Front ${num(v * t)} m gelaufen.`) },
+        { spec: fig((x) => yIn(sc, x, t)), tag: 'cut', why: L('The part that has reached the end is not lost: it comes back, and adds to the part still arriving.', 'Der Teil, der das Ende erreicht hat, geht nicht verloren: Er kommt zurück und addiert sich zum Teil, der noch ankommt.') },
+      ]);
+      return {
+        kind: 'reflsum', level, difficulty: level === 'lin' ? 4 : 5, sc, t,
+        text: L(`A crest runs to the right at ${num(v)} m/s towards ${endWord(et)} at x = ${num(E)} m. The diagram shows the rope at t = 0. Which diagram shows it at t = ${num(t)} s, while the crest is being reflected?`, `Ein Wellenbuckel läuft mit ${num(v)} m/s nach rechts auf ${endWord(et)} bei x = ${num(E)} m zu. Das Diagramm zeigt das Seil zur Zeit t = 0. Welches Diagramm zeigt es zur Zeit t = ${num(t)} s, während der Buckel reflektiert wird?`),
+        fig: snap(onRope(sc), { hi: E, end: sc.end, arrows: [arrowOf(p, 0)], label: tLabel(0) }),
+        anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: t, show: ['parts', 'sum'], virtual: true },
+        questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
+        hints: [RULE.mirror(), L(`At t = ${num(t)} s, draw the incoming crest (partly beyond the end) and its mirror image; on the rope, add them.`, `Zeichne für t = ${num(t)} s den einlaufenden Buckel (teils hinter dem Ende) und sein Spiegelbild; auf dem Seil addierst du sie.`), RULE.fixed()],
+        solution: [RULE.mirror(), RULE.fixed(), L('On the rope the incoming and the reflected part add up.', 'Auf dem Seil addieren sich der einlaufende und der reflektierte Teil.')],
+        solFig: snap(sum(sc), { hi: E, end: sc.end, label: tLabel(t), more: [{ f: (x) => yIn(sc, x, t), cls: 'part' }, { f: (x) => yRef(sc, x, t), cls: 'part2' }] }),
+        p: { k: 'reflsum', x0: p.x0, E, v, t, et },
+      };
+    }
+  }
+  // the mirror crest behind the end
+  function mirror(r, level) {
+    const s0 = reflSetup(r, level), { v, E, w } = s0, et = s0.sc.end.type, other = et === 'fixed' ? 'free' : 'fixed';
+    // the crest close to the end, so that its mirror image lies close behind it
+    const p = pulse(s0.sh, E - w - r.pick([0.5, 1, 1.5]), 1, v), sc = { pulses: [p], end: s0.sc.end };
+    const hi = 2 * E - p.x0 + 1.5;
+    const view = (im) => snap((x) => (x <= E ? ev(p, x, 0) : 0), { hi, end: sc.end, virtual: E, more: [{ f: (x) => (x >= E ? ev(im, x, 0) : 0), cls: 'virt' }], arrows: [arrowOf(p, 0), arrowOf(im, 0)] });
+    const im = image(p, E, et);
+    const right = view(im);
+    const cands = r.shuffle([
+      { spec: view(image(p, E, other)), tag: 'sign', why: RULE.fixed() },
+      { spec: view({ ...im, rev: !im.rev }), tag: 'order', why: L('A mirror image is reversed: the front of the incoming crest faces the end, and so does the front of the mirror crest.', 'Ein Spiegelbild ist seitenverkehrt: Die Front des einlaufenden Buckels zeigt zum Ende, und ebenso die Front des Spiegelbuckels.') },
+      { spec: view({ ...im, x0: im.x0 + 1 }), tag: 'dist', why: L('The mirror crest is as far behind the end as the incoming crest is in front of it.', 'Der Spiegelbuckel ist gleich weit hinter dem Ende wie der einlaufende Buckel vor ihm.') },
+      { spec: view({ ...image(p, E, other), rev: !im.rev }), tag: 'sign', why: RULE.fixed() },
+      { spec: view({ ...im, x0: im.x0 - 0.5 }), tag: 'dist', why: L('The mirror crest is as far behind the end as the incoming crest is in front of it.', 'Der Spiegelbuckel ist gleich weit hinter dem Ende wie der einlaufende Buckel vor ihm.') },
+    ]);
+    return {
+      kind: 'mirror', level, difficulty: level === 'lin' ? 3 : 4, sc,
+      text: L(`A crest runs towards ${endWord(et)} at x = ${num(E)} m. Its reflection can be found with a mirror crest that runs towards it from behind the end. Which diagram shows the right mirror crest (dashed)?`, `Ein Wellenbuckel läuft auf ${endWord(et)} bei x = ${num(E)} m zu. Seine Reflexion findet man mit einem Spiegelbuckel, der ihm von hinter dem Ende entgegenläuft. Welches Diagramm zeigt den richtigen Spiegelbuckel (gestrichelt)?`),
+      fig: snap(onRope(sc), { hi: E, end: sc.end, arrows: [arrowOf(p, 0)], label: tLabel(0) }),
+      anim: null, solAnim: { sc, t0: 0, t1: (E - p.x0) / v + 0.5, show: ['parts', 'sum'], virtual: true },
+      questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
+      hints: [RULE.mirror(), L(`Mirror the crest at x = ${num(E)} m: each point at distance d in front of the end goes to distance d behind it.`, `Spiegle den Buckel an x = ${num(E)} m: Jeder Punkt im Abstand d vor dem Ende kommt in den Abstand d dahinter.`), RULE.fixed()],
+      solution: [RULE.mirror(), L(`At ${endWord(et)} the mirror crest is ${et === 'fixed' ? 'upside down' : 'upright'}.`, `Bei ${endWord(et)} steht der Spiegelbuckel ${et === 'fixed' ? 'auf dem Kopf' : 'aufrecht'}.`)],
+      solFig: right, p: { k: 'mirror', x0: p.x0, E, et, w },
+    };
+  }
+  // y(t) of the end itself
+  function endEx(r, level) {
+    const type = r.next() < 0.7 ? 'free' : 'fixed', { v, E, p, sc, tb } = reflSetup(r, level, type), T = Math.ceil((tb + 0.5) * 2) / 2;
+    const inc = (t) => ev(p, E, t), f = (t) => y(sc, E, t);
+    const g = (fn) => graphT(fn, T, { label: `x = ${num(E)} m`, Y: 11 });
+    const right = g(f);
+    const tf = (E - p.x0 - p.sh.w) / v;
+    const cands = r.shuffle([
+      { spec: g(inc), tag: 'single', why: type === 'free' ? L('At a free end the incoming and the reflected crest overlap exactly: the end moves twice as far.', 'An einem losen Ende überlagern sich der einlaufende und der reflektierte Buckel genau: Das Ende bewegt sich doppelt so weit.') : L('A fixed end cannot move: y = 0 all the time.', 'Ein festes Ende kann sich nicht bewegen: y = 0 die ganze Zeit.') },
+      { spec: g((t) => (type === 'free' ? 0 : 2 * inc(t))), tag: 'sign', why: RULE.fixed() },
+      { spec: g((t) => 2 * inc(tf + tb - t)), tag: 'copy', why: RULE.yt() },
+      { spec: g((t) => -2 * inc(t)), tag: 'sign', why: RULE.fixed() },
+      { spec: g((t) => inc(tf + tb - t)), tag: 'copy', why: RULE.yt() },
+    ]);
+    return {
+      kind: 'end', level, difficulty: level === 'lin' ? 3 : 4, sc,
+      text: L(`A crest runs to the right at ${num(v)} m/s towards ${endWord(type)} at x = ${num(E)} m. Which graph shows how the end itself moves, y(t) at x = ${num(E)} m?`, `Ein Wellenbuckel läuft mit ${num(v)} m/s nach rechts auf ${endWord(type)} bei x = ${num(E)} m zu. Welcher Graph zeigt, wie sich das Ende selbst bewegt, y(t) bei x = ${num(E)} m?`),
+      fig: snap(onRope(sc), { hi: E, end: sc.end, arrows: [arrowOf(p, 0)], label: tLabel(0), Y: 11 }),
+      anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: T, show: ['sum'], mark: E, trace: E },
+      questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
+      hints: [RULE.mirror(), L('At the end itself the incoming crest and its mirror crest arrive at the same time.', 'Am Ende selbst kommen der einlaufende Buckel und sein Spiegelbuckel gleichzeitig an.'), RULE.yt()],
+      solution: [type === 'free' ? L('At a free end the incoming and the reflected crest are the same there at every moment: the end moves twice as far as the crest is high.', 'An einem losen Ende sind der einlaufende und der reflektierte Buckel dort in jedem Moment gleich: Das Ende bewegt sich doppelt so weit, wie der Buckel hoch ist.') : L('At a fixed end the incoming and the reflected crest cancel there at every moment: the end stays at rest.', 'An einem festen Ende heben sich der einlaufende und der reflektierte Buckel dort in jedem Moment auf: Das Ende bleibt in Ruhe.'), RULE.yt()],
+      solFig: right, p: { k: 'end', x0: p.x0, E, v, type },
+    };
+  }
+
+  // ---------------------------------------------------------------- drawing
+  // The rope at a time, set by clicking: a height (whole cm) at each 0.5 m. The crests have their
+  // corners on that grid, so the answer is exactly the heights there.
+  function draw(r, task) {
+    for (;;) {
+      let sc, t, text, hi = X;
+      if (task === 'sup') {
+        const a = shapeFor(r, 'lin', { draw: true }), b = shapeFor(r, 'lin', { draw: true }), v = 1;
+        const pa = pulse(a, 0.5, 1, v), pb = pulse(b, X - b.w - 0.5, -1, v, { sgn: r.pick([1, -1]) });
+        const gap0 = pb.x0 - (pa.x0 + a.w), times = [];
+        for (let tt = 0.5; tt <= 4; tt += 0.5) { const ov = 2 * v * tt - gap0; if (ov >= 1 && ov <= 2.5) times.push(tt); }
+        if (!times.length) continue;
+        t = r.pick(times); sc = { pulses: [pa, pb], end: null };
+        text = L(`Two crests run towards each other at 1 m/s. Draw the rope at t = ${num(t)} s: click the height of the rope at each grid line.`, `Zwei Wellenbuckel laufen mit 1 m/s aufeinander zu. Zeichne das Seil zur Zeit t = ${num(t)} s: Klicke bei jeder Gitterlinie die Höhe des Seils an.`);
+      } else {
+        const type = r.pick(['fixed', 'free']), sh = shapeFor(r, 'lin', { draw: true }), v = 1, E = 6.5, x0 = 0.5, p = pulse(sh, x0, 1, v);
+        sc = { pulses: [p], end: { x: E, type } }; hi = E;
+        const tf = (E - x0 - sh.w) / v, tb = (E - x0) / v, times = [];
+        for (let tt = 0.5; tt <= 10; tt += 0.5) {
+          if (task === 'refl' && tt > tb && E - v * (tt - tb) - sh.w >= 0.5) times.push(tt);
+          if (task === 'reflsum' && tt > tf + 0.4 && tt < tb - 0.4) times.push(tt);
+        }
+        if (!times.length) continue;
+        t = r.pick(times);
+        text = L(`A crest runs at 1 m/s towards ${endWord(type)} at x = ${num(E)} m. Draw the rope at t = ${num(t)} s: click the height of the rope at each grid line.`, `Ein Wellenbuckel läuft mit 1 m/s auf ${endWord(type)} bei x = ${num(E)} m zu. Zeichne das Seil zur Zeit t = ${num(t)} s: Klicke bei jeder Gitterlinie die Höhe des Seils an.`);
+      }
+      const xs = [];
+      for (let x = 0; x <= hi + 1e-9; x += 0.5) xs.push(x);
+      const target = xs.map((x) => Math.round(y(sc, x, t)));
+      if (!xs.every((x, i) => eq(y(sc, x, t), target[i]))) continue;
+      return {
+        kind: 'draw', task, level: 'lin', difficulty: task === 'refl' ? 3 : 4, sc, t, xs, target,
+        text, fig: snap((x) => y(sc, x, 0), { hi, end: sc.end, arrows: sc.pulses.map((p) => arrowOf(p, 0, { up: p.sgn < 0 })), label: tLabel(0) }),
+        anim: { sc, t0: -0.5, t1: 0, show: ['sum'] }, solAnim: { sc, t0: 0, t1: t, show: task === 'refl' ? ['sum'] : ['parts', 'sum'], virtual: task !== 'sup' },
+        draw: { hi, end: sc.end, label: tLabel(t) },
+        questions: [],
+        hints: [task === 'sup' ? RULE.sup() : RULE.mirror(), L(`First move each crest to t = ${num(t)} s (1 m per second), then add the heights at each grid line.`, `Verschiebe zuerst jeden Buckel auf t = ${num(t)} s (1 m pro Sekunde), dann addiere die Höhen bei jeder Gitterlinie.`), ...(task === 'sup' ? [] : [RULE.fixed()])],
+        solution: [task === 'sup' ? RULE.sup() : RULE.mirror(), ...(task === 'sup' ? [] : [RULE.fixed()])],
+        solFig: snap((x) => y(sc, x, t), { hi, end: sc.end, label: tLabel(t), more: task === 'sup' ? sc.pulses.map((p, i) => ({ f: (x) => ev(p, x, t), cls: i ? 'part2' : 'part' })) : [{ f: (x) => yIn(sc, x, t), cls: 'part' }, { f: (x) => yRef(sc, x, t), cls: 'part2' }] }),
+        p: { k: 'draw', task, t, s: sc.pulses.map((p) => [p.x0, p.sgn]) },
+      };
+    }
+  }
+
+  const EXERCISES = {
+    move: (r, a) => move(r, a), yt: (r, a) => yt(r, a), ty: (r, a) => ty(r, a), medium: (r, a) => medium(r, a), speed: (r, a) => speed(r, a),
+    sup: (r, a) => sup(r, a), refl: (r, a, b) => refl(r, b || 'lin', a === 'smooth' ? null : a), reflsum: (r, a, b) => reflsum(r, a || 'lin', b), mirror: (r, a) => mirror(r, a), end: (r, a) => endEx(r, a), draw: (r, a) => draw(r, a),
+  };
+  // An exercise of a type ('move-lin', 'refl-fixed', 'refl-smooth', 'speed-x', 'draw-sup', …) and a seed.
+  function generate(type, seed) {
+    const r = rng(seed), [kind, a, b] = type.split('-');
+    const e = kind === 'refl' ? (a === 'smooth' ? refl(r, 'smooth', null) : refl(r, 'lin', a)) : EXERCISES[kind](r, a, b);
+    return { ...e, type, seed };
+  }
+
+  const api = { rng, LIN, SMOOTH, prof, pulse, ev, image, y, yIn, yRef, snap, graphT, sig, X, Y, num, RULE, EXERCISES, generate, endWord, dirWord, tLabel, arrowOf };
+  root.Waves = api;
+  if (typeof module !== 'undefined') module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);
