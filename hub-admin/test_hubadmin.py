@@ -1,12 +1,13 @@
 """Tests of the hub admin: run with `python3 hub-admin/test_hubadmin.py`.
 
 Checks the reading of the hub page, the cleaning of a configuration and of sets, the names a set
-may have, the atomic write, the password (in the crossword app's format) and sessions, and the
+may have (and that no app or set clashes with a service nginx passes on), the atomic write, the password (in the crossword app's format) and sessions, and the
 service end to end: login, rate limit, the API with and without a session, and that saves reach
 apps.json and sets.json.
 """
 import hashlib
 import json
+import re
 import secrets
 import sys
 import tempfile
@@ -81,6 +82,18 @@ class Unit(unittest.TestCase):
         self.assertEqual(H.normalize_sets({"sets": {"coe": {}, "ok": {}}}, apps, strict=False), {"sets": {"ok": {"title": "", "apps": []}}})
         with self.assertRaises(ValueError):
             H.normalize_sets({"sets": {f"s{i}": {} for i in range(H.MAX_SETS + 1)}}, apps)
+
+    def test_names_do_not_clash(self):
+        # the services nginx passes on (games, quizzes, the admin panel): an app deployed at the
+        # same path would be hidden behind them, and so would a set of that name
+        conf = (ROOT / "deploy" / "nginx" / "learningphysics.conf").read_text()
+        services = set(re.findall(r"location /([a-z0-9-]+)/ \{[^}]*proxy_pass", conf))
+        self.assertIn("millionaire", services)
+        self.assertLessEqual(services, H.RESERVED, "a service is missing from RESERVED (set names)")
+        apps = re.search(r'^APPS="([^"]*)"', (ROOT / "deploy.sh").read_text(), re.M).group(1).split()
+        paths = {a.split(":")[-1] for a in apps}
+        self.assertIn("coe", paths)
+        self.assertEqual(paths & services, set(), "an app is deployed at the path of a service")
 
     def test_normalize(self):
         ids = ["a", "b", "c"]
