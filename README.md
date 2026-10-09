@@ -5,7 +5,7 @@ The physics apps of [learningphysics.ch](https://learningphysics.ch): static pag
 ## Tests and deployment
 
 - `node <app>/test/check-generator.js` tests one app. `shared/sync.sh --check` checks that the copies match `shared/`.
-- Every push to `main` runs all the tests on GitHub. If they pass, `deploy.sh` copies the apps to the web root `/var/www/teachingphysics/` on the server (the folder kept its old name). `./deploy.sh --dry-run` lists what would change.
+- Every push to `main` runs all the tests on GitHub. If they pass, `deploy.sh` copies the apps to the web root `/var/www/teachingphysics/` on the server (the folder kept its old name), and with them the admin panel's program (`hub-admin/hubadmin.py`), whose service restarts by itself when it changes (see `hub-admin/hub-admin.service`). `./deploy.sh --dry-run` lists what would change.
 
 ## Server (nginx)
 

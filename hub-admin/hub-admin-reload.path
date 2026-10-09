@@ -1,0 +1,10 @@
+# Restarts the admin panel when deploy.sh has sent a new hubadmin.py (see hub-admin.service).
+[Unit]
+Description=Restart the hub admin when hubadmin.py changes
+
+[Path]
+PathChanged=/var/www/teachingphysics/hub-admin/hubadmin.py
+Unit=hub-admin-reload.service
+
+[Install]
+WantedBy=multi-user.target

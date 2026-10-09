@@ -1,0 +1,7 @@
+# Started by hub-admin-reload.path: restarts the admin panel (see hub-admin.service).
+[Unit]
+Description=Restart the hub admin after a deploy
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl restart hub-admin.service

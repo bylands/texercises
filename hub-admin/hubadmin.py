@@ -39,7 +39,8 @@ takes effect at once and ends every session. Standard library only.
         --hub /var/www/teachingphysics/index.html --config /var/www/teachingphysics/hub-data/apps.json \
         --sets /var/www/teachingphysics/hub-data/sets.json
 
-Deployment: see hub-admin.service (systemd) and the nginx locations /admin/, /apps.json,
+Deployment: deploy.sh sends this file to the web root (hub-admin/, not served), and the service
+restarts when it changes; see hub-admin.service (systemd) and the nginx locations /admin/, /apps.json,
 /sets.json and @set.
 """
 from __future__ import annotations
@@ -71,7 +72,7 @@ MAX_SETS, MAX_TITLE = 100, 80
 MAX_EXAMPLES, MAX_STAGES = 100, 300  # per app in a set
 # names a set cannot have, besides the apps and what is in the web root: the services and paths
 # nginx serves itself, and some kept free
-RESERVED = {"admin", "api", "apps", "crosswords", "electric-circuits", "hub", "hub-data", "index", "katex",
+RESERVED = {"admin", "api", "apps", "crosswords", "electric-circuits", "hub", "hub-admin", "hub-data", "index", "katex",
             "lang", "millionaire", "privacy", "set", "sets", "static", "www"}
 LOGIN_ATTEMPTS, LOGIN_WINDOW = 10, 15 * 60  # failed logins per address and window (s)
 
