@@ -17,7 +17,7 @@
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
       correct: 'Correct', option: (k) => `Option ${k}`, drawWrong: (n) => `${n} grid ${n === 1 ? 'line is' : 'lines are'} not right yet (marked).`,
       tutorNote: 'Use the arrow keys ← → to step through. ▶ plays an animation; the slider moves through time.',
-      given: 'Given', animLead: 'The animation shows how the rope got there; ▶ plays it again.', animNote: 'The animation shows how the rope got there and stops at the state given. With ▶ or the slider you can move the crests on yourself (two crests running towards each other one by one); the time is not shown.',
+      given: 'Given', animLead: 'The animation shows how the rope got there; ▶ plays it again.', animNote: 'The animation shows how the rope got there and stops at the state given. With ▶ or the slider you can move the crests on yourself (two crests running towards each other one by one); the time is not shown. The faded line is the rope in the state given.',
     },
     de: {
       title: 'Wellenausbreitung', mode: 'Modus', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe', new: 'Neue Aufgabe', difficulty: 'Schwierigkeit',
@@ -29,7 +29,7 @@
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
       correct: 'Richtig', option: (k) => `Antwort ${k}`, drawWrong: (n) => `${n} ${n === 1 ? 'Gitterlinie stimmt' : 'Gitterlinien stimmen'} noch nicht (markiert).`,
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. ▶ spielt eine Animation ab; mit dem Schieber bewegst du dich durch die Zeit.',
-      given: 'Gegeben', animLead: 'Die Animation zeigt, wie das Seil dorthin kam; ▶ spielt sie nochmals ab.', animNote: 'Die Animation zeigt, wie das Seil dorthin kam, und hält beim gegebenen Zustand an. Mit ▶ oder dem Schieber kannst du die Buckel selbst weiterbewegen (zwei aufeinander zulaufende Buckel einzeln); die Zeit wird nicht angezeigt.',
+      given: 'Gegeben', animLead: 'Die Animation zeigt, wie das Seil dorthin kam; ▶ spielt sie nochmals ab.', animNote: 'Die Animation zeigt, wie das Seil dorthin kam, und hält beim gegebenen Zustand an. Mit ▶ oder dem Schieber kannst du die Buckel selbst weiterbewegen (zwei aufeinander zulaufende Buckel einzeln); die Zeit wird nicht angezeigt. Die blasse Linie ist das Seil im gegebenen Zustand.',
     },
   };
   const ui = () => UI[Lang.get()];
@@ -75,7 +75,7 @@
       if (e.kind === 'medium') return `<div class="fig">${animSlot(base)}</div>`;
       const sc = e.anim.sc, split = !sc.end && sc.pulses.length === 2 && sc.pulses[0].dir !== sc.pulses[1].dir;
       const t1 = Math.min(15, Math.max(gone(sc, f.hi), (e.t || 0) + 2, e.anim.t1 + 2));
-      return `<div class="fig">${animSlot({ ...base, t1, hold: e.anim.t1, noTime: true, split, show: split ? ['parts', 'sum'] : e.anim.show, Y: split ? Math.max(base.Y || 6, 11) : base.Y })}</div>`; // moved one by one, any parts may overlap
+      return `<div class="fig">${animSlot({ ...base, t1, hold: e.anim.t1, ref: e.anim.t1, noTime: true, split, show: split ? ['parts', 'sum'] : e.anim.show, Y: split ? Math.max(base.Y || 6, 11) : base.Y })}</div>`; // moved one by one, any parts may overlap
     }
     return graphs(e.fig);
   }
@@ -84,8 +84,9 @@
     return Math.max(...sc.pulses.map((p) => (sc.end && p.dir > 0 ? (2 * sc.end.x - p.x0) / p.v : p.dir > 0 ? (hi - p.x0) / p.v : (p.x0 + p.sh.w) / p.v)));
   }
   // the solution's animation: it stops at the time the exercise asks about, and goes on beyond it
+  // (with the given state faded as a reference, where the exercise gave the rope at its start)
   function solAnimOf(e) {
-    const a = e.solAnim;
+    const a = { ...e.solAnim, ...(e.anim && e.anim.t1 === e.solAnim.t0 ? { ref: e.solAnim.t0 } : {}) };
     if (e.t == null || a.trace != null || e.t <= a.t0 || e.t > a.t1 + 1e-9) return a;
     return { ...a, hold: e.t, t1: Math.max(a.t1, e.t + 1.5) };
   }

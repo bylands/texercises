@@ -12,7 +12,8 @@
 //                    motion) and stops at a.hold (e.g. the time an exercise asks about), from where
 //                    ▶ or the slider go on; a.noTime hides the time (the student moves the crests
 //                    without being told when); a.split gives each crest its own slider, to move
-//                    them one by one (crests without an end). Returns { stop }.
+//                    them one by one (crests without an end); a.ref: the rope at that time drawn
+//                    faded, as a reference, once the crests have left it. Returns { stop }.
 (function (root) {
   'use strict';
 
@@ -108,6 +109,8 @@
         curves.push({ f: (x) => sc.pulses.reduce((s, p) => s + W.ev(W.image(p, E, sc.end.type), x, t), 0) * (a.virtual || x <= E ? 1 : 0), cls: 'part2' });
       } else sc.pulses.forEach((p, i) => curves.push({ f: (x) => W.ev(p, x, t), cls: i ? 'part2' : 'part' }));
     }
+    // faded: the rope at the reference time (the state given), once the crests have moved on
+    if (a.refShown) curves.unshift({ f: (x) => W.y(a.refSc, x, a.ref), cls: 'ref' });
     if (a.show.includes('sum')) curves.push({ f: (x) => W.y(sc, x, t), cls: 'main' });
     // the speed arrows of the crests still (partly) on the rope
     const arrows = a.arrows ? sc.pulses.filter((p) => { const l = p.x0 + p.dir * p.v * t; return l + p.sh.w > 0 && l < (E != null ? E : W.X); }).map((p) => W.arrowOf(p, t, { up: p.sgn < 0 })) : [];
@@ -131,7 +134,8 @@
       const frames = el.querySelector('.frames'), btn = el.querySelector('.play'), sliders = [...el.querySelectorAll('input[type=range]')];
       const ts = Array.from({ length: n }, () => a.t0);
       let raf = 0, last = 0, playing = false, held = false;
-      const at = () => (a.split ? frame({ ...a, sc: { ...a.sc, pulses: a.sc.pulses.map((p, i) => ({ ...p, x0: p.x0 + p.dir * p.v * ts[i] })) } }, 0) : frame(a, ts[0]));
+      const withRef = () => ({ ...a, refSc: a.sc, refShown: a.ref != null && ts.some((t) => Math.abs(t - a.ref) > 1e-6) });
+      const at = () => (a.split ? frame({ ...withRef(), sc: { ...a.sc, pulses: a.sc.pulses.map((p, i) => ({ ...p, x0: p.x0 + p.dir * p.v * ts[i] })) } }, 0) : frame(withRef(), ts[0]));
       const show = () => { frames.innerHTML = at(); sliders.forEach((sl, i) => { sl.value = String(Math.round(((ts[i] - a.t0) / span) * 1000)); }); };
       const stop = () => { playing = false; cancelAnimationFrame(raf); btn.textContent = '▶'; btn.setAttribute('aria-label', L('Play', 'Abspielen')); };
       const step = (now) => {

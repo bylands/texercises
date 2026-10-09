@@ -26,6 +26,7 @@ svg [class^="c-"] { fill: none; stroke-linejoin: round; stroke-linecap: round; }
 svg .c-main { stroke: var(--wv); stroke-width: 2.6; }
 svg .c-part { stroke: var(--wv-in); stroke-width: 2; stroke-dasharray: 7 5; }
 svg .c-part2 { stroke: var(--wv-ref); stroke-width: 2; stroke-dasharray: 7 5; }
+svg .c-ref { stroke: var(--wv); stroke-width: 2.6; opacity: 0.25; }
 svg .c-virt { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 6 5; }
 svg .c-drawn { stroke: var(--wv-drawn); stroke-width: 2.6; }
 svg .wall { stroke: var(--ink); stroke-width: 3; }
