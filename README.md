@@ -12,6 +12,7 @@ The physics apps of [learningphysics.ch](https://learningphysics.ch): static pag
 The nginx site is kept in `deploy/nginx/`:
 
 - `learningphysics.conf`: the site. It serves every folder in the web root, so a new app needs no change here. It proxies the services (live quiz, crosswords, millionaire, admin panel), and redirects www.learningphysics.ch and the old domain teachingphysics.ch.
+  Any other address that looks like a name (learningphysics.ch/3a-elektro) gets the hub page, which shows the teacher's set of that name (made in the admin panel, saved as `hub-data/sets.json`, served as `/sets.json`).
 - `gzip.conf`: compression of CSS, JS, JSON and SVG for all sites.
 
 To install a change (on the server, with sudo):
