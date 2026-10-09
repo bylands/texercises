@@ -1,0 +1,195 @@
+// The drawings of Photons, as SVG strings (in user units, y down; the classes are in style.css):
+//   graph(o)                 axes with a grid and ticks: o = { x: [lo, hi, step], y: [lo, hi, step],
+//                            xl, yl (axis labels, SVG text), w, h, minor (grid lines between ticks) };
+//                            returns { X(x), Y(y), s (the SVG of the axes), svg(body, label, cls) }
+//   ufGraph(o)               stopping voltage U₀ against frequency f (10¹⁴ Hz): o = { pts: [[f, U]],
+//                            line: { slope, icept } (V per 10¹⁴ Hz, V; the axes then reach down to
+//                            −W/e), solve (the line drawn, extended to both axes, with f_G and −W/e
+//                            marked) }
+//   ivGraph(curves, o)       the current of a photocell against the voltage: curves [{ U0, I, cls,
+//                            dash }], I in nA; o = { Imax, label }
+//   current(U, U0, I)        the model of that current (nA)
+//   xray(list, o)            X-ray spectra: list [{ U (kV), anode, cls }], λ from 0 to o.max pm
+//   bar(marks)               the spectrum from 100 nm to 1000 nm, with wavelengths marked [{ nm, label }]
+//   bars(E, W)               the photon energy split into the work function and E_kin (eV)
+//   cell(o)                  a photocell: light on the cathode, electrons to the anode, the voltage
+//                            against them (o.counter) and the ammeter
+//   scatter(theta)           the Compton effect: photon in, photon scattered by θ, electron recoiling
+//   sail(o)                  light on a sail: absorbed (o.absorb) or reflected
+(function (root) {
+  'use strict';
+
+  const P = root.Photon || require('./physics.js');
+  const Lang = root.Lang || require('./lang.js');
+  const L = (en, de) => Lang.L(en, de);
+  const f1 = (x) => Math.round(x * 10) / 10;
+  const dec = (x) => String(Math.round(x * 1000) / 1000).replace('-', '−');
+  const it = (s) => `<tspan font-style="italic">${s}</tspan>`;
+  const sub = (s) => `<tspan font-size="72%" dy="4">${s}</tspan><tspan dy="-4">​</tspan>`;
+
+  // ---------------------------------------------------------------- axes
+  function graph(o) {
+    const w = o.w || 340, h = o.h || 230, ml = o.ml || 44, mr = 16, mt = 22, mb = 36;
+    const [x0, x1, xs] = o.x, [y0, y1, ys] = o.y;
+    const X = (x) => f1(ml + ((x - x0) / (x1 - x0)) * (w - ml - mr));
+    const Y = (y) => f1(mt + ((y1 - y) / (y1 - y0)) * (h - mt - mb));
+    let s = '';
+    const minor = o.minor || 1;
+    for (let k = 0; k <= Math.round(((x1 - x0) / xs) * minor); k++) { const x = x0 + (k * xs) / minor; s += `<line class="${k % minor ? 'grid minor' : 'grid'}" x1="${X(x)}" y1="${Y(y0)}" x2="${X(x)}" y2="${Y(y1)}"/>`; }
+    for (let k = 0; k <= Math.round(((y1 - y0) / ys) * minor); k++) { const y = y0 + (k * ys) / minor; s += `<line class="${k % minor ? 'grid minor' : 'grid'}" x1="${X(x0)}" y1="${Y(y)}" x2="${X(x1)}" y2="${Y(y)}"/>`; }
+    const ax = Math.max(x0, Math.min(x1, 0)), ay = Math.max(y0, Math.min(y1, 0));
+    s += `<line class="ax" x1="${X(x0)}" y1="${Y(ay)}" x2="${X(x1) + 8}" y2="${Y(ay)}"/><path class="axhead" d="M${X(x1) + 12} ${Y(ay)} l-7 -3.5 v7 z"/>`;
+    s += `<line class="ax" x1="${X(ax)}" y1="${Y(y0)}" x2="${X(ax)}" y2="${Y(y1) - 8}"/><path class="axhead" d="M${X(ax)} ${Y(y1) - 12} l-3.5 7 h7 z"/>`;
+    if (!o.noXTicks) for (let k = 0; k <= Math.round((x1 - x0) / xs); k++) { const x = x0 + k * xs; if (Math.abs(x) > 1e-9 || ay !== y0) s += `<text class="tick" x="${X(x)}" y="${Y(y0) + 16}" text-anchor="middle">${dec(x)}</text>`; }
+    if (!o.noYTicks) for (let k = 0; k <= Math.round((y1 - y0) / ys); k++) { const y = y0 + k * ys; s += `<text class="tick" x="${X(x0) - 6}" y="${Y(y) + 4}" text-anchor="end">${dec(y)}</text>`; }
+    s += `<text class="lbl" x="${w - 4}" y="${h - 4}" text-anchor="end">${o.xl}</text>`;
+    s += `<text class="lbl" x="${X(ax) + 10}" y="14" text-anchor="start">${o.yl}</text>`;
+    const svg = (body, label, cls = '') => `<svg class="ph graph ${cls}" viewBox="0 0 ${w} ${h}" width="${w}" role="img" aria-label="${label}">${s}${body}</svg>`;
+    return { X, Y, s, svg, w, h };
+  }
+  const poly = (pts, cls, extra = '') => `<polyline class="${cls}" points="${pts.map(([x, y]) => `${x},${y}`).join(' ')}"${extra}/>`;
+
+  // ---------------------------------------------------------------- U₀ against f
+  function ufGraph(o) {
+    const fmax = Math.max(...o.pts.map((p) => p[0]));
+    const Umax = Math.max(...o.pts.map((p) => p[1]));
+    const xHi = Math.ceil(fmax + 1), yHi = Math.max(1, Math.ceil(Umax * 2 + 0.6) / 2);
+    const yLo = o.line ? -Math.ceil(-o.line.icept * 2 + 0.6) / 2 : 0;
+    const g = graph({ x: [0, xHi, 1], y: [yLo, yHi, 0.5], xl: `${it('f')} in 10<tspan font-size="72%" dy="-6">14</tspan><tspan dy="6"> Hz</tspan>`, yl: `${it('U')}${sub('0')} in V`, w: 360, h: o.line ? 300 : 240, minor: 2 });
+    let body = '';
+    if (o.solve) {
+      const { slope, icept } = o.line, fG = -icept / slope;
+      body += `<line class="fit" x1="${g.X(0)}" y1="${g.Y(icept)}" x2="${g.X(xHi)}" y2="${g.Y(icept + slope * xHi)}"/>`;
+      body += `<line class="fit ext" x1="${g.X(0)}" y1="${g.Y(icept)}" x2="${g.X(fG)}" y2="${g.Y(0)}"/>`;
+      body += `<circle class="mark" cx="${g.X(fG)}" cy="${g.Y(0)}" r="4"/><text class="lbl small" x="${g.X(fG) + 6}" y="${g.Y(0) - 8}">${it('f')}${sub('G')}</text>`;
+      body += `<circle class="mark" cx="${g.X(0)}" cy="${g.Y(icept)}" r="4"/><text class="lbl small" x="${g.X(0) + 8}" y="${g.Y(icept) + 16}">−${it('W')}/${it('e')}</text>`;
+      // the slope triangle between the outer points
+      const [a, b] = [o.pts[0], o.pts[o.pts.length - 1]].map(([f]) => [f, icept + slope * f]);
+      body += `<path class="tri" d="M${g.X(a[0])} ${g.Y(a[1])} H${g.X(b[0])} V${g.Y(b[1])}"/>`;
+      body += `<text class="lbl small" x="${(g.X(a[0]) + g.X(b[0])) / 2}" y="${g.Y(a[1]) + 16}" text-anchor="middle">Δ${it('f')}</text><text class="lbl small" x="${g.X(b[0]) + 6}" y="${(g.Y(a[1]) + g.Y(b[1])) / 2 + 4}">Δ${it('U')}${sub('0')}</text>`;
+    }
+    body += o.pts.map(([f, U]) => `<circle class="pt" cx="${g.X(f)}" cy="${g.Y(U)}" r="3.6"/>`).join('');
+    return g.svg(body, L('Measured stopping voltages against the frequency of the light', 'Gemessene Gegenspannungen gegen die Frequenz des Lichts'));
+  }
+
+  // ---------------------------------------------------------------- current of a photocell
+  const current = (U, U0, I) => (U <= -U0 ? 0 : I * (1 - Math.exp(-(U + U0) / 0.35)));
+  function ivGraph(curves, o = {}) {
+    const Imax = o.Imax || Math.max(...curves.map((k) => k.I)) * 1.15;
+    const step = Imax > 40 ? 20 : Imax > 16 ? 5 : 2;
+    const g = graph({ x: [-3, 3, 1], y: [0, Math.ceil(Imax / step) * step, step], xl: `${it('U')} in V`, yl: `${it('I')} in nA`, w: o.w || 320, h: o.h || 210, noYTicks: o.noYTicks });
+    const body = curves.map((k) => {
+      const pts = [];
+      for (let U = -3; U <= 3.0001; U += 0.05) pts.push([g.X(U), g.Y(current(U, k.U0, k.I))]);
+      return poly(pts, `iv ${k.cls || ''}`, k.dash ? ' stroke-dasharray="5 4"' : '');
+    }).join('');
+    return g.svg(body, o.label || L('Current against voltage of a photocell', 'Strom gegen Spannung einer Fotozelle'), o.small ? 'small' : '');
+  }
+
+  // ---------------------------------------------------------------- X-ray spectra
+  // The continuum (Kramers): I ∝ (λ/λ_min − 1)/λ², largest at 2λ_min; the lines of the anode appear
+  // once the electrons can ionise its K shell (e·U above the edge).
+  function xrayCurve(U, anode, lam) {
+    const lm = P.lambdaMin(U * 1e3), cont = (l) => (l <= lm ? 0 : (l / lm - 1) / (l * l));
+    let I = cont(lam);
+    if (anode && U > anode.edge) {
+      // the lines stand out from the continuum below them, more so well above the edge
+      const k = 3.5 * Math.min(1, (U - anode.edge) / anode.edge);
+      I += k * cont(anode.ka) * Math.exp(-Math.pow((lam - anode.ka) / 1.4, 2)) + 0.45 * k * cont(anode.kb) * Math.exp(-Math.pow((lam - anode.kb) / 1.4, 2));
+    }
+    return I;
+  }
+  function xray(list, o = {}) {
+    const max = o.max || 200, top = o.top || Math.max(...list.map((s) => { let m = 0; for (let l = 1; l <= max; l += 0.25) m = Math.max(m, xrayCurve(s.U, s.anode, l)); return m; })) * 1.12;
+    const g = graph({ x: [0, max, max > 120 ? 20 : 10], y: [0, top, top / 4], xl: `${it('λ')} in pm`, yl: L('intensity', 'Intensität'), noYTicks: true, w: o.w || 360, h: o.h || 220, ml: 18, minor: o.small ? 1 : 2 });
+    const body = list.map((s) => {
+      const pts = [];
+      for (let l = 0; l <= max; l += 0.25) pts.push([g.X(l), g.Y(xrayCurve(s.U, s.anode, l))]);
+      return poly(pts, `spec ${s.cls || ''}`, s.dash ? ' stroke-dasharray="5 4"' : '');
+    }).join('') + (o.marks || []).map((m) => `<line class="mk" x1="${g.X(m.at)}" y1="${g.Y(0)}" x2="${g.X(m.at)}" y2="${g.Y(top * 0.92)}"/><text class="lbl small" x="${g.X(m.at)}" y="${g.Y(top * 0.95)}" text-anchor="middle">${m.label}</text>`).join('');
+    return g.svg(body, o.label || L('X-ray spectrum: intensity against wavelength', 'Röntgenspektrum: Intensität gegen Wellenlänge'), o.small ? 'small' : '');
+  }
+
+  // ---------------------------------------------------------------- the spectrum as a bar
+  function bar(marks = []) {
+    const w = 420, h = 92, x0 = 20, x1 = 400, lo = 100, hi = 1000;
+    const X = (nm) => f1(x0 + ((nm - lo) / (hi - lo)) * (x1 - x0));
+    let s = '<defs><linearGradient id="ph-vis" x1="0" x2="1">';
+    for (let nm = 380; nm <= 750; nm += 10) s += `<stop offset="${((nm - 380) / 370).toFixed(3)}" stop-color="${P.rgb(nm)}"/>`;
+    s += '</linearGradient></defs>';
+    s += `<rect class="uv" x="${X(lo)}" y="26" width="${X(380) - X(lo)}" height="22"/><rect x="${X(380)}" y="26" width="${X(750) - X(380)}" height="22" fill="url(#ph-vis)"/><rect class="ir" x="${X(750)}" y="26" width="${X(hi) - X(750)}" height="22"/>`;
+    s += `<text class="lbl small" x="${(X(lo) + X(380)) / 2}" y="20" text-anchor="middle">UV</text><text class="lbl small" x="${(X(380) + X(750)) / 2}" y="20" text-anchor="middle">${L('visible', 'sichtbar')}</text><text class="lbl small" x="${(X(750) + X(hi)) / 2}" y="20" text-anchor="middle">${L('infrared', 'Infrarot')}</text>`;
+    for (const nm of [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]) s += `<line class="ax" x1="${X(nm)}" y1="48" x2="${X(nm)}" y2="53"/><text class="tick" x="${X(nm)}" y="65" text-anchor="middle">${nm}</text>`;
+    s += `<text class="lbl small" x="${x1}" y="84" text-anchor="end">${it('λ')} in nm</text>`;
+    s += `<text class="lbl small" x="${x0}" y="84">${L('higher photon energy ←', 'höhere Photonenenergie ←')}</text>`;
+    for (const m of marks) if (m.nm >= lo && m.nm <= hi) s += `<path class="mark-arrow" d="M${X(m.nm)} 50 l-5 9 h10 z"/>${m.label ? `<text class="lbl small strong" x="${X(m.nm)}" y="76" text-anchor="middle">${m.label}</text>` : ''}`;
+    return `<svg class="ph bar" viewBox="0 0 ${w} ${h}" width="${w}" role="img" aria-label="${L('The spectrum from ultraviolet to infrared', 'Das Spektrum vom Ultraviolett bis zum Infrarot')}">${s}</svg>`;
+  }
+
+  // ---------------------------------------------------------------- energy bars
+  function bars(E, W) {
+    const w = 300, h = 210, base = 186, k = 150 / Math.max(E, W, 0.5), x = 70, bw = 54;
+    const y = (v) => f1(base - v * k);
+    let s = `<line class="ax" x1="40" y1="${base}" x2="260" y2="${base}"/>`;
+    s += `<rect class="photon" x="${x}" y="${y(E)}" width="${bw}" height="${f1(E * k)}"/><text class="lbl small" x="${x + bw / 2}" y="${y(E) - 6}" text-anchor="middle">${it('h')}·${it('f')}</text>`;
+    const x2 = 170;
+    s += `<rect class="work" x="${x2}" y="${y(Math.min(W, E))}" width="${bw}" height="${f1(Math.min(W, E) * k)}"/><text class="lbl small inside" x="${x2 + bw / 2}" y="${(y(Math.min(W, E)) + base) / 2 + 5}" text-anchor="middle">${it('W')}</text>`;
+    if (E > W) s += `<rect class="kin" x="${x2}" y="${y(E)}" width="${bw}" height="${f1((E - W) * k)}"/><text class="lbl small" x="${x2 + bw + 6}" y="${(y(E) + y(W)) / 2 + 5}">${it('E')}${sub('kin')}</text>`;
+    else s += `<rect class="missing" x="${x2}" y="${y(W)}" width="${bw}" height="${f1((W - E) * k)}"/><text class="lbl small" x="${x2 + bw + 6}" y="${(y(E) + y(W)) / 2 + 5}">${L('missing', 'fehlt')}</text>`;
+    s += `<line class="guide" x1="${x + bw}" y1="${y(E)}" x2="${x2}" y2="${y(E)}"/>`;
+    s += `<text class="lbl small" x="${x + bw / 2}" y="${base + 18}" text-anchor="middle">${L('photon', 'Photon')}</text><text class="lbl small" x="${x2 + bw / 2}" y="${base + 18}" text-anchor="middle">${L('electron', 'Elektron')}</text>`;
+    return `<svg class="ph bars" viewBox="0 0 ${w} ${h + 6}" width="${w}" role="img" aria-label="${L('The photon energy: the work function, and the rest as kinetic energy', 'Die Photonenenergie: die Austrittsarbeit, und der Rest als kinetische Energie')}">${s}</svg>`;
+  }
+
+  // ---------------------------------------------------------------- a photocell
+  function wave(x0, y0, x1, y1, n = 5, amp = 4) {
+    const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+    const pts = [];
+    for (let t = 0; t <= 1.0001; t += 0.02) { const a = amp * Math.sin(t * n * 2 * Math.PI); pts.push([f1(x0 + dx * t - uy * a), f1(y0 + dy * t + ux * a)]); }
+    return poly(pts, 'ray') + `<path class="rayhead" d="M${x1 + ux * 6} ${y1 + uy * 6} l${f1(-ux * 9 - uy * 4)} ${f1(-uy * 9 + ux * 4)} l${f1(uy * 8)} ${f1(-ux * 8)} z"/>`;
+  }
+  function cell(o = {}) {
+    const col = o.nm ? P.rgb(Math.max(400, Math.min(700, o.nm))) : null;
+    let s = '<rect class="glass" x="70" y="20" width="200" height="120" rx="40"/>';
+    s += '<path class="cathode" d="M110 40 a60 60 0 0 0 0 80"/><line class="anode" x1="226" y1="45" x2="226" y2="115"/>';
+    s += `<g style="${col ? `--ray:${col}` : ''}">${wave(20, 30, 100, 68)}${wave(20, 70, 96, 82)}</g>`;
+    for (const [x, y] of [[140, 64], [170, 82], [196, 70]]) s += `<circle class="el" cx="${x}" cy="${y}" r="4"/><text class="sign" x="${x}" y="${y + 3.5}" text-anchor="middle">−</text>`;
+    s += '<path class="elpath" d="M116 70 Q150 60 218 76"/>';
+    s += '<path class="wire" d="M106 120 V170 H150 M190 170 H240 V115 M226 115 H240"/>';
+    s += `<circle class="meter" cx="170" cy="170" r="13"/><text class="lbl small" x="170" y="175" text-anchor="middle">A</text>`;
+    s += `<line class="wire" x1="150" y1="170" x2="157" y2="170"/><line class="wire" x1="183" y1="170" x2="190" y2="170"/>`;
+    if (o.counter) s += '<line class="batt" x1="216" y1="160" x2="216" y2="180"/><line class="batt thick" x1="224" y1="164" x2="224" y2="176"/><rect class="gap" x="217" y="166" width="6" height="8"/>' + `<text class="lbl small" x="220" y="198" text-anchor="middle">${it('U')}</text>`;
+    s += `<text class="lbl small" x="48" y="128" text-anchor="middle">${L('cathode', 'Kathode')}</text><text class="lbl small" x="246" y="44">${L('anode', 'Anode')}</text>`;
+    return `<svg class="ph cell" viewBox="0 0 300 206" width="300" role="img" aria-label="${L('A photocell: light falls on the cathode and releases electrons, which fly to the anode', 'Eine Fotozelle: Licht fällt auf die Kathode und löst Elektronen aus, die zur Anode fliegen')}">${s}</svg>`;
+  }
+
+  // ---------------------------------------------------------------- Compton scattering
+  function scatter(theta) {
+    const cx = 170, cy = 90, t = (theta * Math.PI) / 180, phi = Math.atan2(Math.sin(t), 1.2 - Math.cos(t)) || 0;
+    let s = `<g style="--ray:var(--ph-x)">${wave(20, cy, cx - 14, cy, 6, 4)}</g>`;
+    s += `<g style="--ray:var(--ph-x2)">${wave(cx + 14 * Math.cos(t), cy - 14 * Math.sin(t), cx + 120 * Math.cos(t), cy - 120 * Math.sin(t), 4, 4)}</g>`;
+    s += `<line class="elpath" x1="${cx}" y1="${cy}" x2="${f1(cx + 80 * Math.cos(phi))}" y2="${f1(cy + 80 * Math.sin(phi))}"/>`;
+    s += `<circle class="el" cx="${f1(cx + 88 * Math.cos(phi))}" cy="${f1(cy + 88 * Math.sin(phi))}" r="6"/><text class="sign" x="${f1(cx + 88 * Math.cos(phi))}" y="${f1(cy + 88 * Math.sin(phi) + 3.5)}" text-anchor="middle">−</text>`;
+    s += `<line class="guide" x1="${cx}" y1="${cy}" x2="${cx + 110}" y2="${cy}"/>`;
+    const r = 30;
+    s += `<path class="angle" d="M${cx + r} ${cy} A${r} ${r} 0 ${theta > 180 ? 1 : 0} 0 ${f1(cx + r * Math.cos(t))} ${f1(cy - r * Math.sin(t))}"/>`;
+    s += `<text class="lbl small" x="${f1(cx + (r + 12) * Math.cos(t / 2))}" y="${f1(cy - (r + 12) * Math.sin(t / 2) + 4)}" text-anchor="middle">${it('θ')}</text>`;
+    s += `<circle class="el rest" cx="${cx}" cy="${cy}" r="6"/>`;
+    s += `<text class="lbl small" x="40" y="${cy - 14}">${it('λ')}</text><text class="lbl small" x="${f1(cx + 128 * Math.cos(t) + (Math.cos(t) < -0.3 ? -14 : 6))}" y="${f1(cy - 128 * Math.sin(t))}">${it('λ')}′</text>`;
+    return `<svg class="ph scatter" viewBox="0 0 330 ${theta > 120 ? 190 : 180}" width="330" role="img" aria-label="${L('A photon is scattered by an electron at rest through the angle θ; the electron recoils', 'Ein Photon wird an einem ruhenden Elektron um den Winkel θ gestreut; das Elektron fliegt weg')}">${s}</svg>`;
+  }
+
+  // ---------------------------------------------------------------- a sail in the light
+  function sail(o = {}) {
+    let s = '<rect class="sailbody" x="200" y="20" width="10" height="130"/>';
+    for (const y of [40, 85, 130]) s += `<g style="--ray:var(--ph-sun)">${wave(30, y, 192, y, 6, 3)}</g>`;
+    if (!o.absorb) for (const y of [55, 100]) s += `<g style="--ray:var(--ph-sun)" opacity="0.6">${wave(192, y + 8, 60, y + 8, 6, 3)}</g>`;
+    s += `<line class="force" x1="215" y1="85" x2="${o.absorb ? 255 : 290}" y2="85"/><path class="forcehead" d="M${o.absorb ? 265 : 300} 85 l-11 -5 v10 z"/><text class="lbl small" x="${o.absorb ? 240 : 258}" y="76" text-anchor="middle">${it('F')}</text>`;
+    s += `<text class="lbl small" x="205" y="166" text-anchor="middle">${o.absorb ? L('black: absorbs', 'schwarz: absorbiert') : L('mirror: reflects', 'Spiegel: reflektiert')}</text>`;
+    return `<svg class="ph sail" viewBox="0 0 320 176" width="320" role="img" aria-label="${o.absorb ? L('Light absorbed by a black sail pushes it', 'Licht, das ein schwarzes Segel absorbiert, drückt es weg') : L('Light reflected by a mirror sail pushes it twice as hard', 'Licht, das ein Spiegelsegel reflektiert, drückt es doppelt so stark')}">${s}</svg>`;
+  }
+
+  const api = { graph, ufGraph, ivGraph, current, xray, xrayCurve, bar, bars, cell, scatter, sail };
+  root.PhotonPlot = api;
+  if (typeof module !== 'undefined') module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);
