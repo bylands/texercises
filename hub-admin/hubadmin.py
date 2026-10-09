@@ -694,10 +694,11 @@ DRAG_JS = r"""
       li.classList.add('dragging');
       document.body.classList.add('drag-active');
 
-      // past the middle of a sibling: take its place
+      // past the middle of a sibling: take its place (the sibling moves, not the item: moved, it
+      // would lose the pointer)
       const place = () => {
         let p;
-        while ((p = li.previousElementSibling) && y < mid(p)) list.insertBefore(li, p);
+        while ((p = li.previousElementSibling) && y < mid(p)) list.insertBefore(p, li.nextElementSibling);
         while ((p = li.nextElementSibling) && y > mid(p)) list.insertBefore(p, li);
       };
       const scroll = () => {
@@ -708,14 +709,14 @@ DRAG_JS = r"""
         scrollBy(0, d * Math.ceil((EDGE - (d < 0 ? y : innerHeight - y)) / 4));
         if (scrollY !== before) { place(); frame = requestAnimationFrame(scroll); }
       };
-      const moveTo = (ev) => { y = ev.clientY; place(); if (!frame) frame = requestAnimationFrame(scroll); };
+      const moveTo = (ev) => { if (ev.pointerId !== e.pointerId) return; y = ev.clientY; place(); if (!frame) frame = requestAnimationFrame(scroll); };
       const end = (keep) => {
         if (done) return;
         done = true;
         cancelAnimationFrame(frame);
-        h.removeEventListener('pointermove', moveTo);
-        h.removeEventListener('pointerup', up);
-        h.removeEventListener('pointercancel', cancel);
+        window.removeEventListener('pointermove', moveTo);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', cancel);
         document.removeEventListener('keydown', key, true);
         li.classList.remove('dragging');
         document.body.classList.remove('drag-active');
@@ -723,11 +724,11 @@ DRAG_JS = r"""
         if (keep && to !== from) onMove(from, to);
         else if (to !== from) list.insertBefore(li, after);
       };
-      const up = () => end(true), cancel = () => end(false);
+      const up = (ev) => { if (ev.pointerId === e.pointerId) end(true); }, cancel = (ev) => { if (ev.pointerId === e.pointerId) end(false); };
       const key = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); end(false); } };
-      h.addEventListener('pointermove', moveTo);
-      h.addEventListener('pointerup', up);
-      h.addEventListener('pointercancel', cancel);
+      window.addEventListener('pointermove', moveTo);
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', cancel);
       document.addEventListener('keydown', key, true);
     });
     return h;
