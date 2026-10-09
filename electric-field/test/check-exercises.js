@@ -96,9 +96,27 @@ for (const lang of ['en', 'de']) {
         const want = Math.abs(tz) < 1e-9 ? 'does not turn' : tz > 0 ? 'turns anticlockwise' : 'turns clockwise';
         if (rightLabel(e, 'T') !== want) fail(`${tag}: the dipole turns ${rightLabel(e, 'T')}, not ${want}`);
       }
+      if (type === 'plates-compare') {
+        const [fs, fA, fd] = e.p.f.split(',').map(Number), kE = e.p.fixedQ ? fs / fA : fs / fd;
+        if (rightLabel(e, 'E') !== X.frac(kE)) fail(`${tag}: the field factor`);
+        if (rightLabel(e, 'F') !== X.frac((kE * e.p.z2) / e.p.z1)) fail(`${tag}: the force factor`);
+        if ((rightLabel(e, 's') === 'the same way') !== (e.p.q1 * e.p.q2 > 0)) fail(`${tag}: the directions of the forces`);
+      }
+      if (type === 'deflect-compare') {
+        // independently: y = ½·(q·U/(m·d))·(L/v)² for both experiments
+        const P = { p: [1, 1], a: [2, 4], d: [1, 2], e: [-1, 1], 'e+': [1, 1] }, [fv, fU, fL, fd] = e.p.f.split(',').map(Number);
+        const y = ([z, m], U, Lp, d, v) => 0.5 * (Math.abs(z) * U / (m * d)) * (Lp / v) ** 2;
+        const k = y(P[e.p.b], fU, fL, fd, fv) / y(P[e.p.a], 1, 1, 1, 1);
+        if (rightLabel(e, 'y') !== X.frac(k)) fail(`${tag}: the deflection factor ${rightLabel(e, 'y')}, not ${X.frac(k)}`);
+        if (rightLabel(e, 't') !== X.frac(fL / fv)) fail(`${tag}: the time factor`);
+        const same = Math.sign(P[e.p.a][0]) === Math.sign(P[e.p.b][0]) * (e.p.flip ? -1 : 1);
+        if ((rightLabel(e, 's') === 'to the same side') !== same) fail(`${tag}: the side`);
+      }
       if (type === 'millikan') {
-        const { m, dmm, n } = e.p, nn = Number(rightLabel(e, 'n'));
-        if (nn !== n) fail(`${tag}: the number of elementary charges`);
+        // independently: |q| = m·g·d/U for both drops
+        const [fm, fU, fd] = e.p.f.split(',').map(Number), n2 = (e.p.n1 * fm * fd) / fU;
+        if (Number(rightLabel(e, 'n')) !== n2 || rightLabel(e, 'q') !== X.frac(n2 / e.p.n1)) fail(`${tag}: the charge of drop 2`);
+        if ((rightLabel(e, 's') === 'negative') !== (e.p.top2 > 0)) fail(`${tag}: the sign of drop 2`);
       }
     }
   }

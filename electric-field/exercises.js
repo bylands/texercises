@@ -8,10 +8,10 @@
 //   lines-pick, lines-read      field-line diagrams: which one is right; what a diagram tells
 //   conductor                   the field around a conductor (none inside, lines perpendicular)
 //   superpose, zero             the net field of point charges at a point; where it is zero
-//   er-graph, factor            E(r) of a point charge, a sphere, a wire, a plate; factors
-//   plates-num, millikan        the capacitor: E = Q/(ε₀A); Millikan's oil drop
+//   factor                      E of a point charge, a wire, a plate, a capacitor: by what factor?
+//   plates-compare, millikan    two capacitors compared (E = Q/(ε₀A) or U/d); two of Millikan's drops
 //   dipole-uniform, dipole-point   a dipole in a uniform field (torque) and near a point charge
-//   deflect-path, deflect-num   a charge flying into a capacitor: its path; its deflection
+//   deflect-path, deflect-compare   a charge flying into a capacitor: its path; two deflections compared
 //   stmts                       which statements are correct?
 (function (root) {
   'use strict';
@@ -241,33 +241,6 @@
   }
 
   // ---------------------------------------------------------------- field strength of distributions
-  const SHAPES = {
-    point: { f: (x) => (x < 0.08 ? null : 0.3 / (x * x)), dat: 'einer Punktladung', name: () => L('a point charge', 'eine Punktladung'), law: () => L('E = k·Q/r²: it falls with the square of the distance.', 'E = k·Q/r²: Es nimmt mit dem Quadrat des Abstands ab.') },
-    sphere: { f: (x) => (x < 1 ? 0 : 1 / (x * x)), dat: 'einer geladenen Metallkugel mit dem Radius R', name: () => L('a charged metal sphere of radius R', 'eine geladene Metallkugel mit dem Radius R'), law: () => L('Inside the metal sphere there is no field; outside, E = k·Q/r², as for a point charge at its centre.', 'Im Innern der Metallkugel gibt es kein Feld; aussen ist E = k·Q/r², wie für eine Punktladung im Mittelpunkt.'), marks: [{ x: 1, name: 'R' }] },
-    wire: { f: (x) => (x < 0.08 ? null : 0.6 / x), dat: 'einem langen geladenen Draht', name: () => L('a long charged wire', 'ein langer geladener Draht'), law: () => L('E = λ/(2π·ε₀·r): it falls with the distance, more slowly than for a point charge.', 'E = λ/(2π·ε₀·r): Es nimmt mit dem Abstand ab, langsamer als bei einer Punktladung.') },
-    plate: { f: () => 0.55, dat: 'einer grossen geladenen Platte', name: () => L('a large charged plate', 'eine grosse geladene Platte'), law: () => L('E = σ/(2ε₀): the same at every distance (as long as the plate is large compared with the distance).', 'E = σ/(2ε₀): bei jedem Abstand gleich (solange die Platte gross ist im Vergleich zum Abstand).') },
-  };
-  function erGraph(seed) {
-    const r = rng(seed * 61 + 31), key = r.pick(Object.keys(SHAPES)), S = SHAPES[key], back = r.next() < 0.4;
-    const gr = (k, small) => C.graph(SHAPES[k].f, { small, marks: SHAPES[k].marks, xname: 'r' });
-    const others = Object.keys(SHAPES).filter((k) => k !== key);
-    if (back) {
-      return {
-        kind: 'er', title: L('Which charge?', 'Welche Ladung?'),
-        text: L('<p>The graph shows the field strength E against the distance r from a charged object.</p>', '<p>Der Graph zeigt die Feldstärke E gegen den Abstand r von einem geladenen Körper.</p>'), figs: fig(gr(key)),
-        questions: [choice('c', L('The charged object is', 'Der geladene Körper ist'), r.shuffle([key, ...others]).map((k) => ({ label: SHAPES[k].name(), ok: k === key, why: k === key ? '' : `${SHAPES[k].law()} ${S.law()}` })))],
-        hints: [L('How does the field change with the distance: falling fast, falling slowly, not at all? Is there a region without a field?', 'Wie ändert sich das Feld mit dem Abstand: schnell abnehmend, langsam abnehmend, gar nicht? Gibt es ein Gebiet ohne Feld?')],
-        solution: [S.law()], p: { key, back },
-      };
-    }
-    return {
-      kind: 'er', title: L('Field against distance', 'Feld gegen Abstand'),
-      text: L(`<p>How does the field strength E depend on the distance r from ${S.name()}?</p>`, `<p>Wie hängt die Feldstärke E vom Abstand r von ${S.dat} ab?</p>`), figs: '',
-      questions: [{ type: 'pick', key: 'g', label: L('Which graph is right?', 'Welcher Graph stimmt?'), options: r.shuffle([key, ...others]).map((k) => ({ html: gr(k, true), ok: k === key, tag: k, why: k === key ? '' : L(`That is the graph of ${SHAPES[k].name()}. ${S.law()}`, `Das ist der Graph für ${SHAPES[k].name()}. ${S.law()}`) })) }],
-      hints: [L('Compare: point charge 1/r², wire 1/r, large plate constant, metal sphere zero inside.', 'Vergleiche: Punktladung 1/r², Draht 1/r, grosse Platte konstant, Metallkugel innen null.')],
-      solution: [S.law()], p: { key, back },
-    };
-  }
   const FCONF = {
     point: { n: 2, name: () => L('a point charge', 'einer Punktladung'), law: 'E = k·Q/r²' },
     wire: { n: 1, name: () => L('a long charged wire', 'eines langen geladenen Drahts'), law: 'E = λ/(2π·ε₀·r)' },
@@ -300,42 +273,93 @@
   }
 
   // ---------------------------------------------------------------- the capacitor
-  function platesNum(seed) {
-    const r = rng(seed * 71 + 41), A = r.pick([100, 170, 250, 400]) * 1e-4, Q = r.pick([0.1, 0.25, 0.5, 1]) * 1e-6, Ef = Q / (K.eps0 * A);
-    const pt = particle(r, r.pick([1, -1]), { generic: false }), Fq = Math.abs(pt.z) * K.e * Ef;
-    const how = L(`E = Q/(ε₀·A) = ${show(Q, 'charge')} / (8.85 · 10<sup>−12</sup> C²/(N·m²) · ${nice(A * 1e4)} cm²) = ${show(Ef, 'field')}.`, `E = Q/(ε₀·A) = ${show(Q, 'charge')} / (8.85 · 10<sup>−12</sup> C²/(N·m²) · ${nice(A * 1e4)} cm²) = ${show(Ef, 'field')}.`);
-    const howF = L(`F = |q|·E = ${pt.z === 2 || pt.z === -2 ? '2e' : 'e'} · ${show(Ef, 'field')} = ${show(Fq, 'force')}.`, `F = |q|·E = ${pt.z === 2 || pt.z === -2 ? '2e' : 'e'} · ${show(Ef, 'field')} = ${show(Fq, 'force')}.`);
-    const howD = L('E = Q/(ε₀·A) does not depend on the distance between the plates: the field stays the same.', 'E = Q/(ε₀·A) hängt nicht vom Plattenabstand ab: Das Feld bleibt gleich.');
+  // two situations side by side: a table with a row for each quantity
+  const cmpTable = (heads, rows) => `<table class="cmp"><thead><tr><th></th>${heads.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(([n, ...v]) => `<tr><th>${n}</th>${v.map((x) => `<td>${x}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const times = (f, sym) => (Math.abs(f - 1) < 1e-9 ? it(sym) : f > 1 ? `${nice(f)}${it(sym)}` : `${it(sym)}/${nice(1 / f)}`);
+  const whole = (x) => [x, 1 / x].some((y) => Math.abs(y - Math.round(y)) < 1e-9);
+  const FILL = [2, 0.5, 4, 0.25, 1, 3, 1 / 3, 6, 1 / 6, 8, 1 / 8];
+  // the right factor, the tempting ones (with their reasons), then fillers: four options in order
+  function factors(right, tempt, how) {
+    const out = [{ x: right, ok: true }];
+    for (const [x, why] of tempt) if (out.length < 4 && whole(x) && !out.some((o) => Math.abs(o.x - x) < 1e-9)) out.push({ x, why: `${why} ${how}` });
+    for (const x of FILL) if (out.length < 4 && !out.some((o) => Math.abs(o.x - x) < 1e-9)) out.push({ x, why: how });
+    return out.sort((p, q) => p.x - q.x).map((o) => ({ label: frac(o.x), ok: !!o.ok, why: o.ok ? '' : o.why }));
+  }
+  function platesCompare(seed) {
+    const r = rng(seed * 71 + 41), fixedQ = r.next() < 0.5;
+    let f;
+    for (;;) {
+      f = { s: r.pick([1, 1, 2, 3, 0.5]), A: r.pick([1, 1, 2, 0.5]), d: r.pick([1, 1, 2, 3, 0.5]) };
+      if (Object.values(f).filter((x) => x !== 1).length >= 2 && whole(fixedQ ? f.s / f.A : f.s / f.d)) break;
+    }
+    const kE = fixedQ ? f.s / f.A : f.s / f.d;
+    const p1 = particle(r, r.pick([1, -1]), { generic: false });
+    let p2; do p2 = particle(r, r.pick([1, 1, -1]), { generic: false }); while ((p2.id === p1.id && r.next() < 0.7) || !whole((kE * Math.abs(p2.z)) / Math.abs(p1.z)));
+    const z1 = Math.abs(p1.z), z2 = Math.abs(p2.z), kF = (kE * z2) / z1, same = p1.q * p2.q > 0;
+    const sym = fixedQ ? 'Q' : 'U';
+    const how = fixedQ
+      ? L(`The charge stays on the plates: E = Q/(ε₀·A) depends on the charge per area, not on the distance. Charge ${frac(f.s)}, area ${frac(f.A)}: the field changes by ${frac(kE)}.`, `Die Ladung bleibt auf den Platten: E = Q/(ε₀·A) hängt von der Ladung pro Fläche ab, nicht vom Abstand. Ladung ${frac(f.s)}, Fläche ${frac(f.A)}: Das Feld ändert sich um ${frac(kE)}.`)
+      : L(`The source keeps the voltage: E = U/d depends on the voltage and the distance, not on the area. Voltage ${frac(f.s)}, distance ${frac(f.d)}: the field changes by ${frac(kE)}.`, `Die Quelle hält die Spannung: E = U/d hängt von der Spannung und vom Abstand ab, nicht von der Fläche. Spannung ${frac(f.s)}, Abstand ${frac(f.d)}: Das Feld ändert sich um ${frac(kE)}.`);
+    const tempt = fixedQ
+      ? [[f.s / (f.A * f.d), L('The distance does not matter while the charge stays.', 'Der Abstand spielt keine Rolle, solange die Ladung bleibt.')], [f.s, L('The charge spreads over the area: a larger area, a weaker field.', 'Die Ladung verteilt sich auf die Fläche: grössere Fläche, schwächeres Feld.')], [f.s * f.A, L('The field gets weaker when the area grows.', 'Das Feld wird schwächer, wenn die Fläche wächst.')], [(f.s * f.d) / f.A, L('The distance does not matter while the charge stays.', 'Der Abstand spielt keine Rolle, solange die Ladung bleibt.')]]
+      : [[f.s, L('With the voltage fixed, a larger distance means a weaker field.', 'Bei fester Spannung bedeutet ein grösserer Abstand ein schwächeres Feld.')], [f.s / (f.d * f.A), L('The area does not matter: E = U/d.', 'Die Fläche spielt keine Rolle: E = U/d.')], [f.s * f.d, L('E = U/d: a larger distance gives a weaker field.', 'E = U/d: Ein grösserer Abstand ergibt ein schwächeres Feld.')]];
+    const howF = L(`F = |q|·E: the field ${frac(kE)}, the charge ${z2 === z1 ? 'the same' : frac(z2 / z1)} (${z1}e and ${z2}e): the force changes by ${frac(kF)}. The mass does not matter for the force.`, `F = |q|·E: das Feld ${frac(kE)}, die Ladung ${z2 === z1 ? 'gleich' : frac(z2 / z1)} (${z1}e und ${z2}e): Die Kraft ändert sich um ${frac(kF)}. Die Masse spielt für die Kraft keine Rolle.`);
+    const howS = L(`In both capacitors the field points down. ${cap(p1.name())} is ${signName(p1.q)}, ${p2.name()} is ${signName(p2.q)}: the forces point ${same ? 'the same way' : 'opposite ways'}.`, `In beiden Kondensatoren zeigt das Feld nach unten. ${cap(p1.name())} ist ${signName(p1.q)}, ${p2.name()} ist ${signName(p2.q)}: Die Kräfte zeigen ${same ? 'in dieselbe Richtung' : 'in entgegengesetzte Richtungen'}.`);
+    const rows = [
+      [fixedQ ? L('charge on the plates', 'Ladung auf den Platten') : L('voltage', 'Spannung'), it(sym), times(f.s, sym)],
+      [L('area of each plate', 'Fläche jeder Platte'), it('A'), times(f.A, 'A')],
+      [L('distance between the plates', 'Plattenabstand'), it('d'), times(f.d, 'd')],
+      [L('particle between the plates', 'Teilchen zwischen den Platten'), `${p1.sym} (${p1.q > 0 ? '+' : '−'}${z1 > 1 ? z1 : ''}e)`, `${p2.sym} (${p2.q > 0 ? '+' : '−'}${z2 > 1 ? z2 : ''}e)`],
+    ];
     return {
-      kind: 'cap', title: L('The plate capacitor', 'Der Plattenkondensator'),
-      text: L(`<p>The plates of a capacitor each have an area of ${nice(A * 1e4)} cm² and carry the charges ±${show(Q, 'charge')}. Between them is ${pt.name()}.</p>`, `<p>Die Platten eines Kondensators haben je eine Fläche von ${nice(A * 1e4)} cm² und tragen die Ladungen ±${show(Q, 'charge')}. Zwischen ihnen befindet sich ${pt.name()}.</p>`),
+      kind: 'cap', title: L('Two capacitors', 'Zwei Kondensatoren'),
+      text: L(`<p>Two plate capacitors 1 and 2 ${fixedQ ? 'are charged and then disconnected from the source, so the charges on their plates stay' : 'are connected to voltage sources'}. In both, the upper plate is positive. Between the plates of capacitor 1 is ${p1.name()}, between those of capacitor 2 ${p2.name()}.</p>`, `<p>Zwei Plattenkondensatoren 1 und 2 ${fixedQ ? 'werden geladen und dann von der Quelle getrennt, sodass die Ladungen auf ihren Platten bleiben' : 'sind an Spannungsquellen angeschlossen'}. Bei beiden ist die obere Platte positiv. Zwischen den Platten von Kondensator 1 befindet sich ${p1.name()}, zwischen denen von Kondensator 2 ${p2.name()}.</p>`)
+        + cmpTable([L('capacitor 1', 'Kondensator 1'), L('capacitor 2', 'Kondensator 2')], rows),
       figs: '',
       questions: [
-        choice('E', L('(a) the field between the plates', '(a) das Feld zwischen den Platten'), values(Ef, [{ value: Ef / 2, tag: 'half', why: L(`That is the field of one plate alone; between the plates both fields add. ${how}`, `Das ist das Feld einer Platte allein; zwischen den Platten addieren sich beide Felder. ${how}`) }, { value: (K.k * Q) / A, tag: 'coulomb', why: how }], 'field', how)),
-        choice('F', L(`(b) the force on ${pt.name()}`, `(b) die Kraft auf ${pt.name().replace(/^ein /, '')}`), values(Fq, [{ value: K.e * Ef, tag: 'z', why: howF }], 'force', howF)),
-        choice('d', L('(c) If the plates were pulled further apart (same charges), the field would', '(c) Würden die Platten weiter auseinandergezogen (gleiche Ladungen), würde das Feld'), words(r, [[L('stay the same', 'gleich bleiben'), true, ''], [L('get weaker', 'schwächer werden'), false, howD], [L('get stronger', 'stärker werden'), false, howD]])),
+        choice('E', L('(a) Compared with capacitor 1, the field in capacitor 2 is', '(a) Verglichen mit Kondensator 1 ist das Feld in Kondensator 2'), factors(kE, tempt, how)),
+        choice('F', L('(b) Compared with the force on the particle in capacitor 1, the force on the particle in capacitor 2 is', '(b) Verglichen mit der Kraft auf das Teilchen in Kondensator 1 ist die Kraft auf das Teilchen in Kondensator 2'), factors(kF, [[kE, L('The charges of the particles differ.', 'Die Ladungen der Teilchen sind verschieden.')], [(kE * z1) / z2, L('A larger charge feels a larger force.', 'Eine grössere Ladung spürt eine grössere Kraft.')]], howF)),
+        choice('s', L('(c) The two forces point', '(c) Die beiden Kräfte zeigen'), words(r, [[L('the same way', 'in dieselbe Richtung'), same, howS], [L('opposite ways', 'in entgegengesetzte Richtungen'), !same, howS]])),
       ],
-      hints: [L('Between the plates of a capacitor: E = Q/(ε₀·A) = σ/ε₀.', 'Zwischen den Platten eines Kondensators: E = Q/(ε₀·A) = σ/ε₀.'), L('F = |q|·E; e = 1.602 · 10⁻¹⁹ C.', 'F = |q|·E; e = 1.602 · 10⁻¹⁹ C.')],
-      solution: [how, howF, howD], p: { A, Q, pt: pt.id },
+      hints: [fixedQ ? L('Disconnected, the charge stays: E = Q/(ε₀·A).', 'Getrennt bleibt die Ladung: E = Q/(ε₀·A).') : L('Connected, the voltage stays: E = U/d.', 'Angeschlossen bleibt die Spannung: E = U/d.'), L('F = |q|·E.', 'F = |q|·E.')],
+      solution: [how, howF, howS], p: { fixedQ, f: [f.s, f.A, f.d].join(','), z1, z2, q1: p1.q, q2: p2.q },
     };
   }
   function millikan(seed) {
-    const r = rng(seed * 73 + 43), m = r.pick([1.2, 1.8, 2.4, 3.0, 3.6]) * 1e-15, dmm = r.pick([4, 5, 6, 8]), n = r.int(1, 6), top = r.pick([1, -1]);
-    const U = Number(((m * K.g * dmm * 1e-3) / (n * K.e)).toPrecision(3)), q = (m * K.g * dmm * 1e-3) / U, nn = Math.round(q / K.e), neg = top > 0;
-    const how = L(`The drop hovers: q·E = m·g with E = U/d, so q = m·g·d/U = ${sci(m)} kg · 9.81 N/kg · ${dmm} mm / ${nice(U)} V = ${show(q, 'charge').replace('C', 'C')} (${sci(q)} C).`, `Der Tropfen schwebt: q·E = m·g mit E = U/d, also q = m·g·d/U = ${sci(m)} kg · 9.81 N/kg · ${dmm} mm / ${nice(U)} V = ${sci(q)} C.`);
-    const howN = L(`q/e = ${sci(q)} C / 1.602 · 10<sup>−19</sup> C ≈ ${nn}.`, `q/e = ${sci(q)} C / 1.602 · 10<sup>−19</sup> C ≈ ${nn}.`);
-    const howS = L(`The electric force must point up. The upper plate is ${top > 0 ? 'positive: the field points down, so the drop is negative' : 'negative: the field points up, so the drop is positive'}.`, `Die elektrische Kraft muss nach oben zeigen. Die obere Platte ist ${top > 0 ? 'positiv: Das Feld zeigt nach unten, also ist der Tropfen negativ' : 'negativ: Das Feld zeigt nach oben, also ist der Tropfen positiv'}.`);
+    const r = rng(seed * 73 + 43);
+    let f, n1, n2;
+    for (;;) {
+      f = { m: r.pick([1, 1, 2, 3, 0.5]), U: r.pick([1, 2, 3, 0.5]), d: r.pick([1, 1, 2, 0.5]) };
+      n1 = r.int(1, 4); n2 = (n1 * f.m * f.d) / f.U;
+      if (Object.values(f).filter((x) => x !== 1).length >= 1 && whole(n2 / n1) && Number.isInteger(n2) && n2 >= 1 && n2 <= 12 && n2 !== n1 * f.m && (n2 !== n1 || r.next() < 0.4)) break;
+    }
+    const kq = n2 / n1, top1 = r.pick([1, -1]), top2 = r.pick([1, -1]), neg2 = top2 > 0;
+    const parts = [];
+    if (f.m !== 1) parts.push(L(`the mass ${frac(f.m)}`, `die Masse ${frac(f.m)}`));
+    if (f.d !== 1) parts.push(L(`the distance ${frac(f.d)}`, `der Abstand ${frac(f.d)}`));
+    if (f.U !== 1) parts.push(L(`the voltage ${frac(f.U)}, so ${frac(1 / f.U)}`, `die Spannung ${frac(f.U)}, also ${frac(1 / f.U)}`));
+    const how = L(`The drop hovers: |q|·U/d = m·g, so |q| = m·g·d/U: ${parts.join('; ')}. Together: ${frac(kq)}.`, `Der Tropfen schwebt: |q|·U/d = m·g, also |q| = m·g·d/U: ${parts.join('; ')}. Zusammen: ${frac(kq)}.`);
+    const howN = L(`Drop 1 carries ${n1} elementary charge${n1 > 1 ? 's' : ''}; ${frac(kq)} gives ${n2}.`, `Tropfen 1 trägt ${n1} Elementarladung${n1 > 1 ? 'en' : ''}; ${frac(kq)} ergibt ${n2}.`);
+    const howS = L(`The electric force on drop 2 must point up. Its upper plate is ${top2 > 0 ? 'positive: the field points down, so the drop is negative' : 'negative: the field points up, so the drop is positive'}.`, `Die elektrische Kraft auf Tropfen 2 muss nach oben zeigen. Seine obere Platte ist ${top2 > 0 ? 'positiv: Das Feld zeigt nach unten, also ist der Tropfen negativ' : 'negativ: Das Feld zeigt nach oben, also ist der Tropfen positiv'}.`);
+    const tempt = [[f.m * f.d * f.U, L('A higher voltage gives a stronger field: less charge is needed.', 'Eine höhere Spannung ergibt ein stärkeres Feld: Es braucht weniger Ladung.')], [f.m / (f.d * f.U), L('E = U/d: a larger distance weakens the field, so more charge is needed.', 'E = U/d: Ein grösserer Abstand schwächt das Feld, also braucht es mehr Ladung.')], [f.d / (f.m * f.U), L('A heavier drop needs a larger electric force.', 'Ein schwererer Tropfen braucht eine grössere elektrische Kraft.')], [1 / kq, L('Upside down.', 'Gerade umgekehrt.')]];
+    const rows = [
+      [L('mass of the drop', 'Masse des Tropfens'), it('m'), times(f.m, 'm')],
+      [L('voltage', 'Spannung'), it('U'), times(f.U, 'U')],
+      [L('distance between the plates', 'Plattenabstand'), it('d'), times(f.d, 'd')],
+      [L('upper plate', 'obere Platte'), top1 > 0 ? '+' : '−', top2 > 0 ? '+' : '−'],
+    ];
     return {
-      kind: 'cap', title: L("Millikan's oil drop", 'Millikans Öltröpfchen'),
-      text: L(`<p>An oil drop with a mass of ${sci(m)} kg hovers between two horizontal plates ${dmm} mm apart when a voltage of ${nice(U)} V is applied; the upper plate is ${top > 0 ? 'positive' : 'negative'}.</p>`, `<p>Ein Öltröpfchen mit einer Masse von ${sci(m)} kg schwebt zwischen zwei waagrechten Platten im Abstand ${dmm} mm, wenn eine Spannung von ${nice(U)} V anliegt; die obere Platte ist ${top > 0 ? 'positiv' : 'negativ'}.</p>`),
-      figs: fig(C.capFig({ top, q: neg ? -1 : 1, field: true, sym: '·' })),
+      kind: 'cap', title: L("Millikan's oil drops", 'Millikans Öltröpfchen'),
+      text: L(`<p>Two oil drops 1 and 2 each hover between two horizontal plates. Drop 1 carries ${n1} elementary charge${n1 > 1 ? 's' : ''}. The table compares them.</p>`, `<p>Zwei Öltröpfchen 1 und 2 schweben je zwischen zwei waagrechten Platten. Tropfen 1 trägt ${n1} Elementarladung${n1 > 1 ? 'en' : ''}. Die Tabelle vergleicht sie.</p>`)
+        + cmpTable([L('drop 1', 'Tropfen 1'), L('drop 2', 'Tropfen 2')], rows),
+      figs: fig(C.capFig({ top: top1, q: top1 > 0 ? -1 : 1, field: true, sym: '·', label: L('Drop 1', 'Tropfen 1') })),
       questions: [
-        choice('q', L('(a) the size of the charge of the drop', '(a) der Betrag der Ladung des Tropfens'), values(q, [{ value: (m * K.g) / U, tag: 'noD', why: L(`The field is E = U/d. ${how}`, `Das Feld ist E = U/d. ${how}`) }], 'sci', how, { fmt: (v) => `${sci(v)} C` })),
-        choice('n', L('(b) the number of elementary charges', '(b) die Zahl der Elementarladungen'), [nn - 1, nn, nn + 1, 2 * nn].filter((x, i, a) => x > 0 && a.indexOf(x) === i).map((x) => ({ label: String(x), ok: x === nn, why: howN }))),
-        choice('s', L('(c) The drop is', '(c) Der Tropfen ist'), words(r, [[L('negative', 'negativ'), neg, howS], [L('positive', 'positiv'), !neg, howS]])),
+        choice('q', L('(a) Compared with drop 1, the charge of drop 2 (in size) is', '(a) Verglichen mit Tropfen 1 ist die Ladung von Tropfen 2 (dem Betrag nach)'), factors(kq, tempt, how)),
+        choice('n', L('(b) the number of elementary charges on drop 2', '(b) die Zahl der Elementarladungen auf Tropfen 2'), [n2, n1 * f.m, n2 + 1, n2 > 1 ? n2 - 1 : 2 * n2 + 1, n1, n2 + 2, n2 + 3].filter((x, i, a) => Number.isInteger(x) && x > 0 && a.indexOf(x) === i).slice(0, 4).sort((x, y) => x - y).map((x) => ({ label: String(x), ok: x === n2, why: howN }))),
+        choice('s', L('(c) Drop 2 is', '(c) Tropfen 2 ist'), words(r, [[L('negative', 'negativ'), neg2, howS], [L('positive', 'positiv'), !neg2, howS]])),
       ],
-      hints: [L('Hovering: the electric force q·E balances the weight m·g.', 'Schweben: Die elektrische Kraft q·E hält dem Gewicht m·g das Gleichgewicht.'), L('Between the plates: E = U/d.', 'Zwischen den Platten: E = U/d.'), L('The charge is a whole number of elementary charges e = 1.602 · 10⁻¹⁹ C.', 'Die Ladung ist ein ganzzahliges Vielfaches der Elementarladung e = 1.602 · 10⁻¹⁹ C.')],
-      solution: [how, howN, howS], p: { m, dmm, n, top },
+      hints: [L('Hovering: the electric force |q|·U/d balances the weight m·g.', 'Schweben: Die elektrische Kraft |q|·U/d hält dem Gewicht m·g das Gleichgewicht.'), L('|q| = m·g·d/U: find the factor of each quantity.', '|q| = m·g·d/U: Bestimme den Faktor jeder Grösse.')],
+      solution: [how, howN, howS], p: { f: [f.m, f.U, f.d].join(','), n1, n2, top2 },
     };
   }
 
@@ -400,22 +424,67 @@
       solution: [how], solFig: fig(C.capFig({ top, q, sym: pt.sym, pts: q ? para(down) : straight })), p: { q, top, pt: pt.id },
     };
   }
-  function deflectNum(seed) {
-    const r = rng(seed * 97 + 61), pt = particle(r, r.pick([-1, -1, 1]), { generic: false });
-    const heavy = pt.m > 1e-28, v = heavy ? r.pick([2, 3, 5]) * 1e5 : r.pick([1, 2, 3]) * 1e7, Lc = r.pick([4, 5, 6, 8]), d = r.pick([1, 1.5, 2]) * 1e-2;
-    const qq = Math.abs(pt.z) * K.e, U = heavy ? r.pick([50, 100, 200]) : r.pick([20, 50, 100]), Ef = U / d, t = Lc * 1e-2 / v, y = (qq * Ef * t * t) / (2 * pt.m);
-    const how = L(`It takes t = L/v = ${sci(t)} s to pass. Across, it accelerates with a = q·E/m = q·U/(m·d), so y = ½·a·t² = ${show(y, 'len')}.`, `Es braucht t = L/v = ${sci(t)} s für den Durchgang. Quer dazu wird es mit a = q·E/m = q·U/(m·d) beschleunigt, also y = ½·a·t² = ${show(y, 'len')}.`);
-    const how2 = L('y = q·E·L²/(2·m·v²): twice as fast, a quarter of the deflection.', 'y = q·E·L²/(2·m·v²): doppelt so schnell, ein Viertel der Ablenkung.');
+  // the deflection by the end of the plates: y = |q|·U·L²/(2·m·d·v²)
+  const DPAIRS = [
+    { a: ['p', ['a proton', 'ein Proton'], 'p', 1, 1], b: ['a', ['an alpha particle', 'ein Alphateilchen'], 'α', 2, 4] },
+    { a: ['e', ['an electron', 'ein Elektron'], 'e⁻', -1, 1], b: ['e+', ['a positron', 'ein Positron'], 'e⁺', 1, 1] },
+    { a: ['p', ['a proton', 'ein Proton'], 'p', 1, 1], b: ['d', ['a deuteron (a proton and a neutron)', 'ein Deuteron (ein Proton und ein Neutron)'], 'd', 1, 2] },
+  ];
+  function deflectCompare(seed) {
+    const r = rng(seed * 97 + 61);
+    let pa, pb, f, flip, ky;
+    for (;;) {
+      const pair = r.pick(DPAIRS), change = r.next() < 0.45;
+      pa = pair.a; pb = change ? pair.b : pair.a;
+      if (r.next() < 0.5 && change) [pa, pb] = [pb, pa];
+      f = { v: r.pick([1, 1, 2, 3, 0.5]), U: r.pick([1, 1, 2, 3, 0.5]), L: r.pick([1, 1, 1, 2, 0.5]), d: r.pick([1, 1, 1, 2, 0.5]) };
+      flip = r.next() < 0.25;
+      const zr = Math.abs(pb[3] / pa[3]), mr = pb[4] / pa[4];
+      ky = (zr / mr) * f.U * f.L ** 2 / (f.d * f.v ** 2);
+      const n = Object.values(f).filter((x) => x !== 1).length + (pa !== pb ? 1 : 0);
+      if (n >= 2 && n <= 3 && whole(ky) && ky <= 16 && ky >= 1 / 16) break;
+    }
+    const zr = Math.abs(pb[3] / pa[3]), mr = pb[4] / pa[4], kt = f.L / f.v, nm = (x) => L(...x[1]);
+    const sideA = Math.sign(pa[3]), sideB = Math.sign(pb[3]) * (flip ? -1 : 1), same = sideA === sideB;
+    const parts = [];
+    if (zr !== 1) parts.push(L(`the charge ${frac(zr)}`, `die Ladung ${frac(zr)}`));
+    if (mr !== 1) parts.push(L(`the mass ${frac(mr)}, so ${frac(1 / mr)}`, `die Masse ${frac(mr)}, also ${frac(1 / mr)}`));
+    if (f.U !== 1) parts.push(L(`the voltage ${frac(f.U)}`, `die Spannung ${frac(f.U)}`));
+    if (f.L !== 1) parts.push(L(`the length ${frac(f.L)}, squared ${frac(f.L ** 2)}`, `die Länge ${frac(f.L)}, quadriert ${frac(f.L ** 2)}`));
+    if (f.d !== 1) parts.push(L(`the distance ${frac(f.d)}, so ${frac(1 / f.d)}`, `der Abstand ${frac(f.d)}, also ${frac(1 / f.d)}`));
+    if (f.v !== 1) parts.push(L(`the speed ${frac(f.v)}, squared in the denominator: ${frac(1 / f.v ** 2)}`, `die Geschwindigkeit ${frac(f.v)}, quadriert im Nenner: ${frac(1 / f.v ** 2)}`));
+    const how = L(`y = |q|·U·L²/(2·m·d·v²): ${parts.join('; ')}. Together: ${frac(ky)}.`, `y = |q|·U·L²/(2·m·d·v²): ${parts.join('; ')}. Zusammen: ${frac(ky)}.`);
+    const base = (zr / mr) * f.U / f.d;
+    const tempt = [
+      [base * f.L ** 2 / f.v, L('The time between the plates, L/v, is squared: the speed counts squared.', 'Die Zeit zwischen den Platten, L/v, wird quadriert: Die Geschwindigkeit zählt quadratisch.')],
+      [base * f.L / f.v ** 2, L('The length of the plates counts squared, like the time.', 'Die Länge der Platten zählt quadratisch, wie die Zeit.')],
+      [zr * f.U * f.L ** 2 / (f.d * f.v ** 2), L('A heavier particle is accelerated less: divide by the mass.', 'Ein schwereres Teilchen wird weniger beschleunigt: durch die Masse teilen.')],
+      [(zr / mr) * f.U * f.L ** 2 * f.d / f.v ** 2, L('E = U/d: a larger distance means a weaker field.', 'E = U/d: Ein grösserer Abstand bedeutet ein schwächeres Feld.')],
+      [1 / ky, L('Upside down.', 'Gerade umgekehrt.')],
+    ];
+    const howT = L(`Along the plates the speed stays the same: t = L/v, the length ${frac(f.L)}, the speed ${frac(f.v)}: ${frac(kt)}.`, `Längs der Platten bleibt die Geschwindigkeit gleich: t = L/v, die Länge ${frac(f.L)}, die Geschwindigkeit ${frac(f.v)}: ${frac(kt)}.`);
+    const sideTxt = (x, q, fl) => `${cap(x)} ${q > 0 ? L('is positive', 'ist positiv') : L('is negative', 'ist negativ')}${fl ? L(', and the plates are swapped', ', und die Platten sind vertauscht') : ''}`;
+    const howS = L(`${sideTxt(nm(pa), pa[3], false)}: it is pushed towards the ${sideA > 0 ? 'lower' : 'upper'} plate. ${sideTxt(nm(pb), pb[3], flip)}: towards the ${sideB > 0 ? 'lower' : 'upper'} plate.`, `${sideTxt(nm(pa), pa[3], false)}: Es wird zur ${sideA > 0 ? 'unteren' : 'oberen'} Platte gedrückt. ${sideTxt(nm(pb), pb[3], flip)}: zur ${sideB > 0 ? 'unteren' : 'oberen'} Platte.`);
+    const howS2 = pa === pb && !flip ? L('The same particle and the same plates: the same side.', 'Dasselbe Teilchen und dieselben Platten: dieselbe Seite.') : howS;
+    const row = (n, sym, k) => [n, it(sym), times(k, sym)];
+    const pcell = (x) => `${nm(x).replace(/ \(.*\)$/, '').replace(/^(an?|ein) /, '')} (${x[3] > 0 ? '+' : '−'}${Math.abs(x[3]) > 1 ? Math.abs(x[3]) : ''}e)`;
+    const rows = [
+      [L('particle', 'Teilchen'), pcell(pa), pcell(pb)],
+      row(L('speed', 'Geschwindigkeit'), 'v', f.v), row(L('voltage', 'Spannung'), 'U', f.U), row(L('length of the plates', 'Länge der Platten'), 'L', f.L), row(L('distance between the plates', 'Plattenabstand'), 'd', f.d),
+      [L('upper plate', 'obere Platte'), '+', flip ? '−' : '+'],
+    ];
+    const masses = pa === pb ? '' : pa[0] === 'e' || pa[0] === 'e+' ? L(' An electron and a positron have the same mass.', ' Ein Elektron und ein Positron haben dieselbe Masse.') : L(` Masses: ${nm(pa).replace(/ \(.*\)$/, '')} about ${pa[4]} u, ${nm(pb).replace(/ \(.*\)$/, '')} about ${pb[4]} u.`, ` Massen: ${nm(pa).replace(/ \(.*\)$/, '')} etwa ${pa[4]} u, ${nm(pb).replace(/ \(.*\)$/, '')} etwa ${pb[4]} u.`);
     return {
-      kind: 'path', title: L('The deflection', 'Die Ablenkung'),
-      text: L(`<p>${cap(pt.name())} flies at ${sci(v)} m/s into the field between two plates ${nice(Lc)} cm long and ${nice(d * 100)} cm apart, with a voltage of ${U} V between them.</p>`, `<p>${cap(pt.name())} fliegt mit ${sci(v)} m/s in das Feld zwischen zwei Platten, ${nice(Lc)} cm lang und ${nice(d * 100)} cm voneinander entfernt, mit einer Spannung von ${U} V dazwischen.</p>`),
-      figs: '',
+      kind: 'path', title: L('Two deflections', 'Zwei Ablenkungen'),
+      text: L(`<p>In two experiments A and B, a charged particle flies horizontally into the field between two plates. The table compares them.${masses}</p>`, `<p>In zwei Versuchen A und B fliegt ein geladenes Teilchen waagrecht in das Feld zwischen zwei Platten. Die Tabelle vergleicht sie.${masses}</p>`) + cmpTable(['A', 'B'], rows),
+      figs: fig(C.capFig({ top: 1, q: Math.sign(pa[3]), sym: pa[2], v: true, field: true, label: L('Experiment A', 'Versuch A') })),
       questions: [
-        choice('y', L('(a) how far it is deflected by the end of the plates', '(a) wie weit es bis zum Ende der Platten abgelenkt wird'), values(y, [{ value: 2 * y, tag: 'noHalf', why: L(`The distance at constant acceleration is ½·a·t². ${how}`, `Die Strecke bei konstanter Beschleunigung ist ½·a·t². ${how}`) }], 'len', how)),
-        choice('k', L('(b) Twice as fast, the deflection would be', '(b) Doppelt so schnell wäre die Ablenkung'), [0.25, 0.5, 1, 2].map((x) => ({ label: frac(x), ok: x === 0.25, why: how2 }))),
+        choice('y', L('(a) Compared with A, the deflection by the end of the plates in B is', '(a) Verglichen mit A ist die Ablenkung bis zum Ende der Platten in B'), factors(ky, tempt, how)),
+        choice('t', L('(b) Compared with A, the time the particle takes to pass the plates in B is', '(b) Verglichen mit A ist die Zeit, die das Teilchen in B für den Weg zwischen den Platten braucht,'), factors(kt, [[f.v / f.L, L('t = L/v: faster means less time.', 't = L/v: schneller bedeutet weniger Zeit.')], [f.L / f.v ** 2, L('The speed counts once here, not squared.', 'Die Geschwindigkeit zählt hier einfach, nicht quadratisch.')]], howT)),
+        choice('s', L('(c) Compared with A, the particle in B is deflected', '(c) Verglichen mit A wird das Teilchen in B abgelenkt'), words(r, [[L('to the same side', 'zur selben Seite'), same, howS2], [L('to the other side', 'zur anderen Seite'), !same, howS2]])),
       ],
-      hints: [L('Along the plates the speed stays the same; across them the charge accelerates evenly.', 'Längs der Platten bleibt die Geschwindigkeit gleich; quer dazu wird die Ladung gleichmässig beschleunigt.'), L('E = U/d, a = q·E/m, t = L/v, y = ½·a·t².', 'E = U/d, a = q·E/m, t = L/v, y = ½·a·t².')],
-      solution: [how, how2], p: { pt: pt.id, v, Lc, d, U },
+      hints: [L('Along the plates the speed stays the same: t = L/v. Across them the particle accelerates evenly: a = |q|·E/m with E = U/d.', 'Längs der Platten bleibt die Geschwindigkeit gleich: t = L/v. Quer dazu wird das Teilchen gleichmässig beschleunigt: a = |q|·E/m mit E = U/d.'), L('y = ½·a·t² = |q|·U·L²/(2·m·d·v²): find the factor of each quantity.', 'y = ½·a·t² = |q|·U·L²/(2·m·d·v²): Bestimme den Faktor jeder Grösse.')],
+      solution: [how, howT, howS2], p: { a: pa[0], b: pb[0], f: [f.v, f.U, f.L, f.d].join(','), flip },
     };
   }
 
@@ -467,15 +536,15 @@
 
   const TYPES = {
     'force-dir': [1, forceDir], 'force-num': [2, forceNum], 'lines-pick': [2, linesPick], 'lines-read': [3, linesRead], conductor: [2, conductor],
-    superpose: [3, superpose], zero: [3, zero], 'er-graph': [2, erGraph], factor: [2, factor], 'plates-num': [3, platesNum], millikan: [3, millikan],
-    'dipole-uniform': [2, dipoleUniform], 'dipole-point': [4, dipolePoint], 'deflect-path': [2, deflectPath], 'deflect-num': [4, deflectNum], stmts: [2, statements],
+    superpose: [3, superpose], zero: [3, zero], factor: [2, factor], 'plates-compare': [3, platesCompare], millikan: [3, millikan],
+    'dipole-uniform': [2, dipoleUniform], 'dipole-point': [4, dipolePoint], 'deflect-path': [2, deflectPath], 'deflect-compare': [3, deflectCompare], stmts: [2, statements],
   };
   function make(type, seed) {
     const [difficulty, f] = TYPES[type];
     return { ...f(seed), type, difficulty, id: `${type}-${seed}`, seed };
   }
 
-  const api = { TYPES: Object.keys(TYPES), make, RULE, LINES, SHAPES, label, pts2, BOX, tile, frac };
+  const api = { TYPES: Object.keys(TYPES), make, RULE, LINES, label, pts2, BOX, tile, frac };
   root.FieldEx = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

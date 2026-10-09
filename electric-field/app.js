@@ -230,10 +230,13 @@
             fig(C.fig(X.pts2([[1, -1.5], [4, 1.5]]), { box: BOX, lines: true, lineOpts: { per: 5 }, labels: ['+', '+4'], points: [{ x: -0.5, y: 0, name: 'E = 0' }] }))),
         ];
       } },
-    { topic: 3, stage: 0, name: () => L('Fields of charged objects', 'Felder geladener Körper'), idea: () => L('Point charge 1/r², wire 1/r, plate constant, metal sphere: zero inside.', 'Punktladung 1/r², Draht 1/r, Platte konstant, Metallkugel: innen null.'),
-      frames: () => ['point', 'sphere', 'wire', 'plate'].map((k) => frame(X.SHAPES[k].name().replace(/^./, (x) => x.toUpperCase()), `<p>${X.SHAPES[k].law()}</p>`, fig(C.graph(X.SHAPES[k].f, { marks: X.SHAPES[k].marks })))).concat([
-        frame(L('The plate capacitor', 'Der Plattenkondensator'), `<p>${L('Between two plates with charges ±Q the fields of both plates add up; outside they cancel. The field between them is uniform: E = Q/(ε₀·A) = σ/ε₀, whatever the distance between the plates.', 'Zwischen zwei Platten mit den Ladungen ±Q addieren sich die Felder beider Platten; aussen heben sie sich auf. Das Feld dazwischen ist homogen: E = Q/(ε₀·A) = σ/ε₀, unabhängig vom Plattenabstand.')}</p>`, fig(C.fig({ kind: 'plates', h: 0.8, w: 1.8, q: 1 }, { box: BOX, lines: true }))),
-      ]) },
+    { topic: 3, stage: 0, name: () => L('Comparing fields', 'Felder vergleichen'), idea: () => L('What the field depends on, and how: compare with factors instead of calculating.', 'Wovon das Feld abhängt, und wie: mit Faktoren vergleichen statt rechnen.'),
+      frames: () => [
+        frame(L('A point charge', 'Eine Punktladung'), `<p>${L('E = k·Q/r²: twice the charge, twice the field; twice the distance, a quarter of the field.', 'E = k·Q/r²: doppelte Ladung, doppeltes Feld; doppelter Abstand, ein Viertel des Feldes.')}</p>`, fig(C.fig(one(1), { box: BOX, lines: true }))),
+        frame(L('A wire and a large plate', 'Ein Draht und eine grosse Platte'), `<p>${L('A long wire: E = λ/(2π·ε₀·r), twice the distance, half the field. A large plate: E = σ/(2ε₀), the same at every distance (as long as the plate is large compared with the distance).', 'Ein langer Draht: E = λ/(2π·ε₀·r), doppelter Abstand, halbes Feld. Eine grosse Platte: E = σ/(2ε₀), bei jedem Abstand gleich (solange die Platte gross ist im Vergleich zum Abstand).')}</p>`, fig(C.fig({ kind: 'uniform', E: [0, 1] }, { box: BOX, lines: true }))),
+        frame(L('A capacitor, disconnected', 'Ein Kondensator, getrennt'), `<p>${L('Between two plates with charges ±Q the fields of both plates add up; outside they cancel. Once the capacitor is disconnected from the source, its charge stays: E = Q/(ε₀·A) = σ/ε₀. Pulling the plates apart does not change the field; twice the area, half the field.', 'Zwischen zwei Platten mit den Ladungen ±Q addieren sich die Felder beider Platten; aussen heben sie sich auf. Ist der Kondensator von der Quelle getrennt, bleibt seine Ladung: E = Q/(ε₀·A) = σ/ε₀. Die Platten auseinanderzuziehen ändert das Feld nicht; doppelte Fläche, halbes Feld.')}</p>`, fig(C.fig({ kind: 'plates', h: 0.8, w: 1.8, q: 1 }, { box: BOX, lines: true }))),
+        frame(L('A capacitor, connected', 'Ein Kondensator, angeschlossen'), `<p>${L('Connected to a source, the voltage stays: E = U/d. Twice the distance, half the field; the area does not matter.', 'An einer Quelle angeschlossen bleibt die Spannung: E = U/d. Doppelter Abstand, halbes Feld; die Fläche spielt keine Rolle.')}</p>`, fig(C.fig({ kind: 'plates', h: 0.8, w: 1.8, q: 1 }, { box: BOX, lines: true }))),
+      ] },
     { topic: 4, stage: 0, name: () => L('Dipoles', 'Dipole'), idea: () => L('In a uniform field a dipole turns but is not pulled; in a non-uniform field it is pulled too.', 'In einem homogenen Feld dreht sich ein Dipol, wird aber nicht gezogen; in einem inhomogenen Feld wird er auch gezogen.'),
       frames: () => [
         frame(L('In a uniform field', 'Im homogenen Feld'), `<p>${L('The forces on the two ends are equal and opposite: no net force. But they do not act along one line: they turn the dipole until its + end points along the field.', 'Die Kräfte auf die beiden Enden sind gleich und entgegengesetzt: keine Gesamtkraft. Aber sie wirken nicht auf einer Geraden: Sie drehen den Dipol, bis sein +-Ende in Feldrichtung zeigt.')}</p>`,
@@ -247,6 +250,8 @@
           fig(C.capFig({ top: 1, q: 1, field: true, pts: (() => { const o = [[0, 0]]; for (let x = 0; x <= 1.0001; x += 0.02) o.push([x, x < 0.09 ? 0 : -0.85 * ((x - 0.09) / 0.91) ** 2]); return o; })() }))),
         frame(L("Millikan's oil drop", 'Millikans Öltröpfchen'), `<p>${L('A tiny charged oil drop hovers between two plates when the electric force balances its weight: q·U/d = m·g. Millikan found that the charge is always a whole number of elementary charges, e = 1.602 · 10⁻¹⁹ C.', 'Ein winziges geladenes Öltröpfchen schwebt zwischen zwei Platten, wenn die elektrische Kraft seinem Gewicht das Gleichgewicht hält: q·U/d = m·g. Millikan fand, dass die Ladung immer ein ganzzahliges Vielfaches der Elementarladung e = 1.602 · 10⁻¹⁹ C ist.')}</p>`,
           fig(C.capFig({ top: 1, q: -1, field: true, sym: '·' }))),
+        frame(L('Comparing deflections', 'Ablenkungen vergleichen'), `<p>${L('The deflection is y = |q|·U·L²/(2·m·d·v²). To compare two experiments, take the factor of each quantity: an alpha particle has twice the charge and four times the mass of a proton, so at the same speed it is deflected half as far. Twice as fast: a quarter of the deflection.', 'Die Ablenkung ist y = |q|·U·L²/(2·m·d·v²). Um zwei Versuche zu vergleichen, nimm den Faktor jeder Grösse: Ein Alphateilchen hat die doppelte Ladung und die vierfache Masse eines Protons, wird also bei gleicher Geschwindigkeit halb so weit abgelenkt. Doppelt so schnell: ein Viertel der Ablenkung.')}</p>`,
+          fig(C.capFig({ top: 1, q: 1, sym: 'α', field: true, pts: (() => { const o = [[0, 0]]; for (let x = 0; x <= 1.0001; x += 0.02) o.push([x, x < 0.09 ? 0 : -0.42 * ((x - 0.09) / 0.91) ** 2]); return o; })() }))),
       ] },
   ];
   const stage = (name, types) => ({ name, types });
@@ -254,16 +259,16 @@
     { name: () => L('Field and force', 'Feld und Kraft'), example: () => 0, stages: [stage(() => L('direction', 'Richtung'), ['force-dir']), stage(() => L('numbers', 'Zahlen'), ['force-num'])] },
     { name: () => L('Field lines', 'Feldlinien'), example: () => 1, stages: [stage(() => L('which diagram', 'welches Diagramm'), ['lines-pick']), stage(() => L('reading a diagram', 'ein Diagramm lesen'), ['lines-read']), stage(() => L('conductors', 'Leiter'), ['conductor'])] },
     { name: () => L('Fields add up', 'Felder addieren sich'), example: () => 2, stages: [stage(() => L('at a point', 'in einem Punkt'), ['superpose']), stage(() => L('where it is zero', 'wo es null ist'), ['zero'])] },
-    { name: () => L('Fields of charged objects', 'Felder geladener Körper'), example: () => 3, stages: [stage(() => L('graphs', 'Graphen'), ['er-graph']), stage(() => L('factors', 'Faktoren'), ['factor']), stage(() => L('the capacitor', 'der Kondensator'), ['plates-num'])] },
+    { name: () => L('Comparing fields', 'Felder vergleichen'), example: () => 3, stages: [stage(() => L('factors', 'Faktoren'), ['factor']), stage(() => L('two capacitors', 'zwei Kondensatoren'), ['plates-compare'])] },
     { name: () => L('Dipoles', 'Dipole'), example: () => 4, stages: [stage(() => L('uniform field', 'homogenes Feld'), ['dipole-uniform']), stage(() => L('near a charge', 'nahe einer Ladung'), ['dipole-point'])] },
-    { name: () => L('Charges in a uniform field', 'Ladungen im homogenen Feld'), example: () => 5, stages: [stage(() => L('the path', 'die Bahn'), ['deflect-path']), stage(() => L("Millikan's drop", 'Millikans Tröpfchen'), ['millikan']), stage(() => L('the deflection', 'die Ablenkung'), ['deflect-num'])] },
+    { name: () => L('Charges in a uniform field', 'Ladungen im homogenen Feld'), example: () => 5, stages: [stage(() => L('the path', 'die Bahn'), ['deflect-path']), stage(() => L("Millikan's drop", 'Millikans Tröpfchen'), ['millikan']), stage(() => L('two deflections', 'zwei Ablenkungen'), ['deflect-compare'])] },
     { name: () => L('True or false', 'Richtig oder falsch'), example: () => 1, stages: [stage(() => L('statements', 'Aussagen'), ['stmts'])] },
   ];
   const lessons = () => LESSONS.map((l) => ({ name: l.name(), idea: l.idea(), frames: l.frames, also: topics.also(l.topic) }));
 
   // ---------------------------------------------------------------- arcade
-  const KINDS = [['force-dir', 1], ['factor', 2], ['er-graph', 2], ['lines-pick', 2], ['deflect-path', 2], ['dipole-uniform', 2], ['conductor', 2], ['force-num', 2],
-    ['superpose', 3], ['zero', 3], ['lines-read', 3], ['plates-num', 3], ['millikan', 3], ['dipole-point', 4], ['deflect-num', 4]];
+  const KINDS = [['force-dir', 1], ['factor', 2], ['lines-pick', 2], ['deflect-path', 2], ['dipole-uniform', 2], ['conductor', 2], ['force-num', 2],
+    ['superpose', 3], ['zero', 3], ['lines-read', 3], ['plates-compare', 3], ['millikan', 3], ['dipole-point', 4], ['deflect-compare', 3]];
   const CONCEPT = { sign: 'sign', perp: 'perp', none: 'none', some: 'none', bent: 'none', straight: 'none', reverse: 'lines', separate: 'lines', swap: 'lines', equal: 'lines',
     plate: 'conductor', away: 'conductor', flow: 'conductor', through: 'conductor', inside: 'conductor', largest: 'sum', miss: 'sum', linear: 'square', circle: 'parabola', half: 'cap', same: 'eq', prefix: 'eq', noHalf: 'parabola' };
   function arcadeQuestion(kind, seed) {
