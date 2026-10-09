@@ -437,7 +437,7 @@
           [L('stay where they are', 'bleiben, wo sie sind'), true, '', null],
           [L('move to shorter wavelengths', 'verschieben sich zu kürzeren Wellenlängen'), false, L('The lines belong to the anode atoms: jumps between their inner shells. Only the cut-off moves with the voltage.', 'Die Linien gehören zu den Atomen der Anode: Übergänge zwischen ihren inneren Schalen. Nur die Grenzwellenlänge verschiebt sich mit der Spannung.'), 'lines'],
           [L('move to longer wavelengths', 'verschieben sich zu längeren Wellenlängen'), false, L('The lines belong to the anode atoms: they do not depend on the voltage.', 'Die Linien gehören zu den Atomen der Anode: Sie hängen nicht von der Spannung ab.'), 'lines'],
-        ], true)),
+        ])),
       ],
       hints: [L(`An electron accelerated through ${i('U')} has the kinetic energy ${i('e')}·${i('U')}: ${U} kV gives ${U} keV.`, `Ein Elektron, das mit ${i('U')} beschleunigt wird, hat die kinetische Energie ${i('e')}·${i('U')}: ${U} kV ergeben ${U} keV.`), L(`The most energetic photon has the shortest wavelength: ${i('e')}·${i('U')} = ${h}·${c}/${lam}${sb('min')}.`, `Das energiereichste Photon hat die kürzeste Wellenlänge: ${i('e')}·${i('U')} = ${h}·${c}/${lam}${sb('min')}.`), L('h·c = 1240 eV·nm = 1240 keV·pm.', 'h·c = 1240 eV·nm = 1240 keV·pm.')],
       solution: [
@@ -566,12 +566,12 @@
           [L('the same for both', 'für beide gleich'), true, '', null],
           [L('larger for the X-rays', 'grösser für die Röntgenstrahlung'), false, L('Δλ = λ_C·(1 − cos θ) does not depend on the wavelength.', 'Δλ = λ_C·(1 − cos θ) hängt nicht von der Wellenlänge ab.'), 'lambda'],
           [L('larger for the gamma rays', 'grösser für die Gammastrahlung'), false, L('Δλ = λ_C·(1 − cos θ) does not depend on the wavelength.', 'Δλ = λ_C·(1 − cos θ) hängt nicht von der Wellenlänge ab.'), 'lambda'],
-        ], true)),
+        ])),
         choice('rel', L('(c) Which photons lose the larger fraction of their energy?', '(c) Welche Photonen verlieren den grösseren Teil ihrer Energie?'), opts(r, [
           [L('the gamma photons', 'die Gammaphotonen'), true, '', null],
           [L(`the X-ray photons`, 'die Röntgenphotonen'), false, L('The same Δλ is a larger part of a short wavelength.', 'Dasselbe Δλ ist ein grösserer Teil einer kurzen Wellenlänge.'), 'lambda'],
           [L('both the same fraction', 'beide denselben Teil'), false, L('The same Δλ is a larger part of a short wavelength.', 'Dasselbe Δλ ist ein grösserer Teil einer kurzen Wellenlänge.'), 'lambda'],
-        ], true)),
+        ])),
       ],
       hints: [L('cos θ goes from 1 at 0° to −1 at 180°.', 'cos θ geht von 1 bei 0° bis −1 bei 180°.'), L('In the formula for Δλ, the wavelength itself does not appear.', 'In der Formel für Δλ kommt die Wellenlänge selbst nicht vor.'), L('Compare Δλ with λ: the energy is h·c/λ.', 'Vergleiche Δλ mit λ: Die Energie ist h·c/λ.')],
       solution: [

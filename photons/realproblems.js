@@ -59,7 +59,7 @@
             [L('produces no current, however bright it is', 'erzeugt keinen Strom, wie hell es auch ist'), true, '', null],
             [L('produces a current if it is bright enough', 'erzeugt einen Strom, wenn es hell genug ist'), false, L('Each electron needs one photon with at least the band gap energy: more weak photons do not help.', 'Jedes Elektron braucht ein Photon mit mindestens der Energie der Bandlücke: Mehr schwache Photonen helfen nicht.'), 'intensity'],
             [L('produces a larger current than visible light', 'erzeugt einen grösseren Strom als sichtbares Licht'), false, L('Its photons have less energy than the band gap.', 'Seine Photonen haben weniger Energie als die Bandlücke.'), 'inverse'],
-          ], true)),
+          ])),
           numQ('loss', L(`(c) the part of the energy of a ${nm} nm photon that turns into heat`, `(c) der Teil der Energie eines Photons von ${nm} nm, der zu Wärme wird`), '', '%', loss * 100, { tol: 0.02, abs: 0.6, wrong: [{ value: (Eg / Eph) * 100, tag: 'other', why: L('That is the part that is used; the rest becomes heat.', 'Das ist der genutzte Teil; der Rest wird zu Wärme.') }] }),
         ],
         hints: [L(`At the threshold, the photon energy equals the band gap: ${h}·${c}/${lam}${sb('G')} = ${Eg} eV.`, `An der Grenze ist die Photonenenergie gleich der Bandlücke: ${h}·${c}/${lam}${sb('G')} = ${Eg} eV.`), L('h·c = 1240 eV·nm.', 'h·c = 1240 eV·nm.'), L(`A photon of ${nm} nm has 1240/${nm} eV; ${Eg} eV of it are used.`, `Ein Photon von ${nm} nm hat 1240/${nm} eV; davon werden ${Eg} eV genutzt.`)],
@@ -87,7 +87,7 @@
             [L('no single infrared photon has enough energy to change a molecule', 'kein einzelnes Infrarot-Photon genug Energie hat, um ein Molekül zu verändern'), true, '', null],
             [L('it is not bright enough', 'er nicht hell genug ist'), false, L('A brighter heater gives more photons, but each one still has too little energy.', 'Ein hellerer Strahler liefert mehr Photonen, aber jedes hat immer noch zu wenig Energie.'), 'intensity'],
             [L('infrared light carries no energy', 'Infrarotlicht keine Energie transportiert'), false, L('It does: it warms you. But it comes in small portions.', 'Doch: Es wärmt dich. Aber es kommt in kleinen Portionen.'), 'other'],
-          ], true)),
+          ])),
         ],
         hints: [L(`${E} = ${h}·${c}/${lam} = 1240 eV·nm / ${lam}.`, `${E} = ${h}·${c}/${lam} = 1240 eV·nm / ${lam}.`), L('A molecule is changed by one photon at a time: compare the energy of one photon with what is needed.', 'Ein Molekül wird von einem Photon aufs Mal verändert: Vergleiche die Energie eines Photons mit der nötigen.')],
         solution: [
@@ -138,7 +138,7 @@
             [L('the photons are more energetic', 'die Photonen energiereicher sind'), true, '', null],
             [L('the tube emits more photons of the same energies', 'die Röhre mehr Photonen derselben Energien aussendet'), false, L('More photons alone would not get through more tissue; the new, more energetic photons do.', 'Mehr Photonen allein kämen nicht durch mehr Gewebe; die neuen, energiereicheren Photonen schon.'), 'intensity'],
             [L('the photons have longer wavelengths', 'die Photonen längere Wellenlängen haben'), false, WHY.inverse(), 'inverse'],
-          ], true)),
+          ])),
         ],
         hints: [L(`An electron accelerated through ${i('U')} gets ${i('e')}·${i('U')}; a photon can take all of it.`, `Ein Elektron, das mit ${i('U')} beschleunigt wird, erhält ${i('e')}·${i('U')}; ein Photon kann alles davon übernehmen.`), L('h·c = 1240 keV·pm.', 'h·c = 1240 keV·pm.')],
         solution: [
