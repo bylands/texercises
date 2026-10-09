@@ -17,7 +17,7 @@
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
       correct: 'Correct', option: (k) => `Option ${k}`, drawWrong: (n) => `${n} grid ${n === 1 ? 'line is' : 'lines are'} not right yet (marked).`,
       tutorNote: 'Use the arrow keys ← → to step through. ▶ plays an animation; the slider moves through time.',
-      given: 'Given', animLead: 'The animation shows how the rope got there; ▶ plays it again.', animNote: 'The animation shows how the rope got there and stops at the state given. With ▶ or the slider you can move the crests on yourself (two crests running towards each other one by one); the time is not shown. The faded line is the rope in the state given.',
+      given: 'Given', animLead: 'The animation shows how the rope got there; ▶ plays it again.', animNote: 'The animation shows how the rope got there and stops at the state given. With ▶ or the slider you can move the crests on yourself (two crests running towards each other one by one); the time and the sum of the crests are not shown. The faded line is the rope in the state given.',
     },
     de: {
       title: 'Wellenausbreitung', mode: 'Modus', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe', new: 'Neue Aufgabe', difficulty: 'Schwierigkeit',
@@ -29,7 +29,7 @@
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
       correct: 'Richtig', option: (k) => `Antwort ${k}`, drawWrong: (n) => `${n} ${n === 1 ? 'Gitterlinie stimmt' : 'Gitterlinien stimmen'} noch nicht (markiert).`,
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. ▶ spielt eine Animation ab; mit dem Schieber bewegst du dich durch die Zeit.',
-      given: 'Gegeben', animLead: 'Die Animation zeigt, wie das Seil dorthin kam; ▶ spielt sie nochmals ab.', animNote: 'Die Animation zeigt, wie das Seil dorthin kam, und hält beim gegebenen Zustand an. Mit ▶ oder dem Schieber kannst du die Buckel selbst weiterbewegen (zwei aufeinander zulaufende Buckel einzeln); die Zeit wird nicht angezeigt. Die blasse Linie ist das Seil im gegebenen Zustand.',
+      given: 'Gegeben', animLead: 'Die Animation zeigt, wie das Seil dorthin kam; ▶ spielt sie nochmals ab.', animNote: 'Die Animation zeigt, wie das Seil dorthin kam, und hält beim gegebenen Zustand an. Mit ▶ oder dem Schieber kannst du die Buckel selbst weiterbewegen (zwei aufeinander zulaufende Buckel einzeln); die Zeit und die Summe der Buckel werden nicht angezeigt. Die blasse Linie ist das Seil im gegebenen Zustand.',
     },
   };
   const ui = () => UI[Lang.get()];
@@ -67,15 +67,16 @@
   // the given situation: the animation of the lead-in, stopping at the state given, or the diagrams.
   // Its slider goes on until the crests have left the rope, well past the time asked about: the
   // student can move the crests on, but is not told the time, and has to find the right position.
-  // Two crests running towards each other get a slider each. Not where the question is how the
-  // rope moves at the given moment (moving the crests would show it).
+  // Two crests running towards each other get a slider each. Once moved, only the crests are drawn
+  // (and the given state faded), not the rope, their sum: that is for the student to work out. Not
+  // where the question is how the rope moves at the given moment (moving the crests would show it).
   function given(e) {
     if (e.anim) {
       const f = many(e.fig)[0], base = { ...e.anim, arrows: true, Y: f.Y, mark: e.anim.mark != null ? e.anim.mark : f.marks && f.marks[0] ? f.marks[0].x : null, dots: e.anim.dots };
       if (e.kind === 'medium') return `<div class="fig">${animSlot(base)}</div>`;
       const sc = e.anim.sc, split = !sc.end && sc.pulses.length === 2 && sc.pulses[0].dir !== sc.pulses[1].dir;
       const t1 = Math.min(15, Math.max(gone(sc, f.hi), (e.t || 0) + 2, e.anim.t1 + 2));
-      return `<div class="fig">${animSlot({ ...base, t1, hold: e.anim.t1, ref: e.anim.t1, noTime: true, split, show: split ? ['parts', 'sum'] : e.anim.show, Y: split ? Math.max(base.Y || 6, 11) : base.Y })}</div>`; // moved one by one, any parts may overlap
+      return `<div class="fig">${animSlot({ ...base, t1, hold: e.anim.t1, ref: e.anim.t1, noTime: true, split, show: e.anim.show, explore: split || sc.end || sc.pulses.length > 1 ? ['parts'] : null, Y: split ? Math.max(base.Y || 6, 11) : base.Y })}</div>`; // moved one by one, any parts may overlap
     }
     return graphs(e.fig);
   }

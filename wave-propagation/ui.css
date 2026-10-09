@@ -265,6 +265,19 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 #arcade .ar-actions button { font-size: 0.9rem; color: var(--muted); }
 
 .ar-big { font-size: 2.4rem; margin: 4px 0; color: #ffff00; }
+/* the personal best: the score pulses when it is passed; a banner and confetti at the end */
+.ar-score.pb { animation: ar-pb 1.2s ease-out; }
+@keyframes ar-pb { 0%, 100% { transform: none; text-shadow: none; } 30% { transform: scale(1.35); text-shadow: 0 0 14px #ffff00; } }
+.ar-pb { margin: 2px 0 10px; color: #bbb; }
+.ar-pb:empty { display: none; }
+.ar-pb.record { display: inline-flex; flex-direction: column; gap: 2px; padding: 10px 18px; border: 2px solid #ffd700; border-radius: 12px; color: #ffd700; font-size: 1.3rem; font-weight: 700; animation: ar-pb-in 0.7s cubic-bezier(.2, 1.6, .4, 1) both; }
+.ar-pb.record span { font-size: 0.95rem; font-weight: 400; color: #ddd; }
+@keyframes ar-pb-in { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: none; } }
+#arcade { position: relative; overflow: hidden; }
+.ar-confetti { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.ar-confetti i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; opacity: 0.95; animation: ar-fall linear forwards; }
+@keyframes ar-fall { to { transform: translate(var(--drift), 110vh) rotate(var(--spin)); opacity: 0.6; } }
+@media (prefers-reduced-motion: reduce) { .ar-score.pb, .ar-pb.record { animation: none; } }
 .ar-notes { margin: 6px 0 14px; padding-left: 1.3em; }
 .ar-notes .bonus { color: var(--ok); }
 .ar-notes .penalty { color: var(--bad); }

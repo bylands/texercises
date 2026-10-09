@@ -13,7 +13,8 @@
 //                    ▶ or the slider go on; a.noTime hides the time (the student moves the crests
 //                    without being told when); a.split gives each crest its own slider, to move
 //                    them one by one (crests without an end); a.ref: the rope at that time drawn
-//                    faded, as a reference, once the crests have left it. Returns { stop }.
+//                    faded, as a reference, once the crests have left it; a.explore: what to show
+//                    then instead of a.show (e.g. ['parts']: the crests, not their sum). Returns { stop }.
 (function (root) {
   'use strict';
 
@@ -134,7 +135,8 @@
       const frames = el.querySelector('.frames'), btn = el.querySelector('.play'), sliders = [...el.querySelectorAll('input[type=range]')];
       const ts = Array.from({ length: n }, () => a.t0);
       let raf = 0, last = 0, playing = false, held = false;
-      const withRef = () => ({ ...a, refSc: a.sc, refShown: a.ref != null && ts.some((t) => Math.abs(t - a.ref) > 1e-6) });
+      // moved away from the reference: the faded reference, and (a.explore) other curves, e.g. only the crests
+      const withRef = () => { const moved = a.ref != null && ts.some((t) => Math.abs(t - a.ref) > 1e-6); return { ...a, refSc: a.sc, refShown: moved, show: moved && a.explore ? a.explore : a.show }; };
       const at = () => (a.split ? frame({ ...withRef(), sc: { ...a.sc, pulses: a.sc.pulses.map((p, i) => ({ ...p, x0: p.x0 + p.dir * p.v * ts[i] })) } }, 0) : frame(withRef(), ts[0]));
       const show = () => { frames.innerHTML = at(); sliders.forEach((sl, i) => { sl.value = String(Math.round(((ts[i] - a.t0) / span) * 1000)); }); };
       const stop = () => { playing = false; cancelAnimationFrame(raf); btn.textContent = '▶'; btn.setAttribute('aria-label', L('Play', 'Abspielen')); };

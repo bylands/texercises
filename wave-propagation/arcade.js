@@ -53,7 +53,7 @@
       over: 'Time is up!', ended: 'Game over',
       total: (p) => `${p} points`,
       stats: (ok, bad) => `${ok} solved, ${bad} not solved.`,
-      record: ' New best score!',
+      pbNew: 'New personal best!', pbFirst: 'Your first personal best!', pbPrev: (b) => `Previous best: ${b} points`, pbKeep: (b) => `Personal best: ${b} points`,
       unfinished: 'not answered',
       question: 'Question', yours: 'Your answer', correctV: 'Right answer', none: '—',
       explain: 'Explanation',
@@ -80,7 +80,7 @@
       over: 'Die Zeit ist um!', ended: 'Spiel beendet',
       total: (p) => `${p} Punkte`,
       stats: (ok, bad) => `${ok} gelöst, ${bad} nicht gelöst.`,
-      record: ' Neuer Bestwert!',
+      pbNew: 'Neue persönliche Bestleistung!', pbFirst: 'Deine erste persönliche Bestleistung!', pbPrev: (b) => `Bisherige Bestleistung: ${b} Punkte`, pbKeep: (b) => `Persönliche Bestleistung: ${b} Punkte`,
       unfinished: 'nicht beantwortet',
       question: 'Frage', yours: 'Deine Antwort', correctV: 'Richtige Antwort', none: '—',
       explain: 'Erklärung',
@@ -132,7 +132,7 @@
     // ------------------------------------------------------------ the game
     function start() {
       clearTimeout(nextTimer);
-      game = { t0: Date.now(), score: 0, items: [], counts: {}, redeemed: {}, notes: [], last: null, over: false, asked: new Set() };
+      game = { t0: Date.now(), score: 0, items: [], counts: {}, redeemed: {}, notes: [], last: null, over: false, asked: new Set(), best: h.stored(bestKey, 0), passed: false };
       show('play');
       $('#ar-toast').textContent = '';
       next();
@@ -254,6 +254,15 @@
       game.score += it.points;
       game.notes.push(...it.notes);
       header();
+      // passing the personal best (once per game, and only once there is one to beat)
+      if (game.best > 0 && !game.passed && game.score > game.best) {
+        game.passed = true;
+        msgs.push(`🏆 ${t().pbNew}`);
+        const sc = $('#ar-score');
+        sc.classList.remove('pb');
+        void sc.offsetWidth; // restart the animation
+        sc.classList.add('pb');
+      }
       toast(msgs.join(' · '), cls);
       if (it.points) pop(it.points);
     }
@@ -265,6 +274,26 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => el.classList.remove('shown'), 3500);
     }
+    // A short burst of confetti over the arcade (not with reduced motion).
+    function confetti() {
+      if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const box = document.createElement('div'), colours = ['#ffff00', '#58c4dd', '#83c167', '#fc6255', '#c59df5', '#f0ac5f'];
+      box.className = 'ar-confetti';
+      box.setAttribute('aria-hidden', 'true');
+      for (let i = 0; i < 70; i++) {
+        const c = document.createElement('i');
+        c.style.left = `${Math.random() * 100}%`;
+        c.style.background = colours[i % colours.length];
+        c.style.animationDelay = `${Math.random() * 0.6}s`;
+        c.style.animationDuration = `${1.8 + Math.random() * 1.4}s`;
+        c.style.setProperty('--drift', `${Math.round((Math.random() - 0.5) * 160)}px`);
+        c.style.setProperty('--spin', `${Math.round(360 + Math.random() * 720)}deg`);
+        box.appendChild(c);
+      }
+      $('#arcade').appendChild(box);
+      setTimeout(() => box.remove(), 4000);
+    }
+
     // The points won or lost rise from the score and fade, as in a manim transform.
     function pop(points) {
       const el = document.createElement('span');
@@ -282,8 +311,7 @@
       game.over = true;
       clearInterval(timer);
       game.timeUp = left() <= 0;
-      const best = h.stored(bestKey, 0);
-      game.record = game.score > best && game.items.some((i) => i.ok);
+      game.record = game.score > game.best && game.items.some((i) => i.ok);
       if (game.record) h.store(bestKey, game.score);
       summary();
     }
@@ -294,7 +322,12 @@
       const ok = game.items.filter((i) => i.ok).length, names = src.concepts();
       $('#ar-sum-title').textContent = game.timeUp ? t().over : t().ended;
       $('#ar-sum-score').textContent = t().total(game.score);
-      $('#ar-sum-stats').textContent = t().stats(ok, game.items.length - ok) + (game.record ? t().record : '');
+      $('#ar-sum-stats').textContent = t().stats(ok, game.items.length - ok);
+      // a new personal best: a banner and a burst of confetti; otherwise the best to beat
+      const pb = $('#ar-sum-pb');
+      pb.className = game.record ? 'ar-pb record' : 'ar-pb';
+      pb.innerHTML = game.record ? `🏆 ${game.best > 0 ? t().pbNew : t().pbFirst}${game.best > 0 ? `<span>${t().pbPrev(game.best)}</span>` : ''}` : (game.best > 0 ? t().pbKeep(game.best) : '');
+      if (game.record) confetti();
       $('#ar-sum-notes').innerHTML = game.notes.map((n) => `<li class="${n.kind}">${t()[n.kind](names[n.c])}</li>`).join('');
       $('#ar-sum-list').innerHTML = game.items.map((it, k) => {
         const { q } = question(it.kind, it.seed, it.difficulty);
@@ -393,6 +426,7 @@
       <div id="ar-summary" hidden>
         <h2 id="ar-sum-title"></h2>
         <p id="ar-sum-score" class="ar-big"></p>
+        <p id="ar-sum-pb" class="ar-pb"></p>
         <p id="ar-sum-stats"></p>
         <ul id="ar-sum-notes" class="ar-notes"></ul>
         <div id="ar-sum-list" class="ar-list"></div>
