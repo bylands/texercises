@@ -133,3 +133,7 @@ svg.tb .mf-cable { fill: #555c63; stroke: var(--ink); stroke-width: 1.2; }
 #arcade .ar-opt .val svg.icon { width: 48px; height: 48px; }
 #arcade .ar-opt .dtile { justify-content: center; }
 .ar-hero .figs .fig svg { width: 320px; }
+
+/* the nudge after a wrong check of statements */
+.stmts-fb { color: var(--bad); font-size: 0.9rem; margin: 4px 0 0; }
+.stmts-fb:empty { display: none; }

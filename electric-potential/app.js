@@ -17,7 +17,7 @@
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
       fill: 'Answer every question, then check.', okWell: 'All correct, well done!',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the solution.',
-      correct: 'Correct', missed: 'This one fits too:', shown: 'The right answers are marked.',
+      correct: 'Correct', notThis: 'Not this one: check your reasoning, or take a hint.', notAll: 'Not all the answers that fit are chosen yet.', stmtsWrong: (n) => (n === 1 ? 'One statement is judged wrong.' : `${n} statements are judged wrong.`), missed: 'This one fits too:', shown: 'The right answers are marked.',
     },
     de: {
       title: 'Elektrisches Potential', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
@@ -29,7 +29,7 @@
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
       fill: 'Beantworte jede Frage und prüfe dann.', okWell: 'Alles richtig, gut gemacht!',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die Lösung anschauen.',
-      correct: 'Richtig', missed: 'Auch diese passt:', shown: 'Die richtigen Antworten sind markiert.',
+      correct: 'Richtig', notThis: 'Das stimmt nicht: Überprüfe deine Überlegung, oder nimm einen Hinweis.', notAll: 'Noch sind nicht alle passenden Antworten gewählt.', stmtsWrong: (n) => (n === 1 ? 'Eine Aussage ist falsch beurteilt.' : `${n} Aussagen sind falsch beurteilt.`), missed: 'Auch diese passt:', shown: 'Die richtigen Antworten sind markiert.',
     },
   };
   const ui = () => UI[Lang.get()];
@@ -52,21 +52,35 @@
       return `<p class="ask">${q.label}</p><div class="cands" role="radiogroup">${q.options.map((o, k) => `<label class="cand" data-k="${k}"><input type="radio" name="q-${q.key}" value="${k}"><span class="letter">${k + 1}</span>${o.html}</label>`).join('')}</div><ul class="qfb" data-fb="${q.key}"></ul>`;
     }
     if (q.type === 'multi') {
-      return `<ul class="stmts">${q.statements.map((s, k) => `<li data-k="${k}"><label><input type="checkbox" name="q-${q.key}" value="${k}"><span>${s.html}</span></label><span class="fb"></span></li>`).join('')}</ul>`;
+      return `<ul class="stmts">${q.statements.map((s, k) => `<li data-k="${k}"><label><input type="checkbox" name="q-${q.key}" value="${k}"><span>${s.html}</span></label><span class="fb"></span></li>`).join('')}</ul><p class="fb stmts-fb" data-fb="${q.key}"></p>`;
     }
     return `<div class="field" data-key="${q.key}"><span class="what">${q.label}</span><div class="opts" role="radiogroup">${q.options.map((o, k) => `<label><input type="radio" name="q-${q.key}" value="${k}"><span>${o.label}</span></label>`).join('')}</div><span class="fb" aria-live="polite"></span></div>`;
   }
   // Marks every answer; true if all are right, null if one is missing.
+  // While the exercise is open, a wrong answer gets a nudge, not the solution: the steps of the
+  // solution are taken out of its explanation, and single statements or missed tiles are not marked.
   function feedback() {
     let all = true, missing = false;
+    const done = st && (st.solved || st.revealed);
+    const nudge = (w) => {
+      if (done) return w;
+      let t = w || '';
+      // whole steps, then single sentences of the solution
+      for (const s of ex.solution) if (s) t = t.split(s).join('');
+      for (const s of ex.solution) for (const x of String(s || '').split(/(?<=[.!?])\s+/)) if (x.length > 3) t = t.split(x).join('');
+      t = t.replace(/\s+/g, ' ').trim();
+      return t || ui().notThis;
+    };
     for (const q of ex.questions) {
       if (q.type === 'multi') {
+        let wrong = 0;
         q.statements.forEach((s, k) => {
           const li = $(`.stmts li[data-k="${k}"]`), on = li.querySelector('input').checked, good = on === s.ok;
-          li.className = good ? (on ? 'ok' : '') : 'bad';
-          li.querySelector('.fb').innerHTML = good ? '' : on ? s.why : `${ui().missed.replace(/:$/, '')}: ${s.why}`;
-          if (!good) all = false;
+          if (!good) { all = false; wrong++; }
+          li.className = done || good ? (good ? (on ? 'ok' : '') : 'bad') : '';
+          li.querySelector('.fb').innerHTML = done && !good ? (on ? s.why : `${ui().missed.replace(/:$/, '')}: ${s.why}`) : '';
         });
+        $(`[data-fb="${q.key}"]`).innerHTML = !done && wrong ? ui().stmtsWrong(wrong) : '';
         continue;
       }
       const inputs = [...document.querySelectorAll(`input[name="q-${q.key}"]`)], on = inputs.filter((x) => x.checked).map((x) => Number(x.value));
@@ -77,9 +91,9 @@
           const k = Number(x.value), o = q.options[k], el = x.closest('.tile, .cand'), chosen = x.checked;
           el.classList.remove('ok', 'bad', 'miss');
           if (chosen) el.classList.add(o.ok ? 'ok' : 'bad');
-          else if (q.multi && o.ok) el.classList.add('miss');
-          if (chosen && !o.ok) notes.push(o.why);
-          if (!chosen && q.multi && o.ok) notes.push(`${ui().missed} ${o.why}`);
+          else if (q.multi && o.ok && done) el.classList.add('miss');
+          if (chosen && !o.ok) notes.push(nudge(o.why));
+          if (!chosen && q.multi && o.ok) notes.push(done ? `${ui().missed} ${o.why}` : ui().notAll);
           if (chosen !== o.ok && (chosen || q.multi)) all = false;
         });
         $(`[data-fb="${q.key}"]`).innerHTML = [...new Set(notes)].map((n) => `<li>${n}</li>`).join('');
@@ -87,10 +101,10 @@
       }
       const o = q.options[on[0]], row = $(`.field[data-key="${q.key}"]`);
       row.className = `field ${o.ok ? 'ok' : 'bad'}`;
-      row.querySelector('.fb').innerHTML = o.ok ? ui().correct : o.why;
+      row.querySelector('.fb').innerHTML = o.ok ? ui().correct : nudge(o.why);
       if (!o.ok) all = false;
     }
-    return all ? true : missing && !document.querySelector('.field.bad, .cand.bad, .tile.bad, .tile.miss, .stmts li.bad') ? null : false;
+    return all ? true : missing && !document.querySelector('.field.bad, .cand.bad, .tile.bad, .tile.miss, .stmts li.bad, .stmts-fb:not(:empty)') ? null : false;
   }
 
   // ---------------------------------------------------------------- exercises
@@ -230,6 +244,8 @@
         frame(L('V = k·Q/r', 'V = k·Q/r'), `<p>${L('With the zero far away, the potential of a point charge is V = k·Q/r: positive around a positive charge, negative around a negative one, falling with 1/r (more slowly than the field, 1/r²).', 'Mit dem Nullpunkt weit weg ist das Potential einer Punktladung V = k·Q/r: positiv um eine positive Ladung, negativ um eine negative, abnehmend mit 1/r (langsamer als das Feld, 1/r²).')}</p>`, fig(C.fig(X.EQ.point.c, { box: BOX, equi: X.EQ.point.lv }))),
         frame(L('Numbers, not vectors', 'Zahlen, keine Vektoren'), `<p>${L('At the centre of four equal positive charges on a square, the four fields cancel (vectors), but the potentials add up: V = 4·k·q/r > 0. With +q, −q, +q, −q in turn, both the field and the potential are zero.', 'Im Mittelpunkt von vier gleichen positiven Ladungen auf einem Quadrat heben sich die vier Felder auf (Vektoren), aber die Potentiale addieren sich: V = 4·k·q/r > 0. Mit +q, −q, +q, −q abwechselnd sind Feld und Potential beide null.')}</p>`,
           fig(C.fig({ kind: 'points', charges: [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([x, y]) => ({ q: 1, x, y })) }, { box: BOX, equi: [1.5, 2, 2.5, 3, 4], points: [{ x: 0, y: 0, name: 'M' }] }))),
+        frame(L('In units of V₀', 'In Einheiten von V₀'), `<p>${L('Without a calculator, count in units: with V₀ = k·q/r, a charge +q at the distance r gives +V₀, a charge −2q at the distance 2r gives −2/2·V₀ = −V₀. At P between them: V = +V₀ − V₀ = 0, although the field there is not zero.', 'Ohne Taschenrechner zählt man in Einheiten: Mit V₀ = k·q/r gibt eine Ladung +q im Abstand r den Beitrag +V₀, eine Ladung −2q im Abstand 2r den Beitrag −2/2·V₀ = −V₀. In P dazwischen: V = +V₀ − V₀ = 0, obwohl das Feld dort nicht null ist.')}</p>`,
+          fig(C.fig({ kind: 'points', charges: [{ q: 1, x: -1, y: 0 }, { q: -2, x: 2, y: 0 }] }, { box: BOX, lines: true, labels: ['+', '−2'], points: [{ x: 0, y: 0, name: 'P' }] }))),
       ] },
     { topic: 4, stage: 0, name: () => L('Acceleration voltage', 'Beschleunigungsspannung'), idea: () => L('Through a voltage U, a charge gains |q|·U of kinetic energy: in eV, simply the charge in e times U in V.', 'Mit einer Spannung U gewinnt eine Ladung |q|·U kinetische Energie: in eV einfach die Ladung in e mal U in V.'),
       frames: () => [
@@ -242,6 +258,8 @@
       frames: () => [
         frame(L('Closest approach', 'Kleinster Abstand'), `<p>${L('An alpha particle flying straight at a nucleus is slowed down by the repulsion. At the closest point it stops for a moment: all its kinetic energy has become potential energy, E_kin = k·q·Q/r_min. Rutherford found nuclei this way.', 'Ein Alphateilchen, das geradewegs auf einen Kern zufliegt, wird von der Abstossung abgebremst. Im nächsten Punkt hält es kurz an: Seine ganze kinetische Energie ist potentielle Energie geworden, E_kin = k·q·Q/r_min. So fand Rutherford die Atomkerne.')}</p>`,
           fig(C.fig({ kind: 'points', charges: [{ q: 3, x: 1.5, y: 0 }] }, { box: BOX, equi: [1.2, 1.6, 2.2, 3.2, 5], labels: ['+Ze'], parts: [{ x: -1.8, y: 0, q: 1, sym: 'α' }], vecs: [{ x: -1.8, y: 0, dx: 50, dy: 0, cls: 'v-vel', name: 'v' }] }))),
+        frame(L('Comparing experiments', 'Versuche vergleichen'), `<p>${L('From E_kin = k·q·Q/r_min: r_min = k·q·Q/E_kin. Twice the energy, half the closest distance; an alpha particle (2e) with the same energy as a proton stops twice as far away. The mass does not matter here, only the energy. A particle repelled from a sphere gains |q|·V with V = k·Q/R; its speed grows with the square root of the energy: v = √(2·E_kin/m).', 'Aus E_kin = k·q·Q/r_min folgt r_min = k·q·Q/E_kin. Doppelte Energie, halber kleinster Abstand; ein Alphateilchen (2e) mit derselben Energie wie ein Proton hält doppelt so weit weg an. Die Masse spielt hier keine Rolle, nur die Energie. Ein von einer Kugel abgestossenes Teilchen gewinnt |q|·V mit V = k·Q/R; seine Geschwindigkeit wächst mit der Wurzel aus der Energie: v = √(2·E_kin/m).')}</p>`,
+          fig(C.fig({ kind: 'points', charges: [{ q: 3, x: 1.5, y: 0 }] }, { box: BOX, equi: [1.2, 1.6, 2.2, 3.2, 5], labels: ['+Ze'], parts: [{ x: -1.8, y: 0.7, q: 1, sym: 'α' }, { x: -1.8, y: -0.7, q: 1, sym: 'p' }] }))),
       ] },
   ];
   const stage = (name, types) => ({ name, types });
@@ -249,7 +267,7 @@
     { name: () => L('Potential and energy', 'Potential und Energie'), example: () => 0, stages: [stage(() => L('which way', 'welche Richtung'), ['which-way']), stage(() => L('at points', 'in Punkten'), ['points-v'])] },
     { name: () => L('The uniform field', 'Das homogene Feld'), example: () => 1, stages: [stage(() => L('along the field', 'längs des Feldes'), ['uniform-d']), stage(() => L('V → E', 'V → E'), ['v2e']), stage(() => L('E → V', 'E → V'), ['e2v'])] },
     { name: () => L('Equipotentials', 'Äquipotentiallinien'), example: () => 2, stages: [stage(() => L('which diagram', 'welches Diagramm'), ['equi-pick']), stage(() => L('field lines', 'Feldlinien'), ['lines-equi'])] },
-    { name: () => L('Point charges', 'Punktladungen'), example: () => 3, stages: [stage(() => L('scalar, not vector', 'Skalar, kein Vektor'), ['scalar']), stage(() => L('numbers', 'Zahlen'), ['point-v'])] },
+    { name: () => L('Point charges', 'Punktladungen'), example: () => 3, stages: [stage(() => L('scalar, not vector', 'Skalar, kein Vektor'), ['scalar']), stage(() => L('in units of V₀', 'in Einheiten von V₀'), ['point-v'])] },
     { name: () => L('Acceleration voltage', 'Beschleunigungsspannung'), example: () => 4, stages: [stage(() => L('electronvolt', 'Elektronvolt'), ['ev']), stage(() => L('stopping', 'abbremsen'), ['stop']), stage(() => L('speed', 'Geschwindigkeit'), ['accel']), stage(() => L('comparing', 'vergleichen'), ['accel-compare'])] },
     { name: () => L('Energy conservation', 'Energieerhaltung'), example: () => 5, stages: [stage(() => L('closest approach', 'kleinster Abstand'), ['closest']), stage(() => L('repelled', 'abgestossen'), ['repel'])] },
     { name: () => L('True or false', 'Richtig oder falsch'), example: () => 0, stages: [stage(() => L('statements', 'Aussagen'), ['stmts'])] },
@@ -258,7 +276,7 @@
 
   // ---------------------------------------------------------------- arcade
   const KINDS = [['which-way', 1], ['ev', 2], ['stop', 2], ['uniform-d', 2], ['equi-pick', 2], ['lines-equi', 2], ['v2e', 2], ['points-v', 2],
-    ['scalar', 3], ['point-v', 3], ['accel', 3], ['accel-compare', 3], ['e2v', 3], ['closest', 4], ['repel', 4]];
+    ['scalar', 3], ['point-v', 3], ['accel', 3], ['accel-compare', 3], ['e2v', 3], ['closest', 3], ['repel', 3]];
   const CONCEPT = { sign: 'sign', straight: 'along', across: 'along', even: 'equi', lines: 'equi', turned: 'equi', swap: 'equi', up: 'equi', along: 'equi', copy: 'slope', steep: 'slope',
     z: 'charge', two: 'formula', field: 'vr', abs: 'scalar', one: 'scalar', half: 'charge', prefix: 'units' };
   function arcadeQuestion(kind, seed) {

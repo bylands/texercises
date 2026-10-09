@@ -143,3 +143,7 @@ table.cmp { border-collapse: collapse; margin: 0.6em 0; font-size: 0.95em; }
 table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 0.3em 0.8em; text-align: center; }
 table.cmp thead th { color: var(--accent); }
 table.cmp tbody th { text-align: left; font-weight: normal; color: var(--muted); }
+
+/* the nudge after a wrong check of statements */
+.stmts-fb { color: var(--bad); font-size: 0.9rem; margin: 4px 0 0; }
+.stmts-fb:empty { display: none; }

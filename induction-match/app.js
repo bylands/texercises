@@ -23,7 +23,7 @@
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
       fill: 'Answer every question, then check.', ok: 'All correct.', okWell: 'All correct, well done!',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the solution.',
-      correct: 'Correct', missed: 'This one is correct too:', shown: 'The right answers are marked.',
+      correct: 'Correct', notThis: 'Not this one: check your reasoning, or take a hint.', stmtsWrong: (n) => (n === 1 ? 'One statement is judged wrong.' : `${n} statements are judged wrong.`), missed: 'This one is correct too:', shown: 'The right answers are marked.',
       drawWrong: (n) => `${n} ${n === 1 ? 'handle is' : 'handles are'} not right yet (marked).`,
     },
     de: {
@@ -38,7 +38,7 @@
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
       fill: 'Beantworte jede Frage und prüfe dann.', ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht!',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die Lösung anschauen.',
-      correct: 'Richtig', missed: 'Auch diese ist richtig:', shown: 'Die richtigen Antworten sind markiert.',
+      correct: 'Richtig', notThis: 'Das stimmt nicht: Überprüfe deine Überlegung, oder nimm einen Hinweis.', stmtsWrong: (n) => (n === 1 ? 'Eine Aussage ist falsch beurteilt.' : `${n} Aussagen sind falsch beurteilt.`), missed: 'Auch diese ist richtig:', shown: 'Die richtigen Antworten sind markiert.',
       drawWrong: (n) => `${n} ${n === 1 ? 'Griff stimmt' : 'Griffe stimmen'} noch nicht (markiert).`,
     },
   };
@@ -58,7 +58,7 @@
       return `<p class="ask">${q.label}</p><div class="cands four" role="radiogroup">${q.options.map((o, k) => `<label class="cand" data-k="${k}"><input type="radio" name="q-${q.key}" value="${k}"><span class="letter">${k + 1}</span>${o.html}</label>`).join('')}</div><p class="qfb" data-fb="${q.key}"></p>`;
     }
     if (q.type === 'multi') {
-      return `<ul class="stmts">${q.statements.map((s, k) => `<li data-k="${k}"><label><input type="checkbox" name="q-${q.key}" value="${k}"><span>${s.html}</span></label><span class="fb"></span></li>`).join('')}</ul>`;
+      return `<ul class="stmts">${q.statements.map((s, k) => `<li data-k="${k}"><label><input type="checkbox" name="q-${q.key}" value="${k}"><span>${s.html}</span></label><span class="fb"></span></li>`).join('')}</ul><p class="fb stmts-fb" data-fb="${q.key}"></p>`;
     }
     return `<div class="field" data-key="${q.key}"><span class="what">${q.label}</span><div class="opts" role="radiogroup">${q.options.map((o, k) => `<label><input type="radio" name="q-${q.key}" value="${k}"><span>${o.label}</span></label>`).join('')}</div><span class="fb" aria-live="polite"></span></div>`;
   }
@@ -66,14 +66,27 @@
   function feedback() {
     if (ex.kind === 'draw') return drawFeedback();
     let all = true, missing = false;
+    const done = st && (st.solved || st.revealed);
+    // While the exercise is open, a wrong answer gets a nudge, not the solution: the steps of the
+    // solution, whole or sentence by sentence, are taken out of its explanation.
+    const nudge = (w) => {
+      if (done) return w;
+      let t = w || '';
+      for (const s of ex.solution) if (s) t = t.split(s).join('');
+      for (const s of ex.solution) for (const x of String(s || '').split(/(?<=[.!?])\s+/)) if (x.length > 3) t = t.split(x).join('');
+      t = t.replace(/\s+/g, ' ').trim();
+      return t || ui().notThis;
+    };
     for (const q of ex.questions) {
       if (q.type === 'multi') {
+        let wrong = 0;
         q.statements.forEach((s, k) => {
           const li = $(`.stmts li[data-k="${k}"]`), on = li.querySelector('input').checked, good = on === s.ok;
-          li.className = good ? (on ? 'ok' : '') : 'bad';
-          li.querySelector('.fb').innerHTML = good ? '' : on ? s.why : `${ui().missed} ${s.why}`;
-          if (!good) all = false;
+          if (!good) { all = false; wrong++; }
+          li.className = done || good ? (good ? (on ? 'ok' : '') : 'bad') : '';
+          li.querySelector('.fb').innerHTML = done && !good ? (on ? s.why : `${ui().missed} ${s.why}`) : '';
         });
+        $(`[data-fb="${q.key}"]`).innerHTML = !done && wrong ? ui().stmtsWrong(wrong) : '';
         continue;
       }
       const sel = document.querySelector(`input[name="q-${q.key}"]:checked`);
@@ -82,15 +95,15 @@
       if (q.type === 'pick') {
         document.querySelectorAll(`input[name="q-${q.key}"]`).forEach((x) => x.closest('.cand').classList.remove('ok', 'bad'));
         sel.closest('.cand').classList.add(o.ok ? 'ok' : 'bad');
-        $(`[data-fb="${q.key}"]`).innerHTML = o.ok ? '' : o.why;
+        $(`[data-fb="${q.key}"]`).innerHTML = o.ok ? '' : nudge(o.why);
       } else {
         const row = $(`.field[data-key="${q.key}"]`);
         row.className = `field ${o.ok ? 'ok' : 'bad'}`;
-        row.querySelector('.fb').innerHTML = o.ok ? ui().correct : o.why;
+        row.querySelector('.fb').innerHTML = o.ok ? ui().correct : nudge(o.why);
       }
       if (!o.ok) all = false;
     }
-    return all ? true : missing && !document.querySelector('.field.bad, .cand.bad, .stmts li.bad') ? null : false;
+    return all ? true : missing && !document.querySelector('.field.bad, .cand.bad, .stmts li.bad, .stmts-fb:not(:empty)') ? null : false;
   }
 
   // ---------------------------------------------------------------- drawing

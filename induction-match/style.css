@@ -150,3 +150,7 @@ svg .tag { fill: var(--ink); font: 600 10px system-ui, sans-serif; paint-order: 
 .ar-hero .figs .fig svg { width: 300px; }
 /* the start picture: first the flux, then its voltage */
 #ar-hero.animate .fig:nth-child(2) .curve { animation-delay: 1.4s, 1.8s; }
+
+/* the nudge after a wrong check of statements */
+.stmts-fb { color: var(--bad); font-size: 0.9rem; margin: 4px 0 0; }
+.stmts-fb:empty { display: none; }

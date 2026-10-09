@@ -15,7 +15,7 @@
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
       fill: 'Answer every question, then check again.', ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
-      correct: 'Correct', next: 'Correct so far. Now the last question:', option: (k) => `Option ${k}`, place: (n) => `Click where state ${n} lies:`, placed: 'All states placed.', missed: 'This one is correct too.',
+      correct: 'Correct', notThis: 'Not this one: check your reasoning, or take a hint.', stmtsWrong: (n) => (n === 1 ? 'One statement is judged wrong.' : `${n} statements are judged wrong.`), next: 'Correct so far. Now the last question:', option: (k) => `Option ${k}`, place: (n) => `Click where state ${n} lies:`, placed: 'All states placed.', missed: 'This one is correct too.',
       tutorNote: 'Use the arrow keys ← → to step through.',
     },
     de: {
@@ -26,7 +26,7 @@
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
       fill: 'Beantworte jede Frage und prüfe dann nochmals.', ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
-      correct: 'Richtig', next: 'Bis hierher richtig. Jetzt noch die letzte Frage:', option: (k) => `Antwort ${k}`, place: (n) => `Klicke dorthin, wo der Zustand ${n} liegt:`, placed: 'Alle Zustände gesetzt.', missed: 'Auch diese ist richtig.',
+      correct: 'Richtig', notThis: 'Das stimmt nicht: Überprüfe deine Überlegung, oder nimm einen Hinweis.', stmtsWrong: (n) => (n === 1 ? 'Eine Aussage ist falsch beurteilt.' : `${n} Aussagen sind falsch beurteilt.`), next: 'Bis hierher richtig. Jetzt noch die letzte Frage:', option: (k) => `Antwort ${k}`, place: (n) => `Klicke dorthin, wo der Zustand ${n} liegt:`, placed: 'Alle Zustände gesetzt.', missed: 'Auch diese ist richtig.',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter.',
     },
   };
@@ -75,21 +75,34 @@
       return `<div class="cands" role="radiogroup">${q.options.map((o, k) => `<label class="cand" data-k="${k}"><input type="radio" name="q-${q.key}" value="${k}"><span class="letter">${k + 1}</span>${D.diagram(o.fig, { small: true, label: ui().option(k + 1) })}</label>`).join('')}</div><p class="qfb" data-fb="${q.key}"></p>`;
     }
     if (q.type === 'multi') {
-      return `<ul class="stmts">${q.statements.map((s, k) => `<li data-k="${k}"><label><input type="checkbox" name="q-${q.key}" value="${k}"><span>${s.html}</span></label><span class="fb"></span></li>`).join('')}</ul>`;
+      return `<ul class="stmts">${q.statements.map((s, k) => `<li data-k="${k}"><label><input type="checkbox" name="q-${q.key}" value="${k}"><span>${s.html}</span></label><span class="fb"></span></li>`).join('')}</ul><p class="fb stmts-fb" data-fb="${q.key}"></p>`;
     }
     return `<div class="field" data-key="${q.key}"${q.after ? ' hidden' : ''}><span class="what">${q.label}</span><div class="opts" role="radiogroup">${q.options.map((o, k) => `<label><input type="radio" name="q-${q.key}" value="${k}"><span>${o.label}</span></label>`).join('')}</div><span class="fb" aria-live="polite"></span></div>`;
   }
   // Marks every answer; true if all are right, null if one is missing.
   function feedback() {
     let all = true, missing = false;
+    const done = st && (st.solved || st.revealed);
+    // While the exercise is open, a wrong answer gets a nudge, not the solution: the steps of the
+    // solution, whole or sentence by sentence, are taken out of its explanation.
+    const nudge = (w) => {
+      if (done) return w;
+      let t = w || '';
+      for (const s of ex.solution) if (s) t = t.split(s).join('');
+      for (const s of ex.solution) for (const x of String(s || '').split(/(?<=[.!?])\s+/)) if (x.length > 3) t = t.split(x).join('');
+      t = t.replace(/\s+/g, ' ').trim();
+      return t || ui().notThis;
+    };
     for (const q of ex.questions) {
       if (q.type === 'multi') {
+        let wrong = 0;
         q.statements.forEach((s, k) => {
           const li = $(`.stmts li[data-k="${k}"]`), on = li.querySelector('input').checked, good = on === s.ok;
-          li.className = good ? (on ? 'ok' : '') : 'bad';
-          li.querySelector('.fb').innerHTML = good ? '' : (on ? s.why : `${ui().missed} ${s.why}`);
-          if (!good) all = false;
+          if (!good) { all = false; wrong++; }
+          li.className = done || good ? (good ? (on ? 'ok' : '') : 'bad') : '';
+          li.querySelector('.fb').innerHTML = done && !good ? (on ? s.why : `${ui().missed} ${s.why}`) : '';
         });
+        $(`[data-fb="${q.key}"]`).innerHTML = !done && wrong ? ui().stmtsWrong(wrong) : '';
         continue;
       }
       if (q.after && $(`.field[data-key="${q.key}"]`).hidden) { all = false; missing = true; continue; }
@@ -99,17 +112,17 @@
       if (q.type === 'pick') {
         document.querySelectorAll('.cand').forEach((el) => el.classList.remove('ok', 'bad'));
         sel.closest('.cand').classList.add(o.ok ? 'ok' : 'bad');
-        $(`[data-fb="${q.key}"]`).innerHTML = o.ok ? '' : o.why;
+        $(`[data-fb="${q.key}"]`).innerHTML = o.ok ? '' : nudge(o.why);
       } else {
         const row = $(`.field[data-key="${q.key}"]`);
         row.className = `field ${o.ok ? 'ok' : 'bad'}`;
-        row.querySelector('.fb').innerHTML = o.ok ? ui().correct : o.why;
+        row.querySelector('.fb').innerHTML = o.ok ? ui().correct : nudge(o.why);
       }
       if (!o.ok) all = false;
     }
     return all ? true : missing && !anyWrong() ? null : false;
   }
-  const anyWrong = () => !!document.querySelector('.field.bad, .cand.bad, .stmts li.bad');
+  const anyWrong = () => !!document.querySelector('.field.bad, .cand.bad, .stmts li.bad, .stmts-fb:not(:empty)');
 
   // ---------------------------------------------------------------- drawing
   // The states are placed one by one; a right click draws the step, a wrong one says why.

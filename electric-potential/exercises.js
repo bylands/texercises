@@ -5,9 +5,9 @@
 //   points-v, which-way          potentials at points: voltage, energy, work; which way a charge moves
 //   uniform-d, v2e, e2v          the uniform field: ΔV = E·d along the field lines; V(x) ↔ E(x)
 //   equi-pick, lines-equi        equipotentials of an arrangement; field lines from equipotentials
-//   point-v, scalar              the potential of point charges (a sum of numbers, not of vectors)
+//   point-v, scalar              the potential of point charges in units of V₀ (a sum of numbers, not of vectors)
 //   accel, accel-compare, stop, ev   acceleration voltage, speeds and energies, electronvolt, relativity
-//   closest, repel               energy conservation: closest approach, repelled from a sphere
+//   closest, repel               energy conservation, two experiments compared: closest approach, repelled from a sphere
 //   stmts                        which statements are correct?
 (function (root) {
   'use strict';
@@ -79,10 +79,11 @@
     };
   }
   function whichWay(seed) {
+    const mv = (x) => String(x).replace('-', '−');
     const r = rng(seed * 37 + 11), q = r.pick([1, 1, -1, -1, 0]), pt = particle(r, q), Vl = r.pick([0, 100, 200]), Vr = Vl + r.pick([-1, 1]) * r.pick([100, 200, 300]);
     const Ed = Vl > Vr ? [1, 0] : [-1, 0]; // the field points from high to low potential
     const move = q > 0 ? Ed : q < 0 ? [-Ed[0], 0] : null, toHigh = q < 0;
-    const how = q ? L(`${DOWNHILL()} The left plate is at ${Vl} V, the right one at ${Vr} V: ${q > 0 ? 'lower' : 'higher'} potential is ${dirName(move)}.`, `${DOWNHILL()} Die linke Platte liegt auf ${Vl} V, die rechte auf ${Vr} V: ${q > 0 ? 'Tieferes' : 'Höheres'} Potential liegt ${dirName(move)}.`)
+    const how = q ? L(`${DOWNHILL()} The left plate is at ${mv(Vl)} V, the right one at ${mv(Vr)} V: ${q > 0 ? 'lower' : 'higher'} potential is ${dirName(move)}.`, `${DOWNHILL()} Die linke Platte liegt auf ${mv(Vl)} V, die rechte auf ${mv(Vr)} V: ${q > 0 ? 'Tieferes' : 'Höheres'} Potential liegt ${dirName(move)}.`)
       : L('A neutral particle feels no force: it stays where it is.', 'Ein neutrales Teilchen spürt keine Kraft: Es bleibt, wo es ist.');
     const opts = [{ d: move, ok: true }];
     for (const d of [move ? [-move[0], 0] : [1, 0], move ? null : [-1, 0], [0, 1]]) if (opts.length < 4 && !opts.some((o) => dkey(o.d) === dkey(d))) opts.push({ d });
@@ -94,8 +95,8 @@
     }
     return {
       kind: 'pot', title: L('Which way?', 'In welche Richtung?'),
-      text: L(`<p>Between two parallel plates at ${Vl} V (left) and ${Vr} V (right), ${pt.name()} is released at rest.</p>`, `<p>Zwischen zwei parallelen Platten auf ${Vl} V (links) und ${Vr} V (rechts) wird ${pt.name()} in Ruhe losgelassen.</p>`),
-      figs: fig(C.fig({ kind: 'uniform', E: Ed }, { box: [-2.75, 2.75, -1.6, 1.6], lines: true, rods: [[-2.6, -1.5, -2.6, 1.5], [2.6, -1.5, 2.6, 1.5]], parts: [{ x: 0, y: 0, q, sym: pt.sym }], tops: [{ x: -2.6, label: `${Vl} V` }, { x: 2.6, label: `${Vr} V` }] })),
+      text: L(`<p>Between two parallel plates at ${mv(Vl)} V (left) and ${mv(Vr)} V (right), ${pt.name()} is released at rest.</p>`, `<p>Zwischen zwei parallelen Platten auf ${mv(Vl)} V (links) und ${mv(Vr)} V (rechts) wird ${pt.name()} in Ruhe losgelassen.</p>`),
+      figs: fig(C.fig({ kind: 'uniform', E: Ed }, { box: [-2.75, 2.75, -1.6, 1.6], lines: true, rods: [[-2.6, -1.5, -2.6, 1.5], [2.6, -1.5, 2.6, 1.5]], parts: [{ x: 0, y: 0, q, sym: pt.sym }], tops: [{ x: -2.6, label: `${mv(Vl)} V` }, { x: 2.6, label: `${mv(Vr)} V` }] })),
       questions: qs, hints: [chargeOf(pt), DOWNHILL(), L('The field points from high to low potential.', 'Das Feld zeigt von hohem zu tiefem Potential.')],
       solution: q ? [how, howE] : [how], p: { q, Vl, Vr, pt: pt.id },
     };
@@ -236,26 +237,59 @@
   }
 
   // ---------------------------------------------------------------- point charges
+  // ---------------------------------------------------------------- comparing two situations
+  const it = (x) => `<i>${x}</i>`;
+  const cmpTable = (heads, rows) => `<table class="cmp"><thead><tr><th></th>${heads.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(([n, ...v]) => `<tr><th>${n}</th>${v.map((x) => `<td>${x}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const times = (f, sym) => (Math.abs(f - 1) < 1e-9 ? it(sym) : f > 1 ? `${nice(f)}${it(sym)}` : `${it(sym)}/${nice(1 / f)}`);
+  const whole = (x) => x > 0 && [x, 1 / x].some((y) => Math.abs(y - Math.round(y)) < 1e-9);
+  const rootable = (x) => whole(x) || [2, 3, 6].some((n) => Math.abs(x * x - n) < 1e-9 || Math.abs(x * x - 1 / n) < 1e-9);
+  // a factor as ×2, ×1/3, ×√2 or ×1/√2
+  const fac = (x) => (whole(x) ? frac(x) : x > 1 ? `×√${Math.round(x * x)}` : `×1/√${Math.round(1 / (x * x))}`);
+  const FILL = [2, 0.5, 4, 0.25, 1, 3, 1 / 3, 8, 1 / 8, 6, 1 / 6];
+  // four options: the right factor, the tempting ones (each one mistake, with its reason), fillers
+  function factors(right, tempt, how) {
+    const out = [{ x: right, ok: true }];
+    for (const [x, why] of tempt) if (out.length < 4 && rootable(x) && !out.some((o) => Math.abs(o.x - x) < 1e-9)) out.push({ x, why });
+    for (const x of FILL) if (out.length < 4 && !out.some((o) => Math.abs(o.x - x) < 1e-9)) out.push({ x, why: how });
+    return out.sort((p, q) => p.x - q.x).map((o) => ({ label: fac(o.x), ok: !!o.ok, why: o.ok ? '' : o.why }));
+  }
+  // a multiple of V₀ as a fraction: +3/2 V₀
+  function inV0(x) {
+    if (Math.abs(x) < 1e-9) return '0';
+    for (let d = 1; d <= 12; d++) if (Math.abs(x * d - Math.round(x * d)) < 1e-9) { const n = Math.abs(Math.round(x * d)); return `${x > 0 ? '+' : '−'}${d === 1 ? (n === 1 ? '' : n) : `${n}/${d}·`}V₀`; }
+    return `${x > 0 ? '+' : '−'}${nice(Math.abs(x))}·V₀`;
+  }
+  const PROJ = { p: [['a proton', 'ein Proton'], 'p', 1, 1], d: [['a deuteron (a proton and a neutron)', 'ein Deuteron (ein Proton und ein Neutron)'], 'd', 1, 2], a: [['an alpha particle', 'ein Alphateilchen'], 'α', 2, 4] };
+  const pname = (k) => L(...PROJ[k][0]).replace(/ \(.*\)$/, '').replace(/^(an?|ein) /, '');
+  const pcell = (k) => `${pname(k)} (+${PROJ[k][2] > 1 ? PROJ[k][2] : ''}e)`;
+  const massNote = (a, b) => (a === b ? '' : L(` Masses: ${pname(a)} about ${PROJ[a][3]} u, ${pname(b)} about ${PROJ[b][3]} u.`, ` Massen: ${pname(a)} etwa ${PROJ[a][3]} u, ${pname(b)} etwa ${PROJ[b][3]} u.`));
+
   function pointV(seed) {
-    const r = rng(seed * 61 + 31), Q = r.pick([1, 2, 3, 5, -2, -4]) * 1e-9, r1 = r.pick([5, 10, 20]) / 100, r2 = r1 * r.pick([2, 3, 4]), V1 = (K.k * Q) / r1, V2 = (K.k * Q) / r2;
-    const Q2 = r.pick([-1, 1]) * r.pick([1, 2, 4]) * 1e-9, rP = r.pick([10, 20, 30]) / 100, sP = r.pick([10, 20, 40]) / 100, VP = K.k * (Q / rP + Q2 / sP);
-    const fmtV = (v) => `${sgn(Number(v.toPrecision(3)))} V`;
-    const how1 = L(`V = k·Q/r = 8.99 · 10⁹ N·m²/C² · (${sgn(Q * 1e9)} nC) / ${nice(r1 * 100)} cm = ${fmtV(V1)}.`, `V = k·Q/r = 8.99 · 10⁹ N·m²/C² · (${sgn(Q * 1e9)} nC) / ${nice(r1 * 100)} cm = ${fmtV(V1)}.`);
-    const how2 = L(`V_B − V_A = k·Q/r_B − k·Q/r_A = ${fmtV(V2)} − (${fmtV(V1)}) = ${fmtV(V2 - V1)}.`, `V_B − V_A = k·Q/r_B − k·Q/r_A = ${fmtV(V2)} − (${fmtV(V1)}) = ${fmtV(V2 - V1)}.`);
-    const how3 = L(`Potentials add as numbers, with their signs: V = k·Q/r_Q + k·q₂/r₂ = ${fmtV((K.k * Q) / rP)} + (${fmtV((K.k * Q2) / sP)}) = ${fmtV(VP)}.`, `Potentiale addieren sich als Zahlen, mit ihren Vorzeichen: V = k·Q/r_Q + k·q₂/r₂ = ${fmtV((K.k * Q) / rP)} + (${fmtV((K.k * Q2) / sP)}) = ${fmtV(VP)}.`);
+    const r = rng(seed * 61 + 31);
+    let sQ, k, m, s2, VP;
+    for (;;) {
+      sQ = r.pick([1, -1]); k = r.pick([2, 3, 4]); m = r.pick([-3, -2, -1, 1, 2, 3]); s2 = r.pick([1, 2, 3]); VP = sQ + m / s2;
+      if (Math.abs(VP) > 1e-9 && Math.abs(sQ + m / (s2 * s2) - VP) > 1e-9) break;
+    }
+    const dBA = sQ * (1 / k - 1), qs = (x) => `${x < 0 ? '−' : '+'}${Math.abs(x) === 1 ? '' : Math.abs(x)}q`;
+    const howK = L(`V = k·Q/r falls with 1/r: at ${k} times the distance, the potential is ${frac(1 / k)}.`, `V = k·Q/r nimmt mit 1/r ab: beim ${k}-fachen Abstand ist das Potential ${frac(1 / k)}.`);
+    const howD = L(`V_A = ${inV0(sQ)}, V_B = ${inV0(sQ / k)}: V_B − V_A = ${inV0(dBA)}.`, `V_A = ${inV0(sQ)}, V_B = ${inV0(sQ / k)}: V_B − V_A = ${inV0(dBA)}.`);
+    const howP = L(`Potentials add as numbers, with their signs: from Q ${inV0(sQ)}, from q₂ = ${qs(m)} at ${s2 === 1 ? 'the distance r' : `${s2}r`}: ${inV0(m / s2)}. Together V_P = ${inV0(VP)}.`, `Potentiale addieren sich als Zahlen, mit ihren Vorzeichen: von Q ${inV0(sQ)}, von q₂ = ${qs(m)} im Abstand ${s2 === 1 ? 'r' : `${s2}r`}: ${inV0(m / s2)}. Zusammen V_P = ${inV0(VP)}.`);
+    const field = L('That is how the field falls off, with 1/r²; the potential falls with 1/r.', 'So nimmt das Feld ab, mit 1/r²; das Potential nimmt mit 1/r ab.');
     return {
       kind: 'pc', title: L('The potential of point charges', 'Das Potential von Punktladungen'),
-      text: L(`<p>A point charge Q = ${sgn(Q * 1e9)} nC (the potential is zero far away). A is ${nice(r1 * 100)} cm from it, B ${nice(r2 * 100)} cm. A second charge q₂ = ${sgn(Q2 * 1e9)} nC is added; the point P is ${nice(rP * 100)} cm from Q and ${nice(sP * 100)} cm from q₂.</p>`, `<p>Eine Punktladung Q = ${sgn(Q * 1e9)} nC (weit weg ist das Potential null). A ist ${nice(r1 * 100)} cm von ihr entfernt, B ${nice(r2 * 100)} cm. Eine zweite Ladung q₂ = ${sgn(Q2 * 1e9)} nC kommt hinzu; der Punkt P ist ${nice(rP * 100)} cm von Q und ${nice(sP * 100)} cm von q₂ entfernt.</p>`),
+      text: L(`<p>A point charge Q = ${qs(sQ)} (with q > 0; the potential is zero far away). Call V₀ = k·q/r. Point A is at the distance r from Q, point B at the distance ${k}r. Then a second charge q₂ = ${qs(m)} is added: the point P is at the distance r from Q and ${s2 === 1 ? 'r' : `${s2}r`} from q₂.</p>`, `<p>Eine Punktladung Q = ${qs(sQ)} (mit q > 0; weit weg ist das Potential null). Sei V₀ = k·q/r. Der Punkt A ist im Abstand r von Q, der Punkt B im Abstand ${k}r. Dann kommt eine zweite Ladung q₂ = ${qs(m)} dazu: Der Punkt P ist im Abstand r von Q und ${s2 === 1 ? 'r' : `${s2}r`} von q₂.</p>`),
       figs: '',
       questions: [
-        choice('V', L('(a) the potential at A (Q alone)', '(a) das Potential in A (Q allein)'), values(V1, [{ value: (K.k * Q) / (r1 * r1), tag: 'field', why: L(`That is the field strength k·Q/r² (in V/m), not the potential. ${how1}`, `Das ist die Feldstärke k·Q/r² (in V/m), nicht das Potential. ${how1}`) }, { value: -V1, tag: 'sign', why: how1 }], null, how1, { signed: true, fmt: fmtV })),
-        choice('U', L('(b) V_B − V_A (Q alone)', '(b) V_B − V_A (Q allein)'), values(V2 - V1, [{ value: V1 - V2, tag: 'sign', why: how2 }, { value: V2, tag: 'only', why: how2 }], null, how2, { signed: true, fmt: fmtV })),
-        choice('P', L('(c) the potential at P (both charges)', '(c) das Potential in P (beide Ladungen)'), values(VP, [{ value: K.k * (Math.abs(Q) / rP + Math.abs(Q2) / sP) * Math.sign(VP || 1), tag: 'abs', why: L(`Mind the signs of the charges. ${how3}`, `Achte auf die Vorzeichen der Ladungen. ${how3}`) }, { value: (K.k * Q) / rP, tag: 'one', why: how3 }], null, how3, { signed: true, fmt: fmtV })),
+        choice('V', L('(a) Q alone: compared with A, the potential at B is', '(a) Q allein: Verglichen mit A ist das Potential in B'), factors(1 / k, [[1 / (k * k), field], [k, L('Further away, the potential is smaller in size.', 'Weiter weg ist das Potential dem Betrag nach kleiner.')]], howK)),
+        choice('U', L('(b) Q alone: V_B − V_A', '(b) Q allein: V_B − V_A'), values(dBA, [{ value: -dBA, tag: 'sign', why: L('Mind the order: V_B − V_A, and the sign of Q.', 'Achte auf die Reihenfolge: V_B − V_A, und auf das Vorzeichen von Q.') }, { value: sQ * (1 / (k * k) - 1), tag: 'field', why: field }], null, howD, { signed: true, fmt: inV0, extra: [2, 0.5] })),
+        choice('P', L('(c) both charges: the potential at P', '(c) beide Ladungen: das Potential in P'), values(VP, [{ value: sQ + Math.abs(m) / s2 * sQ, tag: 'abs', why: L('Mind the signs of the charges.', 'Achte auf die Vorzeichen der Ladungen.') }, { value: sQ + m / (s2 * s2), tag: 'field', why: field }, { value: sQ, tag: 'one', why: L('Both charges contribute.', 'Beide Ladungen tragen bei.') }], null, howP, { signed: true, fmt: inV0, extra: [2, 0.5] })),
       ],
-      hints: [L('V = k·Q/r, with the sign of Q; k = 8.99 · 10⁹ N·m²/C².', 'V = k·Q/r, mit dem Vorzeichen von Q; k = 8.99 · 10⁹ N·m²/C².'), L('Potentials of several charges add as numbers (no directions).', 'Die Potentiale mehrerer Ladungen addieren sich als Zahlen (ohne Richtungen).')],
-      solution: [how1, how2, how3], p: { Q, r1, r2, Q2, rP, sP },
+      hints: [L('V = k·Q/r, with the sign of Q: it falls with 1/r.', 'V = k·Q/r, mit dem Vorzeichen von Q: Es nimmt mit 1/r ab.'), L('Potentials of several charges add as numbers (no directions).', 'Die Potentiale mehrerer Ladungen addieren sich als Zahlen (ohne Richtungen).')],
+      solution: [howK, howD, howP], p: { sQ, k, m, s2 },
     };
   }
+
   const SC = [
     { id: 'four', c: [[1, 1, 1], [1, -1, 1], [1, -1, -1], [1, 1, -1]], name: () => L('four equal positive charges at the corners of a square', 'vier gleiche positive Ladungen an den Ecken eines Quadrats') },
     { id: 'alt', c: [[1, 1, 1], [-1, -1, 1], [1, -1, -1], [-1, 1, -1]], name: () => L('charges +q, −q, +q, −q in turn at the corners of a square', 'Ladungen +q, −q, +q, −q abwechselnd an den Ecken eines Quadrats') },
@@ -263,12 +297,12 @@
     { id: 'pair', c: [[1, -1.5, 0], [1, 1.5, 0]], name: () => L('two equal positive charges', 'zwei gleiche positive Ladungen') },
     { id: 'dip', c: [[1, -1.5, 0], [-1, 1.5, 0]], name: () => L('a positive and a negative charge of the same size', 'eine positive und eine negative Ladung gleichen Betrags') },
     { id: 'negpair', c: [[-1, -1.5, 0], [-1, 1.5, 0]], name: () => L('two equal negative charges', 'zwei gleiche negative Ladungen') },
-    { id: 'tri', c: [[1, 0, 1.4], [1, -1.212, -0.7], [1, 1.212, -0.7]], name: () => L('three equal positive charges at the corners of an equilateral triangle', 'drei gleiche positive Ladungen an den Ecken eines gleichseitigen Dreiecks') },
+    { id: 'tri', c: [[1, 0, 1.4], [1, -0.7 * Math.sqrt(3), -0.7], [1, 0.7 * Math.sqrt(3), -0.7]], name: () => L('three equal positive charges at the corners of an equilateral triangle', 'drei gleiche positive Ladungen an den Ecken eines gleichseitigen Dreiecks') },
   ];
   function scalar(seed) {
     const r = rng(seed * 67 + 37), S = r.pick(SC), flip = S.id === 'halves' && r.next() < 0.5;
     const ch = S.c.map(([q, x, y]) => ({ q, x: flip ? y : x, y: flip ? -x : y })), c = { kind: 'points', charges: ch };
-    const Ev = C.field(c, 0, 0), d = dirOf(Ev.map((x) => Math.round(x * 1e9) / 1e9)), V = C.potential(c, 0, 0), vs = Math.abs(V) < 1e-9 ? 0 : Math.sign(V);
+    const Ev = C.field(c, 0, 0), d = Math.hypot(...Ev) < 1e-6 ? null : dirOf(Ev), V = C.potential(c, 0, 0), vs = Math.abs(V) < 1e-9 ? 0 : Math.sign(V);
     const opts = [{ d, ok: true }];
     for (const x of [null, [1, 0], [0, -1], [0, 1], [-1, 0]]) if (opts.length < 4 && !opts.some((o) => dkey(o.d) === dkey(x))) opts.push({ d: x });
     const howE = d ? L(`The fields add as vectors and do not cancel here: the net field points ${dirName(d)}, from the positive towards the negative charges.`, `Die Felder addieren sich als Vektoren und heben sich hier nicht auf: Das Gesamtfeld zeigt ${dirName(d)}, von den positiven zu den negativen Ladungen.`)
@@ -368,38 +402,67 @@
         questions: [choice('r', L('To find its speed,', 'Um seine Geschwindigkeit zu finden,'), words(r, [[L('the classical formula ½·m·v² is good enough', 'genügt die klassische Formel ½·m·v²'), !rel, how], [L('relativity is needed', 'braucht es die Relativitätstheorie'), rel, how]]))],
         hints: [L('Electron: E₀ = 511 keV; proton: E₀ = 938 MeV.', 'Elektron: E₀ = 511 keV; Proton: E₀ = 938 MeV.')], solution: [how], p: { task, Ek, E0 } };
     }
-    const [name, A] = r.pick([[['a carbon-12 atom', 'ein Kohlenstoff-12-Atom'], 12], [['a helium-4 atom', 'ein Helium-4-Atom'], 4.0026], [['an oxygen-16 atom', 'ein Sauerstoff-16-Atom'], 15.995], [['a uranium-238 atom', 'ein Uran-238-Atom'], 238.05]]), mc2 = A * 931.494;
-    const how = L(`1 u = 931.5 MeV/c²: ${nice(A)} u = ${nice(mc2)} MeV/c².`, `1 u = 931.5 MeV/c²: ${nice(A)} u = ${nice(mc2)} MeV/c².`);
-    return { kind: 'ev', title: L('A mass in MeV/c²', 'Eine Masse in MeV/c²'), text: L(`<p>Express the mass of ${L(...name)} (${nice(A)} u) in MeV/c².</p>`, `<p>Drücke die Masse von ${L(...name).replace(/^ein /, 'einem ')} (${nice(A)} u) in MeV/c² aus.</p>`), figs: '',
-      questions: [choice('m', L('the mass', 'die Masse'), values(mc2, [{ value: A * 938.27, tag: 'proton', why: L(`Use 1 u = 931.5 MeV/c², not the proton mass. ${how}`, `Nimm 1 u = 931.5 MeV/c², nicht die Protonenmasse. ${how}`) }, { value: mc2 / 1000, tag: 'prefix', why: how }], null, how, { fmt: (x) => `${nice(x)} MeV/c²`, extra: [2, 0.5] }))],
-      hints: [L('1 u = 931.5 MeV/c².', '1 u = 931.5 MeV/c².')], solution: [how], p: { task, A } };
+    const [name, A] = r.pick([[['a carbon-12 atom', 'ein Kohlenstoff-12-Atom'], 12], [['a helium-4 atom', 'ein Helium-4-Atom'], 4.0026], [['an oxygen-16 atom', 'ein Sauerstoff-16-Atom'], 15.995], [['a uranium-238 atom', 'ein Uran-238-Atom'], 238.05]]);
+    const p3 = (x) => Number(x.toPrecision(3)), mc2 = p3(A * 0.931494);
+    const how = L(`1 u = 0.9315 GeV/c²: ${nice(A)} u = ${nice(mc2)} GeV/c².`, `1 u = 0.9315 GeV/c²: ${nice(A)} u = ${nice(mc2)} GeV/c².`);
+    return { kind: 'ev', title: L('A mass in GeV/c²', 'Eine Masse in GeV/c²'), text: L(`<p>Express the mass of ${L(...name)} (${nice(A)} u) in GeV/c².</p>`, `<p>Drücke die Masse von ${L(...name).replace(/^ein /, 'einem ')} (${nice(A)} u) in GeV/c² aus.</p>`), figs: '',
+      questions: [choice('m', L('the mass', 'die Masse'), values(mc2, [{ value: p3(A / 0.931494), tag: 'div', why: L('Multiply by the energy per u, do not divide.', 'Multipliziere mit der Energie pro u, teile nicht.') }, { value: p3(A * 931.494), tag: 'prefix', why: L('That would be in MeV/c²: mind the prefix.', 'Das wäre in MeV/c²: Achte auf den Vorsatz.') }], null, how, { fmt: (x) => `${nice(x)} GeV/c²`, extra: [2, 0.5] }))],
+      hints: [L('1 u = 931.5 MeV/c² = 0.9315 GeV/c².', '1 u = 931.5 MeV/c² = 0.9315 GeV/c².')], solution: [how], p: { task, A } };
   }
 
   // ---------------------------------------------------------------- energy conservation
   function closest(seed) {
-    const r = rng(seed * 89 + 59), [nname, Z] = r.pick([[['gold', 'Gold'], 79], [['silver', 'Silber'], 47], [['aluminium', 'Aluminium'], 13], [['copper', 'Kupfer'], 29]]), Ek = r.pick([2, 4, 5, 7.7]), rmin = (K.k * 2 * Z * K.e * K.e) / (Ek * 1e6 * K.e);
-    const how = L(`At the closest point the alpha particle stops for a moment: all its kinetic energy has become potential energy, E_kin = k·(2e)·(Z·e)/r. So r = k·2·${Z}·e²/E_kin = ${show(rmin, 'len')}.`, `Im nächsten Punkt hält das Alphateilchen kurz an: Seine ganze kinetische Energie ist potentielle Energie geworden, E_kin = k·(2e)·(Z·e)/r. Also r = k·2·${Z}·e²/E_kin = ${show(rmin, 'len')}.`);
+    const r = rng(seed * 89 + 59);
+    let pa, pb, fE, fZ, kr;
+    for (;;) {
+      pa = r.pick(['p', 'a', 'd']); pb = r.next() < 0.6 ? r.pick(['p', 'a', 'd']) : pa; fE = r.pick([1, 2, 4, 0.5]); fZ = r.pick([1, 1, 2, 3, 0.5]);
+      kr = (PROJ[pb][2] / PROJ[pa][2]) * fZ / fE;
+      if ((pa !== pb) + (fE !== 1) + (fZ !== 1) >= 2 && whole(kr)) break;
+    }
+    const zr = PROJ[pb][2] / PROJ[pa][2], mr = PROJ[pb][3] / PROJ[pa][3];
+    const parts = [];
+    if (zr !== 1) parts.push(L(`the charge of the particle ${frac(zr)}`, `die Ladung des Teilchens ${frac(zr)}`));
+    if (fZ !== 1) parts.push(L(`the charge of the nucleus ${frac(fZ)}`, `die Ladung des Kerns ${frac(fZ)}`));
+    if (fE !== 1) parts.push(L(`the energy ${frac(fE)}, so ${frac(1 / fE)}`, `die Energie ${frac(fE)}, also ${frac(1 / fE)}`));
+    const how = L(`At the closest point the particle stops for a moment: E_kin = k·q·Q/r_min, so r_min = k·q·Q/E_kin: ${parts.join('; ')}. Together: ${frac(kr)}. The mass does not matter.`, `Im nächsten Punkt hält das Teilchen kurz an: E_kin = k·q·Q/r_min, also r_min = k·q·Q/E_kin: ${parts.join('; ')}. Zusammen: ${frac(kr)}. Die Masse spielt keine Rolle.`);
+    const howU = L(`At the closest point all the kinetic energy has become potential energy: ${frac(fE)}, like the kinetic energy.`, `Im nächsten Punkt ist die ganze kinetische Energie zu potentieller Energie geworden: ${frac(fE)}, wie die kinetische Energie.`);
+    const rows = [[L('particle', 'Teilchen'), pcell(pa), pcell(pb)], [L('kinetic energy at the start', 'kinetische Energie am Start'), it('E'), times(fE, 'E')], [L('charge of the nucleus', 'Ladung des Kerns'), `${it('Z')}e`, `${fZ === 1 ? '' : fZ === 0.5 ? '½' : nice(fZ)}${it('Z')}e`]];
     return {
       kind: 'en', title: L('Closest approach', 'Kleinster Abstand'),
-      text: L(`<p>An alpha particle (charge 2e) with ${nice(Ek)} MeV flies straight at a ${L(...nname)} nucleus (charge ${Z}e), as in Rutherford's experiment.</p>`, `<p>Ein Alphateilchen (Ladung 2e) mit ${nice(Ek)} MeV fliegt geradewegs auf einen ${L(...nname)}kern (Ladung ${Z}e) zu, wie in Rutherfords Versuch.</p>`), figs: '',
-      questions: [choice('r', L('the closest distance it reaches', 'der kleinste Abstand, den es erreicht'), values(rmin, [{ value: rmin / 2, tag: 'z', why: L(`The alpha particle has the charge 2e. ${how}`, `Das Alphateilchen hat die Ladung 2e. ${how}`) }, { value: Math.sqrt(rmin * 1e-15), tag: 'sq', why: L(`The potential energy is k·q·Q/r (not /r²). ${how}`, `Die potentielle Energie ist k·q·Q/r (nicht /r²). ${how}`) }], 'len', how))],
-      hints: [L('Energy conservation: the kinetic energy turns into potential energy k·q·Q/r.', 'Energieerhaltung: Die kinetische Energie wird zu potentieller Energie k·q·Q/r.'), L('1 MeV = 1.602 · 10⁻¹³ J; k = 8.99 · 10⁹ N·m²/C².', '1 MeV = 1.602 · 10⁻¹³ J; k = 8.99 · 10⁹ N·m²/C².')],
-      solution: [how], p: { Z, Ek },
+      text: L(`<p>In two experiments A and B, as in Rutherford's, a positive particle flies straight at a nucleus. The table compares them.${massNote(pa, pb)}</p>`, `<p>In zwei Versuchen A und B fliegt, wie bei Rutherford, ein positives Teilchen geradewegs auf einen Kern zu. Die Tabelle vergleicht sie.${massNote(pa, pb)}</p>`) + cmpTable(['A', 'B'], rows),
+      figs: '',
+      questions: [
+        choice('r', L('(a) Compared with A, the closest distance in B is', '(a) Verglichen mit A ist der kleinste Abstand in B'), factors(kr, [[Math.sqrt(kr), L('The potential energy is k·q·Q/r, not /r².', 'Die potentielle Energie ist k·q·Q/r, nicht /r².')], [kr / mr, L('The mass does not matter: only the energy counts.', 'Die Masse spielt keine Rolle: Es zählt nur die Energie.')], [kr / zr, L('The charge of the particle counts too.', 'Die Ladung des Teilchens zählt auch.')], [1 / kr, L('A larger energy brings the particle closer.', 'Eine grössere Energie bringt das Teilchen näher heran.')]], how)),
+        choice('U', L('(b) Compared with A, the potential energy at the closest point in B is', '(b) Verglichen mit A ist die potentielle Energie im nächsten Punkt in B'), factors(fE, [[zr * fZ, L('All the kinetic energy turns into potential energy.', 'Die ganze kinetische Energie wird zu potentieller Energie.')], [1, L('All the kinetic energy turns into potential energy.', 'Die ganze kinetische Energie wird zu potentieller Energie.')]], howU)),
+      ],
+      hints: [L('Energy conservation: at the closest point, E_kin = k·q·Q/r_min.', 'Energieerhaltung: Im nächsten Punkt ist E_kin = k·q·Q/r_min.'), L('Find the factor of each quantity in r_min = k·q·Q/E_kin.', 'Bestimme den Faktor jeder Grösse in r_min = k·q·Q/E_kin.')],
+      solution: [how, howU], p: { pa, pb, fE, fZ },
     };
   }
   function repel(seed) {
-    const r = rng(seed * 97 + 61), pt = particle(r, r.pick([1, -1]), { generic: false }), R = r.pick([5, 10, 20]) / 100, Qs = pt.q * r.pick([5, 10, 20]) * 1e-9, Vs = (K.k * Qs) / R, W = Math.abs(pt.z) * K.e * Math.abs(Vs), v = Math.sqrt((2 * W) / pt.m);
-    const how = L(`The sphere repels the particle: its potential energy at the surface, q·V = ${Math.abs(pt.z) === 2 ? '2e' : 'e'} · ${show(Math.abs(Vs), 'volt')}, becomes kinetic energy far away: v = √(2·|q|·V/m) = ${sci(v)} m/s.`, `Die Kugel stösst das Teilchen ab: Seine potentielle Energie an der Oberfläche, q·V = ${Math.abs(pt.z) === 2 ? '2e' : 'e'} · ${show(Math.abs(Vs), 'volt')}, wird weit weg zu kinetischer Energie: v = √(2·|q|·V/m) = ${sci(v)} m/s.`);
-    const howV = L(`V = k·Q/R = ${show(Vs, 'volt').replace(/^-/, '−')}.`, `V = k·Q/R = ${show(Vs, 'volt').replace(/^-/, '−')}.`);
+    const r = rng(seed * 97 + 61);
+    let pa, pb, fQ, fR, fV, fE, fv;
+    for (;;) {
+      pa = r.pick(['p', 'a', 'd']); pb = r.next() < 0.6 ? r.pick(['p', 'a', 'd']) : pa; fQ = r.pick([1, 2, 3, 4, 0.5]); fR = r.pick([1, 1, 2, 0.5]);
+      fV = fQ / fR; fE = fV * PROJ[pb][2] / PROJ[pa][2]; fv = Math.sqrt(fE / (PROJ[pb][3] / PROJ[pa][3]));
+      if ((pa !== pb) + (fQ !== 1) + (fR !== 1) >= 2 && whole(fV) && whole(fE) && rootable(fv)) break;
+    }
+    const zr = PROJ[pb][2] / PROJ[pa][2], mr = PROJ[pb][3] / PROJ[pa][3];
+    const howV = L(`Outside, the sphere acts like a point charge at its centre: V = k·Q/R at its surface. Charge ${frac(fQ)}, radius ${frac(fR)}: ${frac(fV)}.`, `Aussen wirkt die Kugel wie eine Punktladung im Mittelpunkt: V = k·Q/R an ihrer Oberfläche. Ladung ${frac(fQ)}, Radius ${frac(fR)}: ${frac(fV)}.`);
+    const howE = L(`The potential energy q·V at the surface becomes kinetic energy far away: E_kin = |q|·V. The potential ${frac(fV)}, the charge of the particle ${frac(zr)}: ${frac(fE)}.`, `Die potentielle Energie q·V an der Oberfläche wird weit weg zu kinetischer Energie: E_kin = |q|·V. Das Potential ${frac(fV)}, die Ladung des Teilchens ${frac(zr)}: ${frac(fE)}.`);
+    const howS = L(`½·m·v² = E_kin, so v = √(2·E_kin/m): the energy ${frac(fE)}, the mass ${frac(mr)}: ${fac(fv)}.`, `½·m·v² = E_kin, also v = √(2·E_kin/m): die Energie ${frac(fE)}, die Masse ${frac(mr)}: ${fac(fv)}.`);
+    const rows = [[L('charge of the sphere', 'Ladung der Kugel'), it('Q'), times(fQ, 'Q')], [L('radius of the sphere', 'Radius der Kugel'), it('R'), times(fR, 'R')], [L('particle', 'Teilchen'), pcell(pa), pcell(pb)]];
     return {
       kind: 'en', title: L('Repelled by a sphere', 'Von einer Kugel abgestossen'),
-      text: L(`<p>A metal sphere of radius ${nice(R * 100)} cm carries ${sgn(Qs * 1e9)} nC. ${cap(pt.name())} starts at rest at its surface and flies away. (m = ${sci(pt.m)} kg)</p>`, `<p>Eine Metallkugel mit dem Radius ${nice(R * 100)} cm trägt ${sgn(Qs * 1e9)} nC. ${cap(pt.name())} startet in Ruhe an ihrer Oberfläche und fliegt davon. (m = ${sci(pt.m)} kg)</p>`), figs: '',
+      text: L(`<p>In two experiments A and B, a positively charged metal sphere repels a positive particle that starts at rest at its surface and flies away. The table compares them.${massNote(pa, pb)}</p>`, `<p>In zwei Versuchen A und B stösst eine positiv geladene Metallkugel ein positives Teilchen ab, das in Ruhe an ihrer Oberfläche startet und davonfliegt. Die Tabelle vergleicht sie.${massNote(pa, pb)}</p>`) + cmpTable(['A', 'B'], rows),
+      figs: '',
       questions: [
-        choice('V', L('(a) the potential of the sphere (zero far away)', '(a) das Potential der Kugel (weit weg null)'), values(Vs, [{ value: (K.k * Qs) / (R * R), tag: 'field', why: L(`That is k·Q/R², the field. ${howV}`, `Das ist k·Q/R², das Feld. ${howV}`) }], null, howV, { signed: true, fmt: (x) => show(x, 'volt').replace(/^-/, '−') })),
-        choice('v', L('(b) its speed far away', '(b) seine Geschwindigkeit weit weg'), values(v, [{ value: v / Math.SQRT2, tag: 'two', why: how }], 'speed', how)),
+        choice('V', L('(a) Compared with A, the potential at the surface in B is', '(a) Verglichen mit A ist das Potential an der Oberfläche in B'), factors(fV, [[fQ / (fR * fR), L('That is how the field depends on the radius: k·Q/R². The potential is k·Q/R.', 'So hängt das Feld vom Radius ab: k·Q/R². Das Potential ist k·Q/R.')], [fQ * fR, L('A larger sphere with the same charge has a lower potential.', 'Eine grössere Kugel mit derselben Ladung hat ein tieferes Potential.')]], howV)),
+        choice('E', L('(b) Compared with A, the kinetic energy far away in B is', '(b) Verglichen mit A ist die kinetische Energie weit weg in B'), factors(fE, [[fV, L('The energy depends on the charge of the particle too: E_kin = |q|·V.', 'Die Energie hängt auch von der Ladung des Teilchens ab: E_kin = |q|·V.')], [fE / mr, L('The mass does not matter for the energy.', 'Für die Energie spielt die Masse keine Rolle.')]], howE)),
+        choice('v', L('(c) Compared with A, the speed far away in B is', '(c) Verglichen mit A ist die Geschwindigkeit weit weg in B'), factors(fv, [[fv * fv, L('The speed grows with the square root of the energy.', 'Die Geschwindigkeit wächst mit der Wurzel aus der Energie.')], [Math.sqrt(fE), L('A heavier particle is slower with the same energy.', 'Ein schwereres Teilchen ist bei gleicher Energie langsamer.')]], howS)),
       ],
-      hints: [L('Outside, a charged sphere acts like a point charge at its centre: V = k·Q/r.', 'Aussen wirkt eine geladene Kugel wie eine Punktladung im Mittelpunkt: V = k·Q/r.'), L('Energy conservation: q·V at the surface becomes ½·m·v².', 'Energieerhaltung: q·V an der Oberfläche wird zu ½·m·v².')],
-      solution: [howV, how], p: { pt: pt.id, R, Qs },
+      hints: [L('Outside, a charged sphere acts like a point charge at its centre: V = k·Q/R at its surface.', 'Aussen wirkt eine geladene Kugel wie eine Punktladung im Mittelpunkt: V = k·Q/R an ihrer Oberfläche.'), L('Energy conservation: |q|·V at the surface becomes ½·m·v² far away.', 'Energieerhaltung: |q|·V an der Oberfläche wird weit weg zu ½·m·v².')],
+      solution: [howV, howE, howS], p: { pa, pb, fQ, fR },
     };
   }
 
@@ -458,7 +521,7 @@
     const [difficulty, f] = TYPES[type];
     return { ...f(seed), type, difficulty, id: `${type}-${seed}`, seed };
   }
-  const api = { TYPES: Object.keys(TYPES), make, RULE, DOWNHILL, vGraph, eGraph, EQ, SC, vec, sgn };
+  const api = { TYPES: Object.keys(TYPES), make, RULE, DOWNHILL, vGraph, eGraph, EQ, SC, vec, sgn, frac };
   root.PotEx = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

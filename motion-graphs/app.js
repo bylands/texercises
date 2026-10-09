@@ -134,7 +134,8 @@
   function whyEnd(p, i, end, withValue) {
     const F = Q(ex.from), f = Q(ex.to), t = end === 'start' ? p.t0 : p.t1;
     const why = ex.how[i][end], k = end === 'start' ? i : i + 2;
-    if (why === 'vertex') return L(`${F} has a horizontal tangent at ${fmt(t)} s, so ${at(ex.to, t)} = 0.`, `${F} hat bei ${fmt(t)} s eine waagrechte Tangente, also ${at(ex.to, t)} = 0.`);
+    if (why === 'vertex' && withValue) return L(`${F} has a horizontal tangent at ${fmt(t)} s, so ${at(ex.to, t)} = 0.`, `${F} hat bei ${fmt(t)} s eine waagrechte Tangente, also ${at(ex.to, t)} = 0.`);
+    if (why === 'vertex') return L(`${F} has a horizontal tangent at ${fmt(t)} s: what does that tell you about ${at(ex.to, t)}?`, `${F} hat bei ${fmt(t)} s eine waagrechte Tangente: Was sagt das über ${at(ex.to, t)}?`);
     if (why === 'join' && withValue) {
       const v = sval(end === 'start' ? p.g0 : p.g1, ex.to);
       return L(`${F} joins piece ${k} smoothly at ${fmt(t)} s (no kink), so ${at(ex.to, t)} = ${v}, the same as in piece ${k}.`,
@@ -217,7 +218,7 @@
       case 'notConst': return L(`${F} is a straight line here, so its slope does not change: ${f} is constant (a horizontal line).`,
         `${F} ist hier eine Gerade, also ändert sich die Steigung nicht: ${f} ist konstant (eine waagrechte Linie).`);
       case 'value': return p.g0 === 0
-        ? L(`${F} is horizontal here${ex.from === 's' ? ' (the body is at rest)' : ''}, so ${f} = 0.`, `${F} ist hier waagrecht${ex.from === 's' ? ' (der Körper ist in Ruhe)' : ''}, also ${f} = 0.`)
+        ? L(`${F} is horizontal here${ex.from === 's' ? ' (the body is at rest)' : ''}: what slope does that mean, and so what value of ${f}?`, `${F} ist hier waagrecht${ex.from === 's' ? ' (der Körper ist in Ruhe)' : ''}: Welche Steigung bedeutet das, und also welcher Wert von ${f}?`)
         : L(`${f} is constant here, but check its value: ${f} equals ${M()} ${fb} = Δ${F}/Δ<i>t</i>. Read the change of ${F} and the duration of the piece from the graph.`,
           `${f} ist hier konstant, aber prüfe den Wert: ${f} ist gleich ${M('dat')} ${fb} = Δ${F}/Δ<i>t</i>. Lies die Änderung von ${F} und die Dauer des Stücks am Graphen ab.`);
       case 'average': return L(`You drew ${M()} ${fb} = Δ${F}/Δ<i>t</i> for the whole piece. But ${F} is curved here, so ${f} changes steadily: it equals ${fb} only in the middle of the piece and is a sloped straight line through that point.`,
@@ -468,7 +469,7 @@
     ex.questions.forEach((q) => {
       const then = st.checked && st.checked[q.key];
       const same = st.checked && JSON.stringify(then) === JSON.stringify(now[q.key]);
-      Quiz.paint(q, same ? Quiz.evaluate(q, then) : null, now[q.key]);
+      Quiz.paint(q, same ? Quiz.evaluate(q, then) : null, now[q.key], !st.solved && !st.revealed);
     });
     if (st.revealed && !st.solved) { status.textContent = ui().qShown; return; }
     if (!st.checked) return;

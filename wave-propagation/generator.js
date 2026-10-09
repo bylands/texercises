@@ -146,8 +146,8 @@
       const at = (pp, tt) => (x) => ev(pp, x, tt);
       const right = snap(at(p, t), { label: tLabel(t) });
       const cands = r.shuffle([
-        { spec: snap(at(p, 2 * t), { label: tLabel(t) }), tag: 'dist', why: L(`That is where it is after ${num(2 * t)} s: in ${num(t)} s it moves ${num(v)} m/s · ${num(t)} s = ${num(d)} m.`, `Dort ist er nach ${num(2 * t)} s: In ${num(t)} s legt er ${num(v)} m/s · ${num(t)} s = ${num(d)} m zurück.`) },
-        { spec: snap(at(p, t / 2), { label: tLabel(t) }), tag: 'dist', why: L(`Too short a distance: in ${num(t)} s it moves ${num(d)} m.`, `Eine zu kurze Strecke: In ${num(t)} s legt er ${num(d)} m zurück.`) },
+        { spec: snap(at(p, 2 * t), { label: tLabel(t) }), tag: 'dist', why: L(`That is where it is after ${num(2 * t)} s: how far does it move in ${num(t)} s at ${num(v)} m/s?`, `Dort ist er nach ${num(2 * t)} s: Wie weit kommt er in ${num(t)} s mit ${num(v)} m/s?`) },
+        { spec: snap(at(p, t / 2), { label: tLabel(t) }), tag: 'dist', why: L(`Too short a distance: how far does it move in ${num(t)} s at ${num(v)} m/s?`, `Eine zu kurze Strecke: Wie weit kommt er in ${num(t)} s mit ${num(v)} m/s?`) },
         { spec: snap(at({ ...p, dir: -dir }, t), { label: tLabel(t) }), tag: 'dir', why: L(`The crest moves ${dirWord(dir)}.`, `Der Buckel läuft ${dirWord(dir)}.`) },
         { spec: snap(at({ ...p, rev: true }, t), { label: tLabel(t) }), tag: 'turn', why: RULE.move() },
         { spec: snap(at({ ...p, sgn: -1 }, t), { label: tLabel(t) }), tag: 'flip', why: RULE.move() },
@@ -184,7 +184,7 @@
     const lab = right.label;
     const cands = r.shuffle([
       { spec: graphT((t) => f(tf + tb - t), T, { label: lab }), tag: 'copy', why: RULE.yt() },
-      { spec: graphT((t) => f(t - w / v), T, { label: lab }), tag: 'back', why: L(`The front reaches x = ${num(xp)} m first, at t = ${num(tf)} s; the back follows ${num(w / v)} s later.`, `Die Front erreicht x = ${num(xp)} m zuerst, bei t = ${num(tf)} s; der Rücken folgt ${num(w / v)} s später.`) },
+      { spec: graphT((t) => f(t - w / v), T, { label: lab }), tag: 'back', why: L(`Which part of the crest reaches x = ${num(xp)} m first, the front or the back?`, `Welcher Teil des Buckels erreicht x = ${num(xp)} m zuerst, die Front oder der Rücken?`) },
       { spec: graphT((t) => f(tf + (t - tf) / 2), T, { label: lab }), tag: 'dur', why: RULE.dur() },
       { spec: graphT((t) => -f(t), T, { label: lab }), tag: 'flip', why: L('The rope at that place is displaced the same way as the crest: upwards where the crest is up.', 'Das Seil an diesem Ort wird gleich ausgelenkt wie der Buckel: nach oben, wo der Buckel oben ist.') },
       { spec: graphT((t) => f(tf + tb - t + 0.5), T, { label: lab }), tag: 'copy', why: RULE.yt() },
@@ -211,7 +211,7 @@
     const right = snap(at(p, t1), { label: tLabel(t1) });
     const cands = r.shuffle([
       { spec: snap(at({ ...p, rev: true }, t1), { label: tLabel(t1) }), tag: 'copy', why: RULE.yt() },
-      { spec: snap(at(p, t1 + w / v), { label: tLabel(t1) }), tag: 'back', why: L(`At x = ${num(xp)} m the front arrives at t = ${num(tf)} s: that fixes where the crest is.`, `Bei x = ${num(xp)} m kommt die Front bei t = ${num(tf)} s an: Das legt fest, wo der Buckel ist.`) },
+      { spec: snap(at(p, t1 + w / v), { label: tLabel(t1) }), tag: 'back', why: L(`Which part of the crest arrives at x = ${num(xp)} m first? That fixes where the crest is.`, `Welcher Teil des Buckels kommt zuerst bei x = ${num(xp)} m an? Das legt fest, wo der Buckel ist.`) },
       { spec: snap(at(p, t1 - 0.5), { label: tLabel(t1) }), tag: 'time', why: L(`Go from the time the front passes x = ${num(xp)} m, at ${num(v)} m/s.`, `Geh von der Zeit aus, zu der die Front x = ${num(xp)} m passiert, mit ${num(v)} m/s.`) },
       { spec: snap(at({ ...p, sgn: -1 }, t1), { label: tLabel(t1) }), tag: 'flip', why: L('Up in the y(t) graph is up on the rope.', 'Oben im y(t)-Bild ist oben auf dem Seil.') },
       { spec: snap(at(p, t1 + 0.5), { label: tLabel(t1) }), tag: 'time', why: L(`Go from the time the front passes x = ${num(xp)} m, at ${num(v)} m/s.`, `Geh von der Zeit aus, zu der die Front x = ${num(xp)} m passiert, mit ${num(v)} m/s.`) },
@@ -250,6 +250,8 @@
       const names = 'PQRS';
       const word = { up: () => L('moves up', 'bewegt sich nach oben'), down: () => L('moves down', 'bewegt sich nach unten'), rest: () => L('is at rest', 'ist in Ruhe') };
       const sc = { pulses: [p], end: null };
+      // what one point does, and why (in the solution, so that it is not given away before)
+      const point = (q, i) => (q.m === 'rest' ? L(`Around ${names[i]} the rope is flat: it stays where it is.`, `Um ${names[i]} ist das Seil flach: Es bleibt, wo es ist.`) : L(`Just ${dir > 0 ? 'left' : 'right'} of ${names[i]} the rope is ${q.m === 'up' ? 'higher' : 'lower'}: ${names[i]} ${word[q.m]()}.`, `Gleich ${dir > 0 ? 'links' : 'rechts'} von ${names[i]} ist das Seil ${q.m === 'up' ? 'höher' : 'tiefer'}: ${names[i]} ${word[q.m]()}.`));
       return {
         kind: 'medium', level, difficulty: level === 'lin' ? 2 : 3, sc,
         text: L(`A crest runs ${dirWord(dir)} along a rope. How does each marked point of the rope move at this moment?`, `Ein Wellenbuckel läuft ${dirWord(dir)} über ein Seil. Wie bewegt sich jeder markierte Punkt des Seils in diesem Moment?`),
@@ -258,10 +260,10 @@
         solAnim: { sc, t0: 0, t1: 0.6, show: ['sum'], dots: uniq.map((q, i) => ({ x: q.x, label: names[i] })) },
         questions: uniq.map((q, i) => ({
           type: 'choice', key: names[i], label: names[i],
-          options: ['up', 'down', 'rest'].map((m) => ({ label: word[m](), ok: m === q.m, why: `${RULE.medium()} ${q.m === 'rest' ? L(`Around ${names[i]} the rope is flat: it stays where it is.`, `Um ${names[i]} ist das Seil flach: Es bleibt, wo es ist.`) : L(`Just ${dir > 0 ? 'left' : 'right'} of ${names[i]} the rope is ${q.m === 'up' ? 'higher' : 'lower'}: ${names[i]} ${word[q.m]()}.`, `Gleich ${dir > 0 ? 'links' : 'rechts'} von ${names[i]} ist das Seil ${q.m === 'up' ? 'höher' : 'tiefer'}: ${names[i]} ${word[q.m]()}.`)}` })),
+          options: ['up', 'down', 'rest'].map((m) => ({ label: word[m](), ok: m === q.m, why: `${RULE.medium()} ${point(q, i)}` })),
         })),
         hints: [RULE.medium(), L('Imagine the crest shifted a little further: is the rope at the point higher or lower then?', 'Stell dir den Buckel ein Stück weiter vor: Ist das Seil am Punkt dann höher oder tiefer?')],
-        solution: [RULE.medium(), L('The points at the front of the crest rise, those at its back fall; where the rope is flat, it is at rest for the moment.', 'Die Punkte an der Front des Buckels steigen, die an seinem Rücken sinken; wo das Seil flach ist, ist es im Moment in Ruhe.')],
+        solution: [RULE.medium(), L('The points at the front of the crest rise, those at its back fall; where the rope is flat, it is at rest for the moment.', 'Die Punkte an der Front des Buckels steigen, die an seinem Rücken sinken; wo das Seil flach ist, ist es im Moment in Ruhe.'), ...uniq.map(point)],
         p: { k: 'medium', x0, dir, sh: sh.w },
       };
     }
@@ -339,9 +341,9 @@
       const cands = r.shuffle([
         { spec: snap(big, { label: tLabel(t) }), tag: 'max', why: RULE.sup() },
         { spec: snap(A, { label: tLabel(t), more: [{ f: B, cls: 'main' }] }), tag: 'apart', why: L('Where the crests overlap, the rope has one displacement: the sum of both.', 'Wo sich die Buckel überlagern, hat das Seil eine einzige Auslenkung: die Summe beider.') },
-        { spec: snap((x) => ev(pa, x, t + 0.5) + ev(pb, x, t + 0.5), { label: tLabel(t) }), tag: 'time', why: L(`In ${num(t)} s each crest moves ${num(v * t)} m.`, `In ${num(t)} s bewegt sich jeder Buckel um ${num(v * t)} m.`) },
+        { spec: snap((x) => ev(pa, x, t + 0.5) + ev(pb, x, t + 0.5), { label: tLabel(t) }), tag: 'time', why: L(`How far does each crest move in ${num(t)} s?`, `Wie weit bewegt sich jeder Buckel in ${num(t)} s?`) },
         { spec: snap((x) => ev(pa, x, t) - ev(pb, x, t), { label: tLabel(t) }), tag: 'sign', why: RULE.sup() },
-        { spec: snap((x) => ev(pa, x, t - 0.5) + ev(pb, x, t - 0.5), { label: tLabel(t) }), tag: 'time', why: L(`In ${num(t)} s each crest moves ${num(v * t)} m.`, `In ${num(t)} s bewegt sich jeder Buckel um ${num(v * t)} m.`) },
+        { spec: snap((x) => ev(pa, x, t - 0.5) + ev(pb, x, t - 0.5), { label: tLabel(t) }), tag: 'time', why: L(`How far does each crest move in ${num(t)} s?`, `Wie weit bewegt sich jeder Buckel in ${num(t)} s?`) },
       ]);
       return {
         kind: 'sup', level, difficulty: level === 'lin' ? 3 : 4, sc, t,
@@ -417,7 +419,7 @@
         { spec: fig(sum(scOther)), tag: 'sign', why: RULE.fixed() },
         { spec: fig((x) => yIn(sc, x, t), { more: [{ f: (x) => yRef(sc, x, t), cls: 'main' }] }), tag: 'apart', why: L('Where the incoming and the reflected part overlap, the rope has one displacement: their sum.', 'Wo sich der einlaufende und der reflektierte Teil überlagern, hat das Seil eine einzige Auslenkung: ihre Summe.') },
         { spec: fig(notRev), tag: 'order', why: RULE.fixed() },
-        { spec: fig((x) => y(sc, x, t + 0.5)), tag: 'time', why: L(`At t = ${num(t)} s the front has run ${num(v * t)} m.`, `Bei t = ${num(t)} s ist die Front ${num(v * t)} m gelaufen.`) },
+        { spec: fig((x) => y(sc, x, t + 0.5)), tag: 'time', why: L(`How far has the front run at t = ${num(t)} s?`, `Wie weit ist die Front bei t = ${num(t)} s gelaufen?`) },
         { spec: fig((x) => yIn(sc, x, t)), tag: 'cut', why: L('The part that has reached the end is not lost: it comes back, and adds to the part still arriving.', 'Der Teil, der das Ende erreicht hat, geht nicht verloren: Er kommt zurück und addiert sich zum Teil, der noch ankommt.') },
       ]);
       return {

@@ -82,7 +82,7 @@
     alongV: () => L('The magnetic force is perpendicular to the motion, not along it.', 'Die magnetische Kraft steht senkrecht zur Bewegung, nicht in ihrer Richtung.'),
     alongB: () => L('The magnetic force is perpendicular to the field, not along the field lines.', 'Die magnetische Kraft steht senkrecht zum Feld, nicht längs der Feldlinien.'),
     none: () => L('There is a force: the charge moves across the field.', 'Es gibt eine Kraft: Die Ladung bewegt sich quer zum Feld.'),
-    some: () => L('There is no force here.', 'Hier gibt es keine Kraft.'),
+    some: () => L('Check whether the charge moves across the field at all.', 'Prüfe, ob sich die Ladung überhaupt quer zum Feld bewegt.'),
   };
 
   // Four options for a force (or field): the right one, then tempting wrong ones.
@@ -163,7 +163,7 @@
     radial: () => L('The field circles around the current: it does not point towards it or away from it.', 'Das Feld umkreist den Strom: Es zeigt nicht zu ihm hin oder von ihm weg.'),
     along: () => L('The field of a straight current does not point along the current.', 'Das Feld eines geraden Stroms zeigt nicht in Richtung des Stroms.'),
     nofield: () => L('There is a field here.', 'Hier gibt es ein Feld.'),
-    field: () => L('There is no field here.', 'Hier gibt es kein Feld.'),
+    field: () => L('Check where the point lies relative to the line along which the current or charge moves.', 'Prüfe, wo der Punkt bezüglich der Geraden liegt, längs der sich der Strom oder die Ladung bewegt.'),
   };
   function pair(kind, seed) {
     const r = rng(seed * 41 + 13);

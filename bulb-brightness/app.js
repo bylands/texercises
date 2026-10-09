@@ -205,6 +205,15 @@
   function why(code, b) {
     const exact = (c) => isExact(c.iv) && isExact(b.iv) && cmp(c.iv.lo, b.iv.lo) === 0;
     const same = ex.bulbs.find((c) => c !== b && (exact(c) || sameSpot(ex, b, c)));
+    // while the exercise is open: a nudge that does not give the brightness away
+    if (!st.solved && !st.revealed) {
+      const nudge = {
+        short: L(`Follow the wires around ${it(b.name)}: does the current have to pass through it?`, `Verfolge die Drähte um ${it(b.name)}: Muss der Strom durch sie hindurch?`),
+        reversed: L('Look at the batteries: are they all connected the same way round?', 'Schau die Batterien an: Sind alle gleich herum angeschlossen?'),
+        same: L(`The current is not used up by the first bulb it passes: compare the voltage across ${it(b.name)} with those across the other bulbs.`, `Der Strom wird von der ersten Lampe nicht verbraucht: Vergleiche die Spannung an ${it(b.name)} mit denen an den anderen Lampen.`),
+      }[code];
+      if (nudge) return nudge;
+    }
     return {
       short: L(`${it(b.name)} is bridged by a wire. The current takes the wire, so there is no voltage across ${it(b.name)}: it is off.`,
         `${it(b.name)} ist durch einen Draht überbrückt. Der Strom nimmt den Draht, also liegt an ${it(b.name)} keine Spannung an: Sie ist aus.`),
@@ -390,6 +399,7 @@
     if (!canReveal()) return;
     st.revealed = true;
     finish();
+    showFeedback(); // now with the full explanations
     showSolution();
     updateButtons();
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });

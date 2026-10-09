@@ -823,7 +823,7 @@
       const pickK = [fast, slow, ...r.shuffle(ks.filter((k) => k !== fast && k !== slow))].slice(0, 4).sort((x, y) => x - y);
       questions.push(choice('fastest', L('In which second does the cart move fastest?', 'In welcher Sekunde fährt der Wagen am schnellsten?'), pickK.map((k) =>
         opt(interval(k, k + 1), k === fast, k === slow ? 'gaps' : null, k === slow ? WHYG.gaps()
-          : L(`In this second the cart moves ${val(Math.abs(gaps[k]), 'm')}; in ${interval(fast, fast + 1)} it moves ${val(Math.abs(gaps[fast]), 'm')}, farther.`, `In dieser Sekunde fährt der Wagen ${val(Math.abs(gaps[k]), 'm')}; in ${interval(fast, fast + 1)} fährt er ${val(Math.abs(gaps[fast]), 'm')}, weiter.`)))));
+          : L(`In this second the cart moves ${val(Math.abs(gaps[k]), 'm')}: compare with the distances in the other seconds.`, `In dieser Sekunde fährt der Wagen ${val(Math.abs(gaps[k]), 'm')}: Vergleiche mit den Strecken in den anderen Sekunden.`)))));
     }
     // how the cart moves, as the answer and in the sentence "So the cart …"
     const HOW = {

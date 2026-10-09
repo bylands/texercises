@@ -155,3 +155,13 @@ svg.tb .ef-foil { fill: #e8b923; stroke: var(--ink); stroke-width: 1; }
 #arcade .ar-opt .val svg.icon { width: 48px; height: 48px; }
 #arcade .ar-opt .dtile { justify-content: center; }
 .ar-hero .figs .fig svg { width: 320px; }
+
+/* the nudge after a wrong check of statements */
+.stmts-fb { color: var(--bad); font-size: 0.9rem; margin: 4px 0 0; }
+.stmts-fb:empty { display: none; }
+
+/* two situations side by side */
+table.cmp { border-collapse: collapse; margin: 0.6em 0; font-size: 0.95em; }
+table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 0.3em 0.8em; text-align: center; }
+table.cmp thead th { color: var(--accent); }
+table.cmp tbody th { text-align: left; font-weight: normal; color: var(--muted); }

@@ -15,7 +15,7 @@
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
       fill: 'Answer every question, then check again.', ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
-      correct: 'Correct', option: (k) => `Option ${k}`, drawWrong: (n) => `${n} grid ${n === 1 ? 'line is' : 'lines are'} not right yet (marked).`,
+      correct: 'Correct', notThis: 'Not this one: check your reasoning, or take a hint.', stmtsWrong: (n) => (n === 1 ? 'One statement is judged wrong.' : `${n} statements are judged wrong.`), option: (k) => `Option ${k}`, drawWrong: (n) => `${n} grid ${n === 1 ? 'line is' : 'lines are'} not right yet (marked).`,
       tutorNote: 'Use the arrow keys ← → to step through. ▶ plays an animation; the slider moves through time.',
       given: 'Given', animLead: 'The animation shows how the rope got there; ▶ plays it again.', animNote: 'The animation shows how the rope got there and stops at the state given. With ▶ or the slider you can move the crests on yourself (two crests running towards each other one by one). The time is not shown, and only the crests themselves are drawn (an incoming crest also behind the end, in the shaded part), not the rope they make together: that appears once you have solved the exercise. The faded line is the rope in the state given.',
     },
@@ -27,7 +27,7 @@
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
       fill: 'Beantworte jede Frage und prüfe dann nochmals.', ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
-      correct: 'Richtig', option: (k) => `Antwort ${k}`, drawWrong: (n) => `${n} ${n === 1 ? 'Gitterlinie stimmt' : 'Gitterlinien stimmen'} noch nicht (markiert).`,
+      correct: 'Richtig', notThis: 'Das stimmt nicht: Überprüfe deine Überlegung, oder nimm einen Hinweis.', stmtsWrong: (n) => (n === 1 ? 'Eine Aussage ist falsch beurteilt.' : `${n} Aussagen sind falsch beurteilt.`), option: (k) => `Antwort ${k}`, drawWrong: (n) => `${n} ${n === 1 ? 'Gitterlinie stimmt' : 'Gitterlinien stimmen'} noch nicht (markiert).`,
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. ▶ spielt eine Animation ab; mit dem Schieber bewegst du dich durch die Zeit.',
       given: 'Gegeben', animLead: 'Die Animation zeigt, wie das Seil dorthin kam; ▶ spielt sie nochmals ab.', animNote: 'Die Animation zeigt, wie das Seil dorthin kam, und hält beim gegebenen Zustand an. Mit ▶ oder dem Schieber kannst du die Buckel selbst weiterbewegen (zwei aufeinander zulaufende Buckel einzeln). Die Zeit wird nicht angezeigt, und es werden nur die Buckel selbst gezeichnet (ein einlaufender Buckel auch hinter dem Ende, im schattierten Teil), nicht das Seil, das sie zusammen ergeben: Das erscheint, sobald du die Aufgabe gelöst hast. Die blasse Linie ist das Seil im gegebenen Zustand.',
     },
@@ -111,6 +111,17 @@
   function feedback() {
     if (ex.kind === 'draw') return drawFeedback();
     let all = true, missing = false;
+    const done = st && (st.solved || st.revealed);
+    // While the exercise is open, a wrong answer gets a nudge, not the solution: the steps of the
+    // solution, whole or sentence by sentence, are taken out of its explanation.
+    const nudge = (w) => {
+      if (done) return w;
+      let t = w || '';
+      for (const s of ex.solution) if (s) t = t.split(s).join('');
+      for (const s of ex.solution) for (const x of String(s || '').split(/(?<=[.!?])\s+/)) if (x.length > 3) t = t.split(x).join('');
+      t = t.replace(/\s+/g, ' ').trim();
+      return t || ui().notThis;
+    };
     for (const q of ex.questions) {
       const sel = document.querySelector(`input[name="q-${q.key}"]:checked`);
       if (!sel) { all = false; missing = true; continue; }
@@ -118,15 +129,15 @@
       if (q.type === 'pick') {
         document.querySelectorAll(`.cand`).forEach((el) => { if (el.querySelector(`input[name="q-${q.key}"]`)) el.classList.remove('ok', 'bad'); });
         sel.closest('.cand').classList.add(o.ok ? 'ok' : 'bad');
-        $(`[data-fb="${q.key}"]`).innerHTML = o.ok ? '' : o.why;
+        $(`[data-fb="${q.key}"]`).innerHTML = o.ok ? '' : nudge(o.why);
       } else {
         const row = $(`.field[data-key="${q.key}"]`);
         row.className = `field ${o.ok ? 'ok' : 'bad'}`;
-        row.querySelector('.fb').innerHTML = o.ok ? ui().correct : o.why;
+        row.querySelector('.fb').innerHTML = o.ok ? ui().correct : nudge(o.why);
       }
       if (!o.ok) all = false;
     }
-    return all ? true : missing && !document.querySelector('.field.bad, .cand.bad') ? null : false;
+    return all ? true : missing && !document.querySelector('.field.bad, .cand.bad, .stmts-fb:not(:empty)') ? null : false;
   }
 
   // ---------------------------------------------------------------- drawing

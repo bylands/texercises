@@ -196,6 +196,13 @@
       v = r2(v);
       if (out.length < 4 && Number.isFinite(v) && (o.min == null || v >= o.min) && out.every((x) => Math.abs(x.value - v) > 0.2)) out.push({ value: v, ok: false, tag });
     };
+    // signed answers: two sizes, each positive and negative, so that the sign gives nothing away
+    if (o.signed && Math.abs(r2(right)) > 1e-9) {
+      const R = Math.abs(r2(right)), m = [...cands.map((c) => ({ v: r2(c.value), tag: c.tag })), ...[1, 2, 3, 4].map((k) => ({ v: R + k * step, tag: 'other' }))]
+        .find((c) => Number.isFinite(c.v) && Math.abs(c.v) > 1e-9 && Math.abs(Math.abs(c.v) - R) > 0.2);
+      const sg = cands.find((c) => Math.abs(r2(c.value) + r2(right)) < 1e-9);
+      out.push({ value: -r2(right), ok: false, tag: sg ? sg.tag : 'sign' }, { value: m.v, ok: false, tag: m.tag }, { value: -m.v, ok: false, tag: 'other' });
+    }
     cands.forEach((c) => add(c.value, c.tag));
     for (const k of [1, -1, 2, -2, 3, -3, 4]) add(right + k * step, 'other');
     return out.sort((a, b) => a.value - b.value).map((x) => ({ ...x, label: `${o.signed ? sgn(x.value) : x.value < 0 ? sgn(x.value) : fmt(x.value)} ${unit}` }));
@@ -234,6 +241,7 @@
       const ks = r.shuffle(ts.map((t, k) => k)).slice(0, 2).sort((a, b) => a - b);
       ks.forEach((k) => at.push({ t: ts[k], i: Math.min(k, ps.length - 1) }));
     }
+    const hows = []; // each read-off in the solution, so that it is not given away before
     at.forEach(({ t, i }, n) => {
       const p = ps[i], tt = Math.min(t, T - 1e-9), d = I.SHAPE.poly.df(p, tt - p.t0), right = neg(r2(d)), y0 = p.p0, y1 = endOf(g, p), len = p.t1 - p.t0;
       const other = ps[i > 0 ? i - 1 : i + 1];
@@ -242,6 +250,7 @@
           `Zwischen ${fmt(p.t0)} s und ${fmt(p.t1)} s ändert sich ${PHI} in ${fmt(len)} s von ${fmt(y0)} auf ${fmt(y1)} mWb: Die Steigung ist ${num(p.d0)} mWb/s, also ${Vi()} = ${num(right)} mV.`)
         : L(`At ${fmt(t)} s, the tangent to the flux graph has the slope ${sgn(d)} mWb/s, so ${Vi()} = ${num(right)} mV.`,
           `Bei ${fmt(t)} s hat die Tangente an den Flussgraphen die Steigung ${sgn(d)} mWb/s, also ${Vi()} = ${num(right)} mV.`);
+      hows.push(how);
       const cands = family === 'lin'
         ? [{ value: -right, tag: 'sign' }, { value: Fat(g, t), tag: 'copy' }, { value: neg(other.d0), tag: 'steep' }, { value: -(y1 - y0), tag: 'delta' }, { value: 0, tag: 'zero' }]
         : [{ value: -right, tag: 'sign' }, { value: -(p.d0 + p.d1) / 2, tag: 'average' }, { value: Fat(g, t), tag: 'copy' }, { value: 0, tag: 'zero' }];
@@ -255,7 +264,7 @@
       hints: graphHints('phi2v', family, g).slice(0, 2).concat(family === 'lin'
         ? [L(`Read off the slope with a triangle: ${DPHI} = Δ${PHI}/Δ<i>t</i>.`, `Lies die Steigung mit einem Dreieck ab: ${DPHI} = Δ${PHI}/Δ<i>t</i>.`)]
         : [L('Draw the tangent at that time and read off its slope.', 'Zeichne die Tangente zu dieser Zeit und lies ihre Steigung ab.')]),
-      solution: graphSolution('phi2v', g), solFig: solGraphs(g), g, p: { ...keyOf(g), at: at.map((x) => x.t) },
+      solution: graphSolution('phi2v', g).concat(hows), solFig: solGraphs(g), g, p: { ...keyOf(g), at: at.map((x) => x.t) },
     };
   }
 

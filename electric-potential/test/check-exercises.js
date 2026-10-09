@@ -24,6 +24,11 @@ const SEEDS = 60;
 const num = (label) => { const t = label.replace(/−/g, '-').replace('+', ''); const m = t.match(/^(-?[\d.]+)(?: · 10<sup>(-?\d+)<\/sup>)?/); return m ? Number(m[1]) * (m[2] ? 10 ** Number(m[2]) : 1) : NaN; };
 const right = (e, key) => { const q = e.questions.find((x) => x.key === key); return q.options.find((o) => o.ok); };
 
+// signed number options: as many positive as negative ones (the sign must not give the answer away)
+function checkSigns(tag, q) {
+  const labs = q.options.map((o) => String(o.label || '')), pos = labs.filter((x) => /^\+\d/.test(x)).length, neg = labs.filter((x) => /^[−-]\d/.test(x)).length;
+  if (pos + neg >= 3 && pos !== neg) fail(`${tag} ${q.key}: ${pos} positive and ${neg} negative options`);
+}
 function checkQuestions(tag, e) {
   for (const q of e.questions) {
     if (q.type === 'multi') {
@@ -31,6 +36,7 @@ function checkQuestions(tag, e) {
       if (q.statements.some((s) => !s.why)) fail(`${tag}: a statement without a reason`);
       continue;
     }
+    checkSigns(tag, q);
     const n = q.options.filter((o) => o.ok).length;
     if (n < 1 || (!q.multi && n !== 1)) fail(`${tag} ${q.key}: ${n} right options`);
     if (q.options.some((o) => !o.ok && !o.why)) fail(`${tag} ${q.key}: a wrong option without a reason`);
@@ -63,9 +69,24 @@ for (const lang of ['en', 'de']) {
         if (!rel(num(right(e, 'v').label), v, 0.01)) fail(`${tag}: the speed`);
       }
       if (type === 'closest') {
-        const rmin = (E.K.k * 2 * e.p.Z * E.K.e) / (e.p.Ek * 1e6);
-        const lab = right(e, 'r').label, f = { m: 1, cm: 1e-2, mm: 1e-3, 'µm': 1e-6, nm: 1e-9, pm: 1e-12, fm: 1e-15 }[lab.split(' ')[1]];
-        if (!rel(num(lab) * f, rmin, 0.01)) fail(`${tag}: the closest approach`);
+        // independently: r_min = k·q·Q/E_kin; the mass does not matter
+        const z = { p: 1, d: 1, a: 2 }, k = (z[e.p.pb] / z[e.p.pa]) * e.p.fZ / e.p.fE;
+        if (right(e, 'r').label !== X.frac(k)) fail(`${tag}: the closest approach ${right(e, 'r').label}, not ${X.frac(k)}`);
+        if (right(e, 'U').label !== X.frac(e.p.fE)) fail(`${tag}: the potential energy at the closest point`);
+      }
+      if (type === 'repel') {
+        // independently: V = k·Q/R, E_kin = |q|·V, v = √(2·E_kin/m)
+        const z = { p: 1, d: 1, a: 2 }, m = { p: 1, d: 2, a: 4 }, fV = e.p.fQ / e.p.fR, fE = fV * z[e.p.pb] / z[e.p.pa], fv2 = fE / (m[e.p.pb] / m[e.p.pa]);
+        if (right(e, 'V').label !== X.frac(fV) || right(e, 'E').label !== X.frac(fE)) fail(`${tag}: the potential or the energy`);
+        const lab = right(e, 'v').label, v = lab.includes('√') ? (lab.includes('1/') ? 1 / Math.sqrt(Number(lab.split('√')[1])) : Math.sqrt(Number(lab.split('√')[1]))) : (lab.includes('1/') ? 1 / Number(lab.split('1/')[1]) : Number(lab.slice(1)));
+        if (!rel(v * v, fv2, 1e-6)) fail(`${tag}: the speed ${lab}`);
+      }
+      if (type === 'point-v') {
+        // independently: V = k·Q/r in units of V₀ = k·q/r
+        const { sQ, k, m, s2 } = e.p, VP = sQ + m / s2, lab = right(e, 'P').label.replace('−', '-').replace('·', '').replace('V₀', '');
+        const [n, d] = (/^[+-]$/.test(lab) ? lab + '1' : lab).split('/').map(Number), got = d ? n / d : n;
+        if (!rel(got, VP, 1e-9)) fail(`${tag}: the potential at P ${right(e, 'P').label}, not ${VP}`);
+        if (right(e, 'V').label !== X.frac(1 / k)) fail(`${tag}: the factor for B`);
       }
       if (type === 'which-way') {
         const { q, Vl, Vr } = e.p, toRight = q > 0 ? Vl > Vr : q < 0 ? Vr > Vl : null, html = right(e, 'm').html;

@@ -81,3 +81,7 @@ table.states thead th { font-weight: 600; }
 #arcade { --cy: #58c4dd; --gdot: #444; }
 #arcade .desc { font-size: 0.95rem; }
 #arcade .ar-opt .val svg.pv { width: 100%; max-width: 260px; }
+
+/* the nudge after a wrong check of statements */
+.stmts-fb { color: var(--bad); font-size: 0.9rem; margin: 4px 0 0; }
+.stmts-fb:empty { display: none; }

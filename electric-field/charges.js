@@ -226,10 +226,15 @@
     for (const r of o.rods || []) s += `<line class="rod" x1="${f1(X(r[0]))}" y1="${f1(Y(r[1]))}" x2="${f1(X(r[2]))}" y2="${f1(Y(r[3]))}"/>`;
     for (const pt of o.parts || []) s += particle(X(pt.x), Y(pt.y), pt.r || 11, pt.q, pt.sym);
     for (const n of o.names || []) s += txt(X(n.x) + 14, Y(n.y) - 12, n.name, 'lbl name', 'start');
-    for (const t of o.tops || []) s += txt(X(t.x), 16, t.label, 'lbl small');
     for (const t of o.labelsAt || []) s += txt(X(t.x) + 4, Y(t.y), t.label, 'lbl small equi-lbl', 'start');
     for (const p of o.points || []) s += `<circle class="pt" cx="${f1(X(p.x))}" cy="${f1(Y(p.y))}" r="3.6"/>` + txt(X(p.x) + 8, Y(p.y) - 8, p.name, 'lbl', 'start');
     for (const v of o.vecs || []) s += arrow(X(v.x), Y(v.y), X(v.x) + v.dx, Y(v.y) - v.dy, v.cls || 'v-field') + (v.name ? txt(X(v.x) + v.dx + (v.dx >= 0 ? 8 : -8), Y(v.y) - v.dy - 6, v.name, `lbl ${v.cls || 'v-field'}-lbl`, v.dx >= 0 ? 'start' : 'end') : '');
+    // labels above the picture (o.tops), in a strip of their own, kept inside at the edges
+    if (o.tops) {
+      const T = 24, tops = o.tops.map((t) => { const x = X(t.x); return txt(x, 17, String(t.label).replace(/-(?=\d)/g, '−'), 'lbl small', x < 36 ? 'start' : x > W - 36 ? 'end' : 'middle'); }).join('');
+      s = `<rect class="bg" x="0" y="0" width="${W}" height="${H + T}"/>${tops}<g transform="translate(0,${T})">${s}</g>`;
+      return svg(W, H + T, s, o.label || L('Field lines of the arrangement', 'Feldlinien der Anordnung'), o.small ? 'small' : '');
+    }
     return svg(W, H, s, o.label || L('Field lines of the arrangement', 'Feldlinien der Anordnung'), o.small ? 'small' : '');
   }
 

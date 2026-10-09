@@ -49,6 +49,11 @@ for (const [p, q] of C.contours(opp, box, [-0.6, -0.2, 0.2, 0.6]).slice(0, 400))
 }
 
 // ---------------------------------------------------------------- the exercises
+// signed number options: as many positive as negative ones (the sign must not give the answer away)
+function checkSigns(tag, q) {
+  const labs = q.options.map((o) => String(o.label || '')), pos = labs.filter((x) => /^\+\d/.test(x)).length, neg = labs.filter((x) => /^[−-]\d/.test(x)).length;
+  if (pos + neg >= 3 && pos !== neg) fail(`${tag} ${q.key}: ${pos} positive and ${neg} negative options`);
+}
 function checkQuestions(tag, e) {
   for (const q of e.questions) {
     if (q.type === 'multi') {
@@ -56,6 +61,7 @@ function checkQuestions(tag, e) {
       if (q.statements.some((s) => !s.why)) fail(`${tag}: a statement without a reason`);
       continue;
     }
+    checkSigns(tag, q);
     const n = q.options.filter((o) => o.ok).length;
     if (n < 1 || (!q.multi && n !== 1)) fail(`${tag} ${q.key}: ${n} right options`);
     if (q.options.some((o) => !o.ok && !o.why)) fail(`${tag} ${q.key}: a wrong option without a reason`);

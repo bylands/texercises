@@ -472,7 +472,7 @@
     const kinds = { isobaric: () => L('isobar', 'Isobare'), isochoric: () => L('isochore', 'Isochore'), isothermal: () => L('isotherm', 'Isotherme') };
     const typeQ = numbered.map((ln, i) => ({
       type: 'choice', key: `l${i + 1}`, label: L(`line ${i + 1}`, `Linie ${i + 1}`),
-      options: TYPES.map((t) => ({ label: kinds[t](), ok: t === ln.type, why: L(`In the ${dname(d)} diagram, ${kinds[ln.type]()}s are ${shape(ln.type, d)}.`, `Im ${dname(d)}-Diagramm sind ${kinds[ln.type]()}n ${shape(ln.type, d)}.`) })),
+      options: TYPES.map((t) => ({ label: kinds[t](), ok: t === ln.type, why: L(`In the ${dname(d)} diagram, ${kinds[t]()}s are ${shape(t, d)}: does line ${i + 1} look like that?`, `Im ${dname(d)}-Diagramm sind ${kinds[t]()}n ${shape(t, d)}: Sieht Linie ${i + 1} so aus?`) })),
     }));
     const bigger = a < b ? [a, b] : [b, a], hi = numbered[bigger[1] - 1].c > numbered[bigger[0] - 1].c ? bigger[1] : bigger[0];
     const qv = v[pair], why = orderWhy(pair, d);
@@ -600,9 +600,12 @@
     const cells = [];
     for (let i = 1; i < c.states.length; i++) for (const v of ['p', 'V', 'T']) cells.push({ i, v });
     const asked = r.shuffle(cells).filter((x) => change(x.v, c.states[x.i - 1], c.states[x.i]) !== 'same' || r.next() < 0.3).slice(0, 3).sort((a, b) => a.i - b.i || 'pVT'.indexOf(a.v) - 'pVT'.indexOf(b.v));
+    const steps = [];
     const questions = asked.map(({ i, v }) => {
       const prev = c.states[i - 1], s = c.states[i], seg = c.segs[i - 1], right = val(v, s), k = VARS[v](s) / VARS[v](prev), pv = val(v, prev);
-      const why = `${summary(c, seg)} ${L(`So ${v} in ${nameOf(i)} = ${frac(k)} × ${nice(pv)} ${UNIT[v]} = ${nice(right)} ${UNIT[v]}.`, `Also ${v} in ${nameOf(i)} = ${frac(k)} × ${nice(pv)} ${UNIT[v]} = ${nice(right)} ${UNIT[v]}.`)}`;
+      const step = L(`So ${v} in ${nameOf(i)} = ${frac(k)} × ${nice(pv)} ${UNIT[v]} = ${nice(right)} ${UNIT[v]}.`, `Also ${v} in ${nameOf(i)} = ${frac(k)} × ${nice(pv)} ${UNIT[v]} = ${nice(right)} ${UNIT[v]}.`);
+      steps.push(step); // in the solution, so that it is not given away before
+      const why = `${summary(c, seg)} ${step}`;
       const cand = [{ x: right, ok: true }, { x: pv / k, tag: 'inverse' }, { x: pv, tag: 'same' }, { x: pv * k * k, tag: 'other' }, { x: pv * 2, tag: 'other' }, { x: pv / 2, tag: 'other' }, { x: pv * 3, tag: 'other' }];
       if (v === 'T') cand.splice(1, 0, { x: (pv - 273) * k + 273, tag: 'celsius' });
       const opts = [];
@@ -625,7 +628,7 @@
         L('Work through the table row by row, from A: each state follows from the one before it.', 'Arbeite die Tabelle Zeile für Zeile ab A durch: Jeder Zustand folgt aus dem vorherigen.'),
         L('pV/T is the same in every state: use it to check your values.', 'pV/T ist in jedem Zustand gleich: Prüfe damit deine Werte.'),
       ],
-      solution: c.segs.filter((s) => !s.closing).map((s) => summary(c, s)).concat([c.states.map((s, i) => `${nameOf(i)}: p = ${nice(val('p', s))} kPa, V = ${nice(val('V', s))} L, T = ${nice(val('T', s))} K`).join('; ')]),
+      solution: c.segs.filter((s) => !s.closing).map((s) => summary(c, s)).concat(steps, [c.states.map((s, i) => `${nameOf(i)}: p = ${nice(val('p', s))} kPa, V = ${nice(val('V', s))} L, T = ${nice(val('T', s))} K`).join('; ')]),
       p: { kind: 'table', s: c.states, real },
     };
   }
