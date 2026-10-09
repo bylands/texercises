@@ -6,7 +6,7 @@
 // - for every type, in both languages and many seeds: no undefined or NaN in any text or drawing;
 //   hints and a solution; each choice or drawing has exactly one right option, every wrong one a
 //   reason, no two alike; no HTML inside a drawing; statements are mixed; every number is finite, and its typical mistakes
-//   give clearly different values,
+//   give clearly different values; the right option of a choice is not always in the same place,
 // - the numbers the student types (3.8e-24, 3.8·10^-24, 3,8 · 10⁻²⁴, the full number for a field
 //   in 10⁻²⁴ kg·m/s) and how they are judged (a typical mistake gets its own reason),
 // - the arcade: three or four different options (as many as a choice has), exactly one right,
@@ -76,6 +76,13 @@ function checkQuestions(tag, e) {
     const labels = q.options.map((o) => o.label || o.html);
     if (new Set(labels).size !== labels.length) fail(`${tag} ${q.key}: two options alike`);
   }
+}
+// the right option of a choice is not always in the same place (unless the options are ordered, as angles)
+{
+  const at = {}, note = (tag, e) => { for (const q of e.questions) if (q.options) (at[`${tag} ${q.key}`] = at[`${tag} ${q.key}`] || new Set()).add(q.options.findIndex((o) => o.ok)); };
+  for (const type of X.TYPES) for (let seed = 1; seed <= SEEDS; seed++) note(type, X.make(type, seed));
+  R.PROBLEMS.forEach((p, k) => { for (let seed = 1; seed <= 40; seed++) note(p.id, R.realOf(k, seed)); });
+  for (const [k, v] of Object.entries(at)) if (v.size === 1 && ![].includes(k)) fail(`${k}: the right option is always number ${[...v][0] + 1}`);
 }
 for (const lang of ['en', 'de']) {
   Lang.set(lang, true);
