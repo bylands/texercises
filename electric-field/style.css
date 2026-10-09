@@ -1,0 +1,139 @@
+/* Electric Field: its colours, the drawings of charges, field lines and fields, the options; the
+   general look is in ui.css (shared by the apps). Field lines and field blue, force red. */
+:root {
+  --ef-line: #1f5fc4; --ef-force: #c62828; --ef-equi: #c2620c; --ef-part: #7a8aa3; --ef-traj: #8e44ad;
+  --ef-pos: #f2c2bb; --ef-neg: #bcd3f2; --ef-neu: #e4e2dc; --ef-metal: #cfd3d8; --ef-grid: #ebe8e1;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --ef-line: #79a8ff; --ef-force: #ff7b72; --ef-equi: #ffb36b; --ef-part: #8d9bb3; --ef-traj: #c7a6ff; --ef-pos: #7a3e37; --ef-neg: #34507a; --ef-neu: #4a4a46; --ef-metal: #4b5157; --ef-grid: #2c3035; }
+}
+
+#prompt p { margin: 6px 0; }
+/* a vector: an arrow above the letter */
+.vec { position: relative; display: inline-block; }
+.vec::before { content: "→"; position: absolute; left: 0; right: 0; top: -0.62em; text-align: center; font-size: 0.7em; font-style: normal; line-height: 1; }
+.figs .fig { flex: 1 1 100%; }
+.figs svg.ef { display: block; width: 100%; max-width: 440px; height: auto; margin: 0 auto; }
+
+/* drawings */
+svg.ef text { font-family: var(--serif); }
+svg.ef .bg { fill: var(--card); }
+svg.ef .grid { stroke: var(--ef-grid); stroke-width: 1; }
+svg.ef .axisline { stroke: var(--muted); stroke-width: 1; }
+svg.ef .fline { fill: none; stroke: var(--ef-line); stroke-width: 1.4; opacity: 0.9; }
+svg.ef .fline-head { fill: var(--ef-line); }
+svg.ef .equi { stroke: var(--ef-equi); stroke-width: 1.4; fill: none; }
+svg.ef .charge { stroke: var(--ink); stroke-width: 1.3; }
+svg.ef .charge.pos { fill: var(--ef-pos); }
+svg.ef .charge.neg { fill: var(--ef-neg); }
+svg.ef .charge.neu { fill: var(--ef-neu); }
+svg.ef .charge.named { fill: var(--card); stroke-width: 1.6; }
+svg.ef .sign { fill: var(--ink); font: 700 14px system-ui, sans-serif; }
+svg.ef .sign.small { font-size: 10px; }
+svg.ef .sign.big { font-size: 20px; }
+svg.ef .lbl { fill: var(--ink); font-size: 15px; paint-order: stroke; stroke: var(--card); stroke-width: 3px; }
+svg.ef .lbl.name { font-weight: 700; font-family: system-ui, sans-serif; font-size: 13px; }
+svg.ef .lbl.small { font-size: 12px; }
+svg.ef .it { font-style: italic; }
+svg.ef .pt { fill: var(--ink); }
+svg.ef .metal { fill: var(--ef-metal); }
+svg.ef .metal-edge { stroke: var(--ink); stroke-width: 1.2; }
+svg.ef .plate { fill: var(--muted); }
+svg.ef .rod { stroke: var(--ink); stroke-width: 3; }
+svg.ef :is(.v-field, .v-dir) { stroke: var(--ef-line); fill: none; }
+svg.ef :is(.v-field-head, .v-dir-head) { fill: var(--ef-line); }
+svg.ef .v-force { stroke: var(--ef-force); fill: none; }
+svg.ef .v-force-head { fill: var(--ef-force); }
+svg.ef .v-force-lbl { fill: var(--ef-force); }
+svg.ef .v-field-lbl { fill: var(--ef-line); }
+svg.ef .v-part { stroke: var(--ef-part); fill: none; stroke-dasharray: 5 3; }
+svg.ef .v-part-head { fill: var(--ef-part); }
+svg.ef .v-vel { stroke: var(--ink); fill: none; }
+svg.ef .v-vel-head { fill: var(--ink); }
+svg.ef .axis { stroke: var(--ink); fill: none; }
+svg.ef .axis-head { fill: var(--ink); }
+svg.ef .gcurve { fill: none; stroke: var(--ef-line); stroke-width: 2.6; }
+svg.ef .gmark { stroke: var(--muted); stroke-dasharray: 3 3; }
+svg.ef .traj { fill: none; stroke: var(--ef-traj); stroke-width: 2.6; stroke-linecap: round; }
+
+/* direction tiles: one, or all that fit */
+.ask { font-weight: 600; margin: 12px 0 6px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.tile { position: relative; display: block; border: 2px solid var(--line); border-radius: 10px; background: var(--card); padding: 6px 10px; cursor: pointer; }
+.tile input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.tile:hover { border-color: var(--accent); }
+.tile:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.tile:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tiles[role="group"] .tile:has(input:checked)::after { content: "✓"; position: absolute; top: 4px; right: 8px; color: var(--accent); font-weight: 700; }
+.tile.ok { border-color: var(--ok); background: var(--ok-bg); }
+.tile.bad { border-color: var(--bad); background: var(--bad-bg); }
+.tile.miss { border-color: var(--ok); border-style: dashed; }
+.dtile { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.dtile svg.icon { width: 40px; height: 40px; flex: none; }
+.qfb { color: var(--bad); margin: 0 0 12px; padding-left: 1.2em; }
+.qfb:empty { display: none; }
+.qfb li { margin: 3px 0; }
+
+/* drawings to choose from */
+.cands { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 8px 0; }
+.cand { position: relative; display: block; border: 2px solid var(--line); border-radius: 10px; background: var(--card); padding: 4px; cursor: pointer; }
+.cand svg { display: block; width: 100%; height: auto; }
+.cand input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.cand .letter { position: absolute; left: 10px; top: 6px; font-weight: 700; color: var(--accent); }
+.cand:hover { border-color: var(--accent); }
+.cand:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.cand:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.cand.ok { border-color: var(--ok); background: var(--ok-bg); }
+.cand.bad { border-color: var(--bad); background: var(--bad-bg); }
+@media (max-width: 560px) { .cands { grid-template-columns: minmax(0, 1fr); } }
+
+/* answers: a row of options per question; statements to tick */
+#fields .field { display: grid; gap: 6px; margin-bottom: 14px; }
+.field .what { font-weight: 600; }
+.field .fb { font-size: 0.9rem; }
+.field .fb:empty { display: none; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.opts label { position: relative; }
+.opts input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.opts span { display: block; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.opts label:hover span { border-color: var(--accent); }
+.opts input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.opts input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.field.ok input:checked + span { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
+.field.bad input:checked + span { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
+.field.ok .fb { color: var(--ok); }
+.stmts { list-style: none; margin: 8px 0 14px; padding: 0; display: grid; gap: 8px; }
+.stmts li { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--card); }
+.stmts label { display: flex; gap: 10px; align-items: baseline; cursor: pointer; }
+.stmts input { flex: none; transform: translateY(1px); }
+.stmts li.ok { border-color: var(--ok); background: var(--ok-bg); }
+.stmts li.bad { border-color: var(--bad); background: var(--bad-bg); }
+.stmts .fb { display: block; font-size: 0.9rem; margin: 4px 0 0 26px; }
+.stmts .fb:empty { display: none; }
+
+/* the pictures of the problems */
+svg.tb .ef-sign { fill: var(--ink); font: 700 16px system-ui, sans-serif; }
+svg.tb .ef-lbl { fill: var(--ink); font: 13px var(--serif); }
+svg.tb .ef-arrow line, svg.tb .ef-field line { stroke: var(--motion); stroke-width: 2; }
+svg.tb .ef-arrow polygon, svg.tb .ef-field polygon { fill: var(--motion); }
+svg.tb .ef-force line { stroke: #c0392b; stroke-width: 2.2; }
+svg.tb .ef-force polygon { fill: #c0392b; }
+svg.tb .ef-weight line { stroke: var(--ink); stroke-width: 2.2; }
+svg.tb .ef-weight polygon { fill: var(--ink); }
+svg.tb .ef-drop { fill: #e3b04b; stroke: var(--ink); stroke-width: 1; }
+svg.tb .ef-dust { fill: #8a7e70; stroke: var(--ink); stroke-width: 0.8; }
+svg.tb .ef-cloud { fill: #c9ced6; stroke: var(--ink); stroke-width: 1.3; }
+svg.tb .ef-bolt { fill: none; stroke: #e8b923; stroke-width: 4; stroke-linejoin: round; }
+svg.tb .ef-flow { fill: none; stroke: #e8b923; stroke-width: 2; stroke-dasharray: 5 4; }
+svg.tb .ef-wire { stroke: var(--ink); stroke-width: 2; }
+svg.tb .ef-laser { stroke: #d32f2f; stroke-width: 2; }
+svg.tb .ef-water { fill: none; stroke: #4f86b8; stroke-width: 5; stroke-linecap: round; }
+
+/* arcade: manim's colours */
+#arcade { --ef-line: #58c4dd; --ef-force: #fc6255; --ef-equi: #f0ac5f; --ef-traj: #c59df5; --ef-pos: #7a3e37; --ef-neg: #34507a; --ef-neu: #444; --ef-metal: #555; --ef-grid: #222; }
+#arcade svg.ef .bg { fill: #000; }
+#arcade svg.ef .lbl { stroke: #000; }
+#arcade .ar-opt .val svg.ef:not(.icon) { width: 100%; max-width: 260px; }
+#arcade .ar-opt .val svg.icon { width: 48px; height: 48px; }
+#arcade .ar-opt .dtile { justify-content: center; }
+.ar-hero .figs .fig svg { width: 320px; }

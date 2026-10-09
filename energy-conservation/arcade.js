@@ -202,7 +202,7 @@
       time: Math.round((Date.now() - game.since) / 1000), points: 0, notes: [], ...extra });
 
     function choose(k) {
-      if (!game || game.over || game.locked) return;
+      if (!game || game.over || game.locked || !cur.q.options[k]) return; // a key beyond the options
       game.locked = true;
       const { q } = cur, o = q.options[k];
       const it = item({ chosen: k, ok: !!o.correct });
