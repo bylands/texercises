@@ -13,6 +13,11 @@
   <script defer src="sign.js"></script>
   <script defer src="generator.js"></script>
   <script defer src="plot.js"></script>
+  <script defer src="figkit.js"></script>
+  <script defer src="figures.js"></script>
+  <script defer src="exercises.js"></script>
+  <script defer src="realproblems.js"></script>
+  <script defer src="problems.js"></script>
   <script defer src="tutor.js"></script>
   <script defer src="arcade.js"></script>
   <script defer src="practice.js"></script>
@@ -41,9 +46,12 @@
       <div id="modes" class="levels" role="radiogroup" data-i18n-label="mode" aria-label="Mode">
         <label><input type="radio" name="mode" value="tutor" checked><span data-i18n="tutor">Tutor</span></label>
         <label><input type="radio" name="mode" value="practice"><span data-i18n="practice">Practice</span></label>
+        <label><input type="radio" name="mode" value="real"><span data-i18n="real">Problems</span></label>
         <label><input type="radio" name="mode" value="arcade"><span data-i18n="arcade">Arcade</span></label>
       </div>
       <div id="levels" class="levels practice" role="radiogroup" data-i18n-label="difficulty" aria-label="Difficulty" hidden></div>
+      <label class="topic-pick real" hidden><span data-i18n="problem">Problem</span><select id="real-pick"></select></label>
+      <button id="real-new" type="button" class="real" data-i18n="newNumbers" hidden>New numbers</button>
       <button id="new" type="button" class="new-btn practice" data-i18n="new" hidden>New exercise</button>
     </div>
 
@@ -53,7 +61,7 @@
       <p id="t-idea" class="note"></p>
       <div id="t-figure"></div>
       <div class="progress" aria-hidden="true"><div id="t-bar"></div></div>
-      <div id="t-text" class="tutor-text" aria-live="polite"></div>
+      <div id="t-text" class="steps tutor-text" aria-live="polite"></div>
       <div class="actions tutor-nav">
         <button type="button" id="t-prev">← Back</button>
         <span id="t-count" class="note"></span>
@@ -62,25 +70,22 @@
       <p class="note" data-i18n-html="tutorNote"></p>
     </section>
 
-    <section id="task" class="card practice" hidden>
+    <section id="task" class="card practice real" hidden>
       <h2 id="title"></h2>
-      <p data-i18n-html="taskText"></p>
-
-      <div id="board">
-        <h3 class="qc-flux" data-i18n="fluxH">Magnetic flux</h3>
-        <div id="flux" class="graphs"></div>
-        <h3 class="qc-volt" data-i18n="voltH">Induced voltage</h3>
-        <div id="volt" class="graphs"></div>
-      </div>
-
-      <div class="actions">
-        <button type="button" id="check" class="primary">Check</button>
-        <button type="button" id="hint">Hint</button>
-        <button type="button" id="reveal" data-i18n="reveal">Show solution</button>
-      </div>
-      <p id="reveal-note" class="note" data-i18n="revealNote"></p>
-      <p id="status" class="status" aria-live="polite"></p>
-      <ul id="feedback" class="feedback"></ul>
+      <div id="prompt"></div>
+      <div id="figure" class="figs"></div>
+      <div id="draw-area" hidden></div>
+      <p id="draw-fb" class="qfb" aria-live="polite"></p>
+      <form id="answers" novalidate>
+        <div id="fields"></div>
+        <div class="actions">
+          <button type="submit" id="check" class="primary">Check</button>
+          <button type="button" id="hint">Hint</button>
+          <button type="button" id="reveal" data-i18n="reveal">Show solution</button>
+        </div>
+        <p id="reveal-note" class="note"></p>
+        <p id="status" class="status" aria-live="polite"></p>
+      </form>
     </section>
 
     <section id="hints" class="card" hidden>
@@ -90,7 +95,8 @@
 
     <section id="solution" class="card" hidden>
       <h3 data-i18n="solution">Solution</h3>
-      <div id="sol-text"></div>
+      <div id="sol-figure"></div>
+      <div id="sol-steps" class="steps"></div>
     </section>
   </main>
 
