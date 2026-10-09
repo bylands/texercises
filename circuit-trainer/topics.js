@@ -34,6 +34,8 @@
 //   T.solved(st)              the current exercise is solved; once per exercise (st.won), not after
 //                             the solution was shown, and a win only at the first try without hints.
 //                             Returns a text when the stage is done, or when the solve did not count.
+//                             When the next step has a worked example of its own, the text and a note
+//                             with a link to it suggest looking at it first.
 //   T.go(t, s)                practise topic t (from the tutor), at stage s or else the stage reached
 //   T.also(t)                 HTML for the tutor: what the practice of topic t covers
 (function (root) {
@@ -42,9 +44,9 @@
   const WINS = 2;
   const TX = {
     en: { topic: 'Topic', mixed: 'All topics (mixed)', stage: 'Step', worked: (i, n) => `Worked example ${i} · ${n}`, like: 'like the example',
-      done: (n) => `Well done! Next step: ${n}.`, notClean: 'To move on to the next step, solve two exercises of this step at the first try without hints.', allSteps: 'all steps', none: 'You have seen all the exercises of this step: move on to the next step or to another topic.', noneLast: 'You have seen all the exercises of this step: move on to another topic.', last: 'Well done! You have reached the last step of this topic; practise on, or choose another topic.', also: 'Practice:' },
+      done: (n) => `Well done! Next step: ${n}.`, notClean: 'To move on to the next step, solve two exercises of this step at the first try without hints.', allSteps: 'all steps', none: 'You have seen all the exercises of this step: move on to the next step or to another topic.', noneLast: 'You have seen all the exercises of this step: move on to another topic.', newWorked: (i, n) => `This step has its own worked example (${i} · ${n}): have a look at it first.`, last: 'Well done! You have reached the last step of this topic; practise on, or choose another topic.', also: 'Practice:' },
     de: { topic: 'Thema', mixed: 'Alle Themen (gemischt)', stage: 'Schritt', worked: (i, n) => `Beispiel ${i} · ${n}`, like: 'wie im Beispiel',
-      done: (n) => `Gut gemacht! Nächster Schritt: ${n}.`, notClean: 'Für den nächsten Schritt löse zwei Aufgaben dieses Schritts beim ersten Versuch ohne Tipps.', allSteps: 'alle Schritte', none: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit dem nächsten Schritt oder einem anderen Thema weiter.', noneLast: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit einem anderen Thema weiter.', last: 'Gut gemacht! Du hast den letzten Schritt dieses Themas erreicht; übe weiter oder wähle ein anderes Thema.', also: 'Üben:' },
+      done: (n) => `Gut gemacht! Nächster Schritt: ${n}.`, notClean: 'Für den nächsten Schritt löse zwei Aufgaben dieses Schritts beim ersten Versuch ohne Tipps.', allSteps: 'alle Schritte', none: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit dem nächsten Schritt oder einem anderen Thema weiter.', noneLast: 'Du hast alle Aufgaben dieses Schritts gesehen: Mach mit einem anderen Thema weiter.', newWorked: (i, n) => `Zu diesem Schritt gibt es ein eigenes Beispiel (${i} · ${n}): Schau es dir zuerst an.`, last: 'Gut gemacht! Du hast den letzten Schritt dieses Themas erreicht; übe weiter oder wähle ein anderes Thema.', also: 'Üben:' },
   };
   const tx = () => TX[root.Lang && root.Lang.get() === 'de' ? 'de' : 'en'];
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -57,6 +59,8 @@
     const topicOfType = (type) => o.topics.findIndex((t) => t.stages.some((s) => s.types.includes(type)));
     // the current choice { topic (−1: mixed), stage }, and per topic the stage reached and the wins in it
     let cur = read('topic', { topic: 0, stage: 0 }), progress = read('progress', {}), el = null, shownTopic = 0;
+    // a step reached by moving on whose worked example is new: { topic, stage }, until the student goes there
+    let suggest = null;
     // the exercises seen in this session, per step ('topic.stage': Set of keys), and whether the
     // current step has run out of new ones
     const seen = new Map();
@@ -117,11 +121,13 @@
       const last = t < 0 || cur.stage >= stagesOf(t).length - 1;
       el.innerHTML = `<label class="topic-pick"><span>${X.topic}</span><select id="topic-pick">${opts}</select></label>${stages}` +
         (w >= 0 && o.tutor ? `<button type="button" class="linklike worked">📖 ${esc(X.worked(wk.i + 1, wk.name()))}</button>` : '') +
-        (runOut ? `<p class="topic-note">${last ? X.noneLast : X.none}</p>` : '');
+        (runOut ? `<p class="topic-note">${last ? X.noneLast : X.none}</p>` : '') +
+        (suggest && suggest.topic === t && suggest.stage === cur.stage && wk && o.tutor ? `<p class="topic-note tip">${esc(X.newWorked(wk.i + 1, wk.name()))} <button type="button" class="linklike worked">📖 ${esc(X.worked(wk.i + 1, wk.name()))}</button></p>` : '');
     }
 
     function choose(t, s) {
       cur = { topic: t, stage: t < 0 ? 0 : Math.max(0, Math.min(s, stagesOf(t).length - 1)) };
+      if (suggest && (suggest.topic !== cur.topic || suggest.stage !== cur.stage)) suggest = null;
       runOut = false;
       write('topic', cur);
       render();
@@ -137,7 +143,11 @@
           else return;
           o.onChange();
         });
-        el.addEventListener('click', (evt) => { if (evt.target.closest('.worked')) o.tutor(cur.topic < 0 ? workedOf(shownTopic).i : workedOf(cur.topic, cur.stage).i); });
+        el.addEventListener('click', (evt) => {
+          if (!evt.target.closest('.worked')) return;
+          if (suggest) { suggest = null; render(); }
+          o.tutor(cur.topic < 0 ? workedOf(shownTopic).i : workedOf(cur.topic, cur.stage).i);
+        });
         render();
       },
       relabel: render,
@@ -189,6 +199,9 @@
             if (cur.topic === t) cur.stage = p.stage;
             write('topic', cur);
             msg = tx().done(`${p.stage + 1} · ${stageName(t, p.stage)}`);
+            // a new part of the tutor: suggest going back to it
+            const before = workedOf(t, p.stage - 1), now = workedOf(t, p.stage);
+            if (o.tutor && now.i !== before.i) { suggest = { topic: t, stage: p.stage }; msg += ` ${tx().newWorked(now.i + 1, now.name())}`; }
           } else if (p.wins === WINS) msg = tx().last;
         }
         progress[t] = p;

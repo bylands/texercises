@@ -9,6 +9,9 @@
 }
 
 #prompt p { margin: 6px 0; }
+/* a vector: an arrow above the letter */
+.vec { position: relative; display: inline-block; }
+.vec::before { content: "→"; position: absolute; left: 0; right: 0; top: -0.62em; text-align: center; font-size: 0.7em; font-style: normal; line-height: 1; }
 .figs .fig { flex: 1 1 100%; }
 .figs svg.mf { display: block; width: 100%; max-width: 460px; height: auto; margin: 0 auto; }
 

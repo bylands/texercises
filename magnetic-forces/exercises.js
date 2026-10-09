@@ -36,6 +36,9 @@
   };
   const dirName = (d) => (d ? L(...DIR[key(d)]) : L('no force', 'keine Kraft'));
   const it = (s) => `<i>${s}</i>`;
+  // a vector: the letter with an arrow above (style.css)
+  const vec = (s) => `<span class="vec"><i>${s}</i></span>`;
+  const LAW = () => `${vec('F')} = <i>q</i> · ${vec('v')} × ${vec('B')}`;
   const vName = (kind) => (kind === 'I' ? L(`the current ${it('I')}`, `der Strom ${it('I')}`) : L(`the velocity ${it('v')}`, `die Geschwindigkeit ${it('v')}`));
   const signName = (q) => (q > 0 ? L('positive', 'positiv') : q < 0 ? L('negative', 'negativ') : L('neutral', 'neutral'));
   const hand = (q) => (q > 0 ? L('Right hand (positive charge)', 'Rechte Hand (positive Ladung)') : L('Left hand (negative charge)', 'Linke Hand (negative Ladung)'));
@@ -165,13 +168,13 @@
       if (B && !AXES.some((x) => same(x, B))) continue;
       const kind2 = kind === 'particles' ? 'v' : 'I';
       const what1 = kind === 'particles' ? L('charge 1', 'Ladung 1') : L('wire 1', 'Draht 1');
-      const howB = !B ? L(`Point P lies on the line along which charge 1 moves: there its field is zero.`, `Der Punkt P liegt auf der Geraden, längs der sich Ladung 1 bewegt: Dort ist ihr Feld null.`)
+      const howB = !B ? L('Charge 2 lies on the line along which charge 1 moves: there the field of charge 1 is zero.', 'Ladung 2 liegt auf der Geraden, längs der sich Ladung 1 bewegt: Dort ist das Feld von Ladung 1 null.')
         : kind === 'particles'
-          ? L(`A moving charge has a field like a short piece of current (a negative charge like a current against its motion). ${q1 > 0 ? 'Right' : 'Left'} hand, thumb along the motion of charge 1 (${dirName(d1)}): the fingers curl ${dirName(Bz)} at P.`,
-            `Eine bewegte Ladung hat ein Feld wie ein kurzes Stromstück (eine negative Ladung wie ein Strom gegen ihre Bewegung). ${q1 > 0 ? 'Rechte' : 'Linke'} Hand, Daumen in Bewegungsrichtung von Ladung 1 (${dirName(d1)}): Die Finger zeigen bei P ${dirName(Bz)}.`)
+          ? L(`A moving charge has a field like a short piece of current (a negative charge like a current against its motion). ${q1 > 0 ? 'Right' : 'Left'} hand, thumb along the motion of charge 1 (${dirName(d1)}): the fingers curl ${dirName(Bz)} at charge 2.`,
+            `Eine bewegte Ladung hat ein Feld wie ein kurzes Stromstück (eine negative Ladung wie ein Strom gegen ihre Bewegung). ${q1 > 0 ? 'Rechte' : 'Linke'} Hand, Daumen in Bewegungsrichtung von Ladung 1 (${dirName(d1)}): Die Finger zeigen bei Ladung 2 ${dirName(Bz)}.`)
           : L(`Right hand around wire 1, thumb along its current (${dirName(d1)}): at wire 2 the fingers point ${dirName(Bz)}.`, `Rechte Hand um Draht 1, Daumen in seiner Stromrichtung (${dirName(d1)}): Bei Draht 2 zeigen die Finger ${dirName(Bz)}.`);
-      const howF = !B ? L('No field at P, so no force on charge 2.', 'Kein Feld bei P, also keine Kraft auf Ladung 2.') : howForce(q2, kind2, d2, Bz);
-      const radial = P.map((x) => Math.sign(Math.round(x * 10))), qB = tiles('B', L(`(a) In which direction does the field of ${what1} point at ${kind === 'particles' ? 'P' : 'wire 2'}?`, `(a) In welche Richtung zeigt das Feld von ${what1} bei ${kind === 'particles' ? 'P' : 'Draht 2'}?`),
+      const howF = !B ? L('No field at charge 2, so no force on it.', 'Kein Feld bei Ladung 2, also keine Kraft auf sie.') : howForce(q2, kind2, d2, Bz);
+      const radial = P.map((x) => Math.sign(Math.round(x * 10))), qB = tiles('B', L(`(a) In which direction does the field of ${what1} point at ${kind === 'particles' ? 'charge 2' : 'wire 2'}?`, `(a) In welche Richtung zeigt das Feld von ${what1} bei ${kind === 'particles' ? 'Ladung 2' : 'Draht 2'}?`),
         forceOptions(r, Bz, B ? [[neg(Bz), 'hand'], ...(AXES.some((x) => same(x, radial)) ? [[AXES.find((x) => same(x, radial)), 'radial']] : []), [d1, 'along'], ...(kind === 'particles' ? [[null, 'nofield']] : [])] : [[[0, 0, 1], 'field'], [[0, 0, -1], 'field']], howB, L('no field', 'kein Feld')).map((o) => ({ ...o, why: o.ok ? '' : `${o.tag && WHYB[o.tag] ? WHYB[o.tag]() + ' ' : ''}${howB}` })));
       const qF = tiles('F', L(`(b) In which direction does the magnetic force on ${kind === 'particles' ? 'charge 2' : 'wire 2'} point?`, `(b) In welche Richtung zeigt die magnetische Kraft auf ${kind === 'particles' ? 'Ladung 2' : 'Draht 2'}?`),
         forceOptions(r, F, F ? [[neg(F), 'hand'], [d2, 'alongV'], [Bz, 'alongB'], [null, 'none']] : [[d2, 'some'], [Bz, 'some']], howF));
@@ -182,8 +185,8 @@
       const fig = scene({ items, vecs, points: kind === 'particles' ? [] : [] });
       const parallelRule = kind === 'parallel' ? L(` So currents in the same direction attract each other, opposite currents repel each other.`, ` Gleich gerichtete Ströme ziehen sich also an, entgegengesetzte stossen sich ab.`) : '';
       const text = kind === 'particles'
-        ? L(`<p>Two charges move as shown: charge 1 is ${signName(q1)}, charge 2 is ${signName(q2)}. Consider only the magnetic force (the electric force between them is larger, but it is not asked here). Charge 2 is at the point P.</p>`,
-          `<p>Zwei Ladungen bewegen sich wie gezeigt: Ladung 1 ist ${signName(q1)}, Ladung 2 ist ${signName(q2)}. Betrachte nur die magnetische Kraft (die elektrische Kraft zwischen ihnen ist grösser, ist hier aber nicht gefragt). Ladung 2 befindet sich im Punkt P.</p>`)
+        ? L(`<p>Two charges move as shown: charge 1 is ${signName(q1)}, charge 2 is ${signName(q2)}. Consider only the magnetic force (the electric force between them is larger, but it is not asked here).</p>`,
+          `<p>Zwei Ladungen bewegen sich wie gezeigt: Ladung 1 ist ${signName(q1)}, Ladung 2 ist ${signName(q2)}. Betrachte nur die magnetische Kraft (die elektrische Kraft zwischen ihnen ist grösser, ist hier aber nicht gefragt).</p>`)
         : kind === 'parallel'
           ? L(`<p>Two long straight wires carry currents ${d2 === d1 || same(d2, d1) ? 'in the same direction' : 'in opposite directions'}, as shown.</p>`, `<p>Zwei lange gerade Drähte führen Ströme ${same(d2, d1) ? 'in derselben Richtung' : 'in entgegengesetzten Richtungen'}, wie gezeigt.</p>`)
           : L(`<p>A long straight wire 1 carries a current ${dirName(d1)}. Near it, a short piece of wire 2 carries a current ${dirName(d2)}.</p>`, `<p>Ein langer gerader Draht 1 führt einen Strom ${dirName(d1)}. In seiner Nähe führt ein kurzes Drahtstück 2 einen Strom ${dirName(d2)}.</p>`);
@@ -325,7 +328,9 @@
       solution: [how, howT], p: { name, v, B },
     };
   }
-  const RATIO = [[1, 1, 'proton', ['a proton', 'ein Proton']], [2, 1, 'deuteron', ['a deuteron', 'ein Deuteron']], [3, 1, 'triton', ['a triton', 'ein Triton']], [4, 2, 'alpha', ['an alpha particle', 'ein Alphateilchen']], [4, 1, 'he', ['a He⁺ ion', 'ein He⁺-Ion']], [12, 6, 'c6', ['a C⁶⁺ ion', 'ein C⁶⁺-Ion']]];
+  // [mass in u, charge in e, id, [en, de], the German genitive]
+  const RATIO = [[1, 1, 'proton', ['a proton', 'ein Proton'], 'eines Protons'], [2, 1, 'deuteron', ['a deuteron', 'ein Deuteron'], 'eines Deuterons'], [3, 1, 'triton', ['a triton', 'ein Triton'], 'eines Tritons'],
+    [4, 2, 'alpha', ['an alpha particle', 'ein Alphateilchen'], 'eines Alphateilchens'], [4, 1, 'he', ['a He⁺ ion', 'ein He⁺-Ion'], 'eines He⁺-Ions'], [12, 6, 'c6', ['a C⁶⁺ ion', 'ein C⁶⁺-Ion'], 'eines C⁶⁺-Ions']];
   const frac = (x) => (Math.abs(x - 1) < 1e-9 ? L('the same', 'gleich gross') : x > 1 ? L(`${nice(x)} times as large`, `${nice(x)}-mal so gross`) : L(`1/${nice(1 / x)} as large`, `1/${nice(1 / x)} so gross`));
   function radiusCompare(seed) {
     const r = rng(seed * 61 + 31);
@@ -346,9 +351,9 @@
         text: L(`<p>${L(...a[3]).replace(/^./, (c) => c.toUpperCase())} and ${L(...b[3])} move at the same speed perpendicular to the same uniform magnetic field.</p>`, `<p>${L(...a[3]).replace(/^./, (c) => c.toUpperCase())} und ${L(...b[3])} bewegen sich mit derselben Geschwindigkeit senkrecht zum selben homogenen Magnetfeld.</p>`),
         figs: '',
         questions: [
-          choice('r', L(`(a) Compared with ${L(...a[3])}, the radius of ${L(...b[3])} is`, `(a) Verglichen mit ${L(...a[3])} ist der Radius von ${L(...b[3])}`), mk(opt(ratio, [1 / ratio, ratio * ratio, ratio * 2, 1, 2, 0.5]), how)),
-          choice('T', L(`(b) Compared with ${L(...a[3])}, the time for one turn of ${L(...b[3])} is`, `(b) Verglichen mit ${L(...a[3])} ist die Umlaufzeit von ${L(...b[3])}`), mk(opt(ratio, [1, 1 / ratio, ratio * 2, 2, 0.5]), how)),
-          choice('c', change === 'v' ? L(`(c) If ${L(...a[3])} were twice as fast, its radius would be`, `(c) Wäre ${L(...a[3])} doppelt so schnell, wäre sein Radius`) : L(`(c) In a field twice as strong, the radius of ${L(...a[3])} would be`, `(c) In einem doppelt so starken Feld wäre der Radius von ${L(...a[3])}`),
+          choice('r', L(`(a) Compared with the circle of ${L(...a[3])}, the radius of the circle of ${L(...b[3])} is`, `(a) Verglichen mit der Kreisbahn ${a[4]} ist der Radius der Kreisbahn ${b[4]}`), mk(opt(ratio, [1 / ratio, ratio * ratio, ratio * 2, 1, 2, 0.5]), how)),
+          choice('T', L(`(b) Compared with the time for one turn of ${L(...a[3])}, the time for one turn of ${L(...b[3])} is`, `(b) Verglichen mit der Umlaufzeit ${a[4]} ist die Umlaufzeit ${b[4]}`), mk(opt(ratio, [1, 1 / ratio, ratio * 2, 2, 0.5]), how)),
+          choice('c', change === 'v' ? L(`(c) If ${L(...a[3])} were twice as fast, the radius of its circle would be`, `(c) Wäre ${L(...a[3])} doppelt so schnell, wäre der Radius seiner Kreisbahn`) : L(`(c) In a field twice as strong, the radius of the circle of ${L(...a[3])} would be`, `(c) In einem doppelt so starken Feld wäre der Radius der Kreisbahn ${a[4]}`),
             mk(opt(change === 'v' ? 2 : 0.5, [1, 4, 0.25, 2, 0.5]), howC)),
         ],
         hints: [L('r = m·v/(q·B) and T = 2π·m/(q·B).', 'r = m·v/(q·B) und T = 2π·m/(q·B).'), L('Compare m/q: u for the mass unit, e for the elementary charge.', 'Vergleiche m/q: u als Masseneinheit, e als Elementarladung.')],
@@ -433,7 +438,22 @@
     [() => L('A neutral particle is not deflected by a magnetic field.', 'Ein neutrales Teilchen wird von einem Magnetfeld nicht abgelenkt.'), true, () => L('The force is proportional to the charge.', 'Die Kraft ist proportional zur Ladung.')],
     [() => L('In a uniform field, a charge that starts at an angle to the field moves on a helix.', 'In einem homogenen Feld bewegt sich eine Ladung, die schräg zum Feld startet, auf einer Schraubenlinie.'), true, () => L('It circles across the field and moves on along it.', 'Sie kreist quer zum Feld und bewegt sich längs des Feldes weiter.')],
     [() => L('The magnetic force increases the kinetic energy of a charge circling in a field.', 'Die magnetische Kraft erhöht die kinetische Energie einer Ladung, die in einem Feld kreist.'), false, () => L('It does no work: the speed stays the same.', 'Sie verrichtet keine Arbeit: Der Betrag der Geschwindigkeit bleibt gleich.')],
-    [() => L('For a negative charge, the force points the other way than for a positive one.', 'Bei einer negativen Ladung zeigt die Kraft in die Gegenrichtung als bei einer positiven.'), true, () => L('F = q·v × B changes sign with q: hence the left hand.', 'F = q·v × B wechselt mit q das Vorzeichen: daher die linke Hand.')],
+    [() => L('For a negative charge, the force points the other way than for a positive one.', 'Bei einer negativen Ladung zeigt die Kraft in die Gegenrichtung als bei einer positiven.'), true, () => L(`${LAW()} changes sign with q: hence the left hand.`, `${LAW()} wechselt mit q das Vorzeichen: daher die linke Hand.`)],
+    [() => L('The magnetic force on a current-carrying wire is perpendicular to the wire.', 'Die magnetische Kraft auf einen stromdurchflossenen Draht steht senkrecht zum Draht.'), true, () => L('Like the force on a moving charge, it is perpendicular to the current and to the field.', 'Wie die Kraft auf eine bewegte Ladung steht sie senkrecht zum Strom und zum Feld.')],
+    [() => L('A wire carrying a current along the field lines feels no magnetic force.', 'Ein Draht, dessen Strom längs der Feldlinien fliesst, spürt keine magnetische Kraft.'), true, () => L('The current must have a part across the field.', 'Der Strom muss einen Teil quer zum Feld haben.')],
+    [() => L('The field of a long straight current points away from the wire.', 'Das Feld eines langen geraden Stroms zeigt vom Draht weg.'), false, () => L('Its field lines are circles around the wire.', 'Seine Feldlinien sind Kreise um den Draht.')],
+    [() => L('The field of a long straight current gets weaker further from the wire.', 'Das Feld eines langen geraden Stroms wird mit dem Abstand vom Draht schwächer.'), true, () => L('B = μ₀·I/(2π·r).', 'B = μ₀·I/(2π·r).')],
+    [() => L('In a field twice as strong, a charge circles on a circle half as large.', 'In einem doppelt so starken Feld kreist eine Ladung auf einem halb so grossen Kreis.'), true, () => L('r = m·v/(q·B).', 'r = m·v/(q·B).')],
+    [() => L('In a field twice as strong, a charge needs twice the time for one turn.', 'In einem doppelt so starken Feld braucht eine Ladung die doppelte Zeit für einen Umlauf.'), false, () => L('T = 2π·m/(q·B): the period halves.', 'T = 2π·m/(q·B): Die Umlaufzeit halbiert sich.')],
+    [() => L('With the same charge and speed, a heavier particle moves on a larger circle.', 'Bei gleicher Ladung und Geschwindigkeit bewegt sich ein schwereres Teilchen auf einem grösseren Kreis.'), true, () => L('r = m·v/(q·B) grows with the mass.', 'r = m·v/(q·B) wächst mit der Masse.')],
+    [() => L('A velocity selector lets through only particles of one particular mass.', 'Ein Geschwindigkeitsfilter lässt nur Teilchen einer bestimmten Masse durch.'), false, () => L('It lets through all particles with v = E/B, whatever their mass and charge.', 'Es lässt alle Teilchen mit v = E/B durch, unabhängig von Masse und Ladung.')],
+    [() => L('A charge that starts at an angle to a uniform field keeps the part of its velocity along the field.', 'Eine Ladung, die schräg zu einem homogenen Feld startet, behält den Teil ihrer Geschwindigkeit längs des Feldes.'), true, () => L('Along the field there is no force.', 'Längs des Feldes gibt es keine Kraft.')],
+    [() => L('Where the field gets stronger, a circling charge moves on tighter circles.', 'Wo das Feld stärker wird, bewegt sich eine kreisende Ladung auf engeren Kreisen.'), true, () => L('r = m·v/(q·B) shrinks as B grows.', 'r = m·v/(q·B) wird kleiner, wenn B wächst.')],
+    [() => L('The force on a moving charge is largest when it moves perpendicular to the field.', 'Die Kraft auf eine bewegte Ladung ist am grössten, wenn sie sich senkrecht zum Feld bewegt.'), true, () => L('F = q·v·B·sin α, largest for α = 90°.', 'F = q·v·B·sin α, am grössten für α = 90°.')],
+    [() => L('An electron beam and a proton beam with the same velocity are deflected the same way.', 'Ein Elektronenstrahl und ein Protonenstrahl mit derselben Geschwindigkeit werden in dieselbe Richtung abgelenkt.'), false, () => L('Their charges have opposite signs: they are deflected in opposite directions.', 'Ihre Ladungen haben entgegengesetzte Vorzeichen: Sie werden in entgegengesetzte Richtungen abgelenkt.')],
+    [() => L('Two electrons moving side by side in the same direction attract each other magnetically.', 'Zwei Elektronen, die sich nebeneinander in dieselbe Richtung bewegen, ziehen sich magnetisch an.'), true, () => L('Like two parallel currents (though the electric repulsion between them is much stronger).', 'Wie zwei parallele Ströme (allerdings ist die elektrische Abstossung zwischen ihnen viel stärker).')],
+    [() => L('A very strong magnetic field exerts a force on a charge at rest.', 'Ein sehr starkes Magnetfeld übt eine Kraft auf eine ruhende Ladung aus.'), false, () => L('Without motion there is no magnetic force, however strong the field.', 'Ohne Bewegung gibt es keine magnetische Kraft, wie stark das Feld auch ist.')],
+    [() => L('In a cyclotron, the frequency must be raised as the protons get faster.', 'In einem Zyklotron muss die Frequenz erhöht werden, wenn die Protonen schneller werden.'), false, () => L('The period T = 2π·m/(q·B) does not depend on the speed (as long as the protons are much slower than light).', 'Die Umlaufzeit T = 2π·m/(q·B) hängt nicht von der Geschwindigkeit ab (solange die Protonen viel langsamer als das Licht sind).')],
   ];
   function statements(seed) {
     const r = rng(seed * 73 + 43);
@@ -463,7 +483,7 @@
     return { ...f(seed), type, difficulty, id: `${type}-${seed}`, seed };
   }
 
-  const api = { TYPES: Object.keys(TYPES), make, dirName, howForce, RULE, PERP, GRIP, hand, signName, tile, sci, nice, show, values, PNAME };
+  const api = { TYPES: Object.keys(TYPES), make, vec, LAW, dirName, howForce, RULE, PERP, GRIP, hand, signName, tile, sci, nice, show, values, PNAME };
   root.MagEx = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
