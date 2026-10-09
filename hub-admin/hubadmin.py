@@ -449,6 +449,8 @@ def make_handler(admin: Admin):
                 self.send(200, panel_page() if self.logged_in() else login_page(bool(admin.stored_hash())))
             elif path == "/static/admin.js":
                 self.send(200, ADMIN_JS, "text/javascript; charset=utf-8")
+            elif path == "/static/drag.js":
+                self.send(200, DRAG_JS, "text/javascript; charset=utf-8")
             elif path == "/static/sets.js":
                 self.send(200, SETS_JS, "text/javascript; charset=utf-8")
             elif path == "/static/admin.css":
@@ -515,7 +517,7 @@ def page(title: str, body: str, script: bool = False) -> str:
   <meta name="robots" content="noindex">
   <title>{escape(title)}</title>
   <link rel="stylesheet" href="/admin/static/admin.css">
-  {'<script defer src="/admin/static/admin.js"></script><script defer src="/admin/static/sets.js"></script>' if script else ''}
+  {'<script defer src="/admin/static/drag.js"></script><script defer src="/admin/static/admin.js"></script><script defer src="/admin/static/sets.js"></script>' if script else ''}
 </head>
 <body>
   <header class="wrap">
@@ -608,6 +610,11 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .app.moved { border-color: var(--accent); }
 .move { display: flex; flex-direction: column; gap: 4px; }
 .move button { padding: 2px 9px; line-height: 1.3; }
+.drag { display: block; text-align: center; padding: 6px 0; font-size: 1.15rem; line-height: 1; color: var(--muted); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.drag:hover { color: var(--accent); }
+.dragging { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); position: relative; z-index: 2; }
+body.drag-active, body.drag-active * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+.setapp.moved { border-color: var(--accent); }
 .app h2 { margin: 0; font-size: 1.05rem; }
 .app .id { color: var(--muted); font-size: 0.85rem; margin-left: 6px; font-weight: 400; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
@@ -658,6 +665,75 @@ h2.section { font-size: 1.15rem; margin: 28px 0 4px; }
 .outline-frame { position: absolute; left: -10000px; top: 0; width: 1024px; height: 768px; border: 0; visibility: hidden; }
 .empty { color: var(--muted); }
 @media (max-width: 560px) { .view { margin-left: 0; } .add input { width: 9em; } .setform { grid-template-columns: 1fr; } }
+"""
+
+DRAG_JS = r"""
+// Drag to reorder (the arrows stay, for the keyboard): AdminDrag.handle(onMove) is a handle to put
+// in an item (an li) of a list. Dragged, the item takes the place the pointer is at among its
+// siblings, the page scrolling near its edges; on release, onMove(from, to) gets its old and new
+// index. Escape puts it back.
+(function () {
+  'use strict';
+  const EDGE = 70; // px from the window's edge where the page scrolls
+  const mid = (e) => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; };
+
+  function handle(onMove) {
+    const h = document.createElement('span');
+    h.className = 'drag';
+    h.textContent = '⠿';
+    h.title = 'Drag to move';
+    h.setAttribute('aria-hidden', 'true');
+    h.addEventListener('pointerdown', (e) => {
+      const li = h.closest('li'), list = li && li.parentElement;
+      if (!list || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      e.preventDefault();
+      const index = () => [...list.children].indexOf(li);
+      const from = index(), after = li.nextElementSibling;
+      let y = e.clientY, frame = 0, done = false;
+      h.setPointerCapture(e.pointerId);
+      li.classList.add('dragging');
+      document.body.classList.add('drag-active');
+
+      // past the middle of a sibling: take its place
+      const place = () => {
+        let p;
+        while ((p = li.previousElementSibling) && y < mid(p)) list.insertBefore(li, p);
+        while ((p = li.nextElementSibling) && y > mid(p)) list.insertBefore(p, li);
+      };
+      const scroll = () => {
+        frame = 0;
+        const d = y < EDGE ? -1 : y > innerHeight - EDGE ? 1 : 0;
+        if (!d) return;
+        const before = scrollY;
+        scrollBy(0, d * Math.ceil((EDGE - (d < 0 ? y : innerHeight - y)) / 4));
+        if (scrollY !== before) { place(); frame = requestAnimationFrame(scroll); }
+      };
+      const moveTo = (ev) => { y = ev.clientY; place(); if (!frame) frame = requestAnimationFrame(scroll); };
+      const end = (keep) => {
+        if (done) return;
+        done = true;
+        cancelAnimationFrame(frame);
+        h.removeEventListener('pointermove', moveTo);
+        h.removeEventListener('pointerup', up);
+        h.removeEventListener('pointercancel', cancel);
+        document.removeEventListener('keydown', key, true);
+        li.classList.remove('dragging');
+        document.body.classList.remove('drag-active');
+        const to = index();
+        if (keep && to !== from) onMove(from, to);
+        else if (to !== from) list.insertBefore(li, after);
+      };
+      const up = () => end(true), cancel = () => end(false);
+      const key = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); end(false); } };
+      h.addEventListener('pointermove', moveTo);
+      h.addEventListener('pointerup', up);
+      h.addEventListener('pointercancel', cancel);
+      document.addEventListener('keydown', key, true);
+    });
+    return h;
+  }
+  window.AdminDrag = { handle };
+})();
 """
 
 ADMIN_JS = r"""
@@ -713,6 +789,7 @@ ADMIN_JS = r"""
       return el('li', { class: 'app', 'data-id': id },
         el('div', { class: 'move' },
           el('button', { type: 'button', 'aria-label': `Move ${nameOf(id)} up`, onclick: () => move(i, -1), ...(i === 0 ? { disabled: '' } : {}) }, '↑'),
+          AdminDrag.handle((from, to) => { order.splice(to, 0, order.splice(from, 1)[0]); changed(); renderApps({ id, what: 'drop' }); }),
           el('button', { type: 'button', 'aria-label': `Move ${nameOf(id)} down`, onclick: () => move(i, 1), ...(i === order.length - 1 ? { disabled: '' } : {}) }, '↓')),
         el('div', {},
           el('h2', {}, nameOf(id), el('span', { class: 'id' }, `/${id}/`)),
@@ -727,6 +804,7 @@ ADMIN_JS = r"""
       const li = list.querySelector(`li[data-id="${focus.id}"]`);
       if (li) {
         if (focus.what === 'input') li.querySelector('input').focus();
+        else if (focus.what === 'drop') li.classList.add('moved');
         else { const b = li.querySelectorAll('.move button')[focus.what === 'up' ? 0 : 1]; (b.disabled ? li.querySelector('.move button:not(:disabled)') : b).focus(); li.classList.add('moved'); }
       }
     }
@@ -894,6 +972,7 @@ SETS_JS = r"""
         el('button', { type: 'button', onclick: () => { unused.forEach((a) => s.apps.push({ id: a.id, modes: [...a.modes] })); changed(); render(); } }, 'Add all')) : ''));
     if (focus && focus.name) name.focus();
     if (focus && focus.add) { const p = box.querySelector('.addapp select'); if (p) p.focus(); }
+    if (focus && focus.dropped != null) { const b = box.querySelectorAll('.setapp')[focus.dropped]; if (b) b.classList.add('moved'); }
     if (focus && focus.move) { const b = box.querySelectorAll('.setapp')[focus.move.k]; if (b) b.querySelectorAll('.move button')[focus.move.up ? 0 : 1].focus(); }
   }
   // only the buttons of the list (typing in the editor keeps its focus)
@@ -923,6 +1002,7 @@ SETS_JS = r"""
     return el('li', { class: 'setapp' },
       el('div', { class: 'move' },
         el('button', { type: 'button', 'aria-label': `Move ${info.name} up`, disabled: k === 0, onclick: () => move(-1) }, '↑'),
+        AdminDrag.handle((from, to) => { s.apps.splice(to, 0, s.apps.splice(from, 1)[0]); changed(); render({ dropped: to }); }),
         el('button', { type: 'button', 'aria-label': `Move ${info.name} down`, disabled: k === s.apps.length - 1, onclick: () => move(1) }, '↓')),
       el('div', {},
         el('div', { class: 'head' }, el('h3', {}, info.name),
