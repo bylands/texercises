@@ -886,11 +886,14 @@
         title.hidden = !s;
         if (s) document.title = `${title.textContent} · Learning Physics`;
         try { if (s) sessionStorage.setItem('lp-set', JSON.stringify({ name: setName, set: s })); else sessionStorage.removeItem('lp-set'); } catch (e) { /* storage unavailable */ }
+        if ((s && s.lang) !== Lang.fixed()) { Lang.fix(s && s.lang); tags(); }
         texts();
         document.documentElement.classList.add('set-ready');
       }
 
       Lang.init();
+      // the set's language at once, if it is known in this tab (it may have changed: see showSet)
+      try { const st = JSON.parse(sessionStorage.getItem('lp-set')); if (setName && st && st.name === setName && st.set) Lang.fix(st.set.lang); } catch (e) { /* none */ }
       texts();
       arrange();
       Lang.wire(() => { texts(); tags(); });

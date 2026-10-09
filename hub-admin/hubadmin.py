@@ -19,11 +19,12 @@ cards in its order, shows their tags, and lets visitors filter by tag. This serv
 A set is opened at learningphysics.ch/<name> (nginx serves the hub page for it, which then shows
 only the set's apps; see hub/index.html and shared/sets.js, which applies the set in the apps):
 
-    {"sets": {"3a-elektro": {"title": "Klasse 3a", "apps": [
+    {"sets": {"3a-elektro": {"title": "Klasse 3a", "lang": "de", "apps": [
         {"id": "electric-field", "modes": ["tutor", "practice", "arcade"],
          "tutor": [0, 1, 3], "practice": ["force-dir", "lines-pick+lines-read"]}]}}}
 
-The apps in the order of the set's page; for each, its modes in the set (of those its hub card
+The language, if the set fixes it ("en" or "de"; without it, the students choose); the apps in
+the order of the set's page; for each, its modes in the set (of those its hub card
 lists) and, optionally, the worked examples of the tutor (indices) and the stages of practice
 (their exercise types joined with +), which also limit the arcade where its questions are of
 those types; without the list, all of them. The admin panel reads the examples and stages from
@@ -243,7 +244,7 @@ def normalize_set_app(raw: object, apps: Dict[str, Dict[str, object]]) -> Option
 
 
 def normalize_sets(data: object, apps: List[Dict[str, object]], taken=lambda name: False, strict: bool = True) -> Dict[str, object]:
-    """{"sets": {name: {"title": ..., "apps": [...]}}} for the given apps: titles cleaned (at most
+    """{"sets": {name: {"title": ..., "lang"?: ..., "apps": [...]}}} for the given apps: titles cleaned (at most
     MAX_TITLE), apps known and each once, at most MAX_SETS sets. A name that cannot be is an error
     (ValueError) if strict, else the set is dropped (on reading a file written before)."""
     by_id = {a["id"]: a for a in apps}
@@ -266,6 +267,8 @@ def normalize_sets(data: object, apps: List[Dict[str, object]], taken=lambda nam
             if entry and all(c["id"] != entry["id"] for c in chosen):
                 chosen.append(entry)
         out[name] = {"title": title, "apps": chosen}
+        if raw.get("lang") in ("en", "de"):
+            out[name]["lang"] = raw["lang"]
         if len(out) >= MAX_SETS:
             break
     return {"sets": out}
@@ -364,12 +367,18 @@ class Admin:
         root = self.hub.parent
         return any((root / n).exists() for n in (name, name + ".html", name + ".json"))
 
-    def current_sets(self) -> Dict[str, object]:
+    def standard_apps(self) -> List[Dict[str, object]]:
+        """The apps in the hub page's standard order (apps.json's)."""
         apps = self.apps()
+        order = normalize(read_config(self.config), [a["id"] for a in apps])["order"]
+        return sorted(apps, key=lambda a: order.index(a["id"]) if a["id"] in order else len(order))
+
+    def current_sets(self) -> Dict[str, object]:
+        apps = self.standard_apps()
         return {"apps": apps, **normalize_sets(read_config(self.sets), apps, self.taken, strict=False)}
 
     def save_sets(self, data: object) -> Dict[str, object]:
-        apps = self.apps()
+        apps = self.standard_apps()
         if not apps:
             raise ValueError("the hub page lists no apps")
         sets = normalize_sets(data, apps, self.taken)
@@ -643,6 +652,7 @@ h2.section { font-size: 1.15rem; margin: 28px 0 4px; }
 .setform { display: grid; grid-template-columns: 1fr 2fr; gap: 0 14px; }
 .setform .field { margin: 0 0 10px; }
 .setform input.bad { border-color: var(--bad); }
+.setform select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
 .setactions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 16px; }
 .setactions a { color: var(--accent); }
 .setactions .danger { margin-left: auto; color: var(--bad); }
@@ -845,6 +855,7 @@ ADMIN_JS = r"""
     apps = cfg.apps; order = cfg.order; tags = cfg.tags || {}; labels = cfg.labels || {};
     dirty = false; $('#save').disabled = true;
     renderApps(); renderTags();
+    window.dispatchEvent(new CustomEvent('admin-order', { detail: order })); // the sets' list of apps (sets.js)
   }
 
   async function load() {
@@ -880,7 +891,8 @@ ADMIN_JS = r"""
 SETS_JS = r"""
 // The sets of the admin panel, and the switch between its two views (#sets, the first, and #apps:
 // the order and tags of the apps on the hub page, see admin.js). A set is
-// { title, apps: [{ id, modes, tutor?, practice? }] } under its name; tutor and practice list the
+// { title, lang?, apps: [{ id, modes, tutor?, practice? }] } under its name; lang fixes the language
+// ('en', 'de'; without it, the students choose); tutor and practice list the
 // worked examples (indices) and practice stages (keys) shown, all of them without the list. The
 // examples and stages of an app (its outline) come from the app itself, loaded with ?outline=1 in
 // a hidden frame that posts them here.
@@ -892,6 +904,8 @@ SETS_JS = r"""
   let apps = [], sets = [], sel = -1, dirty = false, loaded = false;
   const outlines = {}; // app id → Promise of its outline
   const shown = new Set(); // apps whose sections are open, as 'set index:app id'
+  const added = new Map(); // set → the app last added to it, whose next one the list of apps offers first
+  const LANGS = { '': 'English or German (students choose)', en: 'English only', de: 'German only' };
 
   function el(tag, attrs, ...kids) {
     const e = document.createElement(tag);
@@ -957,19 +971,25 @@ SETS_JS = r"""
     });
     const title = el('input', { type: 'text', value: s.title, maxlength: String(MAX_TITLE), placeholder: 'e.g. Klasse 3a · Elektrizität' });
     title.addEventListener('input', () => { s.title = title.value; changed(); renderList(); });
+    const lang = el('select', {}, ...Object.entries(LANGS).map(([k, t]) => el('option', { value: k, selected: (s.lang || '') === k }, t)));
+    lang.addEventListener('change', () => { if (lang.value) s.lang = lang.value; else delete s.lang; changed(); });
+    // the apps not in the set, in the standard order; first the one after the app last added
     const unused = apps.filter((a) => !s.apps.some((x) => x.id === a.id));
-    const pick = el('select', { 'aria-label': 'App to add' }, ...unused.map((a) => el('option', { value: a.id }, a.name)));
+    const last = apps.findIndex((a) => a.id === (added.get(s) || (s.apps.length ? s.apps[s.apps.length - 1].id : null)));
+    const next = unused.find((a) => apps.indexOf(a) > last) || unused[0];
+    const pick = el('select', { 'aria-label': 'App to add' }, ...unused.map((a) => el('option', { value: a.id, selected: a === next }, a.name)));
     box.replaceChildren(el('div', { class: 'card' },
       el('div', { class: 'setform' },
         el('label', { class: 'field' }, el('span', {}, 'Name (the address)'), name),
-        el('label', { class: 'field' }, el('span', {}, 'Title on the set’s page (optional)'), title)),
+        el('label', { class: 'field' }, el('span', {}, 'Title on the set’s page (optional)'), title),
+        el('label', { class: 'field' }, el('span', {}, 'Language'), lang)),
       el('div', { class: 'setactions' },
         s.saved && s.saved === s.name ? el('a', { href: `/${s.name}`, target: '_blank', rel: 'noopener', id: 'set-url' }, `learningphysics.ch/${s.name} ↗`) : el('span', { class: 'note', id: 'set-url' }, `learningphysics.ch/${s.name}`),
         el('button', { type: 'button', onclick: () => duplicate(i) }, 'Duplicate'),
         el('button', { type: 'button', class: 'danger', onclick: () => remove(i) }, 'Delete set')),
       s.apps.length ? el('ol', { class: 'setapps' }, ...s.apps.map((a, k) => appRow(s, a, k))) : el('p', { class: 'empty' }, 'No apps yet: add some below.'),
       unused.length ? el('div', { class: 'addapp' }, pick,
-        el('button', { type: 'button', onclick: () => { s.apps.push({ id: pick.value, modes: [...appOf(pick.value).modes] }); changed(); render({ add: true }); } }, 'Add app'),
+        el('button', { type: 'button', onclick: () => { s.apps.push({ id: pick.value, modes: [...appOf(pick.value).modes] }); added.set(s, pick.value); changed(); render({ add: true }); } }, 'Add app'),
         el('button', { type: 'button', onclick: () => { unused.forEach((a) => s.apps.push({ id: a.id, modes: [...a.modes] })); changed(); render(); } }, 'Add all')) : ''));
     if (focus && focus.name) name.focus();
     if (focus && focus.add) { const p = box.querySelector('.addapp select'); if (p) p.focus(); }
@@ -1103,7 +1123,7 @@ SETS_JS = r"""
   function apply(data, keepSel) {
     const before = sel >= 0 && sets[sel] ? sets[sel].name : null;
     apps = data.apps || [];
-    sets = Object.entries(data.sets || {}).map(([name, s]) => ({ name, title: s.title || '', apps: s.apps || [], saved: name }));
+    sets = Object.entries(data.sets || {}).map(([name, s]) => ({ name, title: s.title || '', ...(s.lang ? { lang: s.lang } : {}), apps: s.apps || [], saved: name }));
     sel = keepSel && before ? sets.findIndex((s) => s.name === before) : sets.length ? 0 : -1;
     if (sel < 0 && sets.length) sel = 0;
     dirty = false;
@@ -1122,7 +1142,7 @@ SETS_JS = r"""
     $('#sets-save').disabled = true;
     status('Saving…');
     try {
-      const body = { sets: Object.fromEntries(sets.map((s) => [s.name, { title: s.title.trim(), apps: s.apps }])) };
+      const body = { sets: Object.fromEntries(sets.map((s) => [s.name, { title: s.title.trim(), ...(s.lang ? { lang: s.lang } : {}), apps: s.apps }])) };
       const r = await fetch('/admin/api/sets', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (r.status === 403) { status('Logged out: log in again (your changes are lost on reload)', 'bad'); $('#sets-save').disabled = false; return; }
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
@@ -1144,6 +1164,12 @@ SETS_JS = r"""
   }
   window.addEventListener('hashchange', view);
   $('#sets-save').addEventListener('click', save);
+  // the standard order, saved in the other view: the list of apps to add follows it
+  window.addEventListener('admin-order', (e) => {
+    const order = e.detail || [];
+    apps = [...apps].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+    if (loaded) render();
+  });
   window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
   view();
 })();

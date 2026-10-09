@@ -216,7 +216,7 @@ class Service(unittest.TestCase):
         data = json.loads(body)
         self.assertEqual(data["sets"], {})
         self.assertIn({"id": "torque", "name": "Torque", "modes": ["tutor", "practice", "real", "arcade"]}, data["apps"])
-        new = {"sets": {"3a-elektro": {"title": "Klasse 3a", "apps": [
+        new = {"sets": {"3a-elektro": {"title": "Klasse 3a", "lang": "de", "apps": [
             {"id": "electric-field", "modes": ["tutor", "practice", "arcade"], "tutor": [0, 1, 3], "practice": ["force-dir", "lines-pick+lines-read"]},
             {"id": "torque", "modes": ["real"]}]}}}
         self.assertEqual(self.req("/api/sets", json.dumps(new).encode(), "application/json")[0], 403)
@@ -226,6 +226,13 @@ class Service(unittest.TestCase):
         self.assertEqual(json.loads(body)["sets"], new["sets"])
         self.assertEqual(json.loads(self.sets.read_text()), new)
         self.assertEqual(json.loads(self.req("/api/sets", cookie=cookie)[2])["sets"], new["sets"])
+        # a language other than English or German: the students choose
+        st, _, body = self.req("/api/sets", json.dumps({"sets": {"x": {"lang": "fr"}}}).encode(), "application/json", cookie)
+        self.assertEqual(json.loads(body)["sets"], {"x": {"title": "", "apps": []}})
+        self.req("/api/sets", json.dumps(new).encode(), "application/json", cookie)
+        # the apps in the standard order (apps.json's)
+        self.req("/api/config", json.dumps({"order": ["torque", "coulomb"], "tags": {}, "labels": {}}).encode(), "application/json", cookie)
+        self.assertEqual([a["id"] for a in json.loads(self.req("/api/sets", cookie=cookie)[2])["apps"]][:2], ["torque", "coulomb"])
         # names that cannot be: nothing is written
         (Path(self.dir.name) / "privacy-old").mkdir()
         for name, why in [("torque", "name of an app"), ("admin", "taken"), ("privacy-old", "taken"), ("index", "taken"), ("Klasse 3a", "not a valid")]:

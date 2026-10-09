@@ -15,6 +15,8 @@
 //   LPSets.register(what, x)   topics.js ('topics', the app's topics) and tutor.js ('tutor',
 //                              { names() }) say what the app has
 //   LPSets.stageKey(stage)     a stage's key: its types joined with '+'
+//   LPSets.lang()              the language the set fixes ('en', 'de'), or null (the student's
+//                              choice); lang.js asks for it
 // With ?outline=1 (the admin panel loads the app in a hidden frame), the app posts its modes,
 // worked examples and topics with their stages to the page that holds the frame (same origin).
 (function (root) {
@@ -76,6 +78,7 @@
     kinds: (kinds) => filterKinds(kinds, reg.topics, LPSets.practice()),
     register(what, x) { reg[what] = x; },
     stageKey,
+    lang: () => (set && ['en', 'de'].includes(set.lang) ? set.lang : null),
   };
   root.LPSets = LPSets;
 

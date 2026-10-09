@@ -1,6 +1,7 @@
 // Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh): the page
 // language, English or German. It comes from ?lang=de in the address, else the last choice in any
-// of the apps (they share their storage), else the browser's language.
+// of the apps (they share their storage), else the browser's language. A teacher's set can fix the
+// language (see sets.js): then the EN/DE switch is hidden and the choice is not remembered.
 //   Lang.L(en, de)        the text in the current language
 //   Lang.get(), set(l)    the language; set() remembers it
 //   Lang.apply(dict)      fills in [data-i18n] (text), [data-i18n-html] and [data-i18n-label]
@@ -8,6 +9,8 @@
 //                         share (COMMON, e.g. the privacy link in the footer); sets <html lang>
 //                         and the EN/DE switch
 //   Lang.wire(onChange)   connects the EN/DE switch (#langs) to onChange(lang)
+//   Lang.fix(l)           fixes the language to l ('en', 'de'), or with null frees it again; init()
+//                         takes it from the set the app is opened in (LPSets.lang(), sets.js)
 // It also notes when each app was last opened (tp-recent: { folder: time }, e.g. { coe: … }), for
 // the hub's order "Recently used".
 (function (root) {
@@ -16,7 +19,7 @@
   const LANGS = ['en', 'de'], KEY = 'tp-lang';
   // texts of the footer, the same on every page
   const COMMON = { privacy: { en: 'Privacy', de: 'Datenschutz' } };
-  let lang = 'en';
+  let lang = 'en', fixed = null;
 
   const remembered = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
   function initial() {
@@ -32,11 +35,23 @@
     get: () => lang,
     // quiet: do not remember the choice (e.g. in tests)
     set(l, quiet) {
+      if (fixed) return;
       lang = LANGS.includes(l) ? l : 'en';
       if (!quiet) { try { localStorage.setItem(KEY, lang); } catch (e) { /* storage unavailable */ } }
     },
     L: (en, de) => (lang === 'de' ? de : en),
-    init() { lang = initial(); return lang; },
+    init() {
+      const f = root.LPSets && typeof root.LPSets.lang === 'function' ? root.LPSets.lang() : null;
+      return Lang.fix(f);
+    },
+    fix(l) {
+      fixed = LANGS.includes(l) ? l : null;
+      lang = fixed || initial();
+      const sw = typeof document !== 'undefined' ? document.querySelector('#langs') : null;
+      if (sw) sw.style.display = fixed ? 'none' : '';
+      return lang;
+    },
+    fixed: () => fixed,
     apply(dict) {
       const text = (v) => (typeof v === 'function' ? v() : v);
       document.documentElement.lang = lang;
