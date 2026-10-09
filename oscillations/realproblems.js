@@ -23,7 +23,7 @@
   const HINT_SI = () => L('Lengths in metres, times in seconds.', 'Längen in Metern, Zeiten in Sekunden.');
   // the displacement against time, two periods, with the times of the solution marked
   function xfig(Am, T, o = {}) {
-    const u = Am >= 0.1 ? 'm' : Am >= 1e-3 ? (Am >= 0.01 ? 'cm' : 'mm') : 'pm', k = OC.UNITS[u][0], Au = Am / k;
+    const u = Am >= 0.1 ? 'm' : Am >= 0.01 ? 'cm' : Am >= 1e-4 ? 'mm' : Am >= 1e-7 ? 'μm' : 'pm', k = OC.UNITS[u][0], Au = Am / k;
     const pts = Array.from({ length: 201 }, (z, j) => { const t = (j * 2 * T) / 200; return [t / T, Au * Math.cos((PI2 * t) / T)]; });
     return `<div class="fig">${Plot.graph([{ pts }], { tEnd: 2, tStep: 0.5, name: 'y', unit: u, axis: Plot.niceAxis([-Au * 1.05, Au * 1.05]), label: L('Displacement against time (t in periods)', 'Auslenkung gegen die Zeit (t in Perioden)'), dots: (o.dots || []).map(([t, x]) => [t / T, x / k]), tLabel: '<tspan class="it">t</tspan> / <tspan class="it">T</tspan>' })}</div>`;
   }
