@@ -27,13 +27,14 @@ jobs:
           node-version: 22
       - name: Shared files in sync
         run: shared/sync.sh --check
+      # in parallel, one per core; each test's output is printed whole when it ends
       - name: Tests of the apps
         run: |
-          for t in */test/check-*.js; do
-            echo "::group::$t"
-            node "$t"
-            echo "::endgroup::"
-          done
+          ls */test/check-*.js | xargs -P "$(nproc)" -n 1 sh -c '
+            out=$(node "$1" 2>&1); s=$?
+            printf "::group::%s\n%s\n::endgroup::\n" "$1" "$out"
+            [ $s -eq 0 ] || echo "::error::$1 failed"
+            exit $s' _
       - name: Tests of the admin panel
         run: python3 hub-admin/test_hubadmin.py
 
