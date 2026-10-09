@@ -557,6 +557,7 @@ def panel_page() -> str:
       <nav class="tabs" aria-label="Sections">
         <a href="#sets" data-view="sets">Sets</a>
         <a href="#apps" data-view="apps">Apps &amp; tags</a>
+        <a href="#games" data-view="games">Games</a>
       </nav>
       <a class="view" href="/" target="_blank" rel="noopener">View the hub page ↗</a>
       <form method="post" action="/admin/logout" class="logout"><button type="submit">Log out</button></form>
@@ -582,6 +583,21 @@ def panel_page() -> str:
       </div>
       <div id="set-list" class="setlist"></div>
       <div id="set-edit"></div>
+    </section>
+    <section id="view-games" hidden>
+      <p class="lead">The games for the class, each a service of its own on this site.</p>
+      <ul class="games">
+        <li class="card">
+          <h2><a href="/millionaire/" target="_blank" rel="noopener">Who Wants to Be a Physicist? ↗</a></h2>
+          <p>A quiz in the style of <i>Who Wants to Be a Millionaire</i>: 15 physics questions of rising difficulty, a ladder of famous physicists and three lifelines. As a classroom game, students join on their phones (QR code or room code), a Fastest Finger First round picks each contestant, and Ask the Audience can be a live class vote. A quick game starts without a lobby.</p>
+          <p class="note">learningphysics.ch/millionaire/ · open to everyone</p>
+        </li>
+        <li class="card">
+          <h2><a href="/crosswords/" target="_blank" rel="noopener">Crossword generator ↗</a></h2>
+          <p>Generates physics crosswords by topic and size, to solve in the browser or print. A puzzle is shared as a link that students open without logging in; it can become a timed challenge, or a class challenge in which students compete on a live teacher screen.</p>
+          <p class="note">learningphysics.ch/crosswords/ · the generator asks for its own teacher password; puzzle links are public</p>
+        </li>
+      </ul>
     </section>""", script=True)
 
 
@@ -598,6 +614,12 @@ h1 { margin: 4px 0 16px; font-size: 1.6rem; }
 .lead, .note { color: var(--muted); }
 .note { font-size: 0.9rem; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+.games { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.games h2 { margin: 0 0 6px; font-size: 1.1rem; }
+.games h2 a { color: var(--accent); text-decoration: none; }
+.games h2 a:hover { text-decoration: underline; }
+.games p { margin: 0 0 6px; }
+.games p.note { margin: 0; }
 .login { max-width: 420px; }
 .field { display: block; margin: 12px 0; }
 .field span { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 4px; }
@@ -889,8 +911,8 @@ ADMIN_JS = r"""
 
 
 SETS_JS = r"""
-// The sets of the admin panel, and the switch between its two views (#sets, the first, and #apps:
-// the order and tags of the apps on the hub page, see admin.js). A set is
+// The sets of the admin panel, and the switch between its views (#sets, the first; #apps: the order
+// and tags of the apps on the hub page, see admin.js; #games: links to the games). A set is
 // { title, lang?, apps: [{ id, modes, tutor?, practice? }] } under its name; lang fixes the language
 // ('en', 'de'; without it, the students choose); tutor and practice list the
 // worked examples (indices) and practice stages (keys) shown, all of them without the list. The
@@ -1154,11 +1176,10 @@ SETS_JS = r"""
     }
   }
 
-  // ---------------------------------------------------------------- the two views
+  // ---------------------------------------------------------------- the views
   function view() {
-    const v = location.hash === '#apps' ? 'apps' : 'sets';
-    $('#view-apps').hidden = v !== 'apps';
-    $('#view-sets').hidden = v !== 'sets';
+    const v = ['#apps', '#games'].includes(location.hash) ? location.hash.slice(1) : 'sets';
+    ['apps', 'sets', 'games'].forEach((x) => { $(`#view-${x}`).hidden = v !== x; });
     document.querySelectorAll('.tabs a').forEach((a) => { if (a.dataset.view === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     if (v === 'sets' && !loaded) load().catch(() => status('Could not load the sets.', 'bad'));
   }
