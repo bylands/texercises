@@ -54,6 +54,9 @@ svg .wrongcol { fill: var(--bad); opacity: 0.18; }
 .anim-bar { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
 .anim-bar .play { min-width: 2.6em; }
 .anim-bar input[type="range"] { flex: 1; accent-color: var(--accent); }
+.anim-split { flex: 1; display: grid; gap: 4px; }
+.anim-split label { display: flex; align-items: center; gap: 8px; }
+.anim-split span { width: 1.2em; text-align: center; font-size: 1.1rem; }
 
 /* options: four graphs */
 .cands { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 8px 0; }

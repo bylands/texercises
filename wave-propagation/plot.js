@@ -11,7 +11,8 @@
 //                    with play/pause and a slider; it plays once when shown (not with reduced
 //                    motion) and stops at a.hold (e.g. the time an exercise asks about), from where
 //                    ▶ or the slider go on; a.noTime hides the time (the student moves the crests
-//                    without being told when). Returns { stop }.
+//                    without being told when); a.split gives each crest its own slider, to move
+//                    them one by one (crests without an end). Returns { stop }.
 (function (root) {
   'use strict';
 
@@ -121,32 +122,44 @@
   const Anim = {
     mount(el, a) {
       const span = a.t1 - a.t0, rate = Math.max(1, span / 4); // a run takes at most about 4 s
-      el.innerHTML = `<div class="anim"><div class="frames"></div><div class="anim-bar"><button type="button" class="play" aria-label="${L('Play', 'Abspielen')}">▶</button><input type="range" min="0" max="1000" value="0" aria-label="${L('Time', 'Zeit')}"></div></div>`;
-      const frames = el.querySelector('.frames'), btn = el.querySelector('.play'), slider = el.querySelector('input');
-      let t = a.t0, raf = 0, last = 0, playing = false, held = false;
-      const show = () => { frames.innerHTML = frame(a, t); slider.value = String(Math.round(((t - a.t0) / span) * 1000)); };
+      // a.split: each crest has its own time and slider (moved one by one; ▶ moves them all)
+      const n = a.split ? a.sc.pulses.length : 1, range = (i) => `<input type="range" min="0" max="1000" value="0" data-i="${i}" aria-label="${a.split ? L(`Time of crest ${i + 1}`, `Zeit von Buckel ${i + 1}`) : L('Time', 'Zeit')}">`;
+      const bar = a.split
+        ? `<div class="anim-bar"><button type="button" class="play" aria-label="${L('Play', 'Abspielen')}">▶</button><div class="anim-split">${a.sc.pulses.map((p, i) => `<label><span class="k-${i ? 'part2' : 'part'}">${p.dir > 0 ? '→' : '←'}</span>${range(i)}</label>`).join('')}</div></div>`
+        : `<div class="anim-bar"><button type="button" class="play" aria-label="${L('Play', 'Abspielen')}">▶</button>${range(0)}</div>`;
+      el.innerHTML = `<div class="anim"><div class="frames"></div>${bar}</div>`;
+      const frames = el.querySelector('.frames'), btn = el.querySelector('.play'), sliders = [...el.querySelectorAll('input[type=range]')];
+      const ts = Array.from({ length: n }, () => a.t0);
+      let raf = 0, last = 0, playing = false, held = false;
+      const at = () => (a.split ? frame({ ...a, sc: { ...a.sc, pulses: a.sc.pulses.map((p, i) => ({ ...p, x0: p.x0 + p.dir * p.v * ts[i] })) } }, 0) : frame(a, ts[0]));
+      const show = () => { frames.innerHTML = at(); sliders.forEach((sl, i) => { sl.value = String(Math.round(((ts[i] - a.t0) / span) * 1000)); }); };
       const stop = () => { playing = false; cancelAnimationFrame(raf); btn.textContent = '▶'; btn.setAttribute('aria-label', L('Play', 'Abspielen')); };
       const step = (now) => {
         if (!playing) return;
-        if (last) t = Math.min(a.t1, t + ((now - last) / 1000) * rate);
+        if (last) ts.forEach((t, i) => { ts[i] = Math.min(a.t1, t + ((now - last) / 1000) * rate); });
         last = now;
         // a stop at the time held (once per run); ▶ or the slider go on from there
-        if (a.hold != null && !held && t >= a.hold) {
-          held = true; t = a.hold; show(); stop();
+        if (a.hold != null && !held && Math.min(...ts) >= a.hold) {
+          held = true; ts.fill(a.hold); show(); stop();
           return;
         }
         show();
-        if (t >= a.t1) { stop(); return; }
+        if (Math.min(...ts) >= a.t1) { stop(); return; }
         raf = requestAnimationFrame(step);
       };
-      const play = () => { if (t >= a.t1) { t = a.t0; held = false; } if (a.hold != null && t < a.hold) held = false; playing = true; last = 0; btn.textContent = '❚❚'; btn.setAttribute('aria-label', L('Pause', 'Pause')); raf = requestAnimationFrame(step); };
+      const play = () => {
+        if (Math.min(...ts) >= a.t1) { ts.fill(a.t0); held = false; }
+        if (a.hold != null && Math.min(...ts) < a.hold) held = false;
+        playing = true; last = 0; btn.textContent = '❚❚'; btn.setAttribute('aria-label', L('Pause', 'Pause')); raf = requestAnimationFrame(step);
+      };
       btn.addEventListener('click', () => (playing ? stop() : play()));
-      slider.addEventListener('input', () => { stop(); t = a.t0 + (Number(slider.value) / 1000) * span; show(); });
+      sliders.forEach((sl, i) => sl.addEventListener('input', () => { stop(); ts[i] = a.t0 + (Number(sl.value) / 1000) * span; show(); }));
       show();
       if (!reduced() && a.autoplay !== false) setTimeout(play, 300);
       return { stop };
     },
   };
+
 
   const api = { SIZE, graph, pointAt, frame, Anim };
   root.WavePlot = api;
