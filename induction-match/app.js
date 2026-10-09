@@ -12,7 +12,7 @@
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Induction Matching', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
+      title: 'Electromagnetic Induction', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
       tutor: 'Tutor', practice: 'Practice', real: 'Problems', arcade: 'Arcade', new: 'New exercise', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
       tutorNote: 'Use the arrow keys ← → to step through. The part of the graph a step is about is <span class="k-band">highlighted</span> in both graphs; short lines are tangents (the slope at that point), triangles show the change of <i>Φ</i> over a time span, and shaded areas the area under the voltage graph.',
       fluxH: 'Magnetic flux', voltH: 'Induced voltage', option: (k) => `Graph ${k}`, clear: 'Reset the drawing', yours: 'Your graph',
@@ -27,7 +27,7 @@
       drawWrong: (n) => `${n} ${n === 1 ? 'handle is' : 'handles are'} not right yet (marked).`,
     },
     de: {
-      title: 'Induktion zuordnen', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
+      title: 'Elektromagnetische Induktion', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
       tutor: 'Tutor', practice: 'Üben', real: 'Praxisaufgaben', arcade: 'Arcade', new: 'Neue Aufgabe', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Der Teil des Graphen, um den es in einem Schritt geht, ist in beiden Graphen <span class="k-band">hervorgehoben</span>; kurze Linien sind Tangenten (die Steigung an dieser Stelle), Dreiecke zeigen die Änderung von <i>Φ</i> in einer Zeitspanne und schattierte Flächen die Fläche unter dem Spannungsgraphen.',
       fluxH: 'Magnetischer Fluss', voltH: 'Induzierte Spannung', option: (k) => `Graph ${k}`, clear: 'Zeichnung zurücksetzen', yours: 'Dein Graph',
