@@ -1,10 +1,13 @@
-# The admin panel of the hub (hubadmin.py), behind nginx at /admin/. Install:
+# The admin panel of the hub (hubadmin.py), behind nginx at /admin/. deploy.sh copies hubadmin.py
+# into the web root (hub-admin/, which nginx does not serve); hub-admin-reload.path restarts the
+# service when it changes, so a push to main updates the admin panel too. Install (once):
 #   sudo useradd --system --no-create-home --shell /usr/sbin/nologin hubadmin
 #   sudo chmod 640 /opt/crosswords/teacher-password            # the group crosswords may read it
 #   (the service joins that group: SupplementaryGroups below)
 #   sudo install -d -o hubadmin -g hubadmin /var/www/teachingphysics/hub-data
-#   sudo install -D -m 644 hubadmin.py /opt/hub-admin/hubadmin.py
-#   sudo cp hub-admin.service /etc/systemd/system/ && sudo systemctl enable --now hub-admin
+#   sudo cp hub-admin.service hub-admin-reload.path hub-admin-reload.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now hub-admin hub-admin-reload.path
+# A change to this file (or to the two reload units) still needs that cp and daemon-reload.
 [Unit]
 Description=Learning Physics hub admin (tags and order of the apps, sets for classes)
 After=network.target
@@ -13,8 +16,9 @@ After=network.target
 User=hubadmin
 Group=hubadmin
 SupplementaryGroups=crosswords
-ExecStart=/usr/bin/python3 /opt/hub-admin/hubadmin.py --port 8040 --password-file /opt/crosswords/teacher-password --hub /var/www/teachingphysics/index.html --config /var/www/teachingphysics/hub-data/apps.json --sets /var/www/teachingphysics/hub-data/sets.json
+ExecStart=/usr/bin/python3 /var/www/teachingphysics/hub-admin/hubadmin.py --port 8040 --password-file /opt/crosswords/teacher-password --hub /var/www/teachingphysics/index.html --config /var/www/teachingphysics/hub-data/apps.json --sets /var/www/teachingphysics/hub-data/sets.json
 Restart=on-failure
+RestartSec=2
 NoNewPrivileges=yes
 ProtectSystem=strict
 ReadWritePaths=/var/www/teachingphysics/hub-data
