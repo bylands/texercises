@@ -41,6 +41,23 @@
   const LAW = () => `${vec('F')} = <i>q</i> · ${vec('v')} × ${vec('B')}`;
   const vName = (kind) => (kind === 'I' ? L(`the current ${it('I')}`, `der Strom ${it('I')}`) : L(`the velocity ${it('v')}`, `die Geschwindigkeit ${it('v')}`));
   const signName = (q) => (q > 0 ? L('positive', 'positiv') : q < 0 ? L('negative', 'negativ') : L('neutral', 'neutral'));
+  const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+  // The particle of an exercise: often a named one, drawn with its symbol in a neutral colour, so
+  // that its sign is for the student to know; else "a positive particle", drawn with its sign.
+  const NAMED = {
+    1: [['p', ['a proton', 'ein Proton'], 'p'], ['e+', ['a positron', 'ein Positron'], 'e⁺'], ['a', ['an alpha particle', 'ein Alphateilchen'], 'α'], ['na', ['a sodium ion (Na⁺)', 'ein Natrium-Ion (Na⁺)'], 'Na⁺']],
+    '-1': [['e', ['an electron', 'ein Elektron'], 'e⁻'], ['cl', ['a chloride ion (Cl⁻)', 'ein Chlorid-Ion (Cl⁻)'], 'Cl⁻']],
+    0: [['n', ['a neutron', 'ein Neutron'], 'n']],
+  };
+  function particle(r, q) {
+    if (r.next() < 0.35) return { q, id: 'q', sym: null, name: () => L(`a ${signName(q)} particle`, `ein ${q > 0 ? 'positives' : q < 0 ? 'negatives' : 'neutrales'} Teilchen`) };
+    const [id, names, sym] = r.pick(NAMED[q]);
+    return { q, id, sym, name: () => L(...names) };
+  }
+  const chargeOf = (pt) => (pt.sym
+    ? L(`${cap(pt.name())} ${pt.q > 0 ? 'is positively charged' : pt.q < 0 ? 'is negatively charged' : 'has no charge'}.`, `${cap(pt.name())} ist ${pt.q > 0 ? 'positiv geladen' : pt.q < 0 ? 'negativ geladen' : 'ungeladen'}.`)
+    : L(`The particle is ${signName(pt.q)}.`, `Das Teilchen ist ${signName(pt.q)}.`));
+  const drawn = (pt, at, name) => ({ kind: 'particle', q: pt.q, at, sym: pt.sym, name });
   const hand = (q) => (q > 0 ? L('Right hand (positive charge)', 'Rechte Hand (positive Ladung)') : L('Left hand (negative charge)', 'Linke Hand (negative Ladung)'));
   const tile = (d, extra = '') => `<span class="dtile">${icon(d)}<span>${d ? dirName(d) : extra || L('no force', 'keine Kraft')}</span></span>`;
   const RULE = () => L('For a positive charge (or a current) use the right hand: thumb along the velocity (or the current), index finger along the field, then the middle finger shows the force. For a negative charge use the left hand in the same way.',
@@ -81,22 +98,22 @@
   function dirForce(kind, seed) {
     const r = rng(seed * 31 + 7);
     for (;;) {
-      const q = kind === 'I' ? 1 : r.pick([1, 1, -1, -1, 0]), v = r.pick(AXES), B = r.pick(AXES);
+      const q = kind === 'I' ? 1 : r.pick([1, 1, -1, -1, 0]), v = r.pick(AXES), B = r.pick(AXES), pt = particle(r, q);
       if (kind === 'I' && same(v, B)) continue; // a current along the field: rare, but it comes up in the statements
       const F = force(q, v, B), none = !F;
       if (none && r.next() < 0.6) continue; // mostly a force
       const how = howForce(q, kind, v, B);
       const tempt = none ? [[v, 'some'], [B, 'some']] : [[neg(F), 'hand'], [v, 'alongV'], [B, 'alongB'], [null, 'none']];
-      const items = [kind === 'I' ? { kind: 'piece', d: v, at: [0, 0], name: '<tspan class="it">I</tspan>' } : { kind: 'particle', q, at: [0, 0] }];
+      const items = [kind === 'I' ? { kind: 'piece', d: v, at: [0, 0], name: '<tspan class="it">I</tspan>' } : drawn(pt, [0, 0])];
       const fig = scene({ field: { dir: B }, items, vecs: [{ of: 0, kind: kind === 'I' ? 'I' : 'v', dir: v }, { of: 0, kind: 'F', unknown: true }] });
       const text = kind === 'I'
         ? L(`<p>A piece of wire carries a current ${it('I')} (${dirName(v)}) in a magnetic field (${dirName(B)}).</p>`, `<p>Ein Drahtstück führt einen Strom ${it('I')} (${dirName(v)}) in einem Magnetfeld (${dirName(B)}).</p>`)
-        : L(`<p>A ${signName(q)} particle moves ${dirName(v)} through a magnetic field that points ${dirName(B)}.</p>`, `<p>Ein ${q > 0 ? 'positives' : q < 0 ? 'negatives' : 'neutrales'} Teilchen bewegt sich ${dirName(v)} durch ein Magnetfeld, das ${dirName(B)} zeigt.</p>`);
+        : L(`<p>${cap(pt.name())} moves ${dirName(v)} through a magnetic field that points ${dirName(B)}.</p>`, `<p>${cap(pt.name())} bewegt sich ${dirName(v)} durch ein Magnetfeld, das ${dirName(B)} zeigt.</p>`);
       return {
         kind: 'dir', title: L('The direction of the force', 'Die Richtung der Kraft'), text, figs: `<div class="fig">${fig}</div>`,
         questions: [tiles('F', L('In which direction does the magnetic force point?', 'In welche Richtung zeigt die magnetische Kraft?'), forceOptions(r, F, tempt, how))],
-        hints: [PERP(), RULE(), L(`The charge here is ${signName(q)}${kind === 'I' ? ' (a current counts as positive charges moving along it)' : ''}.`, `Die Ladung hier ist ${signName(q)}${kind === 'I' ? ' (ein Strom zählt als positive Ladungen, die sich in Stromrichtung bewegen)' : ''}.`)],
-        solution: [how], p: { q, v: key(v), B: key(B) },
+        hints: [PERP(), RULE(), kind === 'I' ? L('A current counts as positive charges moving along it.', 'Ein Strom zählt als positive Ladungen, die sich in Stromrichtung bewegen.') : chargeOf(pt)],
+        solution: [how], p: { q, v: key(v), B: key(B), pt: pt.id },
       };
     }
   }
@@ -105,7 +122,7 @@
   function dirMissing(seed) {
     const r = rng(seed * 37 + 11);
     for (;;) {
-      const q = r.pick([1, -1]), missing = r.pick(['B', 'v']), a = r.pick(AXES), c = r.pick(CANDS);
+      const q = r.pick([1, -1]), missing = r.pick(['B', 'v']), a = r.pick(AXES), c = r.pick(CANDS), pt = particle(r, q);
       const F = missing === 'B' ? force(q, a, c) : force(q, c, a);
       if (!F || !AXES.some((x) => same(x, F))) continue;
       const fit = fitting(missing, q, a, F), wrong = CANDS.filter((d) => !fit.some((f) => same(f, d)));
@@ -119,11 +136,11 @@
         return { html: tile(d), ok, why };
       });
       const v = missing === 'B' ? a : null, B = missing === 'B' ? null : a;
-      const fig = scene({ field: { dir: B }, items: [{ kind: 'particle', q, at: [0, 0] }], vecs: [missing === 'B' ? { of: 0, kind: 'v', dir: v } : { of: 0, kind: 'v', unknown: true }, { of: 0, kind: 'F', dir: F }, ...(missing === 'B' ? [{ of: 0, kind: 'B', unknown: true }] : [])] });
+      const fig = scene({ field: { dir: B }, items: [drawn(pt, [0, 0])], vecs: [missing === 'B' ? { of: 0, kind: 'v', dir: v } : { of: 0, kind: 'v', unknown: true }, { of: 0, kind: 'F', dir: F }, ...(missing === 'B' ? [{ of: 0, kind: 'B', unknown: true }] : [])] });
       const several = fit.length > 1;
       const text = missing === 'B'
-        ? L(`<p>A ${signName(q)} particle moves ${dirName(v)}. The magnetic force on it points ${dirName(F)}.</p>`, `<p>Ein ${q > 0 ? 'positives' : 'negatives'} Teilchen bewegt sich ${dirName(v)}. Die magnetische Kraft auf es zeigt ${dirName(F)}.</p>`)
-        : L(`<p>A ${signName(q)} particle is in a magnetic field that points ${dirName(B)}. The magnetic force on it points ${dirName(F)}.</p>`, `<p>Ein ${q > 0 ? 'positives' : 'negatives'} Teilchen befindet sich in einem Magnetfeld, das ${dirName(B)} zeigt. Die magnetische Kraft auf es zeigt ${dirName(F)}.</p>`);
+        ? L(`<p>${cap(pt.name())} moves ${dirName(v)}. The magnetic force on it points ${dirName(F)}.</p>`, `<p>${cap(pt.name())} bewegt sich ${dirName(v)}. Die magnetische Kraft auf es zeigt ${dirName(F)}.</p>`)
+        : L(`<p>${cap(pt.name())} is in a magnetic field that points ${dirName(B)}. The magnetic force on it points ${dirName(F)}.</p>`, `<p>${cap(pt.name())} befindet sich in einem Magnetfeld, das ${dirName(B)} zeigt. Die magnetische Kraft auf es zeigt ${dirName(F)}.</p>`);
       const sol = several
         ? L(`Only the part of ${what} perpendicular to the ${missing === 'B' ? 'velocity' : 'field'} matters for the force; a part along it adds nothing. So several directions fit: all those whose perpendicular part gives the force ${dirName(F)} with the ${q > 0 ? 'right' : 'left'} hand: ${fit.map(dirName).join(', ')}.`,
           `Für die Kraft zählt nur der Teil ${missing === 'B' ? 'des Feldes senkrecht zur Geschwindigkeit' : 'der Geschwindigkeit senkrecht zum Feld'}; ein Teil längs dazu trägt nichts bei. Also passen mehrere Richtungen: alle, deren senkrechter Teil mit der ${q > 0 ? 'rechten' : 'linken'} Hand die Kraft ${dirName(F)} ergibt: ${fit.map(dirName).join(', ')}.`)
@@ -131,9 +148,9 @@
       return {
         kind: 'dir', title: missing === 'B' ? L('Which field?', 'Welches Feld?') : L('Which velocity?', 'Welche Geschwindigkeit?'), text, figs: `<div class="fig">${fig}</div>`,
         questions: [tiles('m', missing === 'B' ? L('Which directions of the field fit? Tick all that do.', 'Welche Richtungen des Feldes passen? Kreuze alle an, die passen.') : L('Which directions of motion fit? Tick all that do.', 'Welche Bewegungsrichtungen passen? Kreuze alle an, die passen.'), options, true)],
-        hints: [RULE(), L(`The force is perpendicular to ${missing === 'B' ? 'the field' : 'the velocity'}: rule out the directions that are not.`, `Die Kraft steht senkrecht zu${missing === 'B' ? 'm Feld' : 'r Geschwindigkeit'}: Schliesse die Richtungen aus, die das nicht tun.`),
+        hints: [chargeOf(pt), RULE(), L(`The force is perpendicular to ${missing === 'B' ? 'the field' : 'the velocity'}: rule out the directions that are not.`, `Die Kraft steht senkrecht zu${missing === 'B' ? 'm Feld' : 'r Geschwindigkeit'}: Schliesse die Richtungen aus, die das nicht tun.`),
           L(`Only the part of ${what} perpendicular to the ${missing === 'B' ? 'velocity' : 'field'} counts: a slanting direction can fit as well as a straight one.`, `Nur der Teil ${missing === 'B' ? 'des Feldes senkrecht zur Geschwindigkeit' : 'der Geschwindigkeit senkrecht zum Feld'} zählt: Eine schräge Richtung kann ebenso passen wie eine gerade.`)],
-        solution: [sol], p: { q, missing, a: key(a), F: key(F), o: opts.map(key) },
+        solution: [sol], p: { q, missing, a: key(a), F: key(F), o: opts.map(key), pt: pt.id },
       };
     }
   }
@@ -149,7 +166,7 @@
   function pair(kind, seed) {
     const r = rng(seed * 41 + 13);
     for (;;) {
-      let d1, d2, P, q1 = 1, q2 = 1;
+      let d1, d2, P, q1 = 1, q2 = 1, pt1 = null, pt2 = null;
       if (kind === 'parallel') {
         d1 = r.pick(AXES.filter((d) => d[2] || d[0])); d2 = r.next() < 0.5 ? d1 : neg(d1);
         P = d1[2] ? r.pick([[2.2, 0, 0], [0, -1.6, 0]]) : [0, -1.6, 0];
@@ -158,6 +175,7 @@
         P = r.pick(d1[2] ? [[2.2, 0, 0], [-2.2, 0, 0], [0, 1.6, 0], [0, -1.6, 0]] : d1[0] ? [[0, 1.6, 0], [0, -1.6, 0]] : [[2.2, 0, 0], [-2.2, 0, 0]]);
       } else {
         q1 = r.pick([1, -1]); q2 = r.pick([1, -1]);
+        pt1 = particle(r, q1); pt2 = particle(r, q2);
         d1 = r.pick(AXES.filter((d) => !d[2])); d2 = r.pick(AXES);
         P = r.pick([[2.2, 0, 0], [-2.2, 0, 0], [0, 1.6, 0], [0, -1.6, 0], [1.8, 1.4, 0]]);
       }
@@ -179,14 +197,14 @@
       const qF = tiles('F', L(`(b) In which direction does the magnetic force on ${kind === 'particles' ? 'charge 2' : 'wire 2'} point?`, `(b) In welche Richtung zeigt die magnetische Kraft auf ${kind === 'particles' ? 'Ladung 2' : 'Draht 2'}?`),
         forceOptions(r, F, F ? [[neg(F), 'hand'], [d2, 'alongV'], [Bz, 'alongB'], [null, 'none']] : [[d2, 'some'], [Bz, 'some']], howF));
       const items = kind === 'particles'
-        ? [{ kind: 'particle', q: q1, at: [0, 0], name: '1' }, { kind: 'particle', q: q2, at: [P[0], P[1]], name: '2' }]
+        ? [drawn(pt1, [0, 0], '1'), drawn(pt2, [P[0], P[1]], '2')]
         : [{ kind: 'wire', d: d1, at: [0, 0], name: '1' }, { kind: kind === 'parallel' ? 'wire' : 'piece', d: d2, at: [P[0], P[1]], name: '2' }];
       const vecs = kind === 'particles' ? [{ of: 0, kind: 'v', dir: d1, name: 'v<tspan class="sub" dy="3">1</tspan>' }, { of: 1, kind: 'v', dir: d2, name: 'v<tspan class="sub" dy="3">2</tspan>' }] : [];
       const fig = scene({ items, vecs, points: kind === 'particles' ? [] : [] });
       const parallelRule = kind === 'parallel' ? L(` So currents in the same direction attract each other, opposite currents repel each other.`, ` Gleich gerichtete Ströme ziehen sich also an, entgegengesetzte stossen sich ab.`) : '';
       const text = kind === 'particles'
-        ? L(`<p>Two charges move as shown: charge 1 is ${signName(q1)}, charge 2 is ${signName(q2)}. Consider only the magnetic force (the electric force between them is larger, but it is not asked here).</p>`,
-          `<p>Zwei Ladungen bewegen sich wie gezeigt: Ladung 1 ist ${signName(q1)}, Ladung 2 ist ${signName(q2)}. Betrachte nur die magnetische Kraft (die elektrische Kraft zwischen ihnen ist grösser, ist hier aber nicht gefragt).</p>`)
+        ? L(`<p>Two charged particles move as shown: charge 1 is ${pt1.name()}, charge 2 is ${pt2.name()}. Consider only the magnetic force (the electric force between them is larger, but it is not asked here).</p>`,
+          `<p>Zwei geladene Teilchen bewegen sich wie gezeigt: Ladung 1 ist ${pt1.name()}, Ladung 2 ist ${pt2.name()}. Betrachte nur die magnetische Kraft (die elektrische Kraft zwischen ihnen ist grösser, ist hier aber nicht gefragt).</p>`)
         : kind === 'parallel'
           ? L(`<p>Two long straight wires carry currents ${d2 === d1 || same(d2, d1) ? 'in the same direction' : 'in opposite directions'}, as shown.</p>`, `<p>Zwei lange gerade Drähte führen Ströme ${same(d2, d1) ? 'in derselben Richtung' : 'in entgegengesetzten Richtungen'}, wie gezeigt.</p>`)
           : L(`<p>A long straight wire 1 carries a current ${dirName(d1)}. Near it, a short piece of wire 2 carries a current ${dirName(d2)}.</p>`, `<p>Ein langer gerader Draht 1 führt einen Strom ${dirName(d1)}. In seiner Nähe führt ein kurzes Drahtstück 2 einen Strom ${dirName(d2)}.</p>`);
@@ -194,7 +212,7 @@
         kind: 'pair', title: kind === 'particles' ? L('Two moving charges', 'Zwei bewegte Ladungen') : L('Two currents', 'Zwei Ströme'), text, figs: `<div class="fig">${fig}</div>`,
         questions: [qB, qF],
         hints: [kind === 'particles' ? L('A moving charge makes a field like a short piece of current: positive charges along their motion, negative ones against it.', 'Eine bewegte Ladung erzeugt ein Feld wie ein kurzes Stromstück: positive Ladungen in Bewegungsrichtung, negative entgegen.') : GRIP(), L('First the field of the first one at the place of the second, then the force on the second in this field.', 'Zuerst das Feld des ersten am Ort des zweiten, dann die Kraft auf das zweite in diesem Feld.'), RULE()],
-        solution: [howB, howF + parallelRule], p: { kind, d1: key(d1), d2: key(d2), P: P.join(','), q1, q2 },
+        solution: [howB, howF + parallelRule], p: { kind, d1: key(d1), d2: key(d2), P: P.join(','), q1, q2, pt: pt1 ? pt1.id + pt2.id : '' },
       };
     }
   }
@@ -214,13 +232,13 @@
   };
   const drawPick = (o) => pathFig({ ...o, small: true });
   function pathCircle(seed) {
-    const r = rng(seed * 43 + 17), q = r.pick([1, 1, -1, -1, 0]), bz = r.pick([1, -1]), R = r.pick([1.1, 1.4, 1.8]), y0 = r.pick([-0.5, 0, 0.5]);
+    const r = rng(seed * 43 + 17), q = r.pick([1, 1, -1, -1, 0]), bz = r.pick([1, -1]), R = r.pick([1.1, 1.4, 1.8]), y0 = r.pick([-0.5, 0, 0.5]), pt = particle(r, q);
     const box = [-1, 6, -3.2, 3.2], region = [1, 6, -3.2, 3.2], inside = (x) => x >= 1;
     const run = (k) => path({ x0: -0.6, y0, vx: 1, vy: 0, k, Bz: () => bz, inside, dt: 0.02, n: 900, stop: (x, y) => x < -1.2 || x > 6.5 || Math.abs(y) > 3.5 });
     const k = q / R, right = run(k), turned = run(-k || 1 / R), straight = [[-0.6, y0], [6.5, y0]];
     const down = force(q || 1, [1, 0, 0], [0, 0, bz]), sgn = down ? down[1] : 1, para = [];
     for (let x = -0.6; x <= 6.5; x += 0.05) { const t = Math.max(0, x - 1); para.push([x, y0 + sgn * 0.45 * t * t]); }
-    const base = { box, region, bz, q };
+    const base = { box, region, bz, q, sym: pt.sym };
     const opts = q ? [{ pts: right, ok: true }, { pts: turned, tag: 'hand' }, { pts: straight, tag: 'straight' }, { pts: para, tag: 'parabola' }]
       : [{ pts: straight, ok: true }, { pts: run(1 / R), tag: 'bent' }, { pts: run(-1 / R), tag: 'bent' }, { pts: para, tag: 'bent' }];
     const F = force(q, [1, 0, 0], [0, 0, bz]);
@@ -229,15 +247,15 @@
       : L('A neutral particle feels no magnetic force: it goes straight on.', 'Ein neutrales Teilchen spürt keine magnetische Kraft: Es fliegt geradeaus weiter.');
     return {
       kind: 'path', title: L('A charge enters a field', 'Eine Ladung tritt in ein Feld ein'),
-      text: L(`<p>A ${signName(q)} particle flies to the right into a region with a uniform magnetic field ${dirName([0, 0, bz])}.</p>`, `<p>Ein ${q > 0 ? 'positives' : q < 0 ? 'negatives' : 'neutrales'} Teilchen fliegt nach rechts in ein Gebiet mit einem homogenen Magnetfeld, das ${dirName([0, 0, bz])} zeigt.</p>`),
+      text: L(`<p>${cap(pt.name())} flies to the right into a region with a uniform magnetic field ${dirName([0, 0, bz])}.</p>`, `<p>${cap(pt.name())} fliegt nach rechts in ein Gebiet mit einem homogenen Magnetfeld, das ${dirName([0, 0, bz])} zeigt.</p>`),
       figs: `<div class="fig">${pathFig({ ...base, pts: [[-0.6, y0], [0.4, y0]] })}</div>`,
       questions: [{ type: 'pick', key: 'p', label: L('Which drawing shows its path?', 'Welche Zeichnung zeigt seine Bahn?'), options: r.shuffle(opts).map((o) => ({ html: drawPick({ ...base, pts: o.pts }), ok: !!o.ok, tag: o.tag, why: o.ok ? '' : `${WHYP[o.tag]()} ${how}` })) }],
-      hints: [PERP(), RULE(), L('A force that is always perpendicular to the velocity changes only the direction of motion, not the speed: the path is a circle.', 'Eine Kraft, die immer senkrecht zur Geschwindigkeit steht, ändert nur die Bewegungsrichtung, nicht den Betrag: Die Bahn ist ein Kreis.')],
-      solution: [how], solFig: `<div class="fig">${pathFig({ ...base, pts: q ? right : straight })}</div>`, p: { q, bz, R, y0 },
+      hints: [chargeOf(pt), PERP(), RULE(), L('A force that is always perpendicular to the velocity changes only the direction of motion, not the speed: the path is a circle.', 'Eine Kraft, die immer senkrecht zur Geschwindigkeit steht, ändert nur die Bewegungsrichtung, nicht den Betrag: Die Bahn ist ein Kreis.')],
+      solution: [how], solFig: `<div class="fig">${pathFig({ ...base, pts: q ? right : straight })}</div>`, p: { q, bz, R, y0, pt: pt.id },
     };
   }
   function pathHelix(seed) {
-    const r = rng(seed * 47 + 19), q = r.pick([1, -1]), bx = r.pick([1, -1]), ang = r.pick([30, 45, 60]), R = r.pick([0.7, 0.9]);
+    const r = rng(seed * 47 + 19), q = r.pick([1, -1]), bx = r.pick([1, -1]), ang = r.pick([30, 45, 60]), R = r.pick([0.7, 0.9]), pt = particle(r, q);
     const a = (ang * Math.PI) / 180, vpar = Math.cos(a) * bx, vperp = Math.sin(a), w = vperp / R, box = [-0.5, 7.5, -2.4, 2.4];
     const start = bx < 0 ? 7 : 0, u = [Math.cos(a) * bx, Math.sin(a)], n = [-u[1], u[0]];
     const right = [], circle = [], tilt = [], line = [[start, 0], [start + 9 * u[0], 9 * u[1]]];
@@ -247,21 +265,21 @@
       const off = R * Math.sin(w * t);
       tilt.push([start + 0.6 * t * u[0] + off * n[0], 0.6 * t * u[1] + off * n[1]]); // a helix around the starting direction
     }
-    const base = { box, bx, q };
+    const base = { box, bx, q, sym: pt.sym };
     const opts = [{ pts: right, ok: true }, { pts: circle, tag: 'circle' }, { pts: line, tag: 'line' }, { pts: tilt, tag: 'tilted' }];
     const how = L(`Split the velocity into a part along the field (${Math.round(Math.cos(a) * 100)} %) and a part across it. The field does not change the part along it; the part across makes the charge circle around the field lines. Together: a helix (a screw) along the field, seen from the side as a wave of constant height.`,
       `Zerlege die Geschwindigkeit in einen Teil längs des Feldes (${Math.round(Math.cos(a) * 100)} %) und einen Teil quer dazu. Das Feld ändert den Teil längs nicht; der Teil quer lässt die Ladung um die Feldlinien kreisen. Zusammen: eine Schraubenlinie längs des Feldes, von der Seite gesehen eine Welle gleicher Höhe.`);
     return {
       kind: 'path', title: L('A screw along the field', 'Eine Schraube längs des Feldes'),
-      text: L(`<p>A ${signName(q)} particle starts at an angle of ${ang}° to a uniform magnetic field that points ${dirName([bx, 0, 0])}.</p>`, `<p>Ein ${q > 0 ? 'positives' : 'negatives'} Teilchen startet unter einem Winkel von ${ang}° zu einem homogenen Magnetfeld, das ${dirName([bx, 0, 0])} zeigt.</p>`),
+      text: L(`<p>${cap(pt.name())} starts at an angle of ${ang}° to a uniform magnetic field that points ${dirName([bx, 0, 0])}.</p>`, `<p>${cap(pt.name())} startet unter einem Winkel von ${ang}° zu einem homogenen Magnetfeld, das ${dirName([bx, 0, 0])} zeigt.</p>`),
       figs: `<div class="fig">${pathFig({ ...base, pts: [[start, 0], [start + Math.cos(a) * bx, Math.sin(a)]] })}</div>`,
       questions: [{ type: 'pick', key: 'p', label: L('Which drawing shows its path, seen from the side?', 'Welche Zeichnung zeigt seine Bahn, von der Seite gesehen?'), options: r.shuffle(opts).map((o) => ({ html: drawPick({ ...base, pts: o.pts }), ok: !!o.ok, tag: o.tag, why: o.ok ? '' : `${WHYP[o.tag]()} ${how}` })) }],
       hints: [L('Split the velocity into a part along the field and a part across it.', 'Zerlege die Geschwindigkeit in einen Teil längs des Feldes und einen Teil quer dazu.'), L('Along the field there is no force.', 'Längs des Feldes gibt es keine Kraft.'), L('Across the field, the charge circles.', 'Quer zum Feld kreist die Ladung.')],
-      solution: [how], solFig: `<div class="fig">${pathFig({ ...base, pts: right })}</div>`, p: { q, bx, ang, R },
+      solution: [how], solFig: `<div class="fig">${pathFig({ ...base, pts: right })}</div>`, p: { q, bx, ang, R, pt: pt.id },
     };
   }
   function pathGradient(seed) {
-    const r = rng(seed * 53 + 23), q = r.pick([1, -1]), bz = r.pick([1, -1]), g = r.pick([0.25, 0.35]), R0 = r.pick([0.9, 1.1]), up = r.next() < 0.5;
+    const r = rng(seed * 53 + 23), q = r.pick([1, -1]), bz = r.pick([1, -1]), g = r.pick([0.25, 0.35]), R0 = r.pick([0.9, 1.1]), up = r.next() < 0.5, pt = particle(r, q);
     const Bz = (x, y) => bz * (1 + g * (up ? y : -y)), k = q / R0;
     const box = [-5, 5, -2.6, 2.6], opts0 = { x0: 0, y0: 0, vx: 0, vy: 1, dt: 0.02, n: 1700 };
     const right = path({ ...opts0, k, Bz }), mirror = right.map((p) => [-p[0], p[1]]);
@@ -270,18 +288,18 @@
     const c = closed.reduce((m, p) => [m[0] + p[0] / closed.length, m[1] + p[1] / closed.length], [0, 0]), th0 = Math.atan2(-c[1], -c[0]);
     const turn = Math.sign((closed[5][0] - c[0]) * (closed[10][1] - c[1]) - (closed[5][1] - c[1]) * (closed[10][0] - c[0]));
     for (let th = 0; th < 8 * Math.PI; th += 0.05) { const rr = R0 * Math.exp(-th / 10); spiral.push([c[0] + rr * Math.cos(th0 + turn * th), c[1] + rr * Math.sin(th0 + turn * th)]); }
-    const base = { box, bz, grad: up ? g : -g, q };
+    const base = { box, bz, grad: up ? g : -g, q, sym: pt.sym };
     const drift = Math.sign(right[right.length - 1][0]);
     const how = L(`Where the field is stronger (${up ? 'higher up' : 'further down'}), the circle is tighter; where it is weaker, wider. So the loops do not close: the charge drifts ${drift > 0 ? 'to the right' : 'to the left'}, the way it moves on its wide arcs in the weak field.`,
       `Wo das Feld stärker ist (${up ? 'weiter oben' : 'weiter unten'}), ist der Kreis enger; wo es schwächer ist, weiter. Also schliessen sich die Schleifen nicht: Die Ladung driftet ${drift > 0 ? 'nach rechts' : 'nach links'}, in die Richtung, in die sie sich auf ihren weiten Bögen im schwachen Feld bewegt.`);
     const opts = [{ pts: right, ok: true }, { pts: mirror, tag: 'mirror' }, { pts: closed, tag: 'closed' }, { pts: spiral, tag: 'spiral' }];
     return {
       kind: 'path', title: L('A field that grows', 'Ein Feld, das zunimmt'),
-      text: L(`<p>A ${signName(q)} particle starts upwards in a magnetic field ${dirName([0, 0, bz])} that gets stronger ${up ? 'upwards' : 'downwards'} (the symbols are closer together where it is stronger).</p>`, `<p>Ein ${q > 0 ? 'positives' : 'negatives'} Teilchen startet nach oben in einem Magnetfeld, das ${dirName([0, 0, bz])} zeigt und ${up ? 'nach oben' : 'nach unten'} stärker wird (wo es stärker ist, liegen die Symbole dichter).</p>`),
+      text: L(`<p>${cap(pt.name())} starts upwards in a magnetic field ${dirName([0, 0, bz])} that gets stronger ${up ? 'upwards' : 'downwards'} (the symbols are closer together where it is stronger).</p>`, `<p>${cap(pt.name())} startet nach oben in einem Magnetfeld, das ${dirName([0, 0, bz])} zeigt und ${up ? 'nach oben' : 'nach unten'} stärker wird (wo es stärker ist, liegen die Symbole dichter).</p>`),
       figs: `<div class="fig">${pathFig({ ...base, pts: [[0, 0], [0, 0.6]] })}</div>`,
       questions: [{ type: 'pick', key: 'p', label: L('Which drawing shows its path?', 'Welche Zeichnung zeigt seine Bahn?'), options: r.shuffle(opts).map((o) => ({ html: drawPick({ ...base, pts: o.pts }), ok: !!o.ok, tag: o.tag, why: o.ok ? '' : `${WHYP[o.tag]()} ${how}` })) }],
-      hints: [L('The radius of the circle is r = m·v/(q·B): a stronger field, a tighter circle.', 'Der Radius des Kreises ist r = m·v/(q·B): ein stärkeres Feld, ein engerer Kreis.'), L('The speed does not change: the magnetic force does no work.', 'Der Betrag der Geschwindigkeit ändert sich nicht: Die magnetische Kraft verrichtet keine Arbeit.'), L('Which way does the charge turn? Where on its circle is it in the weak field?', 'In welche Richtung dreht die Ladung? Wo auf ihrem Kreis ist sie im schwachen Feld?')],
-      solution: [how], solFig: `<div class="fig">${pathFig({ ...base, pts: right })}</div>`, p: { q, bz, g, R0, up },
+      hints: [chargeOf(pt), L('The radius of the circle is r = m·v/(q·B): a stronger field, a tighter circle.', 'Der Radius des Kreises ist r = m·v/(q·B): ein stärkeres Feld, ein engerer Kreis.'), L('The speed does not change: the magnetic force does no work.', 'Der Betrag der Geschwindigkeit ändert sich nicht: Die magnetische Kraft verrichtet keine Arbeit.'), L('Which way does the charge turn? Where on its circle is it in the weak field?', 'In welche Richtung dreht die Ladung? Wo auf ihrem Kreis ist sie im schwachen Feld?')],
+      solution: [how], solFig: `<div class="fig">${pathFig({ ...base, pts: right })}</div>`, p: { q, bz, g, R0, up, pt: pt.id },
     };
   }
 
@@ -320,7 +338,7 @@
     return {
       kind: 'radius', title: L('Radius and period', 'Radius und Umlaufzeit'),
       text: L(`<p>${L(...PNAME[name]).replace(/^./, (c) => c.toUpperCase())} moves at ${sci(v)} m/s perpendicular to a uniform magnetic field of ${nice(B)} T. (m = ${sci(pt.m)} kg, q = ${name === 'alpha' ? '2e' : name === 'electron' ? '−e' : 'e'}, e = 1.602 · 10<sup>−19</sup> C)</p>`,
-        `<p>${L(...PNAME[name]).replace(/^./, (c) => c.toUpperCase())} bewegt sich mit ${sci(v)} m/s senkrecht zu einem homogenen Magnetfeld von ${nice(B)} T. (m = ${sci(pt.m)} kg, q = ${name === 'alpha' ? '2e' : name === 'electron' ? '−e' : 'e'}, e = 1.602 · 10<sup>−19</sup> C)</p>`),
+        `<p>${L(...PNAME[name]).replace(/^./, (c) => c.toUpperCase())} bewegt sich mit ${sci(v)} m/s senkrecht zu einem homogenen Magnetfeld von ${nice(B)} T. (m = ${sci(pt.m)} kg, q = ${name === 'alpha' ? '2e' : name === 'electron' ? '−e' : 'e'}, e = 1.602 · 10<sup>−19</sup> C)</p>`) + (WHAT[name] ? `<p class="note">${cap(L(...WHAT[name]))}.</p>` : ''),
       figs: '',
       questions: [choice('r', L('(a) the radius of its circle', '(a) der Radius seiner Kreisbahn'), qa), choice('T', L('(b) the time for one turn', '(b) die Zeit für einen Umlauf'), qb),
         choice('c', L('(c) If it were twice as fast, the time for one turn would', '(c) Wäre es doppelt so schnell, würde die Zeit für einen Umlauf'), r.shuffle(qc.map(([label, ok, why]) => ({ label, ok, why }))))],
@@ -329,6 +347,11 @@
     };
   }
   // [mass in u, charge in e, id, [en, de], the German genitive]
+  const WHAT = {
+    deuteron: ['a deuteron is the nucleus of heavy hydrogen (deuterium): one proton and one neutron', 'ein Deuteron ist der Kern von schwerem Wasserstoff (Deuterium): ein Proton und ein Neutron'],
+    triton: ['a triton is the nucleus of the heaviest hydrogen (tritium): one proton and two neutrons', 'ein Triton ist der Kern des schwersten Wasserstoffs (Tritium): ein Proton und zwei Neutronen'],
+    alpha: ['an alpha particle is a helium nucleus: two protons and two neutrons', 'ein Alphateilchen ist ein Heliumkern: zwei Protonen und zwei Neutronen'],
+  };
   const RATIO = [[1, 1, 'proton', ['a proton', 'ein Proton'], 'eines Protons'], [2, 1, 'deuteron', ['a deuteron', 'ein Deuteron'], 'eines Deuterons'], [3, 1, 'triton', ['a triton', 'ein Triton'], 'eines Tritons'],
     [4, 2, 'alpha', ['an alpha particle', 'ein Alphateilchen'], 'eines Alphateilchens'], [4, 1, 'he', ['a He⁺ ion', 'ein He⁺-Ion'], 'eines He⁺-Ions'], [12, 6, 'c6', ['a C⁶⁺ ion', 'ein C⁶⁺-Ion'], 'eines C⁶⁺-Ions']];
   const frac = (x) => (Math.abs(x - 1) < 1e-9 ? L('the same', 'gleich gross') : x > 1 ? L(`${nice(x)} times as large`, `${nice(x)}-mal so gross`) : L(`1/${nice(1 / x)} as large`, `1/${nice(1 / x)} so gross`));
@@ -348,7 +371,8 @@
       const mk = (list, why) => list.map((o) => ({ ...o, why: o.ok ? '' : why }));
       return {
         kind: 'radius', title: L('Comparing circles', 'Kreise vergleichen'),
-        text: L(`<p>${L(...a[3]).replace(/^./, (c) => c.toUpperCase())} and ${L(...b[3])} move at the same speed perpendicular to the same uniform magnetic field.</p>`, `<p>${L(...a[3]).replace(/^./, (c) => c.toUpperCase())} und ${L(...b[3])} bewegen sich mit derselben Geschwindigkeit senkrecht zum selben homogenen Magnetfeld.</p>`),
+        text: L(`<p>${cap(L(...a[3]))} and ${L(...b[3])} move at the same speed perpendicular to the same uniform magnetic field.</p>`, `<p>${cap(L(...a[3]))} und ${L(...b[3])} bewegen sich mit derselben Geschwindigkeit senkrecht zum selben homogenen Magnetfeld.</p>`) +
+          `<p class="note">${[a, b].map((x, i) => `${(i ? (y) => y : cap)(L(...x[3]).replace(/^(a|an|ein) /, ''))}: ${L('mass', 'Masse')} ${x[0]} u, ${L('charge', 'Ladung')} +${x[1] === 1 ? '' : x[1]}e`).join('; ')}.${[a, b].filter((x) => WHAT[x[2]]).map((x) => ` ${cap(L(...WHAT[x[2]]))}.`).join('')}</p>`,
         figs: '',
         questions: [
           choice('r', L(`(a) Compared with the circle of ${L(...a[3])}, the radius of the circle of ${L(...b[3])} is`, `(a) Verglichen mit der Kreisbahn ${a[4]} ist der Radius der Kreisbahn ${b[4]}`), mk(opt(ratio, [1 / ratio, ratio * ratio, ratio * 2, 1, 2, 0.5]), how)),
@@ -397,8 +421,13 @@
   }
 
   // ---------------------------------------------------------------- the velocity selector
+  // the particles flying in: [English, German, the symbol drawn (none: drawn with its sign)]
+  const FLOCK = {
+    1: [['positive ions', 'Positive Ionen', null], ['protons', 'Protonen', 'p'], ['sodium ions (Na⁺)', 'Natrium-Ionen (Na⁺)', 'Na⁺'], ['alpha particles', 'Alphateilchen', 'α']],
+    '-1': [['negative ions', 'Negative Ionen', null], ['electrons', 'Elektronen', 'e⁻'], ['chloride ions (Cl⁻)', 'Chlorid-Ionen (Cl⁻)', 'Cl⁻']],
+  };
   function selector(seed) {
-    const r = rng(seed * 71 + 41), q = r.pick([1, -1]), Edown = r.next() < 0.5, E = r.pick([1, 2, 3, 4, 6]) * 1e4, B = r.pick([0.05, 0.1, 0.2, 0.25]), v = E / B;
+    const r = rng(seed * 71 + 41), q = r.pick([1, -1]), who = r.pick(FLOCK[q]), Edown = r.next() < 0.5, E = r.pick([1, 2, 3, 4, 6]) * 1e4, B = r.pick([0.05, 0.1, 0.2, 0.25]), v = E / B;
     const bz = Edown ? -1 : 1; // the magnetic force on a positive charge moving right opposes the electric one
     const mag = force(q, [1, 0, 0], [0, 0, bz]), plate = (d) => (d[1] > 0 ? L('towards the upper plate', 'zur oberen Platte') : L('towards the lower plate', 'zur unteren Platte'));
     const how = L(`It passes straight when the two forces cancel: q·E = q·v·B, so v = E/B = ${sci(E)} V/m / ${nice(B)} T = ${sci(v)} m/s, whatever its charge and mass.`, `Es fliegt gerade durch, wenn sich die beiden Kräfte aufheben: q·E = q·v·B, also v = E/B = ${sci(E)} V/m / ${nice(B)} T = ${sci(v)} m/s, unabhängig von Ladung und Masse.`);
@@ -409,16 +438,16 @@
     const three = (rightLabel, why) => r.shuffle([[plate([0, 1, 0]), 'up'], [plate([0, -1, 0]), 'down'], [L('straight through', 'gerade durch'), 'straight']].map(([label, k]) => ({ label, ok: label === rightLabel, why })));
     return {
       kind: 'selector', title: L('The velocity selector', 'Das Geschwindigkeitsfilter'),
-      text: L(`<p>Between two charged plates, the electric field (${sci(E)} V/m) points ${Edown ? 'down' : 'up'}; a magnetic field of ${nice(B)} T points ${dirName([0, 0, bz])}. ${q > 0 ? 'Positive' : 'Negative'} ions fly in from the left.</p>`, `<p>Zwischen zwei geladenen Platten zeigt das elektrische Feld (${sci(E)} V/m) nach ${Edown ? 'unten' : 'oben'}; ein Magnetfeld von ${nice(B)} T zeigt ${dirName([0, 0, bz])}. ${q > 0 ? 'Positive' : 'Negative'} Ionen fliegen von links herein.</p>`),
-      figs: `<div class="fig">${P.selectorFig({ Edown, bz, q })}</div>`,
+      text: L(`<p>Between two charged plates, the electric field (${sci(E)} V/m) points ${Edown ? 'down' : 'up'}; a magnetic field of ${nice(B)} T points ${dirName([0, 0, bz])}. ${cap(who[0])} fly in from the left.</p>`, `<p>Zwischen zwei geladenen Platten zeigt das elektrische Feld (${sci(E)} V/m) nach ${Edown ? 'unten' : 'oben'}; ein Magnetfeld von ${nice(B)} T zeigt ${dirName([0, 0, bz])}. ${who[1]} fliegen von links herein.</p>`),
+      figs: `<div class="fig">${P.selectorFig({ Edown, bz, q, sym: who[2] })}</div>`,
       questions: [
-        choice('v', L('(a) the speed of the ions that pass straight through', '(a) die Geschwindigkeit der Ionen, die gerade durchfliegen'), vals),
-        choice('fast', L('(b) A faster ion of the same kind is deflected', '(b) Ein schnelleres Ion derselben Art wird abgelenkt'), three(plate(mag), howFast)),
-        choice('heavy', L('(c) An ion with twice the mass (same charge, speed v = E/B) flies', '(c) Ein Ion mit doppelter Masse (gleiche Ladung, Geschwindigkeit v = E/B) fliegt'), three(L('straight through', 'gerade durch'), howSame)),
-        choice('sign', L('(d) An ion of the opposite sign with the speed v = E/B flies', '(d) Ein Ion mit umgekehrtem Vorzeichen und der Geschwindigkeit v = E/B fliegt'), three(L('straight through', 'gerade durch'), howSame)),
+        choice('v', L('(a) the speed of the particles that pass straight through', '(a) die Geschwindigkeit der Teilchen, die gerade durchfliegen'), vals),
+        choice('fast', L('(b) A faster particle of the same kind is deflected', '(b) Ein schnelleres Teilchen derselben Art wird abgelenkt'), three(plate(mag), howFast)),
+        choice('heavy', L('(c) A particle with twice the mass (same charge, speed v = E/B) flies', '(c) Ein Teilchen mit doppelter Masse (gleiche Ladung, Geschwindigkeit v = E/B) fliegt'), three(L('straight through', 'gerade durch'), howSame)),
+        choice('sign', L('(d) A particle with a charge of the opposite sign and the speed v = E/B flies', '(d) Ein Teilchen mit einer Ladung umgekehrten Vorzeichens und der Geschwindigkeit v = E/B fliegt'), three(L('straight through', 'gerade durch'), howSame)),
       ],
       hints: [L('Electric force q·E, magnetic force q·v·B: in which directions do they point?', 'Elektrische Kraft q·E, magnetische Kraft q·v·B: In welche Richtungen zeigen sie?'), L('Straight through when they cancel.', 'Gerade durch, wenn sie sich aufheben.'), L('Only the magnetic force depends on the speed.', 'Nur die magnetische Kraft hängt von der Geschwindigkeit ab.')],
-      solution: [how, howFast, howSame], p: { q, Edown, E, B },
+      solution: [how, howFast, howSame], p: { q, Edown, E, B, who: who[0] },
     };
   }
 

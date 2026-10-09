@@ -2,7 +2,8 @@
 // into it ⊗. Colours by quantity: velocity and current blue, field green, force red.
 //   icon(d)          a direction as a small picture: an arrow in the page, or ⊙ / ⊗
 //   scene(o)         charges and wires with their vectors: o = { field: { dir } (drawn as field
-//                    lines or a grid of ⊙ / ⊗), items: [{ kind: 'particle', q, at } | { kind: 'piece'
+//                    lines or a grid of ⊙ / ⊗), items: [{ kind: 'particle', q, at, sym (a named
+//                    particle's symbol, drawn instead of its sign) } | { kind: 'piece'
 //                    (a short wire), d, at } | { kind: 'wire' (a long wire through at), d, at, name }],
 //                    vecs: [{ of (item index), kind: 'v' | 'I' | 'F' | 'B', dir, unknown, name }],
 //                    points: [{ at, name }] }
@@ -35,6 +36,10 @@
       ? `<circle class="${cls}-head" cx="${f1(x)}" cy="${f1(y)}" r="${f1(r * 0.28)}"/>`
       : `<path class="${cls}" stroke-width="1.8" d="M${f1(x - r * 0.62)} ${f1(y - r * 0.62)} L${f1(x + r * 0.62)} ${f1(y + r * 0.62)} M${f1(x + r * 0.62)} ${f1(y - r * 0.62)} L${f1(x - r * 0.62)} ${f1(y + r * 0.62)}"/>`);
   }
+  // a charged particle at (x, y): its symbol (a named particle, in a neutral colour, its sign not
+  // shown) or its sign (+, −, 0) on a colour by sign
+  const particle = (x, y, r, q, sym) => `<circle class="particle ${sym ? 'named' : q > 0 ? 'pos' : q < 0 ? 'neg' : 'neu'}" cx="${f1(x)}" cy="${f1(y)}" r="${r}"/>` +
+    txt(x, y + (sym ? 4.5 : 5), sym || (q > 0 ? '+' : q < 0 ? '−' : '0'), `sign${sym && sym.length > 2 ? ' long' : ''}`);
   const svg = (w, h, body, label, cls = '') => `<svg class="mf ${cls}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${label}">${body}</svg>`;
   const txt = (x, y, s, cls = 'lbl', anchor = 'middle') => `<text class="${cls}" x="${f1(x)}" y="${f1(y)}" text-anchor="${anchor}">${s}</text>`;
 
@@ -71,7 +76,7 @@
     (o.items || []).forEach((it) => {
       const x = X(it.at[0]), y = Y(it.at[1]);
       if (it.kind === 'particle') {
-        s += `<circle class="particle ${it.q > 0 ? 'pos' : it.q < 0 ? 'neg' : 'neu'}" cx="${f1(x)}" cy="${f1(y)}" r="${R}"/>` + txt(x, y + 5, it.q > 0 ? '+' : it.q < 0 ? '−' : '0', 'sign');
+        s += particle(x, y, R, it.q, it.sym);
         if (it.name) s += txt(x - R - 4, y - R - 2, it.name, 'lbl', 'end');
         ends.push(R);
       } else if (it.d[2]) {
@@ -133,7 +138,7 @@
       s += head(X(b[0]), Y(b[1]), (X(b[0]) - X(a[0])) / d, (Y(b[1]) - Y(a[1])) / d, 'traj-head', 11, 5);
     }
     const p0 = o.pts[0], R = o.small ? 8 : 10;
-    s += `<circle class="particle ${o.q > 0 ? 'pos' : o.q < 0 ? 'neg' : 'neu'}" cx="${f1(X(p0[0]))}" cy="${f1(Y(p0[1]))}" r="${R}"/>` + txt(X(p0[0]), Y(p0[1]) + 4.5, o.q > 0 ? '+' : o.q < 0 ? '−' : '0', 'sign');
+    s += particle(X(p0[0]), Y(p0[1]), o.sym ? R + 2 : R, o.q, o.sym);
     return svg(W, H, s, o.label || L('The path of the particle', 'Die Bahn des Teilchens'), o.small ? 'small' : '');
   }
 
@@ -162,13 +167,58 @@
     s += txt(46, top + 2, o.Edown ? '+' : '−', 'sign big') + txt(46, bot + 10, o.Edown ? '−' : '+', 'sign big');
     for (const x of [110, 200, 290]) s += o.Edown ? arrow(x, top + 6, x, top + 40, 'v-efield', 2) : arrow(x, bot - 6, x, bot - 40, 'v-efield', 2);
     s += txt(300, o.Edown ? top + 28 : bot - 22, `<tspan class="it">E</tspan>`, 'lbl c-efield', 'start');
-    s += `<circle class="particle ${o.q > 0 ? 'pos' : 'neg'}" cx="26" cy="${(top + bot) / 2}" r="11"/>` + txt(26, (top + bot) / 2 + 5, o.q > 0 ? '+' : '−', 'sign');
+    s += particle(26, (top + bot) / 2, 12, o.q, o.sym);
     s += arrow(40, (top + bot) / 2, 96, (top + bot) / 2, 'v-vel') + txt(70, (top + bot) / 2 - 10, `<tspan class="it">v</tspan>`, 'lbl c-vel');
     s += txt(W - 6, 16, `<tspan class="it">B</tspan>`, 'lbl c-field', 'end');
     return svg(W, H, s, L('A velocity selector: two charged plates in a magnetic field', 'Ein Geschwindigkeitsfilter: zwei geladene Platten in einem Magnetfeld'));
   }
 
-  const api = { icon, scene, pathFig, tracksFig, selectorFig, arrow, dotCross };
+  // ---------------------------------------------------------------- a helix in 3D
+  // The field along x (to the right); y up, z towards the viewer, drawn down and to the left
+  // (an oblique view). The charge winds around a field line: o = { R (radius), pitch, turns, q }.
+  // A positive charge turns clockwise seen with the field pointing at the viewer (right hand).
+  // The back half of each turn (z < 0) is lighter.
+  function helix3d(o) {
+    const W = 520, H = 300, S = 54, ox = 80, oy = 150;
+    const P2 = (x, y, z) => [ox + S * (x - 0.42 * z), oy - S * (y - 0.32 * z)];
+    const len = o.pitch * o.turns, R = o.R, sgn = o.q > 0 ? -1 : 1;
+    let s = `<rect class="bg" x="0" y="0" width="${W}" height="${H}"/>`;
+    // field lines around the axis, and the axis with B
+    for (const [y, z] of [[1.9, 0], [-1.9, 0], [0, 2.3], [0, -2.3]]) {
+      const a = P2(-0.6, y, z), b = P2(len + 0.8, y, z);
+      s += `<line class="v-field faint" x1="${f1(a[0])}" y1="${f1(a[1])}" x2="${f1(b[0])}" y2="${f1(b[1])}"/>`;
+    }
+    const a0 = P2(-0.6, 0, 0), a1 = P2(len + 1.2, 0, 0);
+    s += arrow(a0[0], a0[1], a1[0], a1[1], 'v-field', 1.6) + txt(a1[0] + 4, a1[1] - 8, '<tspan class="it">B</tspan>', 'lbl c-field', 'start');
+    // the cylinder the path winds on: its outline, and its end circles
+    for (const y of [R, -R]) { const a = P2(0, y, 0), b = P2(len, y, 0); s += `<line class="cyl" x1="${f1(a[0])}" y1="${f1(a[1])}" x2="${f1(b[0])}" y2="${f1(b[1])}"/>`; }
+    for (const x of [0, len]) {
+      let d = '';
+      for (let k = 0; k <= 48; k++) { const th = (2 * Math.PI * k) / 48, p = P2(x, R * Math.cos(th), R * Math.sin(th)); d += `${k ? 'L' : 'M'}${f1(p[0])},${f1(p[1])}`; }
+      s += `<path class="cyl" d="${d}"/>`;
+    }
+    // the helix: runs in front (z ≥ 0) and behind (z < 0)
+    let runs = [], cur = null;
+    for (let k = 0; k <= 60 * o.turns; k++) {
+      const th = (2 * Math.PI * k) / 60, x = (o.pitch * th) / (2 * Math.PI), y = R * Math.cos(th), z = sgn * R * Math.sin(th), front = z >= -1e-9;
+      if (!cur || cur.front !== front) { cur = { front, pts: cur ? [cur.pts[cur.pts.length - 1]] : [] }; runs.push(cur); }
+      cur.pts.push(P2(x, y, z));
+    }
+    runs.filter((r) => !r.front).forEach((r) => { s += `<path class="traj back" d="M${r.pts.map((p) => `${f1(p[0])},${f1(p[1])}`).join(' L')}"/>`; });
+    runs.filter((r) => r.front).forEach((r) => { s += `<path class="traj" d="M${r.pts.map((p) => `${f1(p[0])},${f1(p[1])}`).join(' L')}"/>`; });
+    // the start, and the velocity there split into its parts along and across the field
+    const p0 = P2(0, R, 0), along = P2(o.pitch * 0.35, R, 0), across = P2(0, R, sgn * 1.8); // dz/dθ = sgn·R at the start
+    s += arrow(p0[0], p0[1], along[0], along[1], 'v-vel', 2.2) + txt(along[0] + 2, along[1] - 8, 'v<tspan class="sub" dy="3">∥</tspan>', 'lbl c-vel it', 'start');
+    s += arrow(p0[0], p0[1], across[0], across[1], 'v-vel', 2.2) + txt(across[0] + 8, across[1] + 4, 'v<tspan class="sub" dy="3">⊥</tspan>', 'lbl c-vel it', 'start');
+    s += `<circle class="particle ${o.q > 0 ? 'pos' : 'neg'}" cx="${f1(p0[0])}" cy="${f1(p0[1])}" r="9"/>` + txt(p0[0], p0[1] + 4.5, o.q > 0 ? '+' : '−', 'sign');
+    // one pitch
+    const q1 = P2(0, -R - 0.55, 0), q2 = P2(o.pitch, -R - 0.55, 0);
+    s += `<line class="dimline" x1="${f1(q1[0])}" y1="${f1(q1[1])}" x2="${f1(q2[0])}" y2="${f1(q2[1])}"/>` + `<path class="dimline" d="M${f1(q1[0])} ${f1(q1[1] - 5)} v10 M${f1(q2[0])} ${f1(q2[1] - 5)} v10"/>` +
+      txt((q1[0] + q2[0]) / 2, q1[1] + 18, L('one turn: v<tspan class="sub" dy="3">∥</tspan><tspan dy="-3">·T</tspan>', 'ein Umlauf: v<tspan class="sub" dy="3">∥</tspan><tspan dy="-3">·T</tspan>'), 'lbl small');
+    return svg(W, H, s, L('The helix in three dimensions: the charge winds around a field line', 'Die Schraubenlinie räumlich: Die Ladung windet sich um eine Feldlinie'), 'wide');
+  }
+
+  const api = { icon, scene, pathFig, tracksFig, selectorFig, helix3d, arrow, dotCross };
   root.MagPlot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

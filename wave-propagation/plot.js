@@ -6,7 +6,7 @@
 //                    o: { small, values (the student's heights, for drawing), xs, label }
 //   pointAt(spec, px, py)  the grid line and height (whole cm) nearest to a point of a drawing
 //   Anim.mount(el, a)      an animation in el: the rope from a.t0 to a.t1 (a = { sc, t0, t1,
-//                    show: ['sum'] and/or ['parts'], mark, trace (a y(t) graph at that place
+//                    show: ['sum'], ['parts'] and/or ['in'], mark, trace (a y(t) graph at that place
 //                    growing alongside), dots, virtual (the mirror crests behind the end) }),
 //                    with play/pause and a slider; it plays once when shown (not with reduced
 //                    motion) and stops at a.hold (e.g. the time an exercise asks about), from where
@@ -14,7 +14,9 @@
 //                    without being told when); a.split gives each crest its own slider, to move
 //                    them one by one (crests without an end); a.ref: the rope at that time drawn
 //                    faded, as a reference, once the crests have left it; a.explore: what to show
-//                    then instead of a.show (e.g. ['parts']: the crests, not their sum). Returns { stop }.
+//                    then instead of a.show (['parts']: the crests, not their sum; ['in']: only the
+//                    incoming crests), and a.exploreSolved once a.solved() (e.g. the sum as well).
+//                    Returns { stop, redraw }.
 (function (root) {
   'use strict';
 
@@ -111,8 +113,11 @@
       } else sc.pulses.forEach((p, i) => curves.push({ f: (x) => W.ev(p, x, t), cls: i ? 'part2' : 'part' }));
     }
     // faded: the rope at the reference time (the state given), once the crests have moved on
-    if (a.refShown) curves.unshift({ f: (x) => W.y(a.refSc, x, a.ref), cls: 'ref' });
-    if (a.show.includes('sum')) curves.push({ f: (x) => W.y(sc, x, t), cls: 'main' });
+    if (a.refShown) curves.unshift({ f: (x) => (E != null && x > E + 1e-9 ? null : W.y(a.refSc, x, a.ref)), cls: 'ref' });
+    // only the incoming crests: behind the end too, where the axis goes on (a.virtual)
+    if (a.show.includes('in')) curves.push({ f: (x) => (E == null || a.virtual || x <= E ? sc.pulses.reduce((s, p) => s + W.ev(p, x, t), 0) : null), cls: 'part' });
+    const onRope = (f) => (x) => (E != null && x > E + 1e-9 ? null : f(x)); // the rope ends at the end
+    if (a.show.includes('sum')) curves.push({ f: onRope((x) => W.y(sc, x, t)), cls: 'main' });
     // the speed arrows of the crests still (partly) on the rope
     const arrows = a.arrows ? sc.pulses.filter((p) => { const l = p.x0 + p.dir * p.v * t; return l + p.sh.w > 0 && l < (E != null ? E : W.X); }).map((p) => W.arrowOf(p, t, { up: p.sgn < 0 })) : [];
     const spec = { axis: 'x', lo: 0, hi, Y: a.Y || (sc.end && sc.end.type === 'free' ? 11 : 6), curves, end: sc.end, arrows, marks: [...(a.mark != null ? [{ x: a.mark, label: '' }] : []), ...(a.mark2 != null ? [{ x: a.mark2, label: '' }] : [])], dots: (a.dots || []).map((d) => ({ x: d.x, y: W.y(sc, d.x, t), label: d.label })), label: a.noTime ? '' : W.tLabel(Math.round(t * 10) / 10), virtual: a.virtual && E != null ? E : null };
@@ -136,7 +141,10 @@
       const ts = Array.from({ length: n }, () => a.t0);
       let raf = 0, last = 0, playing = false, held = false;
       // moved away from the reference: the faded reference, and (a.explore) other curves, e.g. only the crests
-      const withRef = () => { const moved = a.ref != null && ts.some((t) => Math.abs(t - a.ref) > 1e-6); return { ...a, refSc: a.sc, refShown: moved, show: moved && a.explore ? a.explore : a.show }; };
+      const withRef = () => {
+        const moved = a.ref != null && ts.some((t) => Math.abs(t - a.ref) > 1e-6), solved = a.solved && a.solved() && a.exploreSolved;
+        return { ...a, refSc: a.sc, refShown: moved, show: moved && a.explore ? (solved ? a.exploreSolved : a.explore) : a.show };
+      };
       const at = () => (a.split ? frame({ ...withRef(), sc: { ...a.sc, pulses: a.sc.pulses.map((p, i) => ({ ...p, x0: p.x0 + p.dir * p.v * ts[i] })) } }, 0) : frame(withRef(), ts[0]));
       const show = () => { frames.innerHTML = at(); sliders.forEach((sl, i) => { sl.value = String(Math.round(((ts[i] - a.t0) / span) * 1000)); }); };
       const stop = () => { playing = false; cancelAnimationFrame(raf); btn.textContent = '▶'; btn.setAttribute('aria-label', L('Play', 'Abspielen')); };
@@ -162,7 +170,7 @@
       sliders.forEach((sl, i) => sl.addEventListener('input', () => { stop(); ts[i] = a.t0 + (Number(sl.value) / 1000) * span; show(); }));
       show();
       if (!reduced() && a.autoplay !== false) setTimeout(play, 300);
-      return { stop };
+      return { stop, redraw: show };
     },
   };
 
