@@ -47,7 +47,9 @@
   const NAMED = {
     1: [['p', ['a proton', 'ein Proton'], 'p'], ['e+', ['a positron', 'ein Positron'], 'e⁺'], ['a', ['an alpha particle', 'ein Alphateilchen'], 'α'], ['na', ['a sodium ion (Na⁺)', 'ein Natrium-Ion (Na⁺)'], 'Na⁺']],
     '-1': [['e', ['an electron', 'ein Elektron'], 'e⁻'], ['cl', ['a chloride ion (Cl⁻)', 'ein Chlorid-Ion (Cl⁻)'], 'Cl⁻']],
-    0: [['n', ['a neutron', 'ein Neutron'], 'n']],
+    // neutral: a neutron, or an atom (the sodium atom next to the sodium ion above)
+    0: [['n', ['a neutron', 'ein Neutron'], 'n'], ['he', ['a helium atom', 'ein Heliumatom'], 'He'], ['h', ['a hydrogen atom', 'ein Wasserstoffatom'], 'H'],
+      ['naa', ['a sodium atom (Na)', 'ein Natriumatom (Na)'], 'Na'], ['ne', ['a neon atom', 'ein Neonatom'], 'Ne']],
   };
   function particle(r, q) {
     if (r.next() < 0.35) return { q, id: 'q', sym: null, name: () => L(`a ${signName(q)} particle`, `ein ${q > 0 ? 'positives' : q < 0 ? 'negatives' : 'neutrales'} Teilchen`) };
