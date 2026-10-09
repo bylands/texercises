@@ -55,7 +55,8 @@
 
   // the app is the first folder of the address (/coe/ → coe); the hub (at /, or /hub/ when tried
   // out locally), the privacy page and the admin panel are no app
-  if (typeof location !== 'undefined') {
+  // (not when the admin panel reads an app's outline: ?outline=1, see sets.js)
+  if (typeof location !== 'undefined' && !/[?&]outline=1/.test(location.search)) {
     const app = (location.pathname.match(/^\/([a-z0-9-]+)\//) || [])[1];
     if (app && !['privacy', 'admin', 'hub'].includes(app)) {
       try {

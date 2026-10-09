@@ -8,6 +8,8 @@
 // An example may say what its practice covers (also: HTML, shown under its idea); with
 // helpers.practise(i), the last frame of each example has a button to practise example i's topic
 // (on the last example, the final button does that).
+// In a set of the teacher's (sets.js), only the set's examples are shown (keeping their numbers),
+// and without practice in the set, there is no button to practise and the last example ends there.
 (function (root) {
   'use strict';
 
@@ -22,6 +24,14 @@
   function createTutor(examples, helpers) {
     let ex = 0, frame = 0;
     let cache = [];
+    const S = root.LPSets;
+    if (S) S.register('tutor', { names: () => examples.map((e) => e.name) });
+    // the examples shown, in order, and whether the tutor leads on to practice
+    let only = S && S.tutor() ? S.tutor().filter((i) => i >= 0 && i < examples.length).sort((a, b) => a - b) : null;
+    if (only && !only.length) only = null;
+    const list = () => only || examples.map((_, i) => i);
+    const lastEx = () => list()[list().length - 1];
+    const toPractice = !S || S.mode('practice');
     const lang = () => TEXTS[root.Lang ? root.Lang.get() : 'en'];
     const t = () => ({ ...lang(), ...(helpers.t ? helpers.t() : {}) });
     // the line on what the practice covers, under the idea, and the button to practise
@@ -36,15 +46,16 @@
       $('#t-also').innerHTML = examples[ex].also || '';
       $('#t-also').hidden = !examples[ex].also;
       if ($('#t-practise')) {
-        $('#t-practise').hidden = !last || ex === examples.length - 1;
+        $('#t-practise').hidden = !last || ex === lastEx() || !toPractice;
         $('#t-practise').textContent = t().practise;
       }
       $('#t-figure').innerHTML = f.figure;
       $('#t-text').innerHTML = f.text;
       $('#t-count').textContent = `${frame + 1} / ${frames.length}`;
-      $('#t-prev').disabled = frame === 0 && ex === 0;
-      $('#t-prev').textContent = frame === 0 && ex > 0 ? t().prevEx : t().back;
-      $('#t-next').textContent = !last ? t().next : ex < examples.length - 1 ? t().nextEx : t().done;
+      $('#t-prev').disabled = frame === 0 && ex === list()[0];
+      $('#t-prev').textContent = frame === 0 && ex !== list()[0] ? t().prevEx : t().back;
+      $('#t-next').textContent = !last ? t().next : ex !== lastEx() ? t().nextEx : toPractice ? t().done : t().next;
+      $('#t-next').disabled = last && ex === lastEx() && !toPractice;
       $('#t-bar').style.width = `${(100 * (frame + 1)) / frames.length}%`;
       document.querySelectorAll('input[name="example"]').forEach((r) => { r.checked = Number(r.value) === ex; });
       if (helpers.after) helpers.after();
@@ -53,24 +64,26 @@
     }
 
     function open(i, atEnd) {
+      if (!list().includes(i)) i = list().find((k) => k > i) ?? list()[0]; // one not in the set: the next that is
       ex = i;
       frame = atEnd ? load(i).length - 1 : 0;
       show();
     }
     function next() {
       if (frame < load(ex).length - 1) { frame++; show(); }
-      else if (ex < examples.length - 1) open(ex + 1);
+      else if (ex !== lastEx()) open(list()[list().indexOf(ex) + 1]);
+      else if (!toPractice) return;
       else if (helpers.practise) helpers.practise(ex);
       else helpers.done();
     }
     function prev() {
       if (frame > 0) { frame--; show(); }
-      else if (ex > 0) open(ex - 1, true);
+      else if (ex !== list()[0]) open(list()[list().indexOf(ex) - 1], true);
     }
 
     const buttons = () => {
-      $('#examples').innerHTML = examples.map((e, i) => `
-        <label><input type="radio" name="example" value="${i}"${i === ex ? ' checked' : ''}><span>${i + 1} · ${e.name}</span></label>`).join('');
+      $('#examples').innerHTML = list().map((i) => `
+        <label><input type="radio" name="example" value="${i}"${i === ex ? ' checked' : ''}><span>${i + 1} · ${examples[i].name}</span></label>`).join('');
     };
     buttons();
     $('#examples').addEventListener('change', (evt) => open(Number(evt.target.value)));

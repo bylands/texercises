@@ -1,8 +1,9 @@
 """Tests of the hub admin: run with `python3 hub-admin/test_hubadmin.py`.
 
-Checks the reading of the hub page, the cleaning of a configuration, the atomic write, the
-password (in the crossword app's format) and sessions, and the service end to end: login, rate
-limit, the API with and without a session, and that saves reach apps.json.
+Checks the reading of the hub page, the cleaning of a configuration and of sets, the names a set
+may have, the atomic write, the password (in the crossword app's format) and sessions, and the
+service end to end: login, rate limit, the API with and without a session, and that saves reach
+apps.json and sets.json.
 """
 import hashlib
 import json
@@ -38,6 +39,48 @@ class Unit(unittest.TestCase):
         names = {a["id"]: a["name"] for a in apps}
         self.assertEqual(names["coe"], "Energy Conservation")
         self.assertEqual(names["bulb-brightness"], "Bulb Brightness")
+        modes = {a["id"]: a["modes"] for a in apps}
+        self.assertEqual(modes["bulb-brightness"], ["tutor", "practice", "arcade"])
+        self.assertEqual(modes["coe"], ["tutor", "practice", "real", "arcade"])
+
+    def test_set_names(self):
+        ids = ["coe", "torque"]
+        self.assertIsNone(H.set_name_problem("3a-elektro", ids))
+        for bad in ["", "3A", "-x", "a b", "x" * 41, "über", None, 3]:
+            self.assertIn("not a valid name", H.set_name_problem(bad, ids))
+        self.assertIn("name of an app", H.set_name_problem("coe", ids))
+        self.assertIn("taken", H.set_name_problem("admin", ids))
+        self.assertIn("taken", H.set_name_problem("katex", ids))
+        self.assertIn("taken", H.set_name_problem("folder", ids, lambda n: n == "folder"))
+
+    def test_normalize_sets(self):
+        apps = [{"id": "coe", "modes": ["tutor", "practice", "real", "arcade"]}, {"id": "rl", "modes": ["tutor", "practice", "arcade"]}]
+        out = H.normalize_sets({"sets": {
+            "3a": {"title": " Klasse <b>3a</b>\n ", "apps": [
+                {"id": "rl", "modes": ["arcade", "real", "tutor", "x"], "tutor": [2, 0, 2, -1, True, "1"], "practice": ["a+b", "a+b", "a b", "c"]},
+                {"id": "nope", "modes": ["tutor"]},
+                {"id": "coe", "modes": ["practice"], "tutor": [1], "practice": []},  # no stage: practice goes, nothing left
+                {"id": "rl", "modes": ["tutor"]},  # twice
+            ]},
+            "4b": {"apps": [{"id": "coe", "modes": ["tutor", "real"], "tutor": []}, "junk"]},
+            "5c": "junk",
+        }}, apps)
+        self.assertEqual(out, {"sets": {
+            "3a": {"title": "Klasse b3a/b", "apps": [{"id": "rl", "modes": ["tutor", "arcade"], "tutor": [0, 2], "practice": ["a+b", "c"]}]},
+            "4b": {"title": "", "apps": [{"id": "coe", "modes": ["real"]}]},  # no example: the tutor goes
+            "5c": {"title": "", "apps": []},
+        }})
+        # the stages stay with the arcade alone, the examples only with the tutor
+        one = H.normalize_set_app({"id": "coe", "modes": ["arcade"], "tutor": [1], "practice": ["a"]}, {a["id"]: a for a in apps})
+        self.assertEqual(one, {"id": "coe", "modes": ["arcade"], "practice": ["a"]})
+        keys = ["series:easy", "gravity/rank-launch+force/ramp", "pickinv-RL-series+pickinv-RC-series"]  # as in the apps
+        self.assertEqual(H.normalize_set_app({"id": "coe", "modes": ["practice"], "practice": keys + ["<x>", "a b", "x" * 1001]}, {a["id"]: a for a in apps})["practice"], keys)
+        self.assertEqual(H.normalize_sets(None, apps), {"sets": {}})
+        with self.assertRaises(ValueError):
+            H.normalize_sets({"sets": {"coe": {}}}, apps)
+        self.assertEqual(H.normalize_sets({"sets": {"coe": {}, "ok": {}}}, apps, strict=False), {"sets": {"ok": {"title": "", "apps": []}}})
+        with self.assertRaises(ValueError):
+            H.normalize_sets({"sets": {f"s{i}": {} for i in range(H.MAX_SETS + 1)}}, apps)
 
     def test_normalize(self):
         ids = ["a", "b", "c"]
@@ -95,6 +138,7 @@ class Service(unittest.TestCase):
         (d / "pw").write_text(hash_password("teacher pw") + "\n")
         (d / "index.html").write_text((ROOT / "hub" / "index.html").read_text())
         self.config = d / "data" / "apps.json"
+        self.sets = d / "data" / "sets.json"
         self.admin = H.Admin(d / "pw", d / "index.html", self.config)
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), H.make_handler(self.admin))
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
@@ -161,6 +205,40 @@ class Service(unittest.TestCase):
         self.assertIn("Max-Age=0", headers["Set-Cookie"])
         self.assertEqual(self.req("/static/admin.js")[0], 200)
         self.assertEqual(self.req("/nothing")[0], 404)
+
+    def test_sets(self):
+        st, headers, _ = self.login()
+        cookie = headers["Set-Cookie"].split(";")[0]
+        self.assertEqual(self.req("/api/sets")[0], 403)
+        st, _, body = self.req("/api/sets", cookie=cookie)
+        self.assertEqual(st, 200)
+        data = json.loads(body)
+        self.assertEqual(data["sets"], {})
+        self.assertIn({"id": "torque", "name": "Torque", "modes": ["tutor", "practice", "real", "arcade"]}, data["apps"])
+        new = {"sets": {"3a-elektro": {"title": "Klasse 3a", "apps": [
+            {"id": "electric-field", "modes": ["tutor", "practice", "arcade"], "tutor": [0, 1, 3], "practice": ["force-dir", "lines-pick+lines-read"]},
+            {"id": "torque", "modes": ["real"]}]}}}
+        self.assertEqual(self.req("/api/sets", json.dumps(new).encode(), "application/json")[0], 403)
+        self.assertEqual(self.req("/api/sets", json.dumps(new).encode(), "text/plain", cookie)[0], 415)
+        st, _, body = self.req("/api/sets", json.dumps(new).encode(), "application/json", cookie)
+        self.assertEqual(st, 200)
+        self.assertEqual(json.loads(body)["sets"], new["sets"])
+        self.assertEqual(json.loads(self.sets.read_text()), new)
+        self.assertEqual(json.loads(self.req("/api/sets", cookie=cookie)[2])["sets"], new["sets"])
+        # names that cannot be: nothing is written
+        (Path(self.dir.name) / "privacy-old").mkdir()
+        for name, why in [("torque", "name of an app"), ("admin", "taken"), ("privacy-old", "taken"), ("index", "taken"), ("Klasse 3a", "not a valid")]:
+            st, _, body = self.req("/api/sets", json.dumps({"sets": {name: {}}}).encode(), "application/json", cookie)
+            self.assertEqual(st, 400, name)
+            self.assertIn(why, json.loads(body)["error"])
+        self.assertEqual(json.loads(self.sets.read_text()), new)
+        # deleting every set
+        st, _, body = self.req("/api/sets", b'{"sets": {}}', "application/json", cookie)
+        self.assertEqual(json.loads(self.sets.read_text()), {"sets": {}})
+        # the panel loads the frames of the apps from the same site
+        st, headers, _ = self.req("/", cookie=cookie)
+        self.assertIn("frame-src 'self'", headers["Content-Security-Policy"])
+        self.assertEqual(self.req("/static/sets.js")[0], 200)
 
     def test_rate_limit(self):
         for _ in range(H.LOGIN_ATTEMPTS):

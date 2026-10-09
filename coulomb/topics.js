@@ -38,6 +38,8 @@
 //                             with a link to it suggest looking at it first.
 //   T.go(t, s)                practise topic t (from the tutor), at stage s or else the stage reached
 //   T.also(t)                 HTML for the tutor: what the practice of topic t covers
+// In a set of the teacher's (sets.js), only the set's stages are offered, and the topics that have
+// one; the steps are made of those stages, and all topics mixed mixes only them.
 (function (root) {
   'use strict';
 
@@ -52,10 +54,19 @@
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
   function create(o) {
-    const key = (k) => `${o.app}-${k}`;
+    const S = root.LPSets;
+    if (S) S.register('topics', o.topics);
+    // the stages in the set (all without one); the topics without any are left out
+    let only = S && S.practice() ? new Set(S.practice()) : null;
+    if (only && !o.topics.some((t) => t.stages.some((s) => only.has(S.stageKey(s))))) only = null;
+    // the choice and progress are kept apart in a set that leaves stages out: its steps differ
+    const key = (k) => `${o.app}-${k}${only && S.name ? `@${S.name}` : ''}`;
     const read = (k, d) => { try { const v = JSON.parse(localStorage.getItem(key(k))); return v == null ? d : v; } catch (e) { return d; } };
     const write = (k, v) => { try { localStorage.setItem(key(k), JSON.stringify(v)); } catch (e) { /* storage unavailable */ } };
-    const all = [...new Set(o.topics.flatMap((t) => t.stages.flatMap((s) => s.types)))];
+    const stagesIn = (t) => o.topics[t].stages.filter((s) => !only || only.has(S.stageKey(s)));
+    const open = o.topics.map((_, t) => stagesIn(t).length > 0), firstOpen = open.indexOf(true);
+    const mixed = !only || open.filter(Boolean).length > 1; // all topics mixed: unless only one is left
+    const all = [...new Set(o.topics.flatMap((_, t) => stagesIn(t).flatMap((s) => s.types)))];
     const topicOfType = (type) => o.topics.findIndex((t) => t.stages.some((s) => s.types.includes(type)));
     // the current choice { topic (−1: mixed), stage }, and per topic the stage reached and the wins in it
     let cur = read('topic', { topic: 0, stage: 0 }), progress = read('progress', {}), el = null, shownTopic = 0;
@@ -67,7 +78,7 @@
     let runOut = false;
     const keyOf = (ex) => (o.keyOf ? o.keyOf(ex) : ex.p ? JSON.stringify(ex.p) : null);
     const seenHere = () => { const k = `${cur.topic}.${cur.stage}`; if (!seen.has(k)) seen.set(k, new Set()); return seen.get(k); };
-    if (!(cur.topic >= -1 && cur.topic < o.topics.length)) cur = { topic: 0, stage: 0 };
+    if (!(cur.topic >= -1 && cur.topic < o.topics.length) || (cur.topic >= 0 && !open[cur.topic]) || (cur.topic < 0 && !mixed)) cur = { topic: firstOpen, stage: 0 };
     // The steps of a topic, in the current variant: stages with fewer than MIN different exercises
     // (counted in SAMPLES of them) merged with the next, then the step with all of them.
     const MIN = 3, SAMPLES = 24, plans = new Map();
@@ -84,7 +95,7 @@
       if (t < 0) return [];
       const id = `${t}|${o.variant ? o.variant() : ''}`;
       if (plans.has(id)) return plans.get(id);
-      const raw = o.topics[t].stages, groups = [];
+      const raw = stagesIn(t), groups = [];
       let open = null;
       raw.forEach((st) => {
         open = { names: [...(open ? open.names : []), st.name || null], types: [...(open ? open.types : []), ...st.types] };
@@ -100,6 +111,8 @@
     const reached = (t) => Math.min((progress[t] || {}).stage || 0, stagesOf(t).length - 1);
     const typesOf = (t, s) => (t < 0 ? all : stagesOf(t)[Math.min(s, stagesOf(t).length - 1)].types);
     const stageName = (t, s) => stagesOf(t)[s].name();
+    // whether the tutor shows worked example i (not all may be in the set)
+    const tutorHas = (i) => !!o.tutor && (!S || (S.mode('tutor') && (!S.tutor() || S.tutor().includes(i))));
 
     function exercise(t, s, seed) {
       const types = typesOf(t, s), type = types[seed % types.length];
@@ -113,16 +126,18 @@
       if (!el) return;
       const t = cur.topic, X = tx();
       if (t >= 0 && cur.stage > stagesOf(t).length - 1) cur.stage = stagesOf(t).length - 1; // fewer steps in this variant
-      const opts = o.topics.map((tp, i) => `<option value="${i}"${i === t ? ' selected' : ''}>${i + 1} · ${esc(tp.name())}</option>`).join('') +
-        `<option value="-1"${t < 0 ? ' selected' : ''}>${X.mixed}</option>`;
+      const opts = o.topics.map((tp, i) => (open[i] ? `<option value="${i}"${i === t ? ' selected' : ''}>${i + 1} · ${esc(tp.name())}</option>` : '')).join('') +
+        (mixed ? `<option value="-1"${t < 0 ? ' selected' : ''}>${X.mixed}</option>` : '');
       const stages = stagesOf(t).length > 1 ? `<div class="levels small stages" role="radiogroup" aria-label="${X.stage}">${stagesOf(t).map((s, i) =>
         `<label><input type="radio" name="stage" value="${i}"${i === cur.stage ? ' checked' : ''}><span>${i < reached(t) ? '✓ ' : ''}${i + 1} · ${esc(stageName(t, i))}</span></label>`).join('')}</div>` : '';
       const w = t < 0 ? shownTopic : t, wk = w >= 0 ? workedOf(w, t < 0 ? 0 : cur.stage) : null;
       const last = t < 0 || cur.stage >= stagesOf(t).length - 1;
+      // the link to the worked example, if the set has it
+      const linked = wk && tutorHas(wk.i);
       el.innerHTML = `<label class="topic-pick"><span>${X.topic}</span><select id="topic-pick">${opts}</select></label>${stages}` +
-        (w >= 0 && o.tutor ? `<button type="button" class="linklike worked">📖 ${esc(X.worked(wk.i + 1, wk.name()))}</button>` : '') +
+        (linked ? `<button type="button" class="linklike worked">📖 ${esc(X.worked(wk.i + 1, wk.name()))}</button>` : '') +
         (runOut ? `<p class="topic-note">${last ? X.noneLast : X.none}</p>` : '') +
-        (suggest && suggest.topic === t && suggest.stage === cur.stage && wk && o.tutor ? `<p class="topic-note tip">${esc(X.newWorked(wk.i + 1, wk.name()))} <button type="button" class="linklike worked">📖 ${esc(X.worked(wk.i + 1, wk.name()))}</button></p>` : '');
+        (suggest && suggest.topic === t && suggest.stage === cur.stage && linked ? `<p class="topic-note tip">${esc(X.newWorked(wk.i + 1, wk.name()))} <button type="button" class="linklike worked">📖 ${esc(X.worked(wk.i + 1, wk.name()))}</button></p>` : '');
     }
 
     function choose(t, s) {
@@ -172,12 +187,12 @@
         let m = /^p(\d+)\.(\d+)-(\d+)$/.exec(id);
         if (m) {
           const t = Number(m[1]) - 1, s = Number(m[2]) - 1;
-          if (t < 0 || t >= o.topics.length || s < 0 || s >= stagesOf(t).length) return null;
+          if (t < 0 || t >= o.topics.length || !open[t] || s < 0 || s >= stagesOf(t).length) return null;
           if (cur.topic !== t || cur.stage !== s) choose(t, s);
           return exercise(t, s, Number(m[3]));
         }
         m = /^mix-(\d+)$/.exec(id);
-        if (m) { if (cur.topic !== -1) choose(-1, 0); return exercise(-1, 0, Number(m[1])); }
+        if (m && mixed) { if (cur.topic !== -1) choose(-1, 0); return exercise(-1, 0, Number(m[1])); }
         return null;
       },
       shown(ex) {
@@ -201,7 +216,7 @@
             msg = tx().done(`${p.stage + 1} · ${stageName(t, p.stage)}`);
             // a new part of the tutor: suggest going back to it
             const before = workedOf(t, p.stage - 1), now = workedOf(t, p.stage);
-            if (o.tutor && now.i !== before.i) { suggest = { topic: t, stage: p.stage }; msg += ` ${tx().newWorked(now.i + 1, now.name())}`; }
+            if (tutorHas(now.i) && now.i !== before.i) { suggest = { topic: t, stage: p.stage }; msg += ` ${tx().newWorked(now.i + 1, now.name())}`; }
           } else if (p.wins === WINS) msg = tx().last;
         }
         progress[t] = p;
@@ -209,7 +224,7 @@
         render();
         return msg;
       },
-      go(i, s) { choose(i, s == null ? reached(i) : s); },
+      go(i, s) { if (!open[i]) { i = firstOpen; s = null; } choose(i, s == null ? reached(i) : s); },
       also(i) {
         const st = stagesOf(i).filter((x) => !x.all);
         if (st.length < 2) return '';
