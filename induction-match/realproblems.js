@@ -14,10 +14,11 @@
   const dec = (x) => String(Math.round(x * 1000) / 1000);
   const { T } = I;
 
-  // the options of a value: the right one and the mistakes, apart by 15 %, sorted
+  // the options of a value: the right one and the mistakes, apart by 15 %, sorted; the extra ones
+  // get the reason of the last mistake, which gives the plain working
   function values(right, mistakes, unit, extra = [2, 0.5, 3]) {
     const out = [{ value: right, ok: true, why: '' }];
-    for (const m of [...mistakes, ...extra.map((k) => ({ value: right * k, tag: 'other', why: mistakes.length ? mistakes[0].why : '' }))]) {
+    for (const m of [...mistakes, ...extra.map((k) => ({ value: right * k, tag: 'other', why: mistakes.length ? mistakes[mistakes.length - 1].why : '' }))]) {
       if (out.length === 4) break;
       const v = Number(m.value.toPrecision(3));
       if (Number.isFinite(v) && v > 0 && out.every((o) => Math.abs(Math.log(v / o.value)) > Math.log(1.15))) out.push({ ...m, value: v, ok: false });
