@@ -543,13 +543,13 @@ def panel_page() -> str:
     return page("Admin", """
     <div class="bar top">
       <nav class="tabs" aria-label="Sections">
-        <a href="#hub" data-view="hub">Hub page</a>
         <a href="#sets" data-view="sets">Sets</a>
+        <a href="#apps" data-view="apps">Apps &amp; tags</a>
       </nav>
       <a class="view" href="/" target="_blank" rel="noopener">View the hub page ↗</a>
       <form method="post" action="/admin/logout" class="logout"><button type="submit">Log out</button></form>
     </div>
-    <section id="view-hub">
+    <section id="view-apps" hidden>
       <p class="lead">Put the apps in order and give them tags, e.g. physics topics. On the hub page, visitors can filter the apps by tag, in English or German.</p>
       <div class="bar">
         <button type="button" id="save" class="primary" disabled>Save</button>
@@ -562,7 +562,7 @@ def panel_page() -> str:
       <table id="tags" class="tagtable"><thead><tr><th scope="col">English</th><th scope="col">German</th><th scope="col">Apps</th></tr></thead><tbody></tbody></table>
       <p id="no-tags" class="note" hidden>No tags yet: add one to an app above.</p>
     </section>
-    <section id="view-sets" hidden>
+    <section id="view-sets">
       <p class="lead">A set is a selection of apps for a class, opened at learningphysics.ch/<i>name</i>: the apps you choose, in your order, and in each the modes and, for the tutor and practice, the examples and steps. The apps stay open to everyone at their usual addresses: a set is a view, not a lock.</p>
       <div class="bar">
         <button type="button" id="sets-save" class="primary" disabled>Save</button>
@@ -798,7 +798,8 @@ ADMIN_JS = r"""
 
 
 SETS_JS = r"""
-// The sets of the admin panel, and the switch between its two views (#hub, #sets). A set is
+// The sets of the admin panel, and the switch between its two views (#sets, the first, and #apps:
+// the order and tags of the apps on the hub page, see admin.js). A set is
 // { title, apps: [{ id, modes, tutor?, practice? }] } under its name; tutor and practice list the
 // worked examples (indices) and practice stages (keys) shown, all of them without the list. The
 // examples and stages of an app (its outline) come from the app itself, loaded with ?outline=1 in
@@ -1053,8 +1054,8 @@ SETS_JS = r"""
 
   // ---------------------------------------------------------------- the two views
   function view() {
-    const v = location.hash === '#sets' ? 'sets' : 'hub';
-    $('#view-hub').hidden = v !== 'hub';
+    const v = location.hash === '#apps' ? 'apps' : 'sets';
+    $('#view-apps').hidden = v !== 'apps';
     $('#view-sets').hidden = v !== 'sets';
     document.querySelectorAll('.tabs a').forEach((a) => { if (a.dataset.view === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     if (v === 'sets' && !loaded) load().catch(() => status('Could not load the sets.', 'bad'));
