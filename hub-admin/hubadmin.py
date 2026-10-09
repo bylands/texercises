@@ -555,9 +555,10 @@ def panel_page() -> str:
     return page("Admin", """
     <div class="bar top">
       <nav class="tabs" aria-label="Sections">
+        <a href="#quizzes" data-view="quizzes">Quizzes</a>
+        <a href="#games" data-view="games">Games</a>
         <a href="#sets" data-view="sets">Sets</a>
         <a href="#apps" data-view="apps">Apps &amp; tags</a>
-        <a href="#games" data-view="games">Games</a>
       </nav>
       <a class="view" href="/" target="_blank" rel="noopener">View the hub page ↗</a>
       <form method="post" action="/admin/logout" class="logout"><button type="submit">Log out</button></form>
@@ -575,7 +576,7 @@ def panel_page() -> str:
       <table id="tags" class="tagtable"><thead><tr><th scope="col">English</th><th scope="col">German</th><th scope="col">Apps</th></tr></thead><tbody></tbody></table>
       <p id="no-tags" class="note" hidden>No tags yet: add one to an app above.</p>
     </section>
-    <section id="view-sets">
+    <section id="view-sets" hidden>
       <p class="lead">A set is a selection of apps for a class, opened at learningphysics.ch/<i>name</i>: the apps you choose, in your order, and in each the modes and, for the tutor and practice, the examples and steps. The apps stay open to everyone at their usual addresses: a set is a view, not a lock.</p>
       <div class="bar">
         <button type="button" id="sets-save" class="primary" disabled>Save</button>
@@ -583,6 +584,17 @@ def panel_page() -> str:
       </div>
       <div id="set-list" class="setlist"></div>
       <div id="set-edit"></div>
+    </section>
+    <section id="view-quizzes">
+      <p class="lead">Live classroom quizzes: students join on their phones, the teacher screen runs on the projector.</p>
+      <ul class="games">
+        <li class="card">
+          <h2>Electric Circuits: the quiz</h2>
+          <p>A live quiz in the style of Kahoot on DC circuits: charge, current, voltage, power, resistance, resistor circuits and meters, in 21 questions. Points for difficulty and speed, a ranking after every question, and at the end personal feedback for every student and class statistics with a CSV export for the teacher.</p>
+          <p class="links"><a href="/electric-circuits/host" target="_blank" rel="noopener">Teacher screen ↗</a> <a href="/electric-circuits/" target="_blank" rel="noopener">Student page ↗</a></p>
+          <p class="note">learningphysics.ch/electric-circuits/ · students join there (the lobby shows a QR code); one game at a time, and a new deploy waits until no one is playing</p>
+        </li>
+      </ul>
     </section>
     <section id="view-games" hidden>
       <p class="lead">The games for the class, each a service of its own on this site.</p>
@@ -620,6 +632,8 @@ h1 { margin: 4px 0 16px; font-size: 1.6rem; }
 .games h2 a:hover { text-decoration: underline; }
 .games p { margin: 0 0 6px; }
 .games p.note { margin: 0; }
+.games .links { display: flex; flex-wrap: wrap; gap: 6px 18px; font-weight: 600; }
+.games .links a { color: var(--accent); }
 .login { max-width: 420px; }
 .field { display: block; margin: 12px 0; }
 .field span { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 4px; }
@@ -911,8 +925,8 @@ ADMIN_JS = r"""
 
 
 SETS_JS = r"""
-// The sets of the admin panel, and the switch between its views (#sets, the first; #apps: the order
-// and tags of the apps on the hub page, see admin.js; #games: links to the games). A set is
+// The sets of the admin panel, and the switch between its views (#quizzes, the first, and #games:
+// links to them; #sets; #apps: the order and tags of the apps on the hub page, see admin.js). A set is
 // { title, lang?, apps: [{ id, modes, tutor?, practice? }] } under its name; lang fixes the language
 // ('en', 'de'; without it, the students choose); tutor and practice list the
 // worked examples (indices) and practice stages (keys) shown, all of them without the list. The
@@ -1178,8 +1192,8 @@ SETS_JS = r"""
 
   // ---------------------------------------------------------------- the views
   function view() {
-    const v = ['#apps', '#games'].includes(location.hash) ? location.hash.slice(1) : 'sets';
-    ['apps', 'sets', 'games'].forEach((x) => { $(`#view-${x}`).hidden = v !== x; });
+    const v = ['#games', '#sets', '#apps'].includes(location.hash) ? location.hash.slice(1) : 'quizzes';
+    ['quizzes', 'games', 'sets', 'apps'].forEach((x) => { $(`#view-${x}`).hidden = v !== x; });
     document.querySelectorAll('.tabs a').forEach((a) => { if (a.dataset.view === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     if (v === 'sets' && !loaded) load().catch(() => status('Could not load the sets.', 'bad'));
   }
