@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Learning Physics</title>
+  <script>
+    // a set of the teacher's (learningphysics.ch/name, see below): its apps only, once they are known
+    if (/^\/[a-z0-9][a-z0-9-]{0,39}\/?$/.test(location.pathname) && !/^\/hub\/?$/.test(location.pathname)) document.documentElement.classList.add('set-page');
+  </script>
   <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"%3E%3Cstyle%3E.a%7Bstroke:%232b59c3%7D%40media %28prefers-color-scheme:dark%29%7B.a%7Bstroke:%237aa2ff%7D%7D%3C/style%3E%3Cpath class="a" d="M6 43Q13 6 31 13" fill="none" stroke-width="4.6" stroke-linecap="round" stroke-dasharray="0.1 8.2"/%3E%3Ccircle cx="37" cy="17" r="8.5" fill="%23ffc21a" stroke="%23e0a400" stroke-width="1.5"/%3E%3C/svg%3E'>
   <style>
     :root {
@@ -231,6 +235,11 @@
     main.apps:not(.with-tags) .tags { display: none; }
     .none { color: var(--muted); margin-top: 0; margin-bottom: 20px; }
 
+    /* the page of a set: no filters, and the cards only once the set is known */
+    .set-page .tools, .set-page #legend:empty { display: none; }
+    .set-page:not(.set-ready) main.apps { visibility: hidden; }
+    .set-title { font-family: var(--serif); font-size: 1.5rem; margin: 6px 0 0; }
+
     .filter {
       display: flex;
       flex-wrap: wrap;
@@ -304,6 +313,7 @@
       </div>
     </div>
     <p data-i18n="tagline">Interactive exercises for physics lessons.</p>
+    <h2 id="set-title" class="set-title" hidden></h2>
     <p id="legend" class="legend"></p>
   </header>
 
@@ -660,10 +670,18 @@
     // The search matches the name of an app or of one of its tags, in English or German. The order
     // is the standard one (the admin panel's) or, if chosen, the most recently used apps first
     // (tp-recent, noted by lang.js in each app); the choice is remembered (tp-hub-order).
+    // At learningphysics.ch/name (nginx serves this page for any such address that is no folder),
+    // the page shows the teacher's set of that name from /sets.json (written by the admin panel):
+    // its title, and only its apps, in its order, with its modes; they link to /app/?set=name, and
+    // the set is remembered for the tab (sessionStorage lp-set) so that the apps apply it at once
+    // (see shared/sets.js). No filters there. The page at / leaves any set.
     (function () {
       const main = document.querySelector('main.apps'), nav = document.getElementById('filter');
       const cards = [...main.querySelectorAll('a.app')];
-      const idOf = (a) => (a.getAttribute('href').match(/^\/([a-z0-9-]+)\/?$/) || [])[1];
+      cards.forEach((c) => { c.dataset.id = (c.getAttribute('href').match(/^\/([a-z0-9-]+)\/?$/) || [])[1]; });
+      const idOf = (a) => a.dataset.id;
+      const setName = document.documentElement.classList.contains('set-page') ? location.pathname.replace(/\//g, '') : '';
+      let set = null; // the set, once known; false: there is none of that name
       const L = (en, de) => Lang.L(en, de);
 
       // the German texts of the page; the English ones are those in it
@@ -752,6 +770,7 @@
 
       function texts() {
         Lang.apply(UI[Lang.get()]);
+        if (set === false) document.getElementById('none').innerHTML = L('There is no set of this name. <a href="/">All apps</a>', 'Eine Zusammenstellung mit diesem Namen gibt es nicht. <a href="/">Alle Apps</a>');
         search.placeholder = UI[Lang.get()].placeholder;
         funnel.title = UI[Lang.get()].filters;
         cards.forEach((c) => {
@@ -827,6 +846,7 @@
       const recentOf = () => { try { return JSON.parse(localStorage.getItem('tp-recent')) || {}; } catch (e) { return {}; } };
       const orderKey = () => { try { return localStorage.getItem('tp-hub-order') === 'recent' ? 'recent' : 'standard'; } catch (e) { return 'standard'; } };
       function arrange() {
+        if (setName) return;
         const recent = recentOf(), when = (c) => Number(recent[idOf(c)]) || 0;
         const list = orderKey() === 'recent'
           ? [...standard].sort((a, b) => when(b) - when(a)) // stable: the unused ones keep the standard order
@@ -848,10 +868,40 @@
         tags();
       }
 
+      // a set: only its apps, as it has them
+      function showSet(s) {
+        const byId = new Map(cards.map((c) => [idOf(c), c]));
+        const list = (s && Array.isArray(s.apps) ? s.apps : []).filter((a, i, all) => a && byId.has(a.id) && all.findIndex((b) => b && b.id === a.id) === i);
+        set = s ? s : false;
+        cards.forEach((c) => c.remove());
+        cards.splice(0, cards.length, ...list.map((a) => byId.get(a.id)));
+        list.forEach((a) => {
+          const c = byId.get(a.id);
+          c.dataset.modes = (Array.isArray(a.modes) ? a.modes : []).join(' ');
+          c.href = `/${a.id}/?set=${setName}`;
+          main.append(c);
+        });
+        const title = document.getElementById('set-title');
+        title.textContent = (s && typeof s.title === 'string' && s.title) || setName;
+        title.hidden = !s;
+        if (s) document.title = `${title.textContent} · Learning Physics`;
+        try { if (s) sessionStorage.setItem('lp-set', JSON.stringify({ name: setName, set: s })); else sessionStorage.removeItem('lp-set'); } catch (e) { /* storage unavailable */ }
+        texts();
+        document.documentElement.classList.add('set-ready');
+      }
+
       Lang.init();
       texts();
       arrange();
       Lang.wire(() => { texts(); tags(); });
+      if (setName) {
+        fetch('/sets.json', { cache: 'no-cache' })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => showSet(d && d.sets && typeof d.sets[setName] === 'object' && !Array.isArray(d.sets[setName]) ? d.sets[setName] : null))
+          .catch(() => showSet(null));
+        return;
+      }
+      try { sessionStorage.removeItem('lp-set'); } catch (e) { /* storage unavailable */ }
       fetch('/apps.json', { cache: 'no-cache' })
         .then((r) => (r.ok ? r.json() : null))
         .then((c) => { if (c && typeof c === 'object') apply(c); })

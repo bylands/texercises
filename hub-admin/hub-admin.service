@@ -6,14 +6,14 @@
 #   sudo install -D -m 644 hubadmin.py /opt/hub-admin/hubadmin.py
 #   sudo cp hub-admin.service /etc/systemd/system/ && sudo systemctl enable --now hub-admin
 [Unit]
-Description=Learning Physics hub admin (tags and order of the apps)
+Description=Learning Physics hub admin (tags and order of the apps, sets for classes)
 After=network.target
 
 [Service]
 User=hubadmin
 Group=hubadmin
 SupplementaryGroups=crosswords
-ExecStart=/usr/bin/python3 /opt/hub-admin/hubadmin.py --port 8040 --password-file /opt/crosswords/teacher-password --hub /var/www/teachingphysics/index.html --config /var/www/teachingphysics/hub-data/apps.json
+ExecStart=/usr/bin/python3 /opt/hub-admin/hubadmin.py --port 8040 --password-file /opt/crosswords/teacher-password --hub /var/www/teachingphysics/index.html --config /var/www/teachingphysics/hub-data/apps.json --sets /var/www/teachingphysics/hub-data/sets.json
 Restart=on-failure
 NoNewPrivileges=yes
 ProtectSystem=strict

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Admin panel of the learningphysics.ch hub: tags (e.g. physics topics) and the order of the apps.
+"""Admin panel of the learningphysics.ch hub: tags (e.g. physics topics) and the order of the apps,
+and the teacher's sets of apps for a class.
 
 The hub page (hub/index.html, served as /) shows a card per app; it reads /apps.json and puts the
 cards in its order, shows their tags, and lets visitors filter by tag. This service, served at
@@ -11,7 +12,23 @@ cards in its order, shows their tags, and lets visitors filter by tag. This serv
     /admin/api/config    GET  the apps of the hub page with their order and tags
                          POST {"order": [id, ...], "tags": {id: [key, ...]},
                                "labels": {key: {"en": name, "de": name}}}      saves apps.json
-    /admin/static/...    the panel's script and styles
+    /admin/api/sets      GET  the apps with their modes, and the sets
+                         POST {"sets": {name: set}}                          saves sets.json
+    /admin/static/...    the panel's scripts and styles
+
+A set is opened at learningphysics.ch/<name> (nginx serves the hub page for it, which then shows
+only the set's apps; see hub/index.html and shared/sets.js, which applies the set in the apps):
+
+    {"sets": {"3a-elektro": {"title": "Klasse 3a", "apps": [
+        {"id": "electric-field", "modes": ["tutor", "practice", "arcade"],
+         "tutor": [0, 1, 3], "practice": ["force-dir", "lines-pick+lines-read"]}]}}}
+
+The apps in the order of the set's page; for each, its modes in the set (of those its hub card
+lists) and, optionally, the worked examples of the tutor (indices) and the stages of practice
+(their exercise types joined with +), which also limit the arcade where its questions are of
+those types; without the list, all of them. The admin panel reads the examples and stages from
+the app itself, loaded with ?outline=1 in a hidden frame. A name is a key like a tag's, and not
+that of an app, of a file or folder in the web root, or of a service (RESERVED).
 
 The apps and their names come from the hub page itself (its <a class="app" href="/id/"> cards),
 so a new app needs no change here. The password is the crossword app's teacher password: the
@@ -19,9 +36,11 @@ same salted PBKDF2 hash file (crosswords-web set-password), read on every use, s
 takes effect at once and ends every session. Standard library only.
 
     python3 hubadmin.py --port 8040 --password-file /opt/crosswords/teacher-password \
-        --hub /var/www/teachingphysics/index.html --config /var/www/teachingphysics/hub-data/apps.json
+        --hub /var/www/teachingphysics/index.html --config /var/www/teachingphysics/hub-data/apps.json \
+        --sets /var/www/teachingphysics/hub-data/sets.json
 
-Deployment: see hub-admin.service (systemd) and the nginx locations /admin/ and /apps.json.
+Deployment: see hub-admin.service (systemd) and the nginx locations /admin/, /apps.json,
+/sets.json and @set.
 """
 from __future__ import annotations
 
@@ -44,9 +63,16 @@ from urllib.parse import parse_qs
 
 COOKIE = "hub_admin"
 SESSION_DAYS = 30
-MAX_BODY = 64 * 1024
+MAX_BODY = 256 * 1024
 MAX_TAGS = 8  # per app
 MAX_TAG_LEN = 32
+MODES = ("tutor", "practice", "real", "arcade")
+MAX_SETS, MAX_TITLE = 100, 80
+MAX_EXAMPLES, MAX_STAGES = 100, 300  # per app in a set
+# names a set cannot have, besides the apps and what is in the web root: the services and paths
+# nginx serves itself, and some kept free
+RESERVED = {"admin", "api", "apps", "crosswords", "electric-circuits", "hub", "hub-data", "index", "katex",
+            "lang", "millionaire", "privacy", "set", "sets", "static", "www"}
 LOGIN_ATTEMPTS, LOGIN_WINDOW = 10, 15 * 60  # failed logins per address and window (s)
 
 
@@ -77,7 +103,8 @@ class _Cards(HTMLParser):
         if tag == "a" and "app" in (a.get("class") or "").split():
             m = re.fullmatch(r"/([a-z0-9-]+)/?", a.get("href") or "")
             if m:
-                self.apps.append({"id": m.group(1), "name": m.group(1)})
+                modes = [x for x in MODES if x in (a.get("data-modes") or "").split()]
+                self.apps.append({"id": m.group(1), "name": m.group(1), "modes": modes})
                 self._in_card = True
         elif tag == "h2" and self._in_card:
             self._in_h2 = True
@@ -94,11 +121,12 @@ class _Cards(HTMLParser):
             self.apps[-1]["name"] += data
 
 
-def hub_apps(hub_html: str) -> List[Dict[str, str]]:
-    """[{id, name}] of the hub page's cards, in their order on the page."""
+def hub_apps(hub_html: str) -> List[Dict[str, object]]:
+    """[{id, name, modes}] of the hub page's cards, in their order on the page (modes: those of
+    its data-modes, in the order of MODES)."""
     p = _Cards()
     p.feed(hub_html)
-    return [{"id": a["id"], "name": a["name"].strip() or a["id"]} for a in p.apps]
+    return [{"id": a["id"], "name": a["name"].strip() or a["id"], "modes": a["modes"]} for a in p.apps]
 
 
 # ---------------------------------------------------------------------- the configuration
@@ -169,6 +197,79 @@ def normalize(config: object, app_ids: List[str]) -> Dict[str, object]:
     return {"order": order, "tags": tags, "labels": {k: v for k, v in labels.items() if k in used}}
 
 
+# a stage's key: its exercise types joined with + (types like force-dir, series:easy, pickinv-RL-series,
+# gravity/rank-launch); only checked to be plain text of a sensible length
+STAGE_KEY = re.compile(r"[A-Za-z0-9][^\x00-\x20\x7f<>\"'\\]{0,999}")
+
+
+def set_name_problem(name: object, app_ids: List[str], taken=lambda name: False) -> Optional[str]:
+    """Why a set cannot have this name, or None if it can."""
+    if not isinstance(name, str) or not KEY.fullmatch(name):
+        return f"“{name}” is not a valid name: lower-case letters, digits and hyphens, up to 40"
+    if name in app_ids:
+        return f"“{name}” is the name of an app"
+    if name in RESERVED or taken(name):
+        return f"“{name}” is taken by the site"
+    return None
+
+
+def normalize_set_app(raw: object, apps: Dict[str, Dict[str, object]]) -> Optional[Dict[str, object]]:
+    """An app of a set, cleaned: its modes (of those the app has, in the order of MODES), and if
+    given, the worked examples (sorted indices; with the tutor only) and the practice stages (keys,
+    in their order; with practice or the arcade only). An empty list leaves the tutor or practice
+    out. None if no mode is left."""
+    if not isinstance(raw, dict) or raw.get("id") not in apps:
+        return None
+    want = raw.get("modes") if isinstance(raw.get("modes"), list) else []
+    modes = [m for m in MODES if m in want and m in apps[raw["id"]]["modes"]]
+    tutor, practice = raw.get("tutor"), raw.get("practice")
+    if isinstance(tutor, list):
+        tutor = sorted({i for i in tutor if isinstance(i, int) and not isinstance(i, bool) and 0 <= i < MAX_EXAMPLES})
+        if not tutor and "tutor" in modes:
+            modes.remove("tutor")
+    if isinstance(practice, list):
+        practice = [k for i, k in enumerate(practice) if isinstance(k, str) and STAGE_KEY.fullmatch(k) and k not in practice[:i]][:MAX_STAGES]
+        if not practice and "practice" in modes:
+            modes.remove("practice")
+    if not modes:
+        return None
+    out: Dict[str, object] = {"id": raw["id"], "modes": modes}
+    if isinstance(tutor, list) and tutor and "tutor" in modes:
+        out["tutor"] = tutor
+    if isinstance(practice, list) and practice and ("practice" in modes or "arcade" in modes):
+        out["practice"] = practice
+    return out
+
+
+def normalize_sets(data: object, apps: List[Dict[str, object]], taken=lambda name: False, strict: bool = True) -> Dict[str, object]:
+    """{"sets": {name: {"title": ..., "apps": [...]}}} for the given apps: titles cleaned (at most
+    MAX_TITLE), apps known and each once, at most MAX_SETS sets. A name that cannot be is an error
+    (ValueError) if strict, else the set is dropped (on reading a file written before)."""
+    by_id = {a["id"]: a for a in apps}
+    sets_in = data.get("sets") if isinstance(data, dict) and isinstance(data.get("sets"), dict) else {}
+    if strict and len(sets_in) > MAX_SETS:
+        raise ValueError(f"at most {MAX_SETS} sets")
+    out: Dict[str, object] = {}
+    for name, raw in sets_in.items():
+        problem = set_name_problem(name, list(by_id), taken)
+        if problem:
+            if strict:
+                raise ValueError(problem)
+            continue
+        raw = raw if isinstance(raw, dict) else {}
+        title = raw.get("title")
+        title = re.sub(r"\s+", " ", re.sub(r"[\x00-\x1f\x7f<>]", "", title)).strip()[:MAX_TITLE].strip() if isinstance(title, str) else ""
+        chosen: List[Dict[str, object]] = []
+        for a in raw.get("apps") if isinstance(raw.get("apps"), list) else []:
+            entry = normalize_set_app(a, by_id)
+            if entry and all(c["id"] != entry["id"] for c in chosen):
+                chosen.append(entry)
+        out[name] = {"title": title, "apps": chosen}
+        if len(out) >= MAX_SETS:
+            break
+    return {"sets": out}
+
+
 def read_config(path: Path) -> object:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -179,12 +280,12 @@ def read_config(path: Path) -> object:
 def write_config(path: Path, config: Dict[str, object]) -> None:
     """Atomically: a reader sees the old file or the new one, never half of it."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(prefix=".apps-", suffix=".json", dir=path.parent)
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.stem}-", suffix=".json", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(config, f, ensure_ascii=False, indent=1)
             f.write("\n")
-        os.chmod(tmp, 0o644)  # nginx serves it as /apps.json
+        os.chmod(tmp, 0o644)  # nginx serves it (/apps.json, /sets.json)
         os.replace(tmp, path)
     except BaseException:
         try:
@@ -196,8 +297,9 @@ def write_config(path: Path, config: Dict[str, object]) -> None:
 
 # ---------------------------------------------------------------------- the service
 class Admin:
-    def __init__(self, password_file: Path, hub: Path, config: Path) -> None:
+    def __init__(self, password_file: Path, hub: Path, config: Path, sets: Optional[Path] = None) -> None:
         self.password_file, self.hub, self.config = password_file, hub, config
+        self.sets = sets or config.parent / "sets.json"
         self.failures: Dict[str, List[float]] = {}
 
     def stored_hash(self) -> str:
@@ -237,7 +339,7 @@ class Admin:
     def failed(self, addr: str) -> None:
         self.failures.setdefault(addr, []).append(time.time())
 
-    def apps(self) -> List[Dict[str, str]]:
+    def apps(self) -> List[Dict[str, object]]:
         try:
             return hub_apps(self.hub.read_text(encoding="utf-8"))
         except OSError:
@@ -255,6 +357,26 @@ class Admin:
         cfg = normalize(data, [a["id"] for a in apps])
         write_config(self.config, cfg)
         return {"apps": apps, **cfg}
+
+    def taken(self, name: str) -> bool:
+        """A file or folder of that name in the web root (the hub page's folder)."""
+        root = self.hub.parent
+        return any((root / n).exists() for n in (name, name + ".html", name + ".json"))
+
+    def current_sets(self) -> Dict[str, object]:
+        apps = self.apps()
+        return {"apps": apps, **normalize_sets(read_config(self.sets), apps, self.taken, strict=False)}
+
+    def save_sets(self, data: object) -> Dict[str, object]:
+        apps = self.apps()
+        if not apps:
+            raise ValueError("the hub page lists no apps")
+        sets = normalize_sets(data, apps, self.taken)
+        write_config(self.sets, sets)
+        return {"apps": apps, **sets}
+
+
+API = ("/api/config", "/api/sets")
 
 
 def make_handler(admin: Admin):
@@ -290,7 +412,7 @@ def make_handler(admin: Admin):
             self.send_header("Referrer-Policy", "same-origin")
             self.send_header("Content-Security-Policy",
                              "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "
-                             "img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+                             "img-src 'self'; frame-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
             for k, v in (headers or {}).items():
                 self.send_header(k, v)
             self.end_headers()
@@ -326,13 +448,15 @@ def make_handler(admin: Admin):
                 self.send(200, panel_page() if self.logged_in() else login_page(bool(admin.stored_hash())))
             elif path == "/static/admin.js":
                 self.send(200, ADMIN_JS, "text/javascript; charset=utf-8")
+            elif path == "/static/sets.js":
+                self.send(200, SETS_JS, "text/javascript; charset=utf-8")
             elif path == "/static/admin.css":
                 self.send(200, ADMIN_CSS, "text/css; charset=utf-8")
-            elif path == "/api/config":
+            elif path in API:
                 if not self.logged_in():
                     self.json(403, {"error": "login"})
                 else:
-                    self.json(200, admin.current())
+                    self.json(200, admin.current() if path == "/api/config" else admin.current_sets())
             else:
                 self.send(404, "Not found", "text/plain; charset=utf-8")
 
@@ -355,7 +479,7 @@ def make_handler(admin: Admin):
                     self.send(403, login_page(bool(stored), "Wrong password."))
             elif path == "/logout":
                 self.redirect("")
-            elif path == "/api/config":
+            elif path in API:
                 # JSON only: a form on another site cannot send it (and the cookie is SameSite=Strict)
                 if not self.logged_in():
                     self.json(403, {"error": "login"})
@@ -368,7 +492,8 @@ def make_handler(admin: Admin):
                     self.json(413, {"error": "too large"})
                     return
                 try:
-                    self.json(200, admin.save(json.loads(data.decode("utf-8"))))
+                    body = json.loads(data.decode("utf-8"))
+                    self.json(200, admin.save(body) if path == "/api/config" else admin.save_sets(body))
                 except ValueError as e:
                     self.json(400, {"error": str(e)})
                 except OSError:
@@ -389,7 +514,7 @@ def page(title: str, body: str, script: bool = False) -> str:
   <meta name="robots" content="noindex">
   <title>{escape(title)}</title>
   <link rel="stylesheet" href="/admin/static/admin.css">
-  {'<script defer src="/admin/static/admin.js"></script>' if script else ''}
+  {'<script defer src="/admin/static/admin.js"></script><script defer src="/admin/static/sets.js"></script>' if script else ''}
 </head>
 <body>
   <header class="wrap">
@@ -415,20 +540,37 @@ def login_page(ready: bool, error: str = "") -> str:
 
 
 def panel_page() -> str:
-    return page("Apps on the hub page", """
-    <p class="lead">Put the apps in order and give them tags, e.g. physics topics. On the hub page, visitors can filter the apps by tag, in English or German.</p>
-    <div class="bar">
-      <button type="button" id="save" class="primary" disabled>Save</button>
-      <span id="status" class="status" aria-live="polite"></span>
+    return page("Admin", """
+    <div class="bar top">
+      <nav class="tabs" aria-label="Sections">
+        <a href="#hub" data-view="hub">Hub page</a>
+        <a href="#sets" data-view="sets">Sets</a>
+      </nav>
       <a class="view" href="/" target="_blank" rel="noopener">View the hub page ↗</a>
       <form method="post" action="/admin/logout" class="logout"><button type="submit">Log out</button></form>
     </div>
-    <ol id="apps" class="apps"></ol>
-    <datalist id="known-tags"></datalist>
-    <h2 class="section">Tags</h2>
-    <p class="note">The names of the tags in English and German. Edit them here; a tag used by no app disappears. At most 8 tags per app, 32 characters per name.</p>
-    <table id="tags" class="tagtable"><thead><tr><th scope="col">English</th><th scope="col">German</th><th scope="col">Apps</th></tr></thead><tbody></tbody></table>
-    <p id="no-tags" class="note" hidden>No tags yet: add one to an app above.</p>""", script=True)
+    <section id="view-hub">
+      <p class="lead">Put the apps in order and give them tags, e.g. physics topics. On the hub page, visitors can filter the apps by tag, in English or German.</p>
+      <div class="bar">
+        <button type="button" id="save" class="primary" disabled>Save</button>
+        <span id="status" class="status" aria-live="polite"></span>
+      </div>
+      <ol id="apps" class="apps"></ol>
+      <datalist id="known-tags"></datalist>
+      <h2 class="section">Tags</h2>
+      <p class="note">The names of the tags in English and German. Edit them here; a tag used by no app disappears. At most 8 tags per app, 32 characters per name.</p>
+      <table id="tags" class="tagtable"><thead><tr><th scope="col">English</th><th scope="col">German</th><th scope="col">Apps</th></tr></thead><tbody></tbody></table>
+      <p id="no-tags" class="note" hidden>No tags yet: add one to an app above.</p>
+    </section>
+    <section id="view-sets" hidden>
+      <p class="lead">A set is a selection of apps for a class, opened at learningphysics.ch/<i>name</i>: the apps you choose, in your order, and in each the modes and, for the tutor and practice, the examples and steps. The apps stay open to everyone at their usual addresses: a set is a view, not a lock.</p>
+      <div class="bar">
+        <button type="button" id="sets-save" class="primary" disabled>Save</button>
+        <span id="sets-status" class="status" aria-live="polite"></span>
+      </div>
+      <div id="set-list" class="setlist"></div>
+      <div id="set-edit"></div>
+    </section>""", script=True)
 
 
 ADMIN_CSS = """
@@ -482,7 +624,39 @@ h2.section { font-size: 1.15rem; margin: 28px 0 4px; }
 .tagtable td.n { color: var(--muted); font-size: 0.9rem; white-space: nowrap; }
 .tagtable input.same { border-color: var(--bad); }
 .tagtable tr.new input { outline: 2px solid var(--accent); }
-@media (max-width: 560px) { .view { margin-left: 0; } .add input { width: 9em; } }
+.bar.top { position: static; padding-top: 0; }
+.tabs { display: flex; gap: 4px; }
+.tabs a { color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; }
+.tabs a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.setlist { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.setlist button[aria-pressed="true"] { border-color: var(--accent); outline: 2px solid var(--accent); }
+.setlist .title { color: var(--muted); margin-left: 6px; font-size: 0.9rem; }
+.setlist .new { border-style: dashed; }
+.setform { display: grid; grid-template-columns: 1fr 2fr; gap: 0 14px; }
+.setform .field { margin: 0 0 10px; }
+.setform input.bad { border-color: var(--bad); }
+.setactions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 16px; }
+.setactions a { color: var(--accent); }
+.setactions .danger { margin-left: auto; color: var(--bad); }
+.setapps { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+.setapp { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: start; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.setapp .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.setapp h3 { margin: 0; font-size: 1.05rem; }
+.setapp .remove { margin-left: auto; padding: 2px 9px; }
+.checks { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 0; }
+.checks label, .tree label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.checks input, .tree input { width: auto; accent-color: var(--accent); }
+.sections { margin-top: 8px; }
+.sections > summary { cursor: pointer; color: var(--accent); font-size: 0.95rem; }
+.sections h4 { margin: 10px 0 4px; font-size: 0.95rem; }
+.tree { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 0.95rem; }
+.tree ul { list-style: none; margin: 0 0 4px; padding-left: 24px; display: grid; gap: 2px; }
+.tree .like { color: var(--muted); font-style: italic; }
+.addapp { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.addapp select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; max-width: 100%; }
+.outline-frame { position: absolute; left: -10000px; top: 0; width: 1024px; height: 768px; border: 0; visibility: hidden; }
+.empty { color: var(--muted); }
+@media (max-width: 560px) { .view { margin-left: 0; } .add input { width: 9em; } .setform { grid-template-columns: 1fr; } }
 """
 
 ADMIN_JS = r"""
@@ -623,15 +797,286 @@ ADMIN_JS = r"""
 """
 
 
+SETS_JS = r"""
+// The sets of the admin panel, and the switch between its two views (#hub, #sets). A set is
+// { title, apps: [{ id, modes, tutor?, practice? }] } under its name; tutor and practice list the
+// worked examples (indices) and practice stages (keys) shown, all of them without the list. The
+// examples and stages of an app (its outline) come from the app itself, loaded with ?outline=1 in
+// a hidden frame that posts them here.
+(function () {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const MODES = { tutor: 'Tutor', practice: 'Practice', real: 'Problems', arcade: 'Arcade' };
+  const KEY = /^[a-z0-9][a-z0-9-]{0,39}$/, MAX_TITLE = 80;
+  let apps = [], sets = [], sel = -1, dirty = false, loaded = false;
+  const outlines = {}; // app id → Promise of its outline
+  const shown = new Set(); // apps whose sections are open, as 'set index:app id'
+
+  function el(tag, attrs, ...kids) {
+    const e = document.createElement(tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => {
+      if (v === false || v == null) return;
+      if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? '' : v);
+    });
+    kids.forEach((k) => e.append(k));
+    return e;
+  }
+  const appOf = (id) => apps.find((a) => a.id === id) || { id, name: id, modes: [] };
+  const status = (text, cls) => { const e = $('#sets-status'); e.textContent = text; e.className = `status ${cls || ''}`; };
+  // why a name cannot be, or ''
+  function problem(i) {
+    const n = sets[i].name;
+    if (!KEY.test(n)) return 'A name has lower-case letters, digits and hyphens (up to 40), e.g. 3a-elektro.';
+    if (apps.some((a) => a.id === n)) return `“${n}” is the name of an app.`;
+    if (sets.some((s, j) => j !== i && s.name === n)) return `Two sets are called “${n}”.`;
+    return '';
+  }
+  function changed() {
+    dirty = true;
+    const bad = sets.map((_, i) => problem(i)).find(Boolean);
+    $('#sets-save').disabled = !!bad;
+    status(bad || 'Unsaved changes', bad ? 'bad' : '');
+  }
+
+  // ---------------------------------------------------------------- the outline of an app
+  function outline(id) {
+    if (outlines[id]) return outlines[id];
+    outlines[id] = new Promise((resolve, reject) => {
+      const frame = el('iframe', { class: 'outline-frame', src: `/${id}/?outline=1&lang=en`, title: 'outline', 'aria-hidden': 'true', tabindex: '-1' });
+      const done = (v) => { clearTimeout(timer); window.removeEventListener('message', on); frame.remove(); if (v) resolve(v); else reject(new Error('no outline')); };
+      const on = (e) => { if (e.origin === location.origin && e.source === frame.contentWindow && e.data && e.data.type === 'lp-outline') done(e.data); };
+      const timer = setTimeout(() => done(null), 20000);
+      window.addEventListener('message', on);
+      document.body.append(frame);
+    });
+    outlines[id].catch(() => { delete outlines[id]; });
+    return outlines[id];
+  }
+
+  // ---------------------------------------------------------------- the list and the editor
+  function render(focus) {
+    $('#set-list').replaceChildren(
+      ...sets.map((s, i) => el('button', { type: 'button', 'aria-pressed': String(i === sel), onclick: () => { sel = i; render(); } },
+        s.name || '(no name)', s.title ? el('span', { class: 'title' }, s.title) : '')),
+      el('button', { type: 'button', class: 'new', onclick: () => add() }, '+ New set'));
+    const box = $('#set-edit');
+    if (sel < 0 || !sets[sel]) {
+      box.replaceChildren(el('p', { class: 'empty' }, sets.length ? 'Choose a set to edit it, or make a new one.' : 'No sets yet: make one with New set.'));
+      return;
+    }
+    const s = sets[sel], i = sel;
+    const name = el('input', { type: 'text', value: s.name, maxlength: '40', autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'set-url', class: problem(i) ? 'bad' : '' });
+    name.addEventListener('input', () => {
+      s.name = name.value.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+      if (name.value !== s.name) name.value = s.name;
+      name.classList.toggle('bad', !!problem(i));
+      $('#set-url').replaceWith(el('span', { class: 'note', id: 'set-url' }, `learningphysics.ch/${s.name}`)); // a link once saved
+      changed();
+      renderList();
+    });
+    const title = el('input', { type: 'text', value: s.title, maxlength: String(MAX_TITLE), placeholder: 'e.g. Klasse 3a · Elektrizität' });
+    title.addEventListener('input', () => { s.title = title.value; changed(); renderList(); });
+    const unused = apps.filter((a) => !s.apps.some((x) => x.id === a.id));
+    const pick = el('select', { 'aria-label': 'App to add' }, ...unused.map((a) => el('option', { value: a.id }, a.name)));
+    box.replaceChildren(el('div', { class: 'card' },
+      el('div', { class: 'setform' },
+        el('label', { class: 'field' }, el('span', {}, 'Name (the address)'), name),
+        el('label', { class: 'field' }, el('span', {}, 'Title on the set’s page (optional)'), title)),
+      el('div', { class: 'setactions' },
+        s.saved && s.saved === s.name ? el('a', { href: `/${s.name}`, target: '_blank', rel: 'noopener', id: 'set-url' }, `learningphysics.ch/${s.name} ↗`) : el('span', { class: 'note', id: 'set-url' }, `learningphysics.ch/${s.name}`),
+        el('button', { type: 'button', onclick: () => duplicate(i) }, 'Duplicate'),
+        el('button', { type: 'button', class: 'danger', onclick: () => remove(i) }, 'Delete set')),
+      s.apps.length ? el('ol', { class: 'setapps' }, ...s.apps.map((a, k) => appRow(s, a, k))) : el('p', { class: 'empty' }, 'No apps yet: add some below.'),
+      unused.length ? el('div', { class: 'addapp' }, pick,
+        el('button', { type: 'button', onclick: () => { s.apps.push({ id: pick.value, modes: [...appOf(pick.value).modes] }); changed(); render({ add: true }); } }, 'Add app'),
+        el('button', { type: 'button', onclick: () => { unused.forEach((a) => s.apps.push({ id: a.id, modes: [...a.modes] })); changed(); render(); } }, 'Add all')) : ''));
+    if (focus && focus.name) name.focus();
+    if (focus && focus.add) { const p = box.querySelector('.addapp select'); if (p) p.focus(); }
+    if (focus && focus.move) { const b = box.querySelectorAll('.setapp')[focus.move.k]; if (b) b.querySelectorAll('.move button')[focus.move.up ? 0 : 1].focus(); }
+  }
+  // only the buttons of the list (typing in the editor keeps its focus)
+  function renderList() {
+    $('#set-list').querySelectorAll('button[aria-pressed]').forEach((b, i) => {
+      b.replaceChildren(sets[i].name || '(no name)', sets[i].title ? el('span', { class: 'title' }, sets[i].title) : '');
+    });
+  }
+
+  function appRow(s, a, k) {
+    const info = appOf(a.id), key = `${sel}:${a.id}`;
+    const move = (d) => { const j = k + d; [s.apps[k], s.apps[j]] = [s.apps[j], s.apps[k]]; changed(); render({ move: { k: j, up: d < 0 } }); };
+    const modes = el('div', { class: 'checks', role: 'group', 'aria-label': `Modes of ${info.name}` }, ...info.modes.map((m) => {
+      const box = el('input', { type: 'checkbox', checked: a.modes.includes(m) });
+      box.addEventListener('change', () => {
+        a.modes = info.modes.filter((x) => (x === m ? box.checked : a.modes.includes(x)));
+        changed();
+        render();
+      });
+      return el('label', {}, box, MODES[m]);
+    }));
+    const parts = a.modes.includes('tutor') || a.modes.includes('practice') || a.modes.includes('arcade');
+    const det = el('details', { class: 'sections', open: shown.has(key) });
+    det.append(el('summary', {}, `Examples and steps: ${summary(a)}`));
+    det.addEventListener('toggle', () => { if (det.open) { shown.add(key); fill(det, a); } else shown.delete(key); });
+    if (det.open) fill(det, a);
+    return el('li', { class: 'setapp' },
+      el('div', { class: 'move' },
+        el('button', { type: 'button', 'aria-label': `Move ${info.name} up`, disabled: k === 0, onclick: () => move(-1) }, '↑'),
+        el('button', { type: 'button', 'aria-label': `Move ${info.name} down`, disabled: k === s.apps.length - 1, onclick: () => move(1) }, '↓')),
+      el('div', {},
+        el('div', { class: 'head' }, el('h3', {}, info.name),
+          el('button', { type: 'button', class: 'remove', 'aria-label': `Remove ${info.name} from the set`, onclick: () => { s.apps.splice(k, 1); changed(); render(); } }, '×')),
+        modes,
+        a.modes.length ? '' : el('p', { class: 'note' }, 'No mode chosen: the app is left out when saved.'),
+        parts ? det : ''));
+  }
+  const summary = (a) => [
+    a.modes.includes('tutor') ? `tutor ${a.tutor ? `${a.tutor.length} chosen` : 'all'}` : '',
+    a.modes.includes('practice') || a.modes.includes('arcade') ? `steps ${a.practice ? `${a.practice.length} chosen` : 'all'}` : '',
+  ].filter(Boolean).join(', ');
+
+  // the examples and stages to tick, once the app's outline is there
+  function fill(det, a) {
+    const body = el('div', {}, el('p', { class: 'note' }, 'Loading the examples and steps of the app…'));
+    det.querySelectorAll('summary ~ *').forEach((x) => x.remove());
+    det.append(body);
+    outline(a.id).then((o) => {
+      const parts = [];
+      const redo = () => { det.querySelector('summary').textContent = `Examples and steps: ${summary(a)}`; changed(); };
+      if (a.modes.includes('tutor') && o.tutor.length) {
+        const all = o.tutor.map((_, i) => i);
+        const on = (i) => !a.tutor || a.tutor.includes(i);
+        parts.push(el('h4', {}, 'Tutor: worked examples'), el('ul', { class: 'tree' }, ...o.tutor.map((n, i) => {
+          const box = el('input', { type: 'checkbox', checked: on(i) });
+          box.addEventListener('change', () => {
+            const list = all.filter((j) => (j === i ? box.checked : on(j)));
+            if (list.length === all.length) delete a.tutor; else a.tutor = list;
+            redo();
+          });
+          return el('li', {}, el('label', {}, box, `${i + 1} · ${n}`));
+        })));
+        if (a.tutor && !a.tutor.length) parts.push(el('p', { class: 'note' }, 'No example chosen: the tutor is left out when saved.'));
+      }
+      if ((a.modes.includes('practice') || a.modes.includes('arcade')) && o.topics.length) {
+        const keys = [...new Set(o.topics.flatMap((t) => t.stages.map((s) => s.key)))];
+        const on = (k) => !a.practice || a.practice.includes(k);
+        const set = (pairs) => { // [[key, on]]
+          const want = new Map(pairs);
+          const list = keys.filter((k) => (want.has(k) ? want.get(k) : on(k)));
+          if (list.length === keys.length) delete a.practice; else a.practice = list;
+          redo();
+          fill(det, a);
+        };
+        parts.push(el('h4', {}, 'Practice: topics and their steps'), el('ul', { class: 'tree' }, ...o.topics.map((t, ti) => {
+          const n = t.stages.filter((s) => on(s.key)).length;
+          const top = el('input', { type: 'checkbox', checked: n === t.stages.length });
+          top.indeterminate = n > 0 && n < t.stages.length;
+          top.addEventListener('change', () => set(t.stages.map((s) => [s.key, top.checked])));
+          return el('li', {}, el('label', {}, top, `${ti + 1} · ${t.name}`),
+            t.stages.length > 1 || t.stages[0].name ? el('ul', {}, ...t.stages.map((s, si) => {
+              const box = el('input', { type: 'checkbox', checked: on(s.key) });
+              box.addEventListener('change', () => set([[s.key, box.checked]]));
+              return el('li', {}, el('label', {}, box, `${si + 1} · `, s.name ? s.name : el('span', { class: 'like' }, 'like the example')));
+            })) : '');
+        })));
+        if (a.practice && !a.practice.length) parts.push(el('p', { class: 'note' }, 'No step chosen: practice is left out when saved, and the arcade asks everything.'));
+        else if (a.modes.includes('arcade')) parts.push(el('p', { class: 'note' }, 'The arcade asks only about the chosen steps where its questions are of the same types as the steps (in some apps, its questions go by difficulty instead and are all asked).'));
+      }
+      body.replaceChildren(...(parts.length ? parts : [el('p', { class: 'note' }, 'Nothing to choose here: this app has no examples or steps for the chosen modes.')]));
+    }).catch(() => {
+      body.replaceChildren(el('p', { class: 'error' }, 'Could not load the examples and steps of this app.'),
+        el('button', { type: 'button', onclick: () => fill(det, a) }, 'Try again'));
+    });
+  }
+
+  // ---------------------------------------------------------------- sets
+  function fresh(base) {
+    let n = 1;
+    while (sets.some((s) => s.name === `${base}${n > 1 ? `-${n}` : ''}`)) n++;
+    return `${base}${n > 1 ? `-${n}` : ''}`;
+  }
+  function add() {
+    sets.push({ name: fresh('neues-set'), title: '', apps: [], saved: null });
+    sel = sets.length - 1;
+    changed();
+    render({ name: true });
+  }
+  function duplicate(i) {
+    const copy = JSON.parse(JSON.stringify(sets[i]));
+    copy.name = fresh(`${sets[i].name}-kopie`.slice(0, 34));
+    copy.saved = null;
+    sets.splice(i + 1, 0, copy);
+    sel = i + 1;
+    changed();
+    render({ name: true });
+  }
+  function remove(i) {
+    if (!confirm(`Delete the set “${sets[i].name}”? Its address stops working once you save.`)) return;
+    sets.splice(i, 1);
+    sel = Math.min(i, sets.length - 1);
+    changed();
+    render();
+  }
+
+  function apply(data, keepSel) {
+    const before = sel >= 0 && sets[sel] ? sets[sel].name : null;
+    apps = data.apps || [];
+    sets = Object.entries(data.sets || {}).map(([name, s]) => ({ name, title: s.title || '', apps: s.apps || [], saved: name }));
+    sel = keepSel && before ? sets.findIndex((s) => s.name === before) : sets.length ? 0 : -1;
+    if (sel < 0 && sets.length) sel = 0;
+    dirty = false;
+    $('#sets-save').disabled = true;
+    render();
+  }
+  async function load() {
+    const r = await fetch('/admin/api/sets', { credentials: 'same-origin' });
+    if (r.status === 403) { location.reload(); return; }
+    apply(await r.json());
+    loaded = true;
+  }
+  async function save() {
+    const bad = sets.map((_, i) => problem(i)).find(Boolean);
+    if (bad) { status(bad, 'bad'); return; }
+    $('#sets-save').disabled = true;
+    status('Saving…');
+    try {
+      const body = { sets: Object.fromEntries(sets.map((s) => [s.name, { title: s.title.trim(), apps: s.apps }])) };
+      const r = await fetch('/admin/api/sets', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (r.status === 403) { status('Logged out: log in again (your changes are lost on reload)', 'bad'); $('#sets-save').disabled = false; return; }
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+      apply(await r.json(), true);
+      status('Saved. The sets are live at their addresses.', 'ok');
+    } catch (e) {
+      $('#sets-save').disabled = false;
+      status(`Not saved: ${e.message}`, 'bad');
+    }
+  }
+
+  // ---------------------------------------------------------------- the two views
+  function view() {
+    const v = location.hash === '#sets' ? 'sets' : 'hub';
+    $('#view-hub').hidden = v !== 'hub';
+    $('#view-sets').hidden = v !== 'sets';
+    document.querySelectorAll('.tabs a').forEach((a) => { if (a.dataset.view === v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    if (v === 'sets' && !loaded) load().catch(() => status('Could not load the sets.', 'bad'));
+  }
+  window.addEventListener('hashchange', view);
+  $('#sets-save').addEventListener('click', save);
+  window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+  view();
+})();
+"""
+
+
 def main(argv: Optional[List[str]] = None) -> int:
-    p = argparse.ArgumentParser(description="Admin panel of the learningphysics.ch hub (tags and order of the apps).")
+    p = argparse.ArgumentParser(description="Admin panel of the learningphysics.ch hub (tags and order of the apps, sets for classes).")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8040)
     p.add_argument("--password-file", type=Path, required=True, help="the teacher password hash (crosswords-web set-password)")
     p.add_argument("--hub", type=Path, required=True, help="the hub page, whose cards list the apps")
     p.add_argument("--config", type=Path, required=True, help="where to write apps.json (served as /apps.json)")
+    p.add_argument("--sets", type=Path, help="where to write sets.json (served as /sets.json; default: next to apps.json)")
     args = p.parse_args(argv)
-    admin = Admin(args.password_file, args.hub, args.config)
+    admin = Admin(args.password_file, args.hub, args.config, args.sets)
     server = ThreadingHTTPServer((args.host, args.port), make_handler(admin))
     print(f"hub admin on http://{args.host}:{args.port}/", file=sys.stderr)
     try:

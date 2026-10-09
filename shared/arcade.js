@@ -160,13 +160,15 @@
     function next() {
       if (!game || game.over) return;
       const want = Math.min(5, 1 + Math.floor(game.items.length / 2));
-      const levels = [...new Set(src.kinds.map((k) => k.difficulty))];
+      // in a set of the teacher's (sets.js), only the kinds of its practice stages
+      const kinds = root.LPSets ? root.LPSets.kinds(src.kinds) : src.kinds;
+      const levels = [...new Set(kinds.map((k) => k.difficulty))];
       let d = levels.reduce((a, b) => (Math.abs(b - want) < Math.abs(a - want) || (Math.abs(b - want) === Math.abs(a - want) && b < a) ? b : a));
       // at the top, the two highest levels take turns at random (the top one alone may have only
       // a few kinds of question)
       const top = [...levels].sort((a, b) => b - a);
       if (want >= top[0] && top.length > 1 && Math.random() < 0.5) d = top[1];
-      let list = src.kinds.filter((k) => k.difficulty === d).map((k) => k.id);
+      let list = kinds.filter((k) => k.difficulty === d).map((k) => k.id);
       if (list.length > 1) list = list.filter((k) => k !== game.last);
       // a question not asked before in this game (an exercise type with few variants could
       // otherwise come up again and again)
