@@ -204,6 +204,7 @@ class Service(unittest.TestCase):
         self.assertEqual(st, 303)
         self.assertIn("Max-Age=0", headers["Set-Cookie"])
         self.assertEqual(self.req("/static/admin.js")[0], 200)
+        self.assertEqual(self.req("/static/drag.js")[0], 200)
         self.assertEqual(self.req("/nothing")[0], 404)
 
     def test_sets(self):
