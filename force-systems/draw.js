@@ -61,11 +61,13 @@
       return this.add(`<polyline class="w spring" points="${pts.map((q) => q.map(f).join(',')).join(' ')}"/>`);
     }
     // A box from its bottom-left corner, along the unit vector u (its base) and n (upwards).
-    box(o, u, n, w, h, label) {
+    // right: the mass in the top-right corner (on a slope, clear of the components of the weight)
+    box(o, u, n, w, h, label, right = false) {
       const at = (s, t) => [o[0] + s * u[0] + t * n[0], o[1] + s * u[1] + t * n[1]];
       this.poly([at(0, 0), at(w, 0), at(w, h), at(0, h)]);
       // the mass in the top-left corner, clear of the arrows that start at the centre and the base
-      if (label) this.text(...at(6, h - 17), label, 'lbl mass', 'start');
+      if (label && right) this.text(...at(0.68 * w, h - 16), label, 'lbl mass', 'middle');
+      else if (label) this.text(...at(6, h - 17), label, 'lbl mass', 'start');
       return at;
     }
     // A force { id, kind: g|n|r|s|k|comp, at, dir (unit vector), mag (N) or fixed (length in px), sym: [key, index],

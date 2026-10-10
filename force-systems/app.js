@@ -20,7 +20,9 @@
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
       forcesHead: '1 · Forces on each box', compsHead: (n) => `${n} · Components`, compsNote: 'Choose the right expression for each component; its value is then given.',
       eqsHead: (n) => `${n} · Equations`, eqsNote: 'Choose the right equation for each system and axis. The worked solution then solves them.',
-      idFirst: 'First choose the right expression or equation for each part.',
+      eqsNoteNums: 'Choose the right equation for each system and axis.',
+      numsHead: (n) => `${n} · Calculation`, numsNote: 'Work it out in your head with the values given (g = 10 m/s²), then choose the result.',
+      idFirst: 'First choose the right expression, equation or result for each part.',
       forcesNote: (n, who) => (n > 1 ? 'Tick every force that acts on each box. Each force you tick appears in the drawing.' : `Tick every force that acts on ${who}. Each force you tick appears in the drawing.`),
       tableOk: '✓ The forces are right.', tableBad: (n) => `✗ ${n === 1 ? 'One entry is' : `${n} entries are`} not right yet.`,
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
@@ -36,7 +38,9 @@
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
       forcesHead: '1 · Kräfte auf jede Kiste', compsHead: (n) => `${n} · Komponenten`, compsNote: 'Wähle für jede Komponente den richtigen Ausdruck; ihr Wert wird dann angegeben.',
       eqsHead: (n) => `${n} · Gleichungen`, eqsNote: 'Wähle für jedes System und jede Achse die richtige Gleichung. Die ausführliche Lösung löst sie dann auf.',
-      idFirst: 'Wähle zuerst für jeden Teil den richtigen Ausdruck bzw. die richtige Gleichung.',
+      eqsNoteNums: 'Wähle für jedes System und jede Achse die richtige Gleichung.',
+      numsHead: (n) => `${n} · Rechnung`, numsNote: 'Rechne im Kopf mit den gegebenen Werten (g = 10 m/s²) und wähle das Resultat.',
+      idFirst: 'Wähle zuerst für jeden Teil den richtigen Ausdruck, die richtige Gleichung bzw. das richtige Resultat.',
       forcesNote: (n, who) => (n > 1 ? 'Kreuze jede Kraft an, die auf die jeweilige Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.' : `Kreuze jede Kraft an, die auf ${who} wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.`),
       tableOk: '✓ Die Kräfte stimmen.', tableBad: (n) => `✗ ${n === 1 ? 'Ein Feld stimmt' : `${n} Felder stimmen`} noch nicht.`,
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
@@ -55,6 +59,18 @@
   function store(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable */ }
   }
+  // ---------------------------------------------------------------- saved progress of earlier versions
+  // The order of the topics and stages changed (see lessons.js: migrate): the saved progress moves
+  // along with its content, once. Sets saved before there were objectives list worked examples by
+  // index (sets.js), from the time when Find the error was the last of seven: it is now the 9th.
+  const migrate = () => { try { window.Lessons.migrate(localStorage); } catch (e) { /* storage unavailable */ } };
+  function legacySets() {
+    const S = window.LPSets;
+    if (!S) return;
+    const tutorOf = S.tutor;
+    S.tutor = () => { const l = tutorOf(); return l && !S.objectives() ? l.map(window.Lessons.oldTutor) : l; };
+  }
+
   function showScore() {
     const s = stored('fs-score', { solved: 0, clean: 0 });
     $('#score').textContent = s.solved ? ui().score(s.solved, s.clean) : '';
@@ -153,12 +169,15 @@
     updateButtons();
   }
 
-  // The components to identify (angled forces, see identify.js), with values the app gives, and
-  // the equations to choose (equations.js). Find the error is a choice only: a right choice solves it.
-  const compItems = () => ex.comps.map((c) => Identify.trig({ ...c, alpha: ex.p.alpha, num: (x) => FS.num(x), unit: '\\mathrm{N}' }));
+  // The components to identify (angled forces, see identify.js), with values the app gives (with
+  // the sine or cosine the text gives, c.value), the equations to choose (equations.js) and the
+  // results to work out (a choice of values, generator.js). Find the error is a choice only: a
+  // right choice solves it.
+  const compItems = () => ex.comps.map((c) => ({ ...Identify.trig({ ...c, alpha: ex.p.alpha, num: (x) => FS.num(x), unit: '\\mathrm{N}' }), ...(c.value ? { value: c.value } : {}) }));
   const eqItems = () => ex.eqs;
+  const numItems = () => ex.nums || [];
   const choiceOnly = () => !ex.forces;
-  const allIdentified = () => Identify.ok(compItems(), st.ident) && Identify.ok(eqItems(), st.ident);
+  const allIdentified = () => Identify.ok(compItems(), st.ident) && Identify.ok(eqItems(), st.ident) && Identify.ok(numItems(), st.ident);
   // the forces of the components identified so far (drawn in), all once the solution is shown
   const identified = () => ex.comps.filter((c) => (st && st.revealed) || (st && Identify.right(compItems().find((it) => it.key === c.key), st.ident))).map((c) => c.fig);
   function showComps() {
@@ -170,10 +189,14 @@
     $('#eqs-part').hidden = !ex.eqs.length;
     $('#eqs-part').classList.toggle('only', choiceOnly());
     $('#eqs-head').textContent = ui().eqsHead(m);
-    $('#eqs-note').textContent = ui().eqsNote;
+    $('#eqs-note').textContent = numItems().length ? ui().eqsNoteNums : ui().eqsNote;
     $('#eqs').innerHTML = Identify.html(eqItems(), state, done);
+    $('#nums-part').hidden = !numItems().length;
+    $('#nums-head').textContent = ui().numsHead(m + (ex.eqs.length ? 1 : 0));
+    $('#nums').innerHTML = Identify.html(numItems(), state, done);
     math($('#comps'));
     math($('#eqs'));
+    math($('#nums'));
   }
 
   // solved now, or solved before (its solution can be looked at again)
@@ -354,6 +377,8 @@
 
   // ---------------------------------------------------------------- init
   function init() {
+    migrate();
+    legacySets();
     Lang.init(); // see lang.js
     document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     applyStatic();
@@ -372,6 +397,7 @@
     };
     Identify.attach($('#comps'), compItems, () => st.ident, picked($('#comps')));
     Identify.attach($('#eqs'), eqItems, () => st.ident, picked($('#eqs')));
+    Identify.attach($('#nums'), numItems, () => st.ident, picked($('#nums')));
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);

@@ -8,7 +8,11 @@
 // - "find the error": one wrong step, and the check's questions: four options, one right,
 // - that texts, hints, solutions and drawings contain no undefined values.
 // It also checks the tutor's examples against the answers on the worksheet, and that the check's
-// questions on springs and drag offer their misconceptions.
+// questions on springs and drag offer their misconceptions. Practice: nice angles (sine and cosine
+// given in the text), the results to work out (each worked out here again, four values to choose
+// from, one right), at least 20 different exercises per stage, the order of topics and stages, the
+// drag acting at the body's centre, and the saved progress of the earlier order moved along with
+// its content.
 'use strict';
 
 const load = typeof require === 'function'
@@ -22,7 +26,10 @@ let failures = 0, checked = 0;
 const log = typeof console !== 'undefined' ? (s) => console.log(s) : () => {};
 const fail = (msg) => { failures++; if (failures < 30) log('  FAIL ' + msg); };
 const close = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b));
-const sin = (d) => Math.sin((d * Math.PI) / 180), cos = (d) => Math.cos((d * Math.PI) / 180);
+// practice uses the sine and cosine the text gives (p.nice): 37° and 53° with 0.6 and 0.8, 30° and 60° with 0.5 and 0.87
+const NICE_SIN = { 30: 0.5, 37: 0.6, 53: 0.8, 60: 0.87 }, NICE_COS = { 30: 0.87, 37: 0.8, 53: 0.6, 60: 0.5 };
+let P = {}; // the parameters of the exercise being checked (for the nice angles)
+const sin = (d) => (P.nice ? NICE_SIN[d] : Math.sin((d * Math.PI) / 180)), cos = (d) => (P.nice ? NICE_COS[d] : Math.cos((d * Math.PI) / 180));
 
 // Newton's laws per situation: a list of [left, right] that must be equal.
 const LAWS = {
@@ -65,6 +72,7 @@ function checkText(id, what, s) {
 
 function checkExercise(ex, id) {
   checked++;
+  P = ex.p;
   const law = LAWS[ex.scenario];
   if (!law) { fail(`${id}: no laws for ${ex.scenario}`); return; }
   law(ex.p, ex.v).forEach(([a, b], k) => { if (!close(a, b)) fail(`${id} (${ex.scenario}): law ${k + 1}: ${a} ≠ ${b}`); });
@@ -119,7 +127,7 @@ function equationValue(ex, html) {
   const vals = {
     g, m: p.m, m1: p.m1, m2: p.m2, a: p.a != null ? p.a : v.a, F: p.F != null ? p.F : v.F, mu: p.mu,
     N: v.N != null ? v.N : p.m * g, R: v.R, R1: v.R1, R2: v.R2 || 0, S: v.S, K: v.K,
-    SIN: Math.sin(rad), COS: Math.cos(rad), TAN: Math.tan(rad),
+    SIN: sin(p.alpha || 0), COS: cos(p.alpha || 0), TAN: Math.tan(rad),
     // springs (Δx in metres) and drag; F where there is no push or pull is a "force of motion"
     // that does not exist: any value but zero
     Fs: v.Fs, k: p.k, dx: (p.dx != null ? p.dx : v.dx) / 100, D: p.D != null ? p.D : v.D,
@@ -136,6 +144,7 @@ const holds = ([x, y]) => Math.abs(x - y) <= 1e-6 * Math.max(1, Math.abs(x), Mat
 const trueWrong = {}, seenWrong = {};
 function checkEquations(ex, id) {
   const lang = FS.getLang();
+  P = ex.p;
   Equations.of(ex.scenario, ex.p).forEach((it) => {
     if (it.options.length !== 4) fail(`${id}: equation ${it.key} has ${it.options.length} options`);
     if (new Set(it.options.map((o) => o.html)).size !== it.options.length) fail(`${id}: equation ${it.key} has equal options`);
@@ -160,9 +169,50 @@ function checkEquations(ex, id) {
   FS.setLang(lang);
 }
 
-// Practice: every situation in both languages, with angles of right triangles with whole sides, so
-// that the components the student identifies are whole numbers (the app gives them) and the
-// worked solution needs no rounding.
+// The results the student works out in practice, worked out here again from the parameters.
+const ANSWER = {
+  'rest-up': (p) => ({ N: p.m * g + (p.dir === 'up' ? -p.F : p.F) }),
+  'rest-angle': (p) => ({ N: p.m * g - p.F * (p.ref === 'v' ? cos(p.alpha) : sin(p.alpha)) }),
+  'pull-friction': (p) => (p.given === 'a' ? { F: p.m * p.a + p.mu * p.m * g } : { a: (p.F - p.mu * p.m * g) / p.m }),
+  'incline-pull': (p) => ({ F: p.m * p.a + p.m * g * sin(p.alpha) + p.mu * p.m * g * cos(p.alpha) }),
+  'table-pulley': (p) => { const a = (p.m2 * g - p.mu * p.m1 * g) / (p.m1 + p.m2); return { a, S: p.m2 * (g - a) }; },
+  'incline-pulley': (p) => { const a = (p.m2 * g - p.m1 * g * sin(p.alpha) - p.mu * p.m1 * g * cos(p.alpha)) / (p.m1 + p.m2); return { a, S: p.m2 * (g - a) }; },
+  'spring-hang': (p) => (p.given === 'k' ? { dx: (100 * p.m * g) / p.k } : { k: p.k }),
+  'spring-floor': (p) => ({ a: ((p.k * p.dx) / 100 - p.mu * p.m * g) / p.m }),
+  'drag-fall': (p) => (p.phase === 'terminal' ? { D: p.m * g } : { res: Math.abs(p.m * g - p.D), a: Math.abs(p.m * g - p.D) / p.m }),
+  'drag-bike': (p) => ({ a: p.D / p.m }),
+};
+const UNIT = { N: 'N', F: 'N', S: 'N', D: 'N', res: 'N', a: 'a', dx: 'cm', k: 'Nm' };
+const tenthOk = (x) => Math.abs(10 * x - Math.round(10 * x)) < 1e-9;
+const valueOf = (html) => Number(html.replace(/^\$/, '').match(/^-?[\d.]+/)[0]);
+function checkNums(ex, id) {
+  const want = ANSWER[ex.scenario];
+  if (!want) { if (ex.nums.length) fail(`${id}: results to work out without a check`); return; }
+  const w = want(ex.p);
+  if (ex.nums.map((n) => n.key).join() !== Object.keys(w).map((k) => `n-${k}`).join()) fail(`${id}: results ${ex.nums.map((n) => n.key)} instead of ${Object.keys(w)}`);
+  ex.nums.forEach((n) => {
+    const k = n.key.slice(2), x = w[k], right = n.options.filter((o) => o.right);
+    if (n.options.length !== 4) fail(`${id}: result ${k} has ${n.options.length} options`);
+    if (right.length !== 1) { fail(`${id}: result ${k}: not exactly one right option`); return; }
+    if (new Set(n.options.map((o) => o.html)).size !== 4) fail(`${id}: result ${k}: equal options`);
+    if (Math.abs(valueOf(right[0].html) - x) > 1e-9) fail(`${id}: result ${k} = ${right[0].html}, worked out ${x}`);
+    if (!(x > 0) || !tenthOk(x)) fail(`${id}: result ${k} = ${x} is not a nice number`);
+    if (UNIT[k] === 'a' && !Number.isInteger(Math.round(2 * x * 1e6) / 1e6)) fail(`${id}: acceleration ${x} is not a multiple of 0.5`);
+    n.options.forEach((o) => {
+      const y = valueOf(o.html);
+      if (!(y >= 0) || Math.abs(1000 * y - Math.round(1000 * y)) > 1e-6) fail(`${id}: result ${k}: option ${o.html} is not a short number`);
+      if (!o.right && (!o.why || !o.flag)) fail(`${id}: result ${k}: a wrong option without explanation`);
+      if (!o.html.includes(`\\mathrm{${{ N: 'N', a: 'm/s^2', cm: 'cm', Nm: 'N/m' }[UNIT[k]]}}`)) fail(`${id}: result ${k}: option ${o.html} without its unit`);
+      checkText(id, `result ${k}`, o.html + (o.why || ''));
+    });
+    if (n.options.map(o => valueOf(o.html)).some((y, j, a) => j && y < a[j - 1])) fail(`${id}: result ${k}: options not in ascending order`);
+    checkText(id, `result ${k}`, n.what + n.value);
+  });
+}
+
+// Practice: every situation in both languages, with nice angles (their sine and cosine in the
+// text), so that the components the student identifies, the results the student works out and
+// the worked solution need at most one decimal place.
 let practised = 0;
 const seen = {};
 for (const lang of FS.LANGS) {
@@ -177,10 +227,13 @@ for (const lang of FS.LANGS) {
       if (!ex.eqs.length) fail(`${id}: no equations to choose`);
       ex.fields.forEach((f) => { if (Math.abs(10 * f.value - Math.round(10 * f.value)) > 1e-9) fail(`${id}: ${f.key} = ${f.value} needs rounding`); });
       if (scn.trig && !ex.comps.length) fail(`${id}: no components to identify`);
+      if (scn.trig && (!ex.p.nice || !(ex.p.alpha in NICE_SIN) || !ex.text.includes(`sin ${ex.p.alpha}°`) || !ex.text.includes(`cos ${ex.p.alpha}°`))) fail(`${id}: no nice angle given with its sine and cosine: ${ex.p.alpha}`);
       ex.comps.forEach((c) => {
-        const x = c.baseVal * Math[c.fn]((ex.p.alpha * Math.PI) / 180);
-        if (Math.abs(x - Math.round(x)) > 1e-9) fail(`${id}: component ${c.key} = ${x} is not a whole number`);
+        const x = c.baseVal * (c.fn === 'sin' ? sin(ex.p.alpha) : cos(ex.p.alpha));
+        if (!tenthOk(x)) fail(`${id}: component ${c.key} = ${x} needs rounding`);
+        if (!c.value.includes(`= ${FS.texNum(x)}\\,\\mathrm{N}$`)) fail(`${id}: component ${c.key} shown as ${c.value}, not ${x} N`);
       });
+      checkNums(ex, id);
       // any angles, as in the check
       const any = Forces.generateFor(scn.id, seed);
       checkExercise(any, `${lang} any ${scn.id}-${seed}`);
@@ -197,21 +250,32 @@ let errors = 0;
 const slips = {};
 for (const lang of FS.LANGS) {
   FS.setLang(lang);
-  for (const type of ['error-floor', 'error-pulley', 'error-slope']) {
+  for (const type of ['error-floor', 'error-pulley', 'error-slope', 'error-spring', 'error-drag']) {
     for (let seed = 1; seed <= 150; seed++) {
       const ex = Forces.practiceOf(type, seed), id = `${lang} ${type}-${seed}`, it = ex.eqs[0], e = ex.p.err;
       errors++;
       if (ex.scenario !== type) fail(`${id}: type ${ex.scenario}`);
       if (it.options.length !== 4 || it.options.filter((o) => o.right).length !== 1 || !it.options[e.at].right) fail(`${id}: the wrong step is not the one to choose`);
-      if (e.at && Equations.of(ex.situation, ex.p)[e.eqs[e.at - 1]].options.find((o) => o.n === e.n).right) fail(`${id}: the wrong equation is right`);
+      if (e.at && Forces.linesOf(ex.situation, ex.p)[e.eqs[e.at - 1]].options.find((o) => o.n === e.n).right) fail(`${id}: the wrong equation is right`);
       if (e.eqs.length !== 3) fail(`${id}: ${e.eqs.length} equations`);
-      slips[e.at ? 'equation' : e.flag] = (slips[e.at ? 'equation' : e.flag] || 0) + 1;
+      const group = type.slice(6), kind = e.at ? (e.eqs[e.at - 1] >= Equations.of(ex.situation, ex.p).length ? 'result' : 'equation') : e.flag;
+      slips[group] = slips[group] || {};
+      slips[group][kind] = (slips[group][kind] || 0) + 1;
+      // the right lines hold: a result worked out is the value of the situation
+      Forces.linesOf(ex.situation, ex.p).slice(Equations.of(ex.situation, ex.p).length).forEach((c) => {
+        const r = c.options.find((o) => o.right).html, vals = Object.values(ex.v).map((x) => FS.texNum(x));
+        if (!vals.some((x) => r.includes(`= ${x}\\,`) || r.includes(`= ${x}$`))) fail(`${id}: the result ${r} is none of the values of the situation`);
+        c.options.forEach((o) => { if (!o.right && !o.why) fail(`${id}: a wrong result without explanation`); });
+      });
       if (!ex.taskFigure().includes('<svg') || !ex.solutionFigure().includes('<svg')) fail(`${id}: a drawing is missing`);
       [ex.title, ex.text, it.value, ...it.options.map((o) => o.html + o.why), ...ex.hints, ...ex.solution, ex.results].forEach((x, k) => checkText(id, `text ${k}`, x));
     }
   }
 }
-['motion', 'noFric', 'equation'].forEach((k) => { if (!slips[k]) fail(`find the error: no slip of the kind ${k}`); });
+// every kind of slip comes up: the teacher's examples for springs and drag among them
+const SLIPS = { floor: ['motion', 'noFric', 'equation'], pulley: ['equation'], slope: ['equation'],
+  spring: ['noSpring', 'springDir', 'dragRest', 'motion', 'noFric', 'equation', 'result'], drag: ['noDrag', 'dragDir', 'dragSize', 'motion', 'equation', 'result'] };
+Object.entries(SLIPS).forEach(([group, kinds]) => kinds.forEach((k) => { if (!(slips[group] || {})[k]) fail(`find the error (${group}): no slip of the kind ${k}`); }));
 log(`${errors} attempts to find the error in checked: ${JSON.stringify(slips)}`);
 
 // The worksheet's answers (rounded as there) for the tutor's examples; the last example is a
@@ -223,9 +287,9 @@ const SHEET = [
   { R: 12, res: 28, a: 3.5, S: 26 },
   { res: 12, N: 35, R: 14, F: 46 },
   { N: 52, R: 21, res: 29, a: 2.1, S: 63 },
-  null, // find the error (see above)
   { Fs: 20, R: 5, a: 7.5 }, // springs and drag: not on the worksheet
   { res: 320, a: 4 },
+  null, // find the error (see above)
 ];
 for (const lang of FS.LANGS) {
   FS.setLang(lang);
@@ -278,6 +342,82 @@ const flagsOf = (kind) => new Set(Array.from({ length: 200 }, (_, k) => CheckSou
   want.forEach((f) => { if (!got.has(f)) fail(`check ${kind}: no option with the misconception ${f}`); });
 });
 log(`${questions} check questions checked`);
+
+// The order of topics and stages: the straight case first, then at an angle or on a slope; Find
+// the error after the spring force and air resistance, with spring and drag cases of its own; the
+// objectives point to their worked examples and topics.
+const names = Lessons.EXAMPLES.map((e) => e.name.en), stagesOf = (i) => Lessons.EXAMPLES[i].practice.map((x) => x.types.join('+'));
+const ORDER = [['At rest', ['rest-up', 'rest-angle']], ['Up a slope', ['pull-friction', 'incline-pull']], ['Slope and pulley', ['table-pulley', 'incline-pulley']],
+  ['Find the error', ['error-floor', 'error-pulley', 'error-slope', 'error-spring', 'error-drag']]];
+ORDER.forEach(([n, st]) => { if (stagesOf(names.indexOf(n)).join() !== st.join()) fail(`topic ${n}: stages ${stagesOf(names.indexOf(n))}, not ${st}`); });
+if (names.join() !== 'At rest,Pulled with friction,Two boxes pushed,Over the table edge,Up a slope,Slope and pulley,Spring force,Air resistance,Find the error') fail(`order of the topics: ${names}`);
+const OBJ = { forces: 'Pulled with friction', slope: 'Up a slope', system: 'Two boxes pushed', law: 'Over the table edge', spring: 'Spring force', drag: 'Air resistance', error: 'Find the error' };
+CheckSource.objectives.forEach((o) => { if (names[o.tutor] !== OBJ[o.id] || names[o.topic] !== OBJ[o.id]) fail(`objective ${o.id}: example ${names[o.tutor]}, topic ${names[o.topic]}`); });
+if (CheckSource.objectives.map((o) => o.id).join() !== 'forces,slope,system,law,spring,drag,error') fail('order of the objectives');
+
+// At least 20 different exercises in each stage of practice (as topics.js counts them: by ex.p).
+FS.setLang('en');
+Lessons.EXAMPLES.forEach((e) => e.practice.forEach((st) => {
+  const keys = new Set();
+  for (let k = 1; k <= 400; k++) keys.add(JSON.stringify(Forces.practiceOf(st.types[k % st.types.length], 7919 * k).p));
+  if (keys.size < 20) fail(`${e.name.en} · ${st.types}: only ${keys.size} different exercises`);
+}));
+
+// Air resistance acts at the body's centre (where the weight starts, beside it), in every phase;
+// ticked where it does not act (a box hanging at rest), it starts at the centre's height, on the
+// body, beside the spring force.
+const byId = (id) => Forces.SCENARIOS.find((x) => x.id === id);
+const centreOf = (forces) => { const w = forces.find((f) => f.kind === 'g'); return [w.at[0] + 6, w.at[1]]; };
+for (let seed = 1; seed <= 60; seed++) {
+  ['drag-fall', 'drag-bike'].forEach((id) => {
+    const ex = Forces.practiceOf(id, seed), sc = byId(id).scene(ex.p, ex.v, {}), D = sc.forces.find((f) => f.kind === 'd'), c = centreOf(sc.forces);
+    if (Math.hypot(D.at[0] - c[0], D.at[1] - c[1]) > 9) fail(`${id}-${seed} (${ex.p.phase || ''}): air resistance acts at ${D.at}, the centre is ${c}`);
+  });
+  const ex = Forces.practiceOf('spring-hang', seed), t = ex.forces, j = t.kinds.findIndex((k) => k.kind === 'd');
+  const svg = ex.taskFigure(new Set([`0:${j}`])), sc = byId('spring-hang').scene(ex.p, ex.v, {}), c = centreOf(sc.forces);
+  const m = svg.match(/class="seq force k-d[^"]*"><line x1="([\d.]+)" y1="([\d.]+)"/);
+  if (!m || Math.abs(m[2] - c[1]) > 2 || Math.abs(m[1] - c[0]) > 30) fail(`spring-hang-${seed}: air resistance ticked is drawn at ${m && m.slice(1)}, the centre is ${c}`);
+}
+
+// Saved progress of the earlier order (version 1) moves along with its content: the stage a
+// student had reached, the topic and stage chosen and the exercises solved name the same types.
+const OLD = [['rest-angle', 'rest-up'], ['pull-friction'], ['push-pair', 'rope-pair'], ['table-pulley', 'atwood'], ['incline-pull'], ['incline-pulley'],
+  ['error-floor', 'error-pulley', 'error-slope'], ['spring-floor', 'spring-hang'], ['drag-fall', 'drag-bike']];
+function fakeStorage(init) {
+  const m = new Map(Object.entries(init).map(([k, v]) => [k, JSON.stringify(v)]));
+  return { get length() { return m.size; }, key: (i) => [...m.keys()][i], getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), read: (k) => JSON.parse(m.get(k)) };
+}
+const typesNow = (t, s) => (Lessons.EXAMPLES[t].practice[s] || { types: ['all'] }).types.join('+');
+const oldProgress = {}, oldDone = [];
+OLD.forEach((st, t) => st.forEach((x, s) => { oldDone.push(`p${t + 1}.${s + 1}-${100 * t + s}`); }));
+OLD.forEach((st, t) => { oldProgress[t] = { stage: st.length - 1, wins: 1 }; });
+const store = fakeStorage({ 'fs-progress': oldProgress, 'fs-topic': { topic: 7, stage: 1 }, 'fs-topic@class': { topic: 0, stage: 0 }, 'fs-done': oldDone, 'fs-score': { solved: 3, clean: 1 } });
+Lessons.migrate(store);
+const prog = store.read('fs-progress');
+OLD.forEach((st, t) => {
+  const was = st[st.length - 1], k = Object.keys(prog).find((x) => typesNow(Number(x), prog[x].stage) === was);
+  if (k == null || prog[k].wins !== 1) fail(`migration: progress at ${was} (topic ${t + 1}) lost: ${JSON.stringify(prog)}`);
+});
+if (Object.keys(prog).length !== OLD.length) fail(`migration: ${Object.keys(prog).length} topics in the progress`);
+const cur = store.read('fs-topic');
+if (typesNow(cur.topic, cur.stage) !== 'spring-hang') fail(`migration: topic chosen ${JSON.stringify(cur)}`);
+const curSet = store.read('fs-topic@class');
+if (typesNow(curSet.topic, curSet.stage) !== 'rest-angle') fail(`migration: topic chosen in a set ${JSON.stringify(curSet)}`);
+store.read('fs-done').forEach((id, k) => {
+  const [, t, s] = /^p(\d+)\.(\d+)-(\d+)$/.exec(id), was = /^p(\d+)\.(\d+)-/.exec(oldDone[k]);
+  if (typesNow(t - 1, s - 1) !== OLD[was[1] - 1][was[2] - 1] || !id.endsWith(oldDone[k].split('-')[1])) fail(`migration: solved ${oldDone[k]} became ${id}`);
+});
+if (JSON.stringify(store.read('fs-score')) !== '{"solved":3,"clean":1}') fail('migration: the score changed');
+// once only; and the last step of Find the error (all steps) goes on with the springs
+Lessons.migrate(store);
+if (JSON.stringify(store.read('fs-progress')) !== JSON.stringify(prog)) fail('migration: ran twice');
+const allSteps = fakeStorage({ 'fs-progress': { 6: { stage: 3, wins: 0 } } });
+Lessons.migrate(allSteps);
+if (typesNow(8, allSteps.read('fs-progress')[8].stage) !== 'error-spring') fail(`migration: Find the error, all steps: ${JSON.stringify(allSteps.read('fs-progress'))}`);
+const fresh = fakeStorage({});
+Lessons.migrate(fresh);
+if (fresh.read('fs-layout') !== Lessons.LAYOUT) fail('migration: no version stored');
+if (Lessons.oldTutor(6) !== names.indexOf('Find the error') || Lessons.oldTutor(3) !== 3) fail('legacy sets: worked examples');
 
 log(`${checked} exercises checked, ${Object.keys(seen).length} situations: ${JSON.stringify(seen)}`);
 log(failures ? `${failures} failures` : 'all checks passed');
