@@ -14,9 +14,12 @@
 // The exercises (EXERCISES): each { kind, level, text, fig (the given diagram), anim (an
 // animation of the lead-in, up to the state given), solAnim, questions, hints, solution,
 // difficulty }. Diagrams are specs for plot.js: { axis: 'x' | 't', lo, hi, Y, curves: [{ f, cls }],
-// end, arrows, marks, dots, label }, f a function of x or t. The wrong options come from typical
-// mistakes: the wrong distance or direction, a crest that turns round, a y(t) graph not reversed,
-// the larger instead of the sum, a reflection with the wrong sign or not reversed.
+// end, end0 (an end at the left), arrows, marks, dots, label }, f a function of x or t. The wrong
+// options come from typical mistakes: the wrong distance or direction, a crest that turns round, a
+// y(t) graph not reversed, the larger instead of the sum, a reflection with the wrong sign or not
+// reversed, a standing wave with a node at a free end or an antinode at a fixed end, a loop taken
+// as a whole wavelength. "Find the error" (error-refl, error-stand): four sketches of a student,
+// one of them wrong, the right answer.
 (function (root) {
   'use strict';
 
@@ -99,7 +102,7 @@
   const arrowOf = (p, t, o = {}) => ({ x: leftAt(p, t) + p.sh.w / 2, dir: p.dir, v: p.v, up: o.up });
   const tLabel = (t) => `t = ${num(Math.abs(t) < 1e-9 ? 0 : t).replace('-', '−')} s`; // a lead-in runs at negative times
   // a signature of a curve, for telling options apart
-  const sig = (spec) => spec.curves.map((c) => { const out = []; for (let k = 0; k <= 160; k++) out.push(Math.round(c.f(spec.lo + ((spec.hi - spec.lo) * k) / 160) * 4)); return `${c.cls}:${out.join(',')}`; }).join('|') + (spec.end ? spec.end.type : '');
+  const sig = (spec) => spec.curves.map((c) => { const out = []; for (let k = 0; k <= 160; k++) out.push(Math.round(c.f(spec.lo + ((spec.hi - spec.lo) * k) / 160) * 4)); return `${c.cls}:${out.join(',')}`; }).join('|') + (spec.end ? spec.end.type : '') + (spec.end0 ? spec.end0.type : '');
 
   // Four options from the right diagram and candidates [{ spec, why, tag }]: the first that look
   // different from all the others.
@@ -532,9 +535,183 @@
     }
   }
 
+  // ---------------------------------------------------------------- standing waves
+  // A rope of length ℓ between two ends, each fixed or free. A standing wave on it has a node at a
+  // fixed end and an antinode at a free end, neighbouring nodes λ/2 apart: q quarter wavelengths
+  // fit (q even if the ends are alike, odd if not), λ = 4ℓ/q. Drawn as the rope at its two extreme
+  // positions, y = ±A·sin(qπx/(2ℓ) + ph·π/2): ph = 0 starts with a node at the left, ph = 1 with
+  // an antinode. A wrong picture: ph or q not fitting an end ('ends'), or the nodes not evenly
+  // spaced ('even': the rope stretched unevenly).
+  const AMP = 4;
+  const CONFIGS = [['fixed', 'fixed'], ['fixed', 'free'], ['free', 'fixed']];
+  const phOf = (ends) => (ends[0] === 'fixed' ? 0 : 1);
+  const qFits = (ends, q) => (ends[0] === ends[1]) === (q % 2 === 0);
+  // what the picture has at the left and at the right end: 'node' or 'anti'
+  const endsOf = (q, ph) => [ph ? 'anti' : 'node', Math.abs(Math.sin(((q + ph) * Math.PI) / 2)) > 0.5 ? 'anti' : 'node'];
+  const fits = (ends, q, ph) => endsOf(q, ph).every((k, i) => k === (ends[i] === 'fixed' ? 'node' : 'anti'));
+  function standFn(len, q, ph, o = {}) {
+    return (x) => {
+      if (x < -1e-9 || x > len + 1e-9) return null;
+      const u = o.warp ? len * Math.max(0, x / len) ** 1.6 : x;
+      return AMP * Math.sin(((q * u) / (2 * len) + ph / 2) * Math.PI);
+    };
+  }
+  // the picture: the rope from 0 to ℓ (a little room at the left for its left end)
+  function standFig(len, ends, q, ph, o = {}) {
+    const f = standFn(len, q, ph, o), neg = (x) => { const v = f(x); return v == null ? null : -v; };
+    return { ...snap(f, { hi: len, end: { x: len, type: ends[1] }, more: [{ f: neg, cls: 'main' }], dots: o.dots, label: o.label }), lo: -0.5, end0: { x: 0, type: ends[0] }, std: { len, ends, q, ph, warp: !!o.warp } };
+  }
+  const endsText = (ends) => (ends[0] === ends[1] ? L('fixed at both ends', 'an beiden Enden fest')
+    : ends[0] === 'fixed' ? L('fixed at the left end and free at the right end (a ring on a pole)', 'am linken Ende fest und am rechten Ende lose (ein Ring an einer Stange)')
+      : L('free at the left end (a ring on a pole) and fixed at the right end', 'am linken Ende lose (ein Ring an einer Stange) und am rechten Ende fest'));
+  const qText = (ends, q) => (ends[0] === ends[1] ? `ℓ = ${q / 2} · λ/2` : `ℓ = ${q} · λ/4`);
+  Object.assign(RULE, {
+    stand: () => L('A wave and its reflection make a standing wave: at the nodes the rope does not move, at the antinodes (half-way between) it moves most. Neighbouring nodes are λ/2 apart.', 'Eine Welle und ihre Reflexion bilden eine stehende Welle: In den Knoten bewegt sich das Seil nicht, in den Bäuchen (in der Mitte dazwischen) am meisten. Benachbarte Knoten sind λ/2 voneinander entfernt.'),
+    ends: () => L('A fixed end cannot move: it is always a node. A free end moves most: it is always an antinode.', 'Ein festes Ende kann sich nicht bewegen: Es ist immer ein Knoten. Ein loses Ende bewegt sich am meisten: Es ist immer ein Bauch.'),
+    modes: () => L('Fixed at both ends, n loops fit: ℓ = n·λ/2, so λ = λ₁/n. With one end free, the last piece is a quarter wavelength: ℓ = q·λ/4 with q = 1, 3, 5, …, so λ = λ₁/q.', 'An beiden Enden fest passen n Schleifen: ℓ = n·λ/2, also λ = λ₁/n. Mit einem losen Ende ist das letzte Stück eine Viertelwellenlänge: ℓ = q·λ/4 mit q = 1, 3, 5, …, also λ = λ₁/q.'),
+  });
+  const WHY_ENDS = () => L('Look at the ends: a fixed end is a node, a free end an antinode.', 'Schau die Enden an: Ein festes Ende ist ein Knoten, ein loses Ende ein Bauch.');
+  const WHY_EVEN = () => L('Neighbouring nodes are always λ/2 apart: they are evenly spaced.', 'Benachbarte Knoten sind immer λ/2 voneinander entfernt: Sie liegen gleichmässig verteilt.');
+
+  // which picture fits the ends of the rope
+  function standPic(r) {
+    const ends = r.pick(CONFIGS), same = ends[0] === ends[1], q = r.pick(same ? [2, 4, 6] : [1, 3, 5]), ph = phOf(ends), len = r.pick([5, 6, 7]);
+    const fig = (qq, pp, o) => standFig(len, ends, qq, pp, o);
+    const right = fig(q, ph);
+    const cands = r.shuffle([
+      { spec: fig(q + 1, 1 - ph), tag: 'ends', why: WHY_ENDS() },
+      { spec: fig(q + 1, ph), tag: 'ends', why: WHY_ENDS() },
+      { spec: fig(q, 1 - ph), tag: 'ends', why: WHY_ENDS() },
+      { spec: fig(q, ph, { warp: true }), tag: 'even', why: WHY_EVEN() },
+      ...(q > 1 ? [{ spec: fig(q - 1, ph), tag: 'ends', why: WHY_ENDS() }] : []),
+    ]);
+    return {
+      kind: 'stand', variant: 'pic', level: 'mixed', difficulty: 2,
+      text: L(`A rope is ${endsText(ends)}. Which picture can show a standing wave on it? Each picture shows the rope at its two extreme positions.`, `Ein Seil ist ${endsText(ends)}. Welches Bild kann eine stehende Welle darauf zeigen? Jedes Bild zeigt das Seil in seinen beiden äussersten Lagen.`),
+      fig: null, anim: null, solAnim: null,
+      questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
+      hints: [RULE.ends(), RULE.stand()],
+      solution: [RULE.ends(), L(`The right picture has a node at each fixed end, an antinode at each free end and evenly spaced nodes: ${qText(ends, q)}.`, `Das richtige Bild hat einen Knoten an jedem festen Ende, einen Bauch an jedem losen Ende und gleichmässig verteilte Knoten: ${qText(ends, q)}.`)],
+      solFig: right, p: { k: 'stand-pic', ends, q, len },
+    };
+  }
+  // the wavelength from the picture and the length of the rope
+  function standCount(r) {
+    for (;;) {
+      const ends = r.pick(CONFIGS), same = ends[0] === ends[1], q = r.pick(same ? [2, 4, 6] : [1, 3, 5]), lam = r.pick([1, 2, 3, 4]), len = (q * lam) / 4;
+      if (len < 2 || len > 8 || !eq(len * 2, Math.round(len * 2))) continue;
+      const n = same ? q / 2 : q, many = n > 1;
+      const why = L(`${many ? n : 'One'} ${same ? 'loop' : 'quarter wavelength'}${many ? 's' : ''} ${many ? 'fit' : 'fits'} on the rope: ${qText(ends, q)}, so λ = ${num(lam)} m.`, `Auf das Seil ${many ? `passen ${n}` : 'passt eine'} ${same ? (many ? 'Schleifen' : 'Schleife') : (many ? 'Viertelwellenlängen' : 'Viertelwellenlänge')}: ${qText(ends, q)}, also λ = ${num(lam)} m.`);
+      const wrongs = [
+        { value: lam / 2, tag: 'halfS', why: L(`Neighbouring nodes are half a wavelength apart: one loop is λ/2. ${why}`, `Benachbarte Knoten sind eine halbe Wellenlänge voneinander entfernt: Eine Schleife ist λ/2. ${why}`) },
+        { value: (4 * len) / (q + (same ? 2 : 1)), tag: 'count', why: L(`Count the loops between the nodes, not the nodes. ${why}`, `Zähle die Schleifen zwischen den Knoten, nicht die Knoten. ${why}`) },
+        ...(same ? [] : [{ value: q > 1 ? (4 * len) / (q - 1) : 2 * lam, tag: 'ends', why: L(`At the free end the rope ends with an antinode: the last piece is a quarter wavelength. ${why}`, `Am losen Ende endet das Seil mit einem Bauch: Das letzte Stück ist eine Viertelwellenlänge. ${why}`) }]),
+        { value: 2 * lam, tag: 'halfS', why },
+      ];
+      return {
+        kind: 'stand', variant: 'count', level: 'mixed', difficulty: 2,
+        text: L(`A rope ${num(len)} m long is ${endsText(ends)}. The picture shows a standing wave on it (the rope at its two extreme positions). What is its wavelength?`, `Ein ${num(len)} m langes Seil ist ${endsText(ends)}. Das Bild zeigt eine stehende Welle darauf (das Seil in seinen beiden äussersten Lagen). Wie gross ist ihre Wellenlänge?`),
+        fig: standFig(len, ends, q, phOf(ends)), anim: null, solAnim: null,
+        questions: [{ type: 'choice', key: 'lam', label: 'λ', options: opts4(r, lam, wrongs, 'm') }],
+        hints: [RULE.stand(), L('Count the loops; at a free end the last piece is half a loop.', 'Zähle die Schleifen; an einem losen Ende ist das letzte Stück eine halbe Schleife.')],
+        solution: [RULE.stand(), why], p: { k: 'stand-count', ends, q, lam },
+      };
+    }
+  }
+  // the wavelength as a fraction of the fundamental's
+  function standRatio(r) {
+    const ends = r.pick(CONFIGS), same = ends[0] === ends[1], q = r.pick(same ? [4, 6, 8] : [3, 5, 7]), k = same ? q / 2 : q;
+    const lab = (d) => (d === 1 ? 'λ₁' : d < 1 ? `${Math.round(1 / d)}·λ₁` : `λ₁/${d}`);
+    const why = same ? L(`Fixed at both ends, the fundamental is one loop: λ₁ = 2ℓ. Here ${k} loops fit: λ = 2ℓ/${k} = λ₁/${k}.`, `An beiden Enden fest ist die Grundschwingung eine Schleife: λ₁ = 2ℓ. Hier passen ${k} Schleifen: λ = 2ℓ/${k} = λ₁/${k}.`)
+      : L(`With one end free, the fundamental is a quarter wavelength: λ₁ = 4ℓ. Here ${q} quarter wavelengths fit: λ = 4ℓ/${q} = λ₁/${q}.`, `Mit einem losen Ende ist die Grundschwingung eine Viertelwellenlänge: λ₁ = 4ℓ. Hier passen ${q} Viertelwellenlängen: λ = 4ℓ/${q} = λ₁/${q}.`);
+    // denominators d (λ = λ₁/d; d < 1 for a multiple)
+    const cands = [
+      { d: 1 / k, tag: 'ratio', why: L(`More loops on the same rope: a shorter wavelength. ${why}`, `Mehr Schleifen auf demselben Seil: eine kürzere Wellenlänge. ${why}`) },
+      { d: k + 1, tag: 'count', why: L(`Count the loops, not the nodes. ${why}`, `Zähle die Schleifen, nicht die Knoten. ${why}`) },
+      ...(same ? [{ d: 2 * k, tag: 'halfS', why }] : [{ d: (q + 1) / 2, tag: 'ends', why: L(`At the free end the last piece is half a loop. ${why}`, `Am losen Ende ist das letzte Stück eine halbe Schleife. ${why}`) }]),
+      { d: k - 1, tag: 'count', why },
+      { d: 2 * k, tag: 'halfS', why },
+    ];
+    const opts = [{ d: k, ok: true, why: '' }];
+    for (const c of cands) if (opts.length < 4 && opts.every((o) => !eq(o.d, c.d))) opts.push({ ...c, ok: false });
+    return {
+      kind: 'stand', variant: 'ratio', level: 'mixed', difficulty: 3,
+      text: L(`A rope is ${endsText(ends)}. Its fundamental (the standing wave of lowest frequency) has the wavelength λ₁. What is the wavelength of the standing wave in the picture?`, `Ein Seil ist ${endsText(ends)}. Seine Grundschwingung (die stehende Welle mit der tiefsten Frequenz) hat die Wellenlänge λ₁. Wie gross ist die Wellenlänge der stehenden Welle im Bild?`),
+      fig: standFig(6, ends, q, phOf(ends)), anim: null, solAnim: null,
+      questions: [{ type: 'choice', key: 'lam', label: 'λ', options: opts.sort((a, b) => a.d - b.d).map((o) => ({ ...o, label: lab(o.d) })) }],
+      hints: [RULE.ends(), RULE.modes()],
+      solution: [RULE.modes(), why], p: { k: 'stand-ratio', ends, q },
+    };
+  }
+
+  // ---------------------------------------------------------------- find the error
+  // A student's four sketches, one of them wrong: the wrong one is the right answer. A reflection
+  // with the wrong inversion, or a standing wave with an antinode at a fixed end.
+  // A reflection sketch: the incoming crest (dashed) and the student's reflected crest (solid);
+  // flip: the reflected crest the wrong way up.
+  function reflSketch(p, E, type, t, flip) {
+    const im = image(p, E, type), shown = flip ? { ...im, sgn: -im.sgn } : im;
+    return { ...snap((x) => ev(shown, x, t), { hi: E, end: { x: E, type }, more: [{ f: (x) => ev(p, x, 0), cls: 'part' }], arrows: [arrowOf(p, 0), arrowOf(shown, t, { up: shown.sgn < 0 })] }), flip: !!flip };
+  }
+  function errorEx(r, what) {
+    const sketches = [], seen = new Set();
+    const wrongAt = r.int(0, 3);
+    let wrong = null, fix = null, wrongType = null;
+    while (sketches.length < 4) {
+      const bad = sketches.length === wrongAt;
+      let spec, fixed, type;
+      if (what === 'refl') {
+        type = r.pick(['fixed', 'free']);
+        const sh = shapeFor(r, 'lin'), E = 7, p = pulse(sh, 0.5, 1, 1), tb = E - 0.5;
+        // after the reflection, the reflected crest clear of the incoming one (at t = 0)
+        const times = [];
+        for (let t = tb; 2 * E - 0.5 - sh.w - t >= sh.w + 1; t += 0.5) times.push(t);
+        if (!times.length) continue;
+        const t = r.pick(times);
+        spec = reflSketch(p, E, type, t, bad); fixed = reflSketch(p, E, type, t, false);
+      } else {
+        const ends = r.pick(CONFIGS), len = 6;
+        if (bad) {
+          // an antinode at a fixed end, and no other mistake
+          const opts = [];
+          for (let q = 1; q <= 6; q++) for (const ph of [0, 1]) { const k = endsOf(q, ph); if (k.some((x, i) => x === 'anti' && ends[i] === 'fixed') && !k.some((x, i) => x === 'node' && ends[i] === 'free')) opts.push([q, ph]); }
+          const [q, ph] = r.pick(opts), qq = qFits(ends, q) ? q : q > 1 ? q - 1 : q + 1;
+          spec = standFig(len, ends, q, ph); fixed = standFig(len, ends, qq, phOf(ends));
+        } else {
+          const qs = [1, 2, 3, 4, 5, 6].filter((q) => qFits(ends, q));
+          spec = standFig(len, ends, r.pick(qs), phOf(ends));
+        }
+        type = ends;
+      }
+      const s = sig(spec);
+      if (seen.has(s)) continue;
+      seen.add(s);
+      if (bad) { wrong = spec; fix = fixed; wrongType = type; }
+      sketches.push({ fig: spec, ok: bad, type });
+    }
+    const why = (o) => (what === 'refl'
+      ? L(`This sketch is right: at ${endWord(o.type)} the crest comes back ${o.type === 'fixed' ? 'upside down' : 'upright'}.`, `Diese Skizze stimmt: An ${o.type === 'fixed' ? 'einem festen Ende' : 'einem losen Ende'} kommt der Buckel ${o.type === 'fixed' ? 'umgedreht' : 'aufrecht'} zurück.`)
+      : L('This sketch is right: a node at each fixed end, an antinode at each free end, the nodes evenly spaced.', 'Diese Skizze stimmt: ein Knoten an jedem festen Ende, ein Bauch an jedem losen Ende, die Knoten gleichmässig verteilt.'));
+    const options = sketches.map((o) => ({ fig: o.fig, ok: o.ok, why: o.ok ? '' : why(o), tag: o.ok ? '' : what === 'refl' ? 'errRefl' : 'errStand' }));
+    const n = options.findIndex((o) => o.ok) + 1;
+    return {
+      kind: 'error', variant: what, level: 'mixed', difficulty: 3, fig: null, anim: null, solAnim: null,
+      text: what === 'refl'
+        ? L('A student sketched four reflections. In each, the dashed crest runs towards the end (a wall: a fixed end; a ring on a pole: a free end), and the solid crest is the student’s sketch of it after the reflection. One sketch is wrong. Which?', 'Eine Schülerin hat vier Reflexionen skizziert. In jeder läuft der gestrichelte Buckel auf das Ende zu (eine Wand: ein festes Ende; ein Ring an einer Stange: ein loses Ende), und der ausgezogene ist ihre Skizze von ihm nach der Reflexion. Eine Skizze ist falsch. Welche?')
+        : L('A student sketched standing waves on four ropes, each as the rope at its two extreme positions (a wall: a fixed end; a ring on a pole: a free end). One sketch is wrong. Which?', 'Eine Schülerin hat stehende Wellen auf vier Seilen skizziert, jede als das Seil in seinen beiden äussersten Lagen (eine Wand: ein festes Ende; ein Ring an einer Stange: ein loses Ende). Eine Skizze ist falsch. Welche?'),
+      questions: [{ type: 'pick', key: 'fig', options }],
+      hints: what === 'refl' ? [RULE.fixed(), L('Check each sketch: which kind of end, and which way up does the crest come back?', 'Prüfe jede Skizze: Was für ein Ende, und wie herum kommt der Buckel zurück?')] : [RULE.ends(), L('Check each end of each sketch: node or antinode?', 'Prüfe jedes Ende jeder Skizze: Knoten oder Bauch?')],
+      solution: what === 'refl'
+        ? [RULE.fixed(), L(`Sketch ${n} is wrong: at ${endWord(wrongType)} the crest comes back ${wrongType === 'fixed' ? 'upside down' : 'upright'}, not ${wrongType === 'fixed' ? 'upright' : 'upside down'}. The figure above shows it corrected.`, `Skizze ${n} ist falsch: An ${wrongType === 'fixed' ? 'einem festen Ende' : 'einem losen Ende'} kommt der Buckel ${wrongType === 'fixed' ? 'umgedreht' : 'aufrecht'} zurück, nicht ${wrongType === 'fixed' ? 'aufrecht' : 'umgedreht'}. Die Figur oben zeigt sie richtig.`)]
+        : [RULE.ends(), L(`Sketch ${n} is wrong: it has an antinode at a fixed end. The figure above shows it corrected.`, `Skizze ${n} ist falsch: Sie hat einen Bauch an einem festen Ende. Die Figur oben zeigt sie richtig.`)],
+      solFig: fix, wrong, p: { k: `error-${what}`, n },
+    };
+  }
+
   const EXERCISES = {
     move: (r, a) => move(r, a), yt: (r, a) => yt(r, a), ty: (r, a) => ty(r, a), medium: (r, a) => medium(r, a), speed: (r, a) => speed(r, a),
     sup: (r, a) => sup(r, a), refl: (r, a, b) => refl(r, b || 'lin', a === 'smooth' ? null : a), reflsum: (r, a, b) => reflsum(r, a || 'lin', b), mirror: (r, a) => mirror(r, a), end: (r, a) => endEx(r, a), draw: (r, a) => draw(r, a),
+    stand: (r, a) => (a === 'count' ? standCount(r) : a === 'ratio' ? standRatio(r) : standPic(r)), error: (r, a) => errorEx(r, a),
   };
   // An exercise of a type ('move-lin', 'refl-fixed', 'refl-smooth', 'speed-x', 'draw-sup', …) and a seed.
   function generate(type, seed) {
@@ -543,7 +720,7 @@
     return { ...e, type, seed };
   }
 
-  const api = { rng, LIN, SMOOTH, prof, pulse, ev, image, y, yIn, yRef, snap, graphT, sig, X, Y, num, RULE, EXERCISES, generate, endWord, dirWord, tLabel, arrowOf };
+  const api = { rng, LIN, SMOOTH, prof, pulse, ev, image, y, yIn, yRef, snap, graphT, sig, X, Y, num, RULE, EXERCISES, generate, endWord, dirWord, tLabel, arrowOf, AMP, endsOf, fits, standFig, reflSketch };
   root.Waves = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

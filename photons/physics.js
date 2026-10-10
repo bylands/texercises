@@ -1,30 +1,22 @@
-// Photons: the physics and the numbers. Constants (CODATA, rounded as in a formula book), the
+// Photoelectric Effect: the physics and the numbers. Constants (CODATA, rounded as in a formula book), the
 // formulas of the app, random numbers for the exercises, and how numbers are written.
 //   E = h·f = h·c/λ, h·c = 1240 eV·nm             photon energy
 //   E_kin,max = h·f − W, e·U₀ = E_kin,max         photoelectric effect (Einstein)
-//   p = h/λ = E/c                                photon momentum; radiation force F = P/c (absorbed),
-//                                                2P/c (reflected), P the power of the light
-//   λ_min = h·c/(e·U)                            X-ray tube (Duane–Hunt)
-//   Δλ = λ_C·(1 − cos θ), λ_C = h/(m_e·c)        Compton effect
-// Units in the exercises: λ in nm (X-rays in pm), f in Hz, E in eV or J, U in V.
+//   U₀ = (h/e)·f − W/e, f_G = W/h, λ_G = c/f_G      the stopping voltage against the frequency
+// Units in the exercises: λ in nm, f in Hz, E in eV, U in V.
 (function (root) {
   'use strict';
 
-  const h = 6.626e-34, c = 2.998e8, e = 1.602e-19, me = 9.109e-31;
+  const h = 6.626e-34, c = 2.998e8, e = 1.602e-19;
   const HC = (h * c) / e * 1e9; // 1239.8 eV·nm
-  const LC = (h / (me * c)) * 1e12; // 2.426 pm
+  const hEV = h / e; // 4.136 · 10⁻¹⁵ eV·s
 
   // ---------------------------------------------------------------- formulas
   const freq = (nm) => c / (nm * 1e-9); // Hz
   const eV = (nm) => HC / nm; // photon energy in eV from λ in nm
-  const joule = (nm) => (h * c) / (nm * 1e-9);
   const nmOf = (eVal) => HC / eVal; // λ in nm from E in eV
-  const momentum = (nm) => h / (nm * 1e-9); // kg·m/s
-  const lambdaMin = (U) => (HC / U) * 1e3; // pm, U in V
-  const compton = (theta) => LC * (1 - Math.cos((theta * Math.PI) / 180)); // pm
   // the fastest photoelectrons: E_kin in eV (negative: none released)
   const ekin = (nm, W) => eV(nm) - W;
-  const speed = (ekinEV) => Math.sqrt((2 * ekinEV * e) / me); // m/s
 
   // Metals: work functions in eV, as in a formula book.
   const METALS = [
@@ -37,43 +29,7 @@
     { id: 'cu', en: 'copper', de: 'Kupfer', sym: 'Cu', W: 4.48 },
     { id: 'pt', en: 'platinum', de: 'Platin', sym: 'Pt', W: 5.36 },
   ];
-  // Light sources: wavelengths in nm (mercury lines, lasers, LEDs).
-  const LINES = [
-    { en: 'the UV line of a mercury lamp', de: 'die UV-Linie einer Quecksilberdampflampe', nm: 254 },
-    { en: 'the near-UV line of a mercury lamp', de: 'die nahe UV-Linie einer Quecksilberdampflampe', nm: 365 },
-    { en: 'the violet line of a mercury lamp', de: 'die violette Linie einer Quecksilberdampflampe', nm: 405 },
-    { en: 'the blue line of a mercury lamp', de: 'die blaue Linie einer Quecksilberdampflampe', nm: 436 },
-    { en: 'a blue LED', de: 'eine blaue LED', nm: 470 },
-    { en: 'a green laser', de: 'ein grüner Laser', nm: 532 },
-    { en: 'the yellow line of a mercury lamp', de: 'die gelbe Linie einer Quecksilberdampflampe', nm: 578 },
-    { en: 'a red laser', de: 'ein roter Laser', nm: 650 },
-    { en: 'an infrared LED', de: 'eine Infrarot-LED', nm: 850 },
-  ];
-  // X-ray anodes: the characteristic lines (pm) and the energy needed to ionise the K shell (keV).
-  const ANODES = [
-    { id: 'cu', en: 'copper', de: 'Kupfer', sym: 'Cu', ka: 154, kb: 139, edge: 8.98 },
-    { id: 'mo', en: 'molybdenum', de: 'Molybdän', sym: 'Mo', ka: 71, kb: 63, edge: 20.0 },
-    { id: 'ag', en: 'silver', de: 'Silber', sym: 'Ag', ka: 56, kb: 50, edge: 25.5 },
-  ];
-  // The regions of the spectrum, by wavelength in nm.
-  function region(nm) {
-    if (nm < 10) return 'x';
-    if (nm < 380) return 'uv';
-    if (nm <= 750) return 'vis';
-    if (nm < 1e6) return 'ir';
-    return 'radio';
-  }
-  // The colour of visible light (names) and an RGB colour for drawing it.
-  function colour(nm) {
-    if (nm < 380) return null;
-    if (nm < 450) return 'violet';
-    if (nm < 495) return 'blue';
-    if (nm < 570) return 'green';
-    if (nm < 590) return 'yellow';
-    if (nm < 620) return 'orange';
-    if (nm <= 750) return 'red';
-    return null;
-  }
+  // An RGB colour for drawing visible light.
   function rgb(nm) {
     let r = 0, g = 0, b = 0;
     if (nm >= 380 && nm < 440) { r = (440 - nm) / 60; b = 1; } else if (nm < 490) { g = (nm - 440) / 50; b = 1; } else if (nm < 510) { g = 1; b = (510 - nm) / 20; } else if (nm < 580) { r = (nm - 510) / 70; g = 1; } else if (nm < 645) { r = 1; g = (645 - nm) / 65; } else if (nm <= 780) r = 1;
@@ -132,8 +88,8 @@
   const pow = (k) => `10${String(k).split('').map((d) => SUP[d]).join('')}`;
 
   const api = {
-    h, c, e, me, HC, LC, freq, eV, joule, nmOf, momentum, lambdaMin, compton, ekin, speed,
-    METALS, LINES, ANODES, region, colour, rgb, rng, round, plain, sci, num, pow, MINUS,
+    h, c, e, HC, hEV, freq, eV, nmOf, ekin,
+    METALS, rgb, rng, round, plain, sci, num, pow, MINUS,
   };
   root.Photon = api;
   if (typeof module !== 'undefined') module.exports = api;

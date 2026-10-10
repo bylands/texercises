@@ -2,7 +2,8 @@
 //   graph(spec, o)   a snapshot y(x) or a graph y(t) (spec from generator.js): the grid of the
 //                    worksheet (0.5 m or 0.5 s, 1 cm), the curves, the end (a wall for a fixed
 //                    one, a dashed line with a ring for a free one), the region behind the end
-//                    (mirror crests), arrows for the speed, marked places and points.
+//                    (mirror crests), arrows for the speed, marked places and points; spec.end0
+//                    an end at the left too (a standing wave between two ends).
 //                    o: { small, values (the student's heights, for drawing), xs, label }
 //   pointAt(spec, px, py)  the grid line and height (whole cm) nearest to a point of a drawing
 //   Anim.mount(el, a)      an animation in el: the rope from a.t0 to a.t1 (a = { sc, t0, t1,
@@ -49,11 +50,12 @@
     out += `<text class="axl" x="${s.ML + s.PW + 14}" y="${s.MT + s.PH + 26}" text-anchor="end"><tspan class="it">${isT ? 't' : 'x'}</tspan> in ${u.x}</text>`;
     out += `<text class="axl" x="6" y="${s.MT - 10}"><tspan class="it">${u.yname || 'y'}</tspan> in ${u.y}</text>`;
     if (spec.label) out += `<text class="glabel" x="${s.ML + s.PW - (spec.end && spec.virtual == null ? 18 : 4)}" y="${s.MT + 14}" text-anchor="end">${spec.label}</text>`; // clear of an end at the right
-    // the end
-    if (spec.end) {
-      const ex = s.x(spec.end.x);
-      out += spec.end.type === 'fixed'
-        ? `<path class="wall" d="M${f1(ex)} ${s.MT + 6} V${s.MT + s.PH - 6}"/>${Array.from({ length: 9 }, (z, k) => `<path class="hatch" d="M${f1(ex)} ${f1(s.MT + 10 + k * (s.PH - 20) / 9)} l8 -8"/>`).join('')}`
+    // the end (and spec.end0, an end at the left: its wall hatched to the left)
+    for (const [e, side] of [[spec.end, 1], [spec.end0, -1]]) {
+      if (!e) continue;
+      const ex = s.x(e.x);
+      out += e.type === 'fixed'
+        ? `<path class="wall" d="M${f1(ex)} ${s.MT + 6} V${s.MT + s.PH - 6}"/>${Array.from({ length: 9 }, (z, k) => `<path class="hatch" d="M${f1(ex)} ${f1(s.MT + 10 + k * (s.PH - 20) / 9)} l${8 * side} -8"/>`).join('')}`
         : `<path class="freeend" d="M${f1(ex)} ${s.MT + 6} V${s.MT + s.PH - 6}"/><circle class="ring" cx="${f1(ex)}" cy="${f1(s.y(0))}" r="4"/>`;
     }
     // the marked places, the curves, the arrows, the points

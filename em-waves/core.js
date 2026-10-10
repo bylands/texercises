@@ -8,8 +8,8 @@
   const L = (en, de) => Lang.L(en, de);
 
   // ---------------------------------------------------------------- constants
-  // c as in school, 3.00·10⁸ m/s; ε₀ for the intensity
-  const C = 3e8, EPS0 = 8.854e-12;
+  // c as in school, 3.00·10⁸ m/s
+  const C = 3e8;
 
   // ---------------------------------------------------------------- numbers
   // Results to three significant digits; small and large numbers as powers of ten. The decimal
@@ -30,14 +30,7 @@
   // Units: a quantity is kept in SI; shown in a unit with its factor.
   const UNITS = {
     km: [1e3, 'km', '\\mathrm{km}'], m: [1, 'm', '\\mathrm{m}'], cm: [1e-2, 'cm', '\\mathrm{cm}'], mm: [1e-3, 'mm', '\\mathrm{mm}'], 'μm': [1e-6, 'μm', '\\mu\\mathrm{m}'], nm: [1e-9, 'nm', '\\mathrm{nm}'], pm: [1e-12, 'pm', '\\mathrm{pm}'],
-    s: [1, 's', '\\mathrm{s}'], min: [60, 'min', '\\mathrm{min}'], ms: [1e-3, 'ms', '\\mathrm{ms}'], 'μs': [1e-6, 'μs', '\\mu\\mathrm{s}'], ns: [1e-9, 'ns', '\\mathrm{ns}'],
     Hz: [1, 'Hz', '\\mathrm{Hz}'], kHz: [1e3, 'kHz', '\\mathrm{kHz}'], MHz: [1e6, 'MHz', '\\mathrm{MHz}'], GHz: [1e9, 'GHz', '\\mathrm{GHz}'], THz: [1e12, 'THz', '\\mathrm{THz}'],
-    H: [1, 'H', '\\mathrm{H}'], mH: [1e-3, 'mH', '\\mathrm{mH}'], 'μH': [1e-6, 'μH', '\\mu\\mathrm{H}'],
-    'μF': [1e-6, 'μF', '\\mu\\mathrm{F}'], nF: [1e-9, 'nF', '\\mathrm{nF}'], pF: [1e-12, 'pF', '\\mathrm{pF}'],
-    V: [1, 'V', '\\mathrm{V}'], A: [1, 'A', '\\mathrm{A}'], mA: [1e-3, 'mA', '\\mathrm{mA}'],
-    J: [1, 'J', '\\mathrm{J}'], mJ: [1e-3, 'mJ', '\\mathrm{mJ}'], 'μJ': [1e-6, 'μJ', '\\mu\\mathrm{J}'],
-    W: [1, 'W', '\\mathrm{W}'], mW: [1e-3, 'mW', '\\mathrm{mW}'], kW: [1e3, 'kW', '\\mathrm{kW}'],
-    'W/m²': [1, 'W/m²', '\\mathrm{W/m^2}'], 'mW/m²': [1e-3, 'mW/m²', '\\mathrm{mW/m^2}'], 'μW/m²': [1e-6, 'μW/m²', '\\mu\\mathrm{W/m^2}'], 'kW/m²': [1e3, 'kW/m²', '\\mathrm{kW/m^2}'],
     'V/m': [1, 'V/m', '\\mathrm{V/m}'], 'mV/m': [1e-3, 'mV/m', '\\mathrm{mV/m}'], 'kV/m': [1e3, 'kV/m', '\\mathrm{kV/m}'],
     T: [1, 'T', '\\mathrm{T}'], 'μT': [1e-6, 'μT', '\\mu\\mathrm{T}'], nT: [1e-9, 'nT', '\\mathrm{nT}'], pT: [1e-12, 'pT', '\\mathrm{pT}'],
     'm/s': [1, 'm/s', '\\mathrm{m/s}'], '°': [1, '°', '^\\circ'], '': [1, '', ''],
@@ -51,15 +44,8 @@
   const best = (x, list) => { for (const u of list) if (Math.abs(x) >= 0.9999 * UNITS[u][0]) return u; return list[list.length - 1]; };
   const lengthUnit = (x) => best(x, ['km', 'm', 'cm', 'mm', 'μm', 'nm', 'pm']);
   const freqUnit = (f) => best(f, ['THz', 'GHz', 'MHz', 'kHz', 'Hz']);
-  const timeUnit = (t) => best(t, ['s', 'ms', 'μs', 'ns']);
-  const capUnit = (c) => best(c, ['μF', 'nF', 'pF']);
-  const indUnit = (l) => best(l, ['H', 'mH', 'μH']);
-  const intUnit = (i) => best(i, ['kW/m²', 'W/m²', 'mW/m²', 'μW/m²']);
   const fieldUnit = (e) => best(e, ['kV/m', 'V/m', 'mV/m']);
   const bUnit = (b) => best(b, ['T', 'μT', 'nT', 'pT']);
-  const energyUnit = (w) => best(w, ['J', 'mJ', 'μJ']);
-  const currentUnit = (i) => best(i, ['A', 'mA']);
-  const powerUnit = (p) => best(p, ['kW', 'W', 'mW']);
 
   // ---------------------------------------------------------------- random numbers
   function rng(seed) {
@@ -76,8 +62,8 @@
   const shuffle = (r, a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
   root.EW = {
-    getLang, L, C, EPS0, clean, sig, num, tnum, UNITS, inUnit, q, tq,
-    lengthUnit, freqUnit, timeUnit, capUnit, indUnit, intUnit, fieldUnit, bUnit, energyUnit, currentUnit, powerUnit, rng, pick, shuffle,
+    getLang, L, C, clean, sig, num, tnum, UNITS, inUnit, q, tq,
+    lengthUnit, freqUnit, fieldUnit, bUnit, rng, pick, shuffle,
   };
   if (typeof module !== 'undefined') module.exports = root.EW;
 })(typeof window !== 'undefined' ? window : globalThis);

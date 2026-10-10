@@ -7,7 +7,11 @@
 //   option, options that differ (also as drawings), a reason for each wrong one, complete texts,
 //   and drawings and animation frames that render,
 // - how the rope moves: a point said to move up is higher a moment later,
-// - a drawing exercise has whole heights at its grid lines.
+// - a drawing exercise has whole heights at its grid lines,
+// - standing waves: the right picture has a node at each fixed end and an antinode at each free
+//   end, evenly spaced, the wrong ones not; choice questions have four options; in "find the
+//   error" exactly the wrong sketch is the answer (the reflection the wrong way up, or an antinode
+//   at a fixed end).
 'use strict';
 
 const Lang = require('../lang.js');
@@ -43,7 +47,9 @@ for (const sh of [...Object.values(W.LIN), ...Object.values(W.SMOOTH)]) {
 
 // ---------------------------------------------------------------- exercises
 const TYPES = ['move-lin', 'move-smooth', 'yt-lin', 'yt-smooth', 'ty-lin', 'ty-smooth', 'medium-lin', 'medium-smooth', 'speed-x', 'speed-t', 'speed-len', 'sup-lin', 'sup-smooth',
-  'refl-fixed', 'refl-free', 'refl-smooth', 'reflsum-lin', 'reflsum-smooth', 'mirror-lin', 'mirror-smooth', 'end-lin', 'end-smooth', 'draw-sup', 'draw-refl', 'draw-reflsum'];
+  'refl-fixed', 'refl-free', 'refl-smooth', 'reflsum-lin', 'reflsum-smooth', 'mirror-lin', 'mirror-smooth', 'end-lin', 'end-smooth', 'draw-sup', 'draw-refl', 'draw-reflsum',
+  'stand-pic', 'stand-count', 'stand-ratio', 'error-refl', 'error-stand'];
+const NEW = new Set(['stand-pic', 'stand-count', 'stand-ratio', 'error-refl', 'error-stand']);
 let n = 0;
 for (const lang of ['en', 'de']) {
   Lang.set(lang, true);
@@ -59,6 +65,7 @@ for (const lang of ['en', 'de']) {
           if (new Set(q.options.map((o) => W.sig(o.fig))).size !== 4) fail(`${tag}: two diagrams look the same`);
           if (seed <= 15) for (const o of q.options) if (/NaN|undefined/.test(P.graph(o.fig, { small: true }))) fail(`${tag}: a diagram`);
         } else if (new Set(q.options.map((o) => o.label)).size !== q.options.length) fail(`${tag}: ${q.key} options not distinct`);
+        if (NEW.has(type) && q.options.length !== 4) fail(`${tag}: ${q.options.length} options`);
         if (q.options.some((o) => !o.ok && !o.why)) fail(`${tag}: a wrong option without a reason`);
         if (bad(JSON.stringify(q.options.map((o) => [o.label || '', o.why || ''])) + (q.label || ''))) fail(`${tag}: texts of ${q.key}`);
       }
@@ -76,6 +83,26 @@ for (const lang of ['en', 'de']) {
           const words = { up: q.options[0].label, down: q.options[1].label, rest: q.options[2].label };
           if (m !== words[want]) fail(`${tag}: point ${q.key} moves ${want}`);
         });
+      }
+      if (e.kind === 'stand' && e.variant === 'pic') for (const o of e.questions[0].options) {
+        const d = o.fig.std;
+        if (o.ok !== (W.fits(d.ends, d.q, d.ph) && !d.warp)) fail(`${tag}: a picture judged ${o.ok ? 'right' : 'wrong'}`);
+      }
+      if (e.kind === 'stand' && e.fig) {
+        // the picture itself: nodes at the fixed ends, antinodes at the free ones
+        const d = e.fig.std, f = e.fig.curves[0].f;
+        d.ends.forEach((type, i) => { const v = Math.abs(f(i ? d.len : 0)); if (type === 'fixed' ? v > 1e-6 : !near(v, W.AMP)) fail(`${tag}: the ${type} end of the picture`); });
+      }
+      if (e.kind === 'error' && e.variant === 'stand') for (const o of e.questions[0].options) {
+        const d = o.fig.std, k = W.endsOf(d.q, d.ph);
+        const antiAtFixed = k.some((x, i) => x === 'anti' && d.ends[i] === 'fixed'), nodeAtFree = k.some((x, i) => x === 'node' && d.ends[i] === 'free');
+        if (o.ok ? !antiAtFixed || nodeAtFree : !W.fits(d.ends, d.q, d.ph)) fail(`${tag}: a sketch judged ${o.ok ? 'wrong' : 'right'}`);
+      }
+      if (e.kind === 'error' && e.variant === 'refl') for (const o of e.questions[0].options) if (o.ok !== o.fig.flip) fail(`${tag}: a reflection judged ${o.ok ? 'wrong' : 'right'}`);
+      if (e.kind === 'stand' && e.variant !== 'pic') {
+        // the value marked right is the wavelength of the picture
+        const d = e.fig.std, lam = (4 * d.len) / d.q, lam1 = 4 * d.len / (d.ends[0] === d.ends[1] ? 2 : 1), ok = e.questions[0].options.find((o) => o.ok);
+        if (e.variant === 'count' ? !near(ok.value, lam) : ok.label !== `λ₁/${Math.round(lam1 / lam)}`) fail(`${tag}: the wavelength`);
       }
       if (e.kind === 'draw') {
         if (!e.target.every((v) => Number.isInteger(v)) || e.target.every((v) => v === 0)) fail(`${tag}: the heights to draw`);

@@ -3,7 +3,7 @@
 // solutionFigure(), hints, solution, results, p, v }: a number field has its value in its unit and
 // traps [{ value, why, flag }] (the answers under typical wrong ideas), a choice field its right
 // answer. quiz(exercise, seed) gives a multiple-choice question about one of its fields (for the
-// arcade), tutorial(lesson) the tutor's frames.
+// check), tutorial(lesson) the tutor's frames.
 (function (root) {
   'use strict';
 
@@ -60,7 +60,8 @@
 
   // A multiple-choice question about one field of an exercise: a choice with four options as it
   // is; else a number, with the right value and three wrong ones (typical wrong ideas first, then
-  // simple slips). Where an exercise has both, the seed decides.
+  // simple slips). Where an exercise has both, or several numbers with typical wrong ideas, the seed
+  // decides.
   function quiz(ex, seed) {
     const r = rng(seed), shuffle = (a) => EW.shuffle(r, a);
     const four = ex.fields.filter((g) => g.type === 'choice' && g.options.length >= 4).pop();
@@ -69,7 +70,7 @@
       const right = four.options.find((o) => o[0] === four.value), opts = [right, ...four.options.filter((o) => o !== right).slice(0, 3)];
       return { field: four, options: (four.stack ? shuffle(opts) : four.options.filter((o) => opts.includes(o))).map(([value, html, why, flag]) => ({ value, html, correct: value === four.value, why: value === four.value ? '' : why, flag: value === four.value ? null : flag })) };
     }
-    const f = nums.find((g) => g.traps.length) || nums[0];
+    const trapped = nums.filter((g) => g.traps.length), f = trapped.length ? trapped[Math.floor(seed / 2) % trapped.length] : nums[0];
     const options = [{ value: f.value, correct: true }];
     const fits = (x) => Number.isFinite(x) && x > 0 && options.every((o) => Math.abs(o.value - x) > 0.06 * Math.max(Math.abs(o.value), Math.abs(x)));
     const add = (list) => { for (const o of list) if (options.length < 4 && fits(EW.sig(o.value))) options.push({ ...o, value: EW.sig(o.value) }); };

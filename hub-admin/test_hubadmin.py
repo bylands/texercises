@@ -42,7 +42,7 @@ class Unit(unittest.TestCase):
         self.assertEqual(names["bulb-brightness"], "Bulb Brightness")
         modes = {a["id"]: a["modes"] for a in apps}
         self.assertEqual(modes["bulb-brightness"], ["tutor", "practice", "check"])
-        self.assertEqual(modes["photons"], ["tutor", "practice", "real", "arcade"])
+        self.assertEqual(modes["photons"], ["tutor", "practice", "check"])
         starters = {a["id"]: a.get("tags") for a in apps}
         self.assertEqual(starters["photons"][:2], [{"en": "Quantum physics", "de": "Quantenphysik"}, {"en": "Light", "de": "Licht"}])
         self.assertIsNone(starters["coe"])
@@ -246,7 +246,7 @@ class Service(unittest.TestCase):
         self.assertIn({"id": "torque", "name": "Torque and Equilibrium", "modes": ["tutor", "practice", "check"]}, data["apps"])
         new = {"sets": {"3a-elektro": {"title": "Klasse 3a", "lang": "de", "apps": [
             {"id": "electric-field", "modes": ["tutor", "practice", "check"], "tutor": [0, 1, 3], "practice": ["force-dir", "lines-pick+lines-read"]},
-            {"id": "photons", "modes": ["real"]}]}}}
+            {"id": "photons", "modes": ["check"]}]}}}
         self.assertEqual(self.req("/api/sets", json.dumps(new).encode(), "application/json")[0], 403)
         self.assertEqual(self.req("/api/sets", json.dumps(new).encode(), "text/plain", cookie)[0], 415)
         st, _, body = self.req("/api/sets", json.dumps(new).encode(), "application/json", cookie)
