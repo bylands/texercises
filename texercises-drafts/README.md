@@ -3,7 +3,10 @@
 The story problems that used to live in the modules' Problems mode, rewritten
 as TeXercises exercises in the bulk-import format (see the README of a
 TeXercises export for the format). 121 new exercises in 15 private
-collections, one per module; none has an `"id"`, so an upload creates them.
+collections, one per module. Only force-systems carries the `"id"`s of its
+uploaded copies (exercises 24545 to 24556, collection 5839), so an upload
+updates it in place; the other exercises have no `"id"`, so an upload
+creates them.
 
 | Module | Exercises | Collection | Language |
 |---|---|---|---|
