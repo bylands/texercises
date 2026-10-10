@@ -3,8 +3,8 @@
 // what a circuit does for small and for large ω, from the reactances ωL and 1/(ωC) (which curve
 // belongs to a circuit, and which circuit to a curve, match.js); then the resonance, the minimum of
 // Z in series and its maximum in parallel; last, R, L and C read off the curve of an RLC circuit,
-// with round values (R in Ω, L in H, C in F), and (appended) series RL and RC with the right
-// triangle Z = √(R² + X²). An example's topic is its index in TOPICS. The steps of those worked
+// with round values (R in Ω, L in H, C in F): first series RL and RC with the right triangle
+// Z = √(R² + X²), then series and parallel RLC. An example's topic is its index in TOPICS. The steps of those worked
 // examples come from analysis() in generator.js, as for the practice solutions.
 (function (root) {
   'use strict';
@@ -37,18 +37,6 @@
       idea: { en: 'Which circuit has this curve? Read the curve at both ends and at its minimum or maximum, and ask what can block the whole current there, or short-circuit everything.', de: 'Welche Schaltung hat diese Kurve? Lies die Kurve an beiden Enden und bei ihrem Minimum oder Maximum ab und frage, was dort den ganzen Strom sperren oder alles kurzschliessen kann.' },
       match: { net: 'RLC-parallel-series', q: 1, inverse: true, cands: ['LC-series', 'RL-series', 'RLC-series-parallel', 'RLC-parallel-series'] },
     },
-    {
-      topic: 3,
-      name: { en: 'Values: series RLC', de: 'Werte: RLC in Serie' },
-      idea: { en: 'At resonance the reactances of coil and capacitor cancel: the minimum of Z is R. L is the slope for large ω, and C follows from ω₀ = 1/√(LC).', de: 'Bei der Resonanz heben sich die Blindwiderstände von Spule und Kondensator auf: Das Minimum von Z ist R. L ist die Steigung für grosses ω, und C folgt aus ω₀ = 1/√(LC).' },
-      circuit: { kind: 'RLC', conn: 'series', R: 50, L: 0.05, C: 2e-5 },
-    },
-    {
-      topic: 3,
-      name: { en: 'Values: parallel RLC', de: 'Werte: RLC parallel' },
-      idea: { en: 'At resonance only the resistor counts: the maximum of Z is R. L is the slope at the origin, and C follows from ω₀ = 1/√(LC).', de: 'Bei der Resonanz zählt nur der Widerstand: Das Maximum von Z ist R. L ist die Steigung im Ursprung, und C folgt aus ω₀ = 1/√(LC).' },
-      circuit: { kind: 'RLC', conn: 'parallel', R: 300, L: 0.1, C: 1e-5 },
-    },
     // two elements in series, worked out with the right triangle Z = √(R² + X²) and one point read
     // off the curve at ω = read (pairAnalysis() in generator.js); round values, a 3-4-5 triangle
     {
@@ -62,6 +50,18 @@
       name: { en: 'Values: series RC', de: 'Werte: RC in Serie' },
       idea: { en: 'R and the reactance X = 1/(ωC) add like the sides of a right triangle, Z = √(R² + X²). For small ω the capacitor dominates (Z → ∞), for large ω the resistor (Z → R); one point read off the curve gives X and so C.', de: 'R und der Blindwiderstand X = 1/(ωC) addieren sich wie die Seiten eines rechtwinkligen Dreiecks, Z = √(R² + X²). Für kleines ω dominiert der Kondensator (Z → ∞), für grosses ω der Widerstand (Z → R); ein abgelesener Punkt liefert X und damit C.' },
       circuit: { kind: 'RC', conn: 'series', R: 30, L: null, C: 2.5e-5 }, read: 1000,
+    },
+    {
+      topic: 3,
+      name: { en: 'Values: series RLC', de: 'Werte: RLC in Serie' },
+      idea: { en: 'At resonance the reactances of coil and capacitor cancel: the minimum of Z is R. L is the slope for large ω, and C follows from ω₀ = 1/√(LC).', de: 'Bei der Resonanz heben sich die Blindwiderstände von Spule und Kondensator auf: Das Minimum von Z ist R. L ist die Steigung für grosses ω, und C folgt aus ω₀ = 1/√(LC).' },
+      circuit: { kind: 'RLC', conn: 'series', R: 50, L: 0.05, C: 2e-5 },
+    },
+    {
+      topic: 3,
+      name: { en: 'Values: parallel RLC', de: 'Werte: RLC parallel' },
+      idea: { en: 'At resonance only the resistor counts: the maximum of Z is R. L is the slope at the origin, and C follows from ω₀ = 1/√(LC).', de: 'Bei der Resonanz zählt nur der Widerstand: Das Maximum von Z ist R. L ist die Steigung im Ursprung, und C folgt aus ω₀ = 1/√(LC).' },
+      circuit: { kind: 'RLC', conn: 'parallel', R: 300, L: 0.1, C: 1e-5 },
     },
   ];
 
@@ -100,7 +100,7 @@
     {
       // reading the values off a graph with the probe: one step, all six circuits
       // byType: the worked example linked while an exercise of that type is shown
-      name: { en: 'Values from the curve', de: 'Werte aus der Kurve' }, example: 4, byType: { 'RL-series': 6, 'RC-series': 7 },
+      name: { en: 'Values from the curve', de: 'Werte aus der Kurve' }, example: 4, byType: { 'RL-series': 4, 'RC-series': 5, 'RLC-series': 6, 'RLC-parallel': 7 },
       stages: [
         { name: { en: 'R, L and C', de: 'R, L und C' }, types: ['RL-series', 'RC-series', 'RLC-series', 'RL-parallel', 'RC-parallel', 'RLC-parallel'] },
       ],
