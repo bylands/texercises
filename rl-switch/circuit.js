@@ -40,7 +40,11 @@
     return out;
   }
 
+  // A line break "\n" (outside $...$, after plain text) is a place where the label may wrap: the
+  // rest is a <tspan class="line2">, put on a line of its own by fitText when the label is too wide.
   function richText(label) {
+    const at = String(label).indexOf('\n');
+    if (at >= 0) return `${richText(String(label).slice(0, at) + ' ')}<tspan class="line2">${richText(String(label).slice(at + 1))}</tspan>`;
     let shifted = false;
     return tokens(label).map((tk) => {
       let attrs = '';
@@ -50,6 +54,17 @@
       if (tk.it) attrs += ' font-style="italic"';
       return `<tspan${attrs}>${esc(tk.t)}</tspan>`;
     }).join('');
+  }
+
+  // The space in the plain text of a label nearest its middle, as a possible line break "\n".
+  function breakable(label) {
+    const s = String(label), w = textWidth(s);
+    let best = -1, math = false;
+    for (let k = 0; k < s.length; k++) {
+      if (s[k] === '$') math = !math;
+      if (k && !math && s[k] === ' ' && !/[$ ]/.test(s[k - 1]) && (best < 0 || Math.abs(textWidth(s.slice(0, k)) - w / 2) < Math.abs(textWidth(s.slice(0, best)) - w / 2))) best = k;
+    }
+    return best < 0 ? s : `${s.slice(0, best)}\n${s.slice(best + 1)}`;
   }
 
   function textWidth(label) {
@@ -118,17 +133,22 @@
 
     // Text at point p (units), pushed away from p in direction n. A label is a string, or
     // { t: string, cls: extra classes } to highlight it; class "new" gets a marker background
-    // (<g class="marked">, fitted to the rendered text by fitText).
-    _text(p, n, label, cls) {
+    // (<g class="marked">, fitted to the rendered text by fitText). Beside a horizontal line, the
+    // text is centred on p, or starts at p and runs right (align 1) or left (align −1).
+    _text(p, n, label, cls, align = 0) {
       if (label == null) return;
       let mark = false;
       if (typeof label === 'object') { cls += ' ' + label.cls; mark = / new\b/.test(' ' + label.cls); label = label.t; }
       const [x, y] = this.P(p);
       const w = textWidth(label) * (mark ? 1.06 : 1); // "new" text is bold
       let anchor = 'middle', dy = '0.35em', x0 = x - w / 2, y0 = y - FONT / 2, base = y + 0.35 * FONT;
+      const run = Math.abs(n[0]) > 0.5 ? Math.sign(n[0]) : align;
+      if (run) {
+        anchor = run > 0 ? 'start' : 'end';
+        x0 = run > 0 ? x : x - w;
+      }
       if (Math.abs(n[0]) > 0.5) {
-        anchor = n[0] > 0 ? 'start' : 'end';
-        x0 = n[0] > 0 ? x : x - w;
+        // beside a vertical line: centred on p
       } else if (n[1] > 0) {
         dy = '0em'; y0 = y - FONT; base = y;
       } else {
@@ -137,6 +157,19 @@
       this._grow(x0, y0); this._grow(x0 + w, y0 + FONT * 1.2);
       const text = `<text class="${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" dy="${dy}" text-anchor="${anchor}">${richText(label)}</text>`;
       this.els.push(mark ? `<g class="marked"><rect class="mark" x="${(x0 - 3).toFixed(1)}" y="${(base - 0.95 * FONT).toFixed(1)}" width="${(w + 6).toFixed(1)}" height="${(1.4 * FONT).toFixed(1)}" rx="3"/>${text}</g>` : text);
+    }
+
+    // A label and a note under it (a second line) beside an element, at p pushed away in
+    // direction n: on a side above or below the note goes further out, on a side left or right
+    // the two lines are centred on p. As <g class="stack">, laid out again with the rendered
+    // text sizes by fitText (enlarged labels on a narrow screen would overlap).
+    _stack(p, n, label, note) {
+      if (note == null) { this._text(p, n, label, 'lbl'); return; }
+      const LINE = 0.36, out = Math.abs(n[0]) > 0.5 ? 0 : Math.sign(n[1]), start = this.els.length;
+      const [a, b] = out ? [p, add(p, [0, out * LINE])] : [add(p, [0, LINE / 2]), add(p, [0, -LINE / 2])];
+      this._text(a, n, label, 'lbl');
+      this._text(b, n, typeof note === 'object' ? { ...note, t: breakable(note.t) } : breakable(note), 'note');
+      this.els.push(`<g class="stack" data-out="${out}" data-y="${(-p[1] * S).toFixed(1)}">${this.els.splice(start).join('')}</g>`);
     }
 
     label(p, text, side = 'above', cls = 'lbl') {
@@ -227,14 +260,12 @@
       }
       this.P(add(g.m, mul(side, 0.3)));
       this.els.push(`<path class="${this._cls(o.hl ? 'coil hl' : 'coil')}" d="${d}"/>`);
-      const lp = add(g.m, mul(side, 0.42));
-      this._text(lp, side, o.l, 'lbl');
-      if (o.note) this._text(add(lp, [0, -0.36]), side, o.note, 'note');
+      this._stack(add(g.m, mul(side, 0.42)), side, o.l, o.note || null);
       return this;
     }
 
     // Switch from p to q: two contacts, and a lever that is closed (o.closed) or open.
-    // o.l label above it, o.note a line under it.
+    // o.l label on side o.ls, o.note a line under it (on a side above, over it).
     sw(p, q, o = {}) {
       const g = this._two(p, q, Math.min(0.8, len(sub(q, p)) * 0.6));
       const side = normalTowards(g.d, o.ls || this._defaultSide(g.d));
@@ -246,8 +277,7 @@
         this.els.push(`<circle class="${this._cls('contact')}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6"/>`);
       }
       this.P(add(g.m, mul(side, L * 0.6)));
-      this._text(add(g.m, mul(side, 0.55)), side, o.l, 'lbl');
-      if (o.note) this._text(add(g.m, mul(side, -0.3)), mul(side, -1), o.note, 'note');
+      this._stack(add(g.m, mul(side, 0.55)), side, o.l, o.note || null);
       return this;
     }
 
@@ -264,7 +294,9 @@
       return this;
     }
 
-    // Current arrow (blue) on the segment p→q, centred at fraction t.
+    // Current arrow (blue) on the segment p→q, centred at fraction t. Near an end of a horizontal
+    // segment, the label starts at the arrow and runs towards the other end (away from the wires
+    // at the corner).
     cur(p, q, label, side, t = 0.5) {
       if (label == null) return this;
       const d = unit(sub(q, p));
@@ -274,7 +306,9 @@
       this._path([a, b], 'cur' + ask);
       this._head(b, d, 'cur-h' + ask);
       const n = normalTowards(d, side || this._defaultSide(d));
-      this._text(add(c, mul(n, 0.22)), n, label, 'cur-t');
+      const end = Math.abs(t - 0.5) > 0.2 && Math.abs(d[0]) > 0.9 ? Math.sign(t - 0.5) : 0; // the end it is near: q (1), p (−1)
+      const at = end ? add(c, mul(d, 0.22 * end)) : c;
+      this._text(add(at, mul(n, 0.22)), n, label, 'cur-t', -end * Math.sign(d[0]));
       return this;
     }
 
@@ -331,6 +365,60 @@
   // drawing can only estimate text widths.
   function fitText(svg) {
     const textOf = (el) => (el.tagName === 'text' ? el : el.querySelector('text'));
+    // A label with its note: one line under the other (out ±1: from the first line outwards,
+    // up or down; 0: centred on data-y). Where the two run into another part of the drawing (as
+    // enlarged on a narrow screen), they move up or down by up to a line, and the note wraps if
+    // that runs into less: the place with the least overlap, then the nearest, wins.
+    const shown = svg.getBoundingClientRect(), scale = shown.width ? svg.viewBox.baseVal.width / shown.width : 0;
+    const glyphs = (t) => { const r = t.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top + 0.15 * r.height, bottom: r.bottom - 0.1 * r.height }; };
+    const overlap = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+    const outside = (a) => (a.right - a.left) * (a.bottom - a.top) - overlap(a, shown);
+    const stack = (g, lines) => {
+      const boxes = lines.map((t) => t.getBBox()), out = Number(g.dataset.out);
+      const total = boxes.reduce((h, b) => h + b.height, 0);
+      let top = out === 0 ? Number(g.dataset.y) - total / 2 : out < 0 ? boxes[0].y : boxes[0].y + boxes[0].height - total;
+      for (const k of out > 0 ? [...lines.keys()].reverse() : [...lines.keys()]) {
+        lines[k].setAttribute('y', (Number(lines[k].getAttribute('y')) + top - boxes[k].y).toFixed(1));
+        top += boxes[k].height;
+      }
+    };
+    const move = (lines, dy) => lines.forEach((t) => t.setAttribute('y', (Number(t.getAttribute('y')) + dy).toFixed(1)));
+    for (const g of svg.querySelectorAll('g.stack')) {
+      const lines = [...g.children].map(textOf), wrap = g.querySelector('.line2');
+      const wrapped = (on) => {
+        if (wrap && on) { wrap.setAttribute('x', wrap.closest('text').getAttribute('x')); wrap.setAttribute('dy', '1.15em'); } else if (wrap) { wrap.removeAttribute('x'); wrap.removeAttribute('dy'); }
+        stack(g, lines);
+      };
+      wrapped(false);
+      if (!scale) continue; // hidden
+      const near = [...svg.querySelectorAll('text, path, rect:not(.zone):not(.mark), circle, polygon')].filter((el) => !g.contains(el))
+        .map((el) => {
+          if (el.tagName === 'text') return glyphs(el);
+          const r = el.getBoundingClientRect(), m = Math.min(r.width, r.height) < 4 ? 4 : 1; // keep clear of a wire
+          return { left: r.left - m, right: r.right + m, top: r.top - m, bottom: r.bottom + m };
+        });
+      // the least overlap of the lines moved by dy (screen px), and that dy
+      const best = () => {
+        const boxes = lines.map(glyphs), step = 2, reach = Math.ceil((boxes[0].bottom - boxes[0].top) * 1.3 / step) * step;
+        let found = null;
+        for (let k = 0; k <= reach; k += step) {
+          for (const dy of k ? [-k, k] : [0]) {
+            const moved = boxes.map((b) => ({ ...b, top: b.top + dy, bottom: b.bottom + dy }));
+            const cost = moved.reduce((c, b) => c + outside(b) + near.reduce((d, r) => d + overlap(b, r), 0), 0);
+            if (!found || cost < found.cost - 0.5) found = { cost, dy };
+          }
+          if (found.cost < 0.5) break;
+        }
+        return found;
+      };
+      let choice = best();
+      if (wrap && choice.cost >= 0.5) {
+        wrapped(true);
+        const other = best();
+        if (other.cost < choice.cost - 0.5) choice = other; else wrapped(false);
+      }
+      if (choice.dy) move(lines, choice.dy * scale);
+    }
     for (const g of svg.querySelectorAll('g.caption')) {
       const parts = [...g.children].map((el) => ({ el, text: textOf(el), pad: el.classList.contains('marked') ? 4 : 0 }));
       const widths = parts.map((p) => p.text.getComputedTextLength() + 2 * p.pad);
@@ -345,7 +433,7 @@
 
   // labels enlarged on a narrow screen (fit.js): captions and markers follow
   if (root.Fit) root.Fit.after.push(fitText);
-  const Circuit = { Sketch, richText, esc, textWidth, fitText, S };
+  const Circuit = { Sketch, richText, esc, textWidth, breakable, fitText, S };
   root.Circuit = Circuit;
   if (typeof module !== 'undefined') module.exports = Circuit;
 })(typeof window !== 'undefined' ? window : globalThis);

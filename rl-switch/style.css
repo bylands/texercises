@@ -68,3 +68,4 @@ table.compare th:first-child { text-align: left; font-weight: 600; }
 
 /* check: the current the question asks for, bold */
 #ck svg text.ask { font-weight: 700; font-size: 16px; }
+

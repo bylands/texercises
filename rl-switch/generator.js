@@ -493,7 +493,9 @@
   // columns between the top and the bottom rail. view: { closed (switch drawn closed),
   // cur: key → label text or null (keys IR1, I0, I1, …), focus: key → 'new' | 'use', notes:
   // branch → text next to the inductor, hl: Set of 'R1' | 'S' | branch index, dim: Set of
-  // branch indices | 'main', swNote: text under the switch }.
+  // branch indices | 'main', swNote: text under the switch, gaps: least distances between the
+  // columns (to keep them in place from one picture to the next) }. The sketch keeps the
+  // distances used as s.gaps.
   function draw(c, nm, view) {
     const s = new Circuit.Sketch();
     s.autoDots = true;
@@ -502,8 +504,9 @@
       const t = view.cur ? view.cur[key] : null;
       return t != null && focus.has(key) ? { t, cls: focus.get(key) } : t;
     };
-    const elems = (b) => (b.sw ? 1 : 0) + (b.R ? 1 : 0) + (b.L ? 1 : 0);
-    const H = Math.max(3.2, 0.9 + Math.max(...c.branches.map(elems)) * 1.3);
+    // the height of a branch: 1.3 per element, an inductor a little more (its label has a note)
+    const tall = (b) => ((b.sw ? 1 : 0) + (b.R ? 1 : 0)) * 1.3 + (b.L ? 1.6 : 0);
+    const H = Math.max(3.2, 0.9 + Math.max(...c.branches.map(tall)));
     const sw = (p, q2, extra) => s.sw(p, q2, { l: 'S', closed: view.closed, note: view.swNote, hl: hl.has('S'), ...extra });
 
     // Main line: the switch on the top wire, R1 on the bottom wire (the current goes back to
@@ -517,7 +520,20 @@
     } else {
       s.wire([0, 0], [x, 0]);
     }
-    const cols = c.branches.map((b, j) => x + j * 2.9), last = cols[cols.length - 1];
+    // A column is followed by the widest label on its right, with some room to spare.
+    const wide = (l, at) => (l == null ? 0 : at + Circuit.textWidth(typeof l === 'object' ? l.t : l) / Circuit.S);
+    const labels = (b, j) => ({
+      R: b.R && `$${nm.R(nm.br[j].R)}$ = ${ftxt(b.R)} Ω`,
+      L: b.L && `$${nm.L(j).replace(/[{}]/g, '')}$ = ${comma(String(b.H))} H`,
+    });
+    const gaps = c.branches.map((b, j) => {
+      const l = labels(b, j);
+      const room = Math.max(wide(cur(`I${j}`), 0.22), b.R ? wide(l.R, 0.3) : 0, b.L ? Math.max(wide(l.L, 0.42), wide(view.notes && view.notes[j], 0.42)) : 0,
+        b.sw ? Math.max(wide('S', 0.55), wide(view.swNote, 0.55)) : 0);
+      return Math.max(2.9, room + 0.5, (view.gaps || [])[j] || 0);
+    });
+    s.gaps = gaps;
+    const cols = c.branches.map((b, j) => x + gaps.slice(0, j).reduce((a, g) => a + g, 0)), last = cols[cols.length - 1];
     s.dim = false;
     s.wire([x, 0], [last, 0]).wire([last, -H], [x, -H]);
     c.branches.forEach((b, j) => {
@@ -528,8 +544,8 @@
       parts.forEach((kind, k) => {
         const p = [cx, -0.9 - k * seg], q2 = [cx, -0.9 - (k + 1) * seg];
         if (kind === 'S') sw(p, q2, { ls: 'right' });
-        if (kind === 'R') s.res(p, q2, { l: `$${nm.R(nm.br[j].R)}$ = ${ftxt(b.R)} Ω`, ls: 'right', hl: hl.has(j) && !b.L });
-        if (kind === 'L') s.ind(p, q2, { l: `$${nm.L(j).replace(/[{}]/g, '')}$ = ${comma(String(b.H))} H`, ls: 'right', hl: hl.has(j), note: view.notes && view.notes[j] });
+        if (kind === 'R') s.res(p, q2, { l: labels(b, j).R, ls: 'right', hl: hl.has(j) && !b.L });
+        if (kind === 'L') s.ind(p, q2, { l: labels(b, j).L, ls: 'right', hl: hl.has(j), note: view.notes && view.notes[j] });
       });
     });
     s.dim = dim.has('main');
@@ -631,7 +647,7 @@
     const Ls = c.branches.map((b, j) => j).filter((j) => c.branches[j].L);
     const curs = (s) => ({ IR1: c.r1 ? label(s.IR1, 'A') : null, ...Object.fromEntries(c.branches.map((b, j) => [`I${j}`, label(s.Ib[j], 'A')])) });
     const symbols = () => ({ IR1: c.r1 ? `$${nm.IR1()}$` : null, ...Object.fromEntries(c.branches.map((b, j) => [`I${j}`, `$${nm.Ib(j)}$`])) });
-    const frame = (title, paras, view) => frames.push({ text: `<p class="step-rule">${title}</p>${paras.map((p) => `<p>${p}</p>`).join('')}`, sketch: draw(c, nm, view) });
+    const frame = (title, paras, view) => frames.push({ text: `<p class="step-rule">${title}</p>${paras.map((p) => `<p>${p}</p>`).join('')}`, view });
     const hlL = new Set(Ls);
 
     frame(L('The task', 'Die Aufgabe'), [ex.text], { closed: st.first, cur: symbols(), swNote: swNote(st.first) });
@@ -664,7 +680,10 @@
         `Lange nach dem Schalten sind die Ströme wieder konstant, und ${Ls.length > 1 ? 'die Spulen wirken' : 'die Spule wirkt'} wieder wie ${Ls.length > 1 ? 'Drähte' : 'ein Draht'}.`) + table,
     ], { closed: st.then, cur: curs(st.s2), dim: dead(c, st.then), notes: Object.fromEntries(Ls.map((j) => [j, L('long after: a wire', 'lange danach: ein Draht')])) });
 
-    // One viewBox for all frames, so that the diagram does not jump while stepping through.
+    // The same columns and one viewBox for all frames, so that the diagram does not jump while
+    // stepping through.
+    const gaps = frames.reduce((g, f) => draw(c, nm, f.view).gaps.map((x, j) => Math.max(x, g[j] || 0)), []);
+    frames.forEach((f) => { f.sketch = draw(c, nm, { ...f.view, gaps }); });
     const box = frames.reduce((b, f) => {
       const x = f.sketch.box;
       return [Math.min(b[0], x[0]), Math.min(b[1], x[1]), Math.max(b[2], x[2]), Math.max(b[3], x[3])];
