@@ -1,0 +1,7 @@
+\NewQty{mC}{3}[\tonne][e3][\kg]
+\NewQty{a}{0.2}[\mpss]
+\NewQty{Fmax}{36}[\kilo\newton][e3][\newton]
+\NewQty{g}{10}[\mpss]
+
+\SolQty{FS}[m\cdot(g+a)]{\mCX*(\gX+\aX)}[\newton]
+\SolQty{amax}[\frac{F_\mathrm{max}-m\,g}{m}]{(\FmaxX-\mCX*\gX)/\mCX}[\mpss]

@@ -1,0 +1,19 @@
+{
+  "title": "The Ion Thruster of Dawn",
+  "note": "from learningphysics, Electric Potential, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 4,
+  "default_points": 0,
+  "tags": [
+    "acceleration voltage",
+    "current",
+    "ion",
+    "momentum",
+    "thrust"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

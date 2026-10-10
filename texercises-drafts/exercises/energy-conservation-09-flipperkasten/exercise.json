@@ -1,0 +1,21 @@
+{
+  "title": "Ein Flipperkasten",
+  "note": "aus learningphysics.ch (Problems)",
+  "language": "GER",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "energie",
+    "energieerhaltungssatz",
+    "federkonstante",
+    "kinetische energie",
+    "learningphysics",
+    "potentielle energie",
+    "spannenergie"
+  ],
+  "subbranches": [
+    "Work, Energy, Power"
+  ],
+  "youtube": ""
+}

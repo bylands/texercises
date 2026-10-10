@@ -1,0 +1,18 @@
+{
+  "title": "An Inkjet Printer",
+  "note": "from learningphysics, Electric Field, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 4,
+  "default_points": 0,
+  "tags": [
+    "deflection",
+    "electric field",
+    "electrostatic",
+    "uniform field"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

@@ -1,0 +1,18 @@
+{
+  "title": "Nuclear Fission",
+  "note": "from learningphysics, Coulomb Force, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "coulomb law",
+    "electrostatic",
+    "nuclear fission",
+    "nucleus"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

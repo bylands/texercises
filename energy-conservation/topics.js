@@ -38,8 +38,9 @@
 //                             with a link to it suggest looking at it first.
 //   T.go(t, s)                practise topic t (from the tutor), at stage s or else the stage reached
 //   T.also(t)                 HTML for the tutor: what the practice of topic t covers
-// In a set of the teacher's (sets.js), only the set's stages are offered, and the topics that have
-// one; the steps are made of those stages, and all topics mixed mixes only them.
+// In a set of the teacher's (sets.js), only the topics of its learning objectives are offered, and
+// all topics mixed mixes only them; a set saved before lists stages instead: then only those are
+// offered, and the topics that have one, the steps made of those stages.
 (function (root) {
   'use strict';
 
@@ -56,20 +57,18 @@
   function create(o) {
     const S = root.LPSets;
     if (S) S.register('topics', o.topics);
-    // the stages in the set (all without one); the topics without any are left out
-    let only = S && S.practice() ? new Set(S.practice()) : null;
-    if (only && !o.topics.some((t) => t.stages.some((s) => only.has(S.stageKey(s))))) only = null;
-    // the choice and progress are kept apart in a set that leaves stages out: its steps differ
-    const key = (k) => `${o.app}-${k}${only && S.name ? `@${S.name}` : ''}`;
+    // the topics in the set (those of its objectives) and the stages (a set saved before lists
+    // stages); without a set, all; the topics without any stage left are left out
+    let only = null, inSet = null, open = [], firstOpen = 0, mixed = true, all = [];
+    // the choice and progress are kept apart in a set that leaves stages out (its steps differ),
+    // and the choice of topic in one that leaves topics out
+    const key = (k) => `${o.app}-${k}${(only || (inSet && k === 'topic')) && S.name ? `@${S.name}` : ''}`;
     const read = (k, d) => { try { const v = JSON.parse(localStorage.getItem(key(k))); return v == null ? d : v; } catch (e) { return d; } };
     const write = (k, v) => { try { localStorage.setItem(key(k), JSON.stringify(v)); } catch (e) { /* storage unavailable */ } };
-    const stagesIn = (t) => o.topics[t].stages.filter((s) => !only || only.has(S.stageKey(s)));
-    const open = o.topics.map((_, t) => stagesIn(t).length > 0), firstOpen = open.indexOf(true);
-    const mixed = !only || open.filter(Boolean).length > 1; // all topics mixed: unless only one is left
-    const all = [...new Set(o.topics.flatMap((_, t) => stagesIn(t).flatMap((s) => s.types)))];
+    const stagesIn = (t) => (inSet && !inSet.has(t) ? [] : o.topics[t].stages.filter((s) => !only || only.has(S.stageKey(s))));
     const topicOfType = (type) => o.topics.findIndex((t) => t.stages.some((s) => s.types.includes(type)));
     // the current choice { topic (−1: mixed), stage }, and per topic the stage reached and the wins in it
-    let cur = read('topic', { topic: 0, stage: 0 }), progress = read('progress', {}), el = null, shownTopic = 0;
+    let cur = null, progress = {}, el = null, shownTopic = 0;
     // a step reached by moving on whose worked example is new: { topic, stage }, until the student goes there
     let suggest = null;
     // the exercises seen in this session, per step ('topic.stage': Set of keys), and whether the
@@ -78,7 +77,6 @@
     let runOut = false;
     const keyOf = (ex) => (o.keyOf ? o.keyOf(ex) : ex.p ? JSON.stringify(ex.p) : null);
     const seenHere = () => { const k = `${cur.topic}.${cur.stage}`; if (!seen.has(k)) seen.set(k, new Set()); return seen.get(k); };
-    if (!(cur.topic >= -1 && cur.topic < o.topics.length) || (cur.topic >= 0 && !open[cur.topic]) || (cur.topic < 0 && !mixed)) cur = { topic: firstOpen, stage: 0 };
     // The steps of a topic, in the current variant: stages with fewer than MIN different exercises
     // (counted in SAMPLES of them) merged with the next, then the step with all of them.
     const MIN = 3, SAMPLES = 24, plans = new Map();
@@ -107,6 +105,23 @@
       plans.set(id, steps);
       return steps;
     }
+    // what the set leaves (again once its objectives are known, see sets.js)
+    function limit() {
+      only = S && S.practice() ? new Set(S.practice()) : null;
+      if (only && !o.topics.some((t) => t.stages.some((s) => only.has(S.stageKey(s))))) only = null;
+      inSet = S && S.topics() ? new Set(S.topics().filter((t) => t >= 0 && t < o.topics.length)) : null;
+      if (inSet && !inSet.size) inSet = null;
+      open = o.topics.map((_, t) => stagesIn(t).length > 0);
+      firstOpen = open.indexOf(true);
+      mixed = (!only && !inSet) || open.filter(Boolean).length > 1; // all topics mixed: unless only one is left
+      all = [...new Set(o.topics.flatMap((_, t) => stagesIn(t).flatMap((s) => s.types)))];
+      plans.clear();
+      cur = read('topic', { topic: 0, stage: 0 });
+      progress = read('progress', {});
+      if (!(cur.topic >= -1 && cur.topic < o.topics.length) || (cur.topic >= 0 && !open[cur.topic]) || (cur.topic < 0 && !mixed)) cur = { topic: firstOpen, stage: 0 };
+    }
+    limit();
+    if (S) S.on(() => { limit(); render(); });
     const workedOf = (t, s = 0) => { const e = o.topics[t].example; return typeof e === 'function' ? e(s) : e || { i: t, name: o.topics[t].name }; };
     const reached = (t) => Math.min((progress[t] || {}).stage || 0, stagesOf(t).length - 1);
     const typesOf = (t, s) => (t < 0 ? all : stagesOf(t)[Math.min(s, stagesOf(t).length - 1)].types);

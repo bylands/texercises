@@ -1,0 +1,21 @@
+{
+  "title": "Einen Schlitten ziehen",
+  "note": "aus learningphysics.ch (Problems)",
+  "language": "GER",
+  "type": 1,
+  "default_difficulty": 4,
+  "default_points": 0,
+  "tags": [
+    "aktionsprinzip",
+    "gleitreibung",
+    "kraft",
+    "kräftezerlegung",
+    "learningphysics",
+    "newtonsche gesetze",
+    "normalkraft"
+  ],
+  "subbranches": [
+    "Dynamics"
+  ],
+  "youtube": ""
+}

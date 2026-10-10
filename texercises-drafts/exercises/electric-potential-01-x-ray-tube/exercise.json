@@ -1,0 +1,19 @@
+{
+  "title": "An X-Ray Tube",
+  "note": "from learningphysics, Electric Potential, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "acceleration voltage",
+    "electron",
+    "electronvolt",
+    "photon",
+    "x-rays"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

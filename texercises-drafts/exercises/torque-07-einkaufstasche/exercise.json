@@ -1,0 +1,19 @@
+{
+  "title": "Eine Einkaufstasche halten",
+  "note": "aus learningphysics.ch (Problems)",
+  "language": "GER",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "bizeps",
+    "drehmoment",
+    "gleichgewicht",
+    "hebelgesetz",
+    "learningphysics"
+  ],
+  "subbranches": [
+    "Lever"
+  ],
+  "youtube": ""
+}

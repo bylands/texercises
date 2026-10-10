@@ -1,0 +1,43 @@
+{
+  "title": "Drehmoment – Aufgaben aus learningphysics",
+  "description": "Die Alltagsaufgaben (Problems) der App Drehmoment von learningphysics.ch: Drehmoment, Hebelgesetz, Gleichgewicht und Schwerpunkt. Rechne mit g = 10 m/s².",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "drehmoment",
+    "hebelgesetz",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "torque-01-brandschutztuer"
+    },
+    {
+      "exercise": "torque-02-radmutter"
+    },
+    {
+      "exercise": "torque-03-wippe"
+    },
+    {
+      "exercise": "torque-04-bergauf-treten"
+    },
+    {
+      "exercise": "torque-05-brett-tragen"
+    },
+    {
+      "exercise": "torque-06-turmdrehkran"
+    },
+    {
+      "exercise": "torque-07-einkaufstasche"
+    },
+    {
+      "exercise": "torque-08-hammer-balancieren"
+    },
+    {
+      "exercise": "torque-09-sprungbrett"
+    },
+    {
+      "exercise": "torque-10-kipptest-bus"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "title": "Magnetic forces – problems from learningphysics",
+  "description": "Story problems with realistic numbers from the former Problems tab of the learningphysics.ch app Magnetic forces.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "magnetic force",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "magnetic-forces-01-aurora"
+    },
+    {
+      "exercise": "magnetic-forces-02-mass-spectrometer"
+    },
+    {
+      "exercise": "magnetic-forces-03-cyclotron"
+    },
+    {
+      "exercise": "magnetic-forces-04-fine-beam-tube"
+    },
+    {
+      "exercise": "magnetic-forces-05-particle-detector"
+    },
+    {
+      "exercise": "magnetic-forces-06-short-circuit-cables"
+    },
+    {
+      "exercise": "magnetic-forces-07-cosmic-rays"
+    }
+  ]
+}

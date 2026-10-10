@@ -1,0 +1,19 @@
+{
+  "title": "Eine Seilschaukel über dem See",
+  "note": "aus learningphysics.ch (Problems)",
+  "language": "GER",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "energie",
+    "energieerhaltungssatz",
+    "kinetische energie",
+    "learningphysics",
+    "potentielle energie"
+  ],
+  "subbranches": [
+    "Work, Energy, Power"
+  ],
+  "youtube": ""
+}

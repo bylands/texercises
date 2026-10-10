@@ -1,0 +1,19 @@
+{
+  "title": "The Magnetic Brake of a Drop Tower",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "electromagnetic induction",
+    "motional emf",
+    "eddy currents",
+    "lenz law",
+    "induced emf"
+  ],
+  "subbranches": [
+    "Magnetism"
+  ],
+  "youtube": ""
+}

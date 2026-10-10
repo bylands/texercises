@@ -1,0 +1,19 @@
+{
+  "title": "Ein Kran hebt einen Container",
+  "note": "aus learningphysics.ch (Problems)",
+  "language": "GER",
+  "type": 1,
+  "default_difficulty": 2,
+  "default_points": 0,
+  "tags": [
+    "aktionsprinzip",
+    "kraft",
+    "learningphysics",
+    "newtonsche gesetze",
+    "seilkraft"
+  ],
+  "subbranches": [
+    "Dynamics"
+  ],
+  "youtube": ""
+}

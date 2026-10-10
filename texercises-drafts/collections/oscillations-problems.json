@@ -1,0 +1,37 @@
+{
+  "title": "Oscillations – problems from learningphysics",
+  "description": "The everyday problems (Problems tab) of the Oscillations app on learningphysics.ch: largest speed and acceleration, phase and energy of harmonic oscillations.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "oscillation",
+    "simple harmonic motion",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "oscillations-01-tuning-fork"
+    },
+    {
+      "exercise": "oscillations-02-bouncing-ball"
+    },
+    {
+      "exercise": "oscillations-03-salt-on-a-loudspeaker"
+    },
+    {
+      "exercise": "oscillations-04-earthquake"
+    },
+    {
+      "exercise": "oscillations-05-baby-bouncer"
+    },
+    {
+      "exercise": "oscillations-06-swaying-skyscraper"
+    },
+    {
+      "exercise": "oscillations-07-tide-in-a-harbour"
+    },
+    {
+      "exercise": "oscillations-08-atoms-in-a-crystal"
+    }
+  ]
+}

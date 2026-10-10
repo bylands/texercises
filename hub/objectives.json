@@ -1,0 +1,677 @@
+{
+ "bulb-brightness": {
+  "check": "bb",
+  "objectives": [
+   {
+    "id": "current",
+    "en": "Explain that the current is the same before and after a bulb or a group of bulbs: it is not used up.",
+    "de": "Erklären, dass der Strom vor und nach einer Lampe oder einer Gruppe von Lampen gleich gross ist: Er wird nicht verbraucht."
+   },
+   {
+    "id": "power",
+    "en": "Rank the brightness of bulbs by their power ΔV · I.",
+    "de": "Die Helligkeit von Lampen nach ihrer Leistung ΔU · I ordnen."
+   },
+   {
+    "id": "change",
+    "en": "Predict how the brightness changes when a bulb is added, removed or short-circuited, in series or in parallel.",
+    "de": "Vorhersagen, wie sich die Helligkeit ändert, wenn eine Lampe in Serie oder parallel dazukommt, wegfällt oder überbrückt wird."
+   }
+  ]
+ },
+ "circuit-trainer": {
+  "check": "rc",
+  "objectives": [
+   {
+    "id": "divide",
+    "en": "Split the voltage in series in the ratio of the resistances, and the current in parallel in the inverse ratio.",
+    "de": "Die Spannung in Serie im Verhältnis der Widerstände aufteilen und den Strom parallel im umgekehrten Verhältnis."
+   },
+   {
+    "id": "combine",
+    "en": "Reduce groups of resistors to one equivalent resistance and work out every current and voltage step by step.",
+    "de": "Gruppen von Widerständen durch einen Ersatzwiderstand ersetzen und alle Ströme und Spannungen Schritt für Schritt bestimmen."
+   },
+   {
+    "id": "backwards",
+    "en": "Find an unknown resistance from measured currents and voltages.",
+    "de": "Einen unbekannten Widerstand aus gemessenen Strömen und Spannungen bestimmen."
+   }
+  ]
+ },
+ "potential-circuit": {
+  "check": "pc",
+  "objectives": [
+   {
+    "id": "track",
+    "en": "Track the potential around a circuit: it rises across a source from − to +, drops across a load in the direction of the current and stays the same along a wire.",
+    "de": "Das Potential im Stromkreis verfolgen: Es steigt über einer Quelle von − nach +, sinkt über einem Verbraucher in Stromrichtung und bleibt entlang eines Drahts gleich."
+   },
+   {
+    "id": "rules",
+    "en": "Apply the loop rule (around a loop the rises add up to the drops) and the junction rule (the currents into a junction add up to the currents out of it).",
+    "de": "Die Maschenregel (in einer Masche ergeben die Anstiege zusammen die Abfälle) und die Knotenregel (die Ströme in einen Knoten ergeben zusammen die Ströme hinaus) anwenden."
+   },
+   {
+    "id": "voltage",
+    "en": "Find the voltage between any two points as the difference of their potentials.",
+    "de": "Die Spannung zwischen zwei beliebigen Punkten als Differenz ihrer Potentiale bestimmen."
+   },
+   {
+    "id": "error",
+    "en": "Find the wrong step in a sketch of the potential around a circuit.",
+    "de": "Den falschen Schritt in einer Skizze des Potentials im Stromkreis finden."
+   }
+  ]
+ },
+ "capacitors": {
+  "check": "cap",
+  "objectives": [
+   {
+    "id": "combine",
+    "en": "Combine capacitors in series and in parallel: in parallel the capacitances add, in series their reciprocals add (the rules of resistors, swapped).",
+    "de": "Kondensatoren in Serie und parallel kombinieren: Parallel addieren sich die Kapazitäten, in Serie ihre Kehrwerte (die Regeln der Widerstände, vertauscht)."
+   },
+   {
+    "id": "sketch",
+    "en": "Sketch the voltage and the current against time while a capacitor charges or discharges.",
+    "de": "Die Spannung und den Strom gegen die Zeit skizzieren, während ein Kondensator geladen oder entladen wird."
+   },
+   {
+    "id": "tau",
+    "en": "Read the time constant τ = R·C or the half-life from a graph, and predict what a change of R or C does.",
+    "de": "Die Zeitkonstante τ = R·C oder die Halbwertszeit aus einem Graphen ablesen und vorhersagen, was eine Änderung von R oder C bewirkt."
+   }
+  ]
+ },
+ "impedance": {
+  "check": "imp",
+  "objectives": [
+   {
+    "id": "elements",
+    "en": "Sketch the impedance of a resistor, a coil and a capacitor against the angular frequency, and state how the current is shifted against the voltage in each.",
+    "de": "Die Impedanz eines Widerstands, einer Spule und eines Kondensators gegen die Kreisfrequenz skizzieren und angeben, wie der Strom jeweils gegenüber der Spannung verschoben ist."
+   },
+   {
+    "id": "limits",
+    "en": "Use the reactances ωL and 1/(ωC) to predict what a circuit does for small and for large frequencies: block, short-circuit, or leave only R.",
+    "de": "Mit den Blindwiderständen ωL und 1/(ωC) vorhersagen, was eine Schaltung bei kleinen und bei grossen Frequenzen tut: sperren, kurzschliessen oder nur R übrig lassen."
+   },
+   {
+    "id": "resonance",
+    "en": "Identify the resonance as the minimum of the impedance of a series RLC circuit and the maximum of a parallel one.",
+    "de": "Die Resonanz als Minimum der Impedanz einer RLC-Serieschaltung und als Maximum einer Parallelschaltung erkennen."
+   }
+  ]
+ },
+ "rl-switch": {
+  "check": "rl",
+  "objectives": [
+   {
+    "id": "keep",
+    "en": "Use that the current through an inductor cannot jump: right after switching, it keeps the value it had before.",
+    "de": "Nutzen, dass der Strom durch eine Spule nicht springen kann: Unmittelbar nach dem Schalten behält er seinen Wert von vorher."
+   },
+   {
+    "id": "after",
+    "en": "Find the currents right after a switch closes or opens: the inductor current is kept, the others follow from Kirchhoff’s rules.",
+    "de": "Die Ströme unmittelbar nach dem Schliessen oder Öffnen eines Schalters bestimmen: Der Spulenstrom bleibt, die anderen folgen aus den Kirchhoffschen Regeln."
+   },
+   {
+    "id": "steady",
+    "en": "Find the steady currents long after a switch was set: the inductor then acts like a wire.",
+    "de": "Die konstanten Ströme lange nach dem Schalten bestimmen: Die Spule wirkt dann wie ein Draht."
+   }
+  ]
+ },
+ "torque": {
+  "check": "tq",
+  "objectives": [
+   {
+    "id": "arm",
+    "en": "Determine a torque as the force times its lever arm, the perpendicular distance from the axis to the line of action, with its sense of rotation.",
+    "de": "Ein Drehmoment als Kraft mal Hebelarm bestimmen, mit dem senkrechten Abstand der Drehachse von der Wirkungslinie, samt Drehsinn."
+   },
+   {
+    "id": "rank",
+    "en": "Rank the torques of forces drawn to scale.",
+    "de": "Die Drehmomente von massstäblich gezeichneten Kräften der Grösse nach ordnen."
+   },
+   {
+    "id": "weight",
+    "en": "Place the weight of a body at its centre of mass.",
+    "de": "Die Gewichtskraft eines Körpers in seinem Schwerpunkt ansetzen."
+   },
+   {
+    "id": "balance",
+    "en": "Apply both conditions of equilibrium, zero net force and zero net torque, including the force at the pivot.",
+    "de": "Beide Gleichgewichtsbedingungen anwenden, Kräfte und Drehmomente im Gleichgewicht, auch mit der Kraft in der Drehachse."
+   }
+  ]
+ },
+ "centre-of-mass": {
+  "check": "cm",
+  "objectives": [
+   {
+    "id": "locate",
+    "en": "Locate the centre of mass of a composite figure, such as a wire figure whose pieces have masses proportional to their lengths.",
+    "de": "Den Schwerpunkt einer zusammengesetzten Figur bestimmen, etwa einer Drahtfigur, deren Teile Massen proportional zu ihren Längen haben."
+   },
+   {
+    "id": "stability",
+    "en": "Classify an equilibrium as stable, unstable or neutral from the position of the centre of mass.",
+    "de": "Ein Gleichgewicht anhand der Lage des Schwerpunkts als stabil, labil oder indifferent einordnen."
+   },
+   {
+    "id": "tipping",
+    "en": "Predict whether a body tips over by checking whether the line of action of its weight leaves the base.",
+    "de": "Vorhersagen, ob ein Körper kippt, indem man prüft, ob die Wirkungslinie seiner Gewichtskraft die Standfläche verlässt."
+   }
+  ]
+ },
+ "coulomb": {
+  "check": "cl",
+  "objectives": [
+   {
+    "id": "direction",
+    "en": "Find the direction of the Coulomb force: along the line through the two charges, like charges repelling, unlike charges attracting, and the two forces equal and opposite.",
+    "de": "Die Richtung der Coulombkraft bestimmen: entlang der Geraden durch die beiden Ladungen, gleichnamige stossen sich ab, ungleichnamige ziehen sich an, und die beiden Kräfte sind gleich gross und entgegengesetzt."
+   },
+   {
+    "id": "factor",
+    "en": "Predict by what factor the force changes when the charges or their distance change (the inverse square law).",
+    "de": "Vorhersagen, um welchen Faktor sich die Kraft ändert, wenn sich die Ladungen oder ihr Abstand ändern (das 1/r²-Gesetz)."
+   },
+   {
+    "id": "vector",
+    "en": "Add the forces of several charges as vectors: the net force, its direction, and where it is zero.",
+    "de": "Die Kräfte mehrerer Ladungen als Vektoren addieren: die resultierende Kraft, ihre Richtung und wo sie null ist."
+   },
+   {
+    "id": "field",
+    "en": "Relate field and force with E = F/q: the force on a positive charge along the field, on a negative charge against it.",
+    "de": "Feld und Kraft mit E = F/q verknüpfen: die Kraft auf eine positive Ladung in Feldrichtung, auf eine negative entgegen."
+   }
+  ]
+ },
+ "coe": {
+  "check": "ec",
+  "objectives": [
+   {
+    "id": "forms",
+    "en": "Identify the forms of energy (kinetic, gravitational, elastic) in the initial and the final state, and show them in bar charts.",
+    "de": "Die Energieformen (kinetische, Lage- und Spannenergie) im Anfangs- und im Endzustand erkennen und in Balkendiagrammen darstellen."
+   },
+   {
+    "id": "balance",
+    "en": "Set up the energy balance of two states and solve it with symbols before inserting numbers, e.g. to see how a height or speed scales.",
+    "de": "Die Energiebilanz zweier Zustände aufstellen und mit Symbolen auflösen, bevor Zahlen eingesetzt werden, z. B. um zu sehen, wie eine Höhe oder Geschwindigkeit skaliert."
+   },
+   {
+    "id": "path",
+    "en": "Explain why lifting work does not depend on the path, and where the work done by friction goes.",
+    "de": "Erklären, warum die Hubarbeit nicht vom Weg abhängt und wohin die Reibungsarbeit geht."
+   },
+   {
+    "id": "turn",
+    "en": "Tell the turning point of a bungee jump or a spring (v = 0) from its equilibrium position (largest speed).",
+    "de": "Den Umkehrpunkt eines Bungee-Sprungs oder einer Feder (v = 0) von der Gleichgewichtslage (grösste Geschwindigkeit) unterscheiden."
+   },
+   {
+    "id": "error",
+    "en": "Find the wrong entry in an energy table.",
+    "de": "Den falschen Eintrag in einer Energietabelle finden."
+   }
+  ]
+ },
+ "force-concepts": {
+  "check": "fc",
+  "objectives": [
+   {
+    "id": "first",
+    "en": "Predict the motion of a body on which no net force acts: it stays at rest or moves on in a straight line at constant velocity.",
+    "de": "Die Bewegung eines Körpers vorhersagen, auf den keine resultierende Kraft wirkt: Er bleibt in Ruhe oder bewegt sich geradlinig mit konstanter Geschwindigkeit weiter."
+   },
+   {
+    "id": "balanced",
+    "en": "Explain why balanced forces do not mean that a body is at rest: it may just as well move at constant velocity.",
+    "de": "Erklären, warum Kräfte im Gleichgewicht nicht heissen, dass ein Körper in Ruhe ist: Er kann sich ebenso gut mit konstanter Geschwindigkeit bewegen."
+   },
+   {
+    "id": "second",
+    "en": "Relate the net force to the acceleration with F = m·a (the rate of change of momentum): the net force points along the acceleration, not along the motion.",
+    "de": "Die resultierende Kraft mit F = m·a (der Änderungsrate des Impulses) mit der Beschleunigung verknüpfen: Sie zeigt in Richtung der Beschleunigung, nicht der Bewegung."
+   },
+   {
+    "id": "centre",
+    "en": "Identify which force provides the net force towards the centre in a circular motion.",
+    "de": "Erkennen, welche Kraft bei einer Kreisbewegung die resultierende Kraft zum Zentrum liefert."
+   }
+  ]
+ },
+ "interaction": {
+  "check": "ia",
+  "objectives": [
+   {
+    "id": "equal",
+    "en": "State that the two forces of an interaction are equally large and opposite and act on different bodies, whatever their masses, charges or motion.",
+    "de": "Angeben, dass die beiden Kräfte einer Wechselwirkung gleich gross und entgegengesetzt sind und auf verschiedene Körper wirken, egal wie gross ihre Massen oder Ladungen sind und wie sie sich bewegen."
+   },
+   {
+    "id": "partner",
+    "en": "Identify the partner of each force in a situation, such as mosquito and windscreen, nucleus and electron, or ice dancer and Earth.",
+    "de": "Die Gegenkraft jeder Kraft in einer Situation finden, etwa bei Mücke und Windschutzscheibe, Kern und Elektron oder Eistänzerin und Erde."
+   },
+   {
+    "id": "normal",
+    "en": "Explain why the normal force is not the partner of the weight, and find a wrong pair in a list of force pairs.",
+    "de": "Erklären, warum die Normalkraft nicht die Gegenkraft der Gewichtskraft ist, und ein falsches Paar in einer Liste von Kraftpaaren finden."
+   }
+  ]
+ },
+ "force-systems": {
+  "check": "fs",
+  "objectives": [
+   {
+    "id": "forces",
+    "en": "Choose a system and draw every force on it: weight, normal force, rope or contact force, static or kinetic friction, a push or pull, and no other.",
+    "de": "Ein System wählen und jede Kraft darauf einzeichnen: Gewichtskraft, Normalkraft, Seil- oder Kontaktkraft, Haft- oder Gleitreibung, eine Zug- oder Druckkraft, und keine andere."
+   },
+   {
+    "id": "slope",
+    "en": "Resolve the weight on a slope into components parallel and perpendicular to the slope.",
+    "de": "Die Gewichtskraft auf einer schiefen Ebene in Komponenten parallel und senkrecht zur Unterlage zerlegen."
+   },
+   {
+    "id": "system",
+    "en": "Choose the system so that a wanted force between two bodies, such as a rope force, becomes an external force.",
+    "de": "Das System so wählen, dass eine gesuchte Kraft zwischen zwei Körpern, etwa eine Seilkraft, zu einer äusseren Kraft wird."
+   },
+   {
+    "id": "law",
+    "en": "Set up Newton’s second law along each axis, following the strategy: system, forces, axes, components, equations, then solve.",
+    "de": "Das Aktionsprinzip für jede Achse aufstellen, nach dem Vorgehen: System, Kräfte, Achsen, Komponenten, Gleichungen, dann auflösen."
+   },
+   {
+    "id": "error",
+    "en": "Find the wrong step in a student’s free-body diagram and equations.",
+    "de": "Den falschen Schritt in den Kräften und Gleichungen einer Schülerin finden."
+   }
+  ]
+ },
+ "induction-match": {
+  "check": "im",
+  "objectives": [
+   {
+    "id": "flux",
+    "en": "Work out the magnetic flux Φ = B·A through a loop, with A its area in the field, and how it changes as the loop moves.",
+    "de": "Den magnetischen Fluss Φ = B·A durch eine Schleife bestimmen, mit A ihrer Fläche im Feld, und wie er sich ändert, wenn sich die Schleife bewegt."
+   },
+   {
+    "id": "slope",
+    "en": "Read the induced voltage as minus the slope of the flux graph, and find the flux graph from the voltage.",
+    "de": "Die induzierte Spannung als minus die Steigung des Flussgraphen ablesen und den Flussgraphen aus der Spannung bestimmen."
+   },
+   {
+    "id": "change",
+    "en": "Decide when a voltage is induced in a loop moving through a field: only while the flux through it changes.",
+    "de": "Entscheiden, wann in einer Schleife, die sich durch ein Feld bewegt, eine Spannung induziert wird: nur solange sich der Fluss durch sie ändert."
+   },
+   {
+    "id": "lenz",
+    "en": "Find the direction of an induced current with Lenz's rule.",
+    "de": "Die Richtung eines induzierten Stroms mit der Lenzschen Regel bestimmen."
+   }
+  ]
+ },
+ "motion-data": {
+  "check": "md",
+  "objectives": [
+   {
+    "id": "instant",
+    "en": "Tell a position from a change of position, and an instant from a time interval, when reading a value table.",
+    "de": "Einen Ort von einer Ortsänderung und einen Zeitpunkt von einem Zeitintervall unterscheiden, wenn du eine Wertetabelle liest."
+   },
+   {
+    "id": "convert",
+    "en": "Turn a value table or a stroboscope picture into the s(t) graph of the motion.",
+    "de": "Eine Wertetabelle oder eine Stroboskopaufnahme in den s(t)-Graphen der Bewegung umsetzen."
+   },
+   {
+    "id": "uniform",
+    "en": "Decide from the changes of position in equal time steps whether a motion is uniform or uniformly accelerated.",
+    "de": "An den Ortsänderungen in gleichen Zeitschritten entscheiden, ob eine Bewegung gleichförmig oder gleichmässig beschleunigt ist."
+   }
+  ]
+ },
+ "motion-graphs": {
+  "check": "mg",
+  "objectives": [
+   {
+    "id": "slope",
+    "en": "Read a velocity as the slope of the s(t) graph, not as its height.",
+    "de": "Eine Geschwindigkeit als Steigung des s(t)-Graphen lesen, nicht als seine Höhe."
+   },
+   {
+    "id": "negative",
+    "en": "Recognise a negative velocity in a falling s(t) graph or in decreasing positions in a value table.",
+    "de": "Eine negative Geschwindigkeit an einem fallenden s(t)-Graphen oder an abnehmenden Orten in einer Wertetabelle erkennen."
+   },
+   {
+    "id": "sketch",
+    "en": "Sketch v(t) from s(t), and a(t) from v(t), and find the error in such a sketch.",
+    "de": "v(t) aus s(t) und a(t) aus v(t) skizzieren und den Fehler in einer solchen Skizze finden."
+   },
+   {
+    "id": "uniform",
+    "en": "Recognise a uniform acceleration as a straight line in v(t) and as a parabola in s(t).",
+    "de": "Eine gleichmässige Beschleunigung als Gerade im v(t)-Diagramm und als Parabel im s(t)-Diagramm erkennen."
+   }
+  ]
+ },
+ "motion-areas": {
+  "check": "ma",
+  "objectives": [
+   {
+    "id": "area",
+    "en": "Find the displacement as the area under v(t), counting the area below the t axis as negative.",
+    "de": "Die Verschiebung als Fläche unter v(t) bestimmen und dabei die Fläche unter der t-Achse negativ zählen."
+   },
+   {
+    "id": "farther",
+    "en": "Decide from v(t) graphs which body is farther from its start at a given time.",
+    "de": "An v(t)-Graphen entscheiden, welcher Körper zu einem bestimmten Zeitpunkt weiter von seinem Start entfernt ist."
+   },
+   {
+    "id": "mean",
+    "en": "Determine the mean velocity from a v(t) graph.",
+    "de": "Die mittlere Geschwindigkeit aus einem v(t)-Graphen bestimmen."
+   },
+   {
+    "id": "sketch",
+    "en": "Sketch s(t) from v(t), and v(t) from a(t), and find the error in such a sketch.",
+    "de": "s(t) aus v(t) und v(t) aus a(t) skizzieren und den Fehler in einer solchen Skizze finden."
+   }
+  ]
+ },
+ "oscillations": {
+  "check": "osc",
+  "objectives": [
+   {
+    "id": "circle",
+    "en": "Describe a simple harmonic motion as the projection of a uniform circular motion: the radius is the amplitude, the angular velocity is ω, one turn is one period.",
+    "de": "Eine harmonische Schwingung als Projektion einer gleichförmigen Kreisbewegung beschreiben: Der Radius ist die Amplitude, die Winkelgeschwindigkeit ist ω, eine Umdrehung ist eine Periode."
+   },
+   {
+    "id": "harmonic",
+    "en": "Decide whether a system oscillates harmonically by checking that its acceleration is proportional and opposite to its displacement, and read off ω.",
+    "de": "Entscheiden, ob ein System harmonisch schwingt, indem man prüft, ob seine Beschleunigung proportional und entgegengesetzt zur Auslenkung ist, und ω ablesen."
+   },
+   {
+    "id": "extremes",
+    "en": "Locate the largest speed Aω (at the equilibrium) and the largest acceleration Aω² (at the turning points) in the cycle.",
+    "de": "Die grösste Geschwindigkeit Aω (in der Gleichgewichtslage) und die grösste Beschleunigung Aω² (an den Umkehrpunkten) im Ablauf der Schwingung finden."
+   },
+   {
+    "id": "lc",
+    "en": "Recognise the LC circuit as the same equation with other quantities: the charge for the displacement, the current for the velocity, L for the mass and 1/C for the spring constant.",
+    "de": "Den Schwingkreis als dieselbe Gleichung mit anderen Grössen erkennen: die Ladung für die Auslenkung, den Strom für die Geschwindigkeit, L für die Masse und 1/C für die Federkonstante."
+   }
+  ]
+ },
+ "cyclic-processes": {
+  "check": "cyc",
+  "objectives": [
+   {
+    "id": "states",
+    "en": "Tell a state (p, V and T at one moment, a point) from a process (a line from one state to the next): find a state from the process before it, and the process that links two states.",
+    "de": "Einen Zustand (p, V und T in einem Moment, ein Punkt) von einem Prozess (eine Linie von einem Zustand zum nächsten) unterscheiden: einen Zustand aus dem Prozess davor bestimmen und den Prozess, der zwei Zustände verbindet."
+   },
+   {
+    "id": "identify",
+    "en": "Identify isobaric, isochoric and isothermal processes in p(V), p(T) and V(T) diagrams, using pV ∝ T.",
+    "de": "Isobare, isochore und isotherme Prozesse in p(V)-, p(T)- und V(T)-Diagrammen erkennen, mit pV ∝ T."
+   },
+   {
+    "id": "sketch",
+    "en": "Sketch a cycle from a description and transfer it from one diagram to another.",
+    "de": "Einen Kreisprozess nach einer Beschreibung skizzieren und von einem Diagramm in ein anderes übertragen."
+   },
+   {
+    "id": "error",
+    "en": "Find the error in a sketch of a cycle.",
+    "de": "Den Fehler in der Skizze eines Kreisprozesses finden."
+   }
+  ]
+ },
+ "wave-propagation": {
+  "check": "wav",
+  "objectives": [
+   {
+    "id": "medium",
+    "en": "Tell the motion of the wave from the motion of the rope: where a crest is later, how a point of the rope moves, and its y(t) graph.",
+    "de": "Die Bewegung der Welle von der Bewegung des Seils unterscheiden: wo ein Buckel später ist, wie sich ein Punkt des Seils bewegt, und sein y(t)-Bild."
+   },
+   {
+    "id": "reflect",
+    "en": "Predict the crest reflected at a fixed end (upside down) and at a free end (upright).",
+    "de": "Den an einem festen Ende (umgedreht) und an einem losen Ende (aufrecht) reflektierten Buckel vorhersagen."
+   },
+   {
+    "id": "superpose",
+    "en": "Add the displacements of two overlapping crests point by point.",
+    "de": "Die Auslenkungen zweier sich überlagernder Buckel Punkt für Punkt addieren."
+   },
+   {
+    "id": "standing",
+    "en": "Locate the nodes and antinodes of a standing wave on a rope: nodes λ/2 apart, a node at a fixed end, an antinode at a free end.",
+    "de": "Die Knoten und Bäuche einer stehenden Welle auf einem Seil finden: Knoten im Abstand λ/2, ein Knoten an einem festen Ende, ein Bauch an einem losen Ende."
+   }
+  ]
+ },
+ "interference": {
+  "check": "itf",
+  "objectives": [
+   {
+    "id": "huygens",
+    "en": "Explain diffraction with Huygens’ principle: how much a wave spreads behind an opening depends on its width compared with the wavelength.",
+    "de": "Die Beugung mit dem Prinzip von Huygens erklären: Wie stark sich eine Welle hinter einer Öffnung ausbreitet, hängt von ihrer Breite im Vergleich zur Wellenlänge ab."
+   },
+   {
+    "id": "maxima",
+    "en": "Predict where the maxima of a double slit and a grating lie, from the path difference: d·sin α = k·λ.",
+    "de": "Voraussagen, wo die Maxima eines Doppelspalts und eines Gitters liegen, aus dem Gangunterschied: d·sin α = k·λ."
+   },
+   {
+    "id": "changes",
+    "en": "Predict how the pattern changes when the slit width, the slit spacing or the wavelength changes.",
+    "de": "Voraussagen, wie sich das Muster ändert, wenn sich die Spaltbreite, der Spaltabstand oder die Wellenlänge ändert."
+   },
+   {
+    "id": "resolve",
+    "en": "Relate the resolving power to the aperture and the wavelength: θₘᵢₙ = 1.22·λ/D.",
+    "de": "Das Auflösungsvermögen mit der Öffnung und der Wellenlänge verknüpfen: θₘᵢₙ = 1.22·λ/D."
+   }
+  ]
+ },
+ "electric-field": {
+  "check": "ef",
+  "objectives": [
+   {
+    "id": "sketch",
+    "en": "Sketch the field lines of point charges, of a charged wire and of a plate capacitor (a uniform field).",
+    "de": "Die Feldlinien von Punktladungen, eines geladenen Drahts und eines Plattenkondensators (ein homogenes Feld) skizzieren."
+   },
+   {
+    "id": "read",
+    "en": "Read the direction and the relative strength of a field from its field lines.",
+    "de": "Die Richtung und die relative Stärke eines Feldes aus seinen Feldlinien ablesen."
+   },
+   {
+    "id": "dipole",
+    "en": "Determine the force and the torque on a dipole in a uniform field.",
+    "de": "Die Kraft und das Drehmoment auf einen Dipol in einem homogenen Feld bestimmen."
+   },
+   {
+    "id": "equi",
+    "en": "Sketch equipotential lines at right angles to the field lines.",
+    "de": "Äquipotentiallinien senkrecht zu den Feldlinien skizzieren."
+   },
+   {
+    "id": "error",
+    "en": "Find the error in a sketch of field lines and equipotentials: lines that cross, or equipotentials not at right angles to the field lines.",
+    "de": "Den Fehler in einer Skizze von Feldlinien und Äquipotentiallinien finden: Linien, die sich kreuzen, oder Äquipotentiallinien, die nicht senkrecht zu den Feldlinien stehen."
+   }
+  ]
+ },
+ "electric-potential": {
+  "check": "ep",
+  "objectives": [
+   {
+    "id": "quantities",
+    "en": "Tell potential energy, potential and potential difference apart, and say which of them depends on the charge.",
+    "de": "Potentielle Energie, Potential und Potentialdifferenz unterscheiden und sagen, welche davon von der Ladung abhängt."
+   },
+   {
+    "id": "uniform",
+    "en": "Use E = ΔV/d in a uniform field, with d measured along the field lines.",
+    "de": "E = ΔV/d im homogenen Feld anwenden, mit d längs der Feldlinien gemessen."
+   },
+   {
+    "id": "point",
+    "en": "Predict how the potential of a point charge depends on its sign and on the distance.",
+    "de": "Vorhersagen, wie das Potential einer Punktladung von ihrem Vorzeichen und vom Abstand abhängt."
+   },
+   {
+    "id": "energy",
+    "en": "Decide whether a charge gains or loses potential energy moving between two points, from the signs of q and of ΔV.",
+    "de": "Entscheiden, ob eine Ladung zwischen zwei Punkten potentielle Energie gewinnt oder verliert, aus den Vorzeichen von q und von ΔV."
+   }
+  ]
+ },
+ "magnetic-forces": {
+  "check": "mf",
+  "objectives": [
+   {
+    "id": "lines",
+    "en": "Sketch the field lines of a bar magnet, a straight wire, a loop and a solenoid, with the right-hand grip rule for the currents.",
+    "de": "Die Feldlinien eines Stabmagneten, eines geraden Drahts, einer Leiterschleife und einer Spule skizzieren, mit der Rechte-Hand-Regel für die Ströme."
+   },
+   {
+    "id": "wire",
+    "en": "Find the direction and the size of the force on a current-carrying wire, F = I·L·B·sin θ, by mental arithmetic or as a ratio.",
+    "de": "Richtung und Betrag der Kraft auf einen stromdurchflossenen Draht bestimmen, F = I·L·B·sin θ, im Kopf oder als Verhältnis."
+   },
+   {
+    "id": "charge",
+    "en": "Find the direction of the force on a moving charge, reversed for a negative charge.",
+    "de": "Die Richtung der Kraft auf eine bewegte Ladung bestimmen, umgekehrt für eine negative Ladung."
+   },
+   {
+    "id": "coil",
+    "en": "Explain the torque on a coil in a magnetic field and when it is largest, as in the electric motor, the loudspeaker and the moving-coil meter.",
+    "de": "Das Drehmoment auf eine Spule im Magnetfeld erklären und wann es am grössten ist, wie im Elektromotor, im Lautsprecher und im Drehspulinstrument."
+   },
+   {
+    "id": "pair",
+    "en": "Predict whether two parallel currents attract or repel each other.",
+    "de": "Voraussagen, ob sich zwei parallele Ströme anziehen oder abstossen."
+   },
+   {
+    "id": "error",
+    "en": "Find the wrong step in a student’s hand rule: the wrong hand, or the sign of the charge ignored.",
+    "de": "Den falschen Schritt in der Handregel einer Schülerin finden: die falsche Hand oder das Vorzeichen der Ladung übersehen."
+   }
+  ]
+ },
+ "charged-particles": {
+  "check": "cp",
+  "objectives": [
+   {
+    "id": "accel",
+    "en": "Apply |q|·ΔV = ΔE_kin to a charge accelerated through a voltage, and give its energy in electronvolts.",
+    "de": "|q|·ΔV = ΔE_kin auf eine Ladung anwenden, die mit einer Spannung beschleunigt wird, und ihre Energie in Elektronvolt angeben."
+   },
+   {
+    "id": "work",
+    "en": "Explain why a magnetic field changes the direction of a charge but not its speed: the magnetic force does no work, unlike the electric force in a capacitor.",
+    "de": "Erklären, warum ein Magnetfeld die Richtung einer Ladung ändert, aber nicht ihre Geschwindigkeit: Die magnetische Kraft verrichtet keine Arbeit, anders als die elektrische Kraft im Kondensator."
+   },
+   {
+    "id": "radius",
+    "en": "Relate the radius r = m·v/(q·B) of the circular path to mass, speed, charge and field by ratios, and explain why the period does not depend on the speed.",
+    "de": "Den Radius r = m·v/(q·B) der Kreisbahn mit Verhältnissen auf Masse, Geschwindigkeit, Ladung und Feld zurückführen und erklären, warum die Umlaufzeit nicht von der Geschwindigkeit abhängt."
+   },
+   {
+    "id": "crossed",
+    "en": "Find the speed that passes crossed electric and magnetic fields undeflected, and explain how the Hall voltage builds up.",
+    "de": "Die Geschwindigkeit bestimmen, mit der eine Ladung gekreuzte elektrische und magnetische Felder unabgelenkt durchfliegt, und erklären, wie die Hall-Spannung entsteht."
+   }
+  ]
+ },
+ "em-waves": {
+  "check": "emw",
+  "objectives": [
+   {
+    "id": "dirs",
+    "en": "Determine the direction of propagation from E and B, which form a right-handed set with it, and get one field from the other with E = c·B.",
+    "de": "Die Ausbreitungsrichtung aus E und B bestimmen, die mit ihr ein Rechtssystem bilden, und das eine Feld mit E = c·B aus dem andern berechnen."
+   },
+   {
+    "id": "speed",
+    "en": "Use the speed c in vacuum and c/n in a medium, where the frequency stays the same and the wavelength shrinks to λ₀/n.",
+    "de": "Die Geschwindigkeit c im Vakuum und c/n in einem Medium verwenden, wobei die Frequenz gleich bleibt und die Wellenlänge auf λ₀/n schrumpft."
+   },
+   {
+    "id": "spectrum",
+    "en": "Order the parts of the spectrum by wavelength, frequency and photon energy.",
+    "de": "Die Bereiche des Spektrums nach Wellenlänge, Frequenz und Photonenenergie ordnen."
+   }
+  ]
+ },
+ "photons": {
+  "check": "ph",
+  "objectives": [
+   {
+    "id": "wave",
+    "en": "Name the observations of the photoelectric effect that the wave model cannot explain: the threshold frequency, and a kinetic energy that does not depend on the brightness.",
+    "de": "Die Beobachtungen beim Photoeffekt nennen, die das Wellenmodell nicht erklärt: die Grenzfrequenz, und eine kinetische Energie, die nicht von der Helligkeit abhängt."
+   },
+   {
+    "id": "einstein",
+    "en": "Apply E = h·f and the energy balance h·f = W + E_kin,max, with E_kin,max measured by the stopping voltage.",
+    "de": "E = h·f und die Energiebilanz h·f = W + E_kin,max anwenden, mit E_kin,max gemessen durch die Gegenspannung."
+   },
+   {
+    "id": "threshold",
+    "en": "Determine the threshold frequency, the cut-off wavelength and the work function, for instance from a U₀(f) graph with slope h/e.",
+    "de": "Die Grenzfrequenz, die Grenzwellenlänge und die Austrittsarbeit bestimmen, zum Beispiel aus einem U₀(f)-Diagramm mit der Steigung h/e."
+   },
+   {
+    "id": "rate",
+    "en": "Tell the photon energy from the number of photons per second when the brightness or the frequency of the light changes, also in the characteristic of a photocell.",
+    "de": "Die Photonenenergie von der Zahl der Photonen pro Sekunde unterscheiden, wenn sich die Helligkeit oder die Frequenz des Lichts ändert, auch in der Kennlinie einer Photozelle."
+   }
+  ]
+ },
+ "matter-waves": {
+  "check": "mw",
+  "objectives": [
+   {
+    "id": "debroglie",
+    "en": "Work out de Broglie wavelengths by ratios with λ = h/p and p = √(2·m·E_kin), not E/c, and explain why electron diffraction shows that electrons are waves.",
+    "de": "De-Broglie-Wellenlängen mit λ = h/p und p = √(2·m·E_kin), nicht E/c, über Verhältnisse bestimmen und erklären, warum die Elektronenbeugung zeigt, dass Elektronen Wellen sind."
+   },
+   {
+    "id": "box",
+    "en": "Sketch the standing waves of a particle in a box, and explain why its energies are quantised, with E_n ∝ n² and ∝ 1/L².",
+    "de": "Die stehenden Wellen eines Teilchens im Kasten skizzieren und erklären, warum seine Energien gequantelt sind, mit E_n ∝ n² und ∝ 1/L²."
+   },
+   {
+    "id": "psi",
+    "en": "Read |ψ|² as a probability density, with its expectation value and its uncertainty, and tell the uncertainty from a measurement error.",
+    "de": "|ψ|² als Wahrscheinlichkeitsdichte lesen, mit Erwartungswert und Unschärfe, und die Unschärfe von einem Messfehler unterscheiden."
+   }
+  ]
+ }
+}

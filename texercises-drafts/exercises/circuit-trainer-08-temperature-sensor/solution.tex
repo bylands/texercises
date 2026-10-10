@@ -1,0 +1,25 @@
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw (0,0) to[battery1, invert, l={$V_0 = \VzO$}] (0,2.5)
+   to[R, l={$R_1 = \RaO$}] (3.5,2.5)
+   to[thR, l={$R_\mathrm{T}$}] (7,2.5)
+   to[short, i={$I$}] (7,0) -- (0,0);
+\end{circuitikz}
+\end{center}
+
+\begin{abcliste}
+\abc Of the supply voltage $V_0$, the part $V_\mathrm{T}$ is across the thermistor, the rest $V_0 - V_\mathrm{T}$ across the fixed resistor $R_1$. Hence
+\begin{align}
+ I &= \IF \\
+   &= \frac{\Vz-\VT}{\Ra} \\
+   &= \result{\IP{-3}{2}}
+\end{align}
+
+\abc The same current flows through the thermistor:
+\begin{align}
+ R_\mathrm{T} &= \frac{V_\mathrm{T}}{I} = \RTF \\
+   &= \frac{\VT}{\Vz-\VT}\times\Ra \\
+   &= \result{\RTP{3}{2}}
+\end{align}
+In a voltage divider, the voltages are in the ratio of the resistances.
+\end{abcliste}

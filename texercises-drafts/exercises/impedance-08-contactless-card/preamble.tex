@@ -1,0 +1,12 @@
+\NewQty{Lc}{2.0}[\micro\henry][e-6][\henry]
+\NewQty{fz}{13.56}[\mega\hertz][e6][\hertz]
+
+% read from the graph
+\NewQty{Zm}{2000}[\ohm]
+\NewQty{fl}{12.99}[\mega\hertz][e6][\hertz]
+\NewQty{fh}{14.15}[\mega\hertz][e6][\hertz]
+
+\SolQty{C}[\frac{1}{(2\pi f_0)^2 L}]{1/((2*pi*\fzX)^2*\LcX)}[\farad]
+\SolQty{Zb}[\frac{Z_\mathrm{max}}{\sqrt{2}}]{\ZmX/sqrt(2)}[\ohm]
+\SolQty{df}[f_2-f_1]{\fhX-\flX}[\hertz]
+\SolQty{Q}[\frac{f_0}{\Delta f}]{\fzX/\dfX}

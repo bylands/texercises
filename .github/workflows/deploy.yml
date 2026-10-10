@@ -27,6 +27,8 @@ jobs:
           node-version: 22
       - name: Shared files in sync
         run: shared/sync.sh --check
+      - name: Learning objectives of the hub page up to date
+        run: node hub/build-objectives.js --check
       # in parallel, one per core; each test's output is printed whole when it ends
       - name: Tests of the apps
         run: |

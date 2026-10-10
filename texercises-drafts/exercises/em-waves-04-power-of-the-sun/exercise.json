@@ -1,0 +1,19 @@
+{
+  "title": "The Power of the Sun",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "intensity",
+    "solar constant",
+    "power",
+    "inverse square law",
+    "sun"
+  ],
+  "subbranches": [
+    "Electromagnetic Waves"
+  ],
+  "youtube": ""
+}

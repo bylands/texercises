@@ -1,0 +1,28 @@
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw (0,0) to[sV, l={$V = \VO$}] (0,2.5)
+   to[short, i={$I$}] (1,2.5)
+   to[lamp] (2.5,2.5)
+   to[lamp] (4,2.5) -- (4.5,2.5);
+ \draw[dashed] (4.5,2.5) -- (5.5,2.5);
+ \draw (5.5,2.5) -- (6,2.5) to[lamp] (7.5,2.5) -- (7.5,0) -- (0,0);
+ \node at (4.25,3.4) {$n$ bulbs, each $R_1$};
+\end{circuitikz}
+\end{center}
+
+\begin{abcliste}
+\abc In series, the mains voltage is shared equally among the $n$ identical bulbs, and the current $I$ flows through each:
+\begin{align}
+ V_1 &= \VaF = \frac{\VO}{\NO} = \result{\VaP{0}{3}} \\
+ R_1 &= \frac{V_1}{I} = \RaF \\
+   &= \frac{\VO}{\NO\times\IO} = \result{\RaP{0}{2}}
+\end{align}
+
+\abc Now only $n-1$ bulbs are in series:
+\begin{align}
+ I' &= \frac{V}{(n-1)\,R_1} = \IbF \\
+   &= \frac{\NO}{\NO-1}\times\IO \\
+   &= \Ib \approx \result{\IbP{0}{2}}
+\end{align}
+The current grows a little: the remaining bulbs shine brighter and wear out faster.
+\end{abcliste}

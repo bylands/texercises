@@ -1,0 +1,8 @@
+\NewQty{Lz}{400}[\micro\henry][e-6][\henry]
+\NewQty{C}{15}[\nano\farad][e-9][\farad]
+\NewQty{fz}{64.97}[\kilo\hertz][e3][\hertz]
+\NewQty{fa}{65.634}[\kilo\hertz][e3][\hertz]
+
+\SolQty{fo}[\frac{1}{2\pi\sqrt{L_0 C}}]{1/(2*pi*sqrt(\LzX*\CX))}[\hertz]
+\SolQty{La}[\frac{1}{(2\pi f_1)^2 C}]{1/((2*pi*\faX)^2*\CX)}[\henry]
+\SolQty{dL}[L_0-L_1]{\LzX-\LaX}[\henry]

@@ -1,0 +1,19 @@
+{
+  "title": "A Temperature Sensor",
+  "note": "from learningphysics, Resistor Circuit Trainer, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "current",
+    "resistor",
+    "series",
+    "thermistor",
+    "voltage divider"
+  ],
+  "subbranches": [
+    "Circuits"
+  ],
+  "youtube": ""
+}

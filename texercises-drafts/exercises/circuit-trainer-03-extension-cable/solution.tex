@@ -1,0 +1,26 @@
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw (0,0) to[sV, l={$V_0 = \VzO$}] (0,2.5)
+   to[R, l={$r$}] (3,2.5)
+   to[short, i={$I$}] (4,2.5)
+   to[R, l={$R$}] (4,0)
+   to[R, l={$r$}] (0,0);
+\end{circuitikz}
+\end{center}
+
+\begin{abcliste}
+\abc The current flows through one wire to the heater and back through the other: wire, heater and wire are in series, $R_\mathrm{tot} = R + 2r$. Hence
+\begin{align}
+ I &= \IF \\
+   &= \frac{\Vz}{\R + 2\times\rw} \\
+   &= \result{\IP{0}{2}}
+\end{align}
+
+\abc This current flows through the heater:
+\begin{align}
+ V_\mathrm{H} &= \VHF \\
+   &= \R \times \I \\
+   &= \result{\VHP{0}{2}}
+\end{align}
+Along each wire the potential drops by $r\,I = \VwP{0}{2}$: the heater gets $2\times\VwP{0}{1}$ less than the socket.
+\end{abcliste}

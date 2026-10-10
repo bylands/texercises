@@ -1,0 +1,19 @@
+{
+  "title": "Ein Güterzug",
+  "note": "aus learningphysics.ch (Problems)",
+  "language": "GER",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "aktionsprinzip",
+    "kraft",
+    "kupplung",
+    "learningphysics",
+    "newtonsche gesetze"
+  ],
+  "subbranches": [
+    "Dynamics"
+  ],
+  "youtube": ""
+}

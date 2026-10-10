@@ -1,0 +1,20 @@
+{
+  "title": "A Silicon Solar Cell",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "photon",
+    "photon energy",
+    "band gap",
+    "solar cell",
+    "semiconductor"
+  ],
+  "subbranches": [
+    "quantum physics",
+    "Semiconductors"
+  ],
+  "youtube": ""
+}

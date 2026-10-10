@@ -1,0 +1,29 @@
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw (0,0) to[battery1, invert, l={$V = \VO$}] (0,3)
+   to[short, i={$I$}] (1.5,3) -- (10,3);
+ \draw (0,0) -- (10,0);
+ \draw (2,3) to[lamp, l={$R_\mathrm{h}$}, *-*] (2,0);
+ \draw (4,3) to[lamp, l={$R_\mathrm{h}$}, *-*] (4,0);
+ \draw (6,3) to[lamp, l={$R_\mathrm{t}$}, *-*] (6,0);
+ \draw (8,3) to[lamp, l={$R_\mathrm{t}$}, *-*] (8,0);
+ \draw (10,3) to[R, l={$R_\mathrm{w}$}] (10,0);
+\end{circuitikz}
+\end{center}
+
+\begin{abcliste}
+\abc In parallel, every device is at the full battery voltage $V$. With $R_\mathrm{h}$, $R_\mathrm{t}$ and $R_\mathrm{w}$ the resistances of a headlamp, a tail lamp and the heater, the currents through the devices add up:
+\begin{align}
+ I &= \IF \\
+   &= \VO\times\left(\frac{2}{\RhO}+\frac{2}{\RtO}+\frac{1}{\RwO}\right) \\
+   &= \result{\IP{0}{2}}
+\end{align}
+
+\abc All of them together draw this current at the battery voltage:
+\begin{align}
+ R_\mathrm{tot} &= \RF \\
+   &= \frac{\V}{\I} \\
+   &= \R \approx \result{\RP{0}{2}}
+\end{align}
+This is smaller than the smallest single resistance, as always in a parallel circuit.
+\end{abcliste}

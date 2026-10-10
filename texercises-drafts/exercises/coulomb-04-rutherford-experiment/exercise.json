@@ -1,0 +1,18 @@
+{
+  "title": "Rutherford's Experiment",
+  "note": "from learningphysics, Coulomb Force, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 2,
+  "default_points": 0,
+  "tags": [
+    "alpha particle",
+    "coulomb law",
+    "electrostatic",
+    "nucleus"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

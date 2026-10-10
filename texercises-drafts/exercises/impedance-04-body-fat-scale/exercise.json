@@ -1,0 +1,19 @@
+{
+  "title": "A Body-Fat Scale",
+  "note": "from learningphysics, Impedance Curves, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "ac circuit",
+    "capacitor",
+    "impedance",
+    "parallel",
+    "resistor"
+  ],
+  "subbranches": [
+    "Circuits"
+  ],
+  "youtube": ""
+}

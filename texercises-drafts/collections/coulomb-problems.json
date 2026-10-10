@@ -1,0 +1,41 @@
+{
+  "title": "Coulomb force – problems from learningphysics",
+  "description": "Story problems on Coulomb's law and the superposition of forces (atoms, ions, nuclei, quarks, Coulomb's torsion balance) from the Problems tab of the learningphysics app Coulomb Force.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "coulomb law",
+    "electrostatic",
+    "point charge",
+    "superposition"
+  ],
+  "items": [
+    {
+      "exercise": "coulomb-01-hydrogen-atom"
+    },
+    {
+      "exercise": "coulomb-02-protons-in-a-nucleus"
+    },
+    {
+      "exercise": "coulomb-03-ions-in-a-crystal"
+    },
+    {
+      "exercise": "coulomb-04-rutherford-experiment"
+    },
+    {
+      "exercise": "coulomb-05-torsion-balance"
+    },
+    {
+      "exercise": "coulomb-06-hydrogen-molecule-ion"
+    },
+    {
+      "exercise": "coulomb-07-nuclear-fission"
+    },
+    {
+      "exercise": "coulomb-08-two-electrons-one-nucleus"
+    },
+    {
+      "exercise": "coulomb-09-quarks-in-a-proton"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "title": "A Contactless Card",
+  "note": "from learningphysics, Impedance Curves, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 4,
+  "default_points": 0,
+  "tags": [
+    "ac circuit",
+    "bandwidth",
+    "parallel resonant circuit",
+    "quality factor",
+    "resonance"
+  ],
+  "subbranches": [
+    "Circuits"
+  ],
+  "youtube": ""
+}

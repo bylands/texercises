@@ -1,0 +1,19 @@
+{
+  "title": "The FM Band",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "LC circuit",
+    "oscillating circuit",
+    "capacitance",
+    "frequency",
+    "radio"
+  ],
+  "subbranches": [
+    "Electromagnetic Waves"
+  ],
+  "youtube": ""
+}

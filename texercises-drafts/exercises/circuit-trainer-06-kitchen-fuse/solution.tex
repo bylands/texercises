@@ -1,0 +1,27 @@
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw (0,0) to[sV, l={$V = \VO$}] (0,3)
+   to[fuse, l={fuse}, i={$I$}] (3,3) -- (8,3);
+ \draw (0,0) -- (8,0);
+ \draw (4,3) to[R, l={$R_\mathrm{K}$}, *-*] (4,0);
+ \draw (6,3) to[R, l={$R_\mathrm{T}$}, *-*] (6,0);
+ \draw (8,3) to[R, l={$R_\mathrm{C}$}] (8,0);
+\end{circuitikz}
+\end{center}
+
+\begin{abcliste}
+\abc Each appliance is at the full mains voltage $V$. The fuse is in series with all appliances together, so the whole current flows through it, the sum of the currents through kettle and toaster:
+\begin{align}
+ I &= \IF \\
+   &= \frac{\V}{\Rk}+\frac{\V}{\Rt} \\
+   &= \result{\IP{0}{2}}
+\end{align}
+
+\abc The coffee machine may draw at most $I_\mathrm{max} - I$. The smaller its resistance, the larger its current, so its resistance must be at least
+\begin{align}
+ R_\mathrm{C} &= \RcF \\
+   &= \frac{\V}{\Imax - \I} \\
+   &= \result{\RcP{0}{2}}
+\end{align}
+Any machine with a smaller resistance draws more current, and the fuse blows.
+\end{abcliste}

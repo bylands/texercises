@@ -1,0 +1,9 @@
+\NewQty{Eg}{1.12}[\electronvolt]
+\NewQty{lir}{1500}[\nano\m][e-9][\m]
+\NewQty{la}{500}[\nano\m][e-9][\m]
+
+\SolQty{lgr}[\frac{h c}{E_G}]{\nchX*\nccX/(\EgX*\nceX)}[\m]
+\SolQty{Eir}[\frac{h c}{\lambda_\text{IR}}]{\nchX*\nccX/(\lirX*\nceX)}[\electronvolt]
+\SolQty{Ea}[\frac{h c}{\lambda}]{\nchX*\nccX/(\laX*\nceX)}[\electronvolt]
+\SolQty{loss}[\frac{E-E_G}{E}]{(\EaX-\EgX)/\EaX}
+\ConvTo{lossp}{100}{loss}{\percent}

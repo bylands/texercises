@@ -1,0 +1,9 @@
+\NewQty{mG}{12}[\tonne][e3][\kg]
+\NewQty{cG}{8}[\meter]
+\NewQty{ra}{30}[\meter]
+\NewQty{rb}{50}[\meter]
+
+\SolQty{mLa}[\frac{m_\mathrm{G}\cdot c}{r_1}]{\mGX*\cGX/\raX}[\kg]
+\SolQty{mLb}[\frac{m_\mathrm{G}\cdot c}{r_2}]{\mGX*\cGX/\rbX}[\kg]
+\ConvTo{mLat}{1e-3}{mLa}{\tonne}
+\ConvTo{mLbt}{1e-3}{mLb}{\tonne}

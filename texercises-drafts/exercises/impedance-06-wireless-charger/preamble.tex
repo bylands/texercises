@@ -1,0 +1,10 @@
+\NewQty{Lz}{10}[\micro\henry][e-6][\henry]
+\NewQty{fz}{120}[\kilo\hertz][e3][\hertz]
+
+% read from the graph
+\NewQty{fa}{110}[\kilo\hertz][e3][\hertz]
+\NewQty{Zo}{1.6}[\ohm]
+\NewQty{Zz}{0.50}[\ohm]
+
+\SolQty{C}[\frac{1}{(2\pi f_0)^2 L}]{1/((2*pi*\fzX)^2*\LzX)}[\farad]
+\SolQty{La}[\frac{1}{(2\pi f_1)^2 C}]{1/((2*pi*\faX)^2*\CX)}[\henry]

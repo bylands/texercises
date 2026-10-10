@@ -1,0 +1,38 @@
+{
+  "title": "Electric potential – problems from learningphysics",
+  "description": "Story problems on acceleration voltage, potential and field (X-ray tube, electron gun, ion thruster, proton therapy, Van de Graaff generator, nerve cell, electron microscope, Rutherford) from the Problems tab of the learningphysics app Electric Potential.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "acceleration voltage",
+    "electric potential",
+    "electrostatic",
+    "potential difference"
+  ],
+  "items": [
+    {
+      "exercise": "electric-potential-01-x-ray-tube"
+    },
+    {
+      "exercise": "electric-potential-02-electron-gun"
+    },
+    {
+      "exercise": "electric-potential-03-ion-thruster"
+    },
+    {
+      "exercise": "electric-potential-04-proton-therapy"
+    },
+    {
+      "exercise": "electric-potential-05-van-de-graaff"
+    },
+    {
+      "exercise": "electric-potential-06-nerve-cell-membrane"
+    },
+    {
+      "exercise": "electric-potential-07-electron-microscope"
+    },
+    {
+      "exercise": "electric-potential-08-rutherford-closest-approach"
+    }
+  ]
+}

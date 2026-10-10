@@ -1,0 +1,8 @@
+\NewQty{fx}{4.0}[\kilo\hertz][e3][\hertz]
+
+% read from the graph
+\NewQty{R}{8.0}[\ohm]
+\NewQty{fc}{2.0}[\kilo\hertz][e3][\hertz]
+
+\SolQty{Zc}[\sqrt{2}\,R]{sqrt(2)*\RX}[\ohm]
+\SolQty{Cx}[\frac{1}{2\pi f_c R}]{1/(2*pi*\fxX*\RX)}[\farad]

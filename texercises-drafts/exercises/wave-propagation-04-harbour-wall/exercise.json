@@ -1,0 +1,19 @@
+{
+  "title": "A Wave at the Harbour Wall",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "propagation",
+    "reflection",
+    "free end",
+    "superposition",
+    "water wave"
+  ],
+  "subbranches": [
+    "Mechanical Waves"
+  ],
+  "youtube": ""
+}

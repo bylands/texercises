@@ -1,0 +1,8 @@
+\NewQty{kC}{9.0e9}[\newton\meter\squared\per\coulomb\squared]
+\NewQty{qe}{1.6e-19}[\coulomb]
+\NewQty{Z}{2}
+\NewQty{re}{3.1e-11}[\meter]
+
+\SolQty{FK}[k\,\frac{Z\,e^2}{r^2}]{\kCX*\ZX*\qeX^2/\reX^2}[\newton]
+\SolQty{Fe}[k\,\frac{e^2}{(2r)^2}]{\kCX*\qeX^2/(2*\reX)^2}[\newton]
+\SolQty{F}[F_\mathrm{N}-F_\mathrm{e}]{\FKX-\FeX}[\newton]

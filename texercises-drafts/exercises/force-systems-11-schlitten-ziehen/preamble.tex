@@ -1,0 +1,10 @@
+\NewQty{m}{23}[\kg]
+\NewQty{lS}{1}[\meter]
+\NewQty{hS}{60}[\cm][e-2][\meter]
+\NewQty{muG}{0.20}
+\NewQty{g}{10}[\mpss]
+
+\SolQty{sa}[\frac{h}{\ell}]{\hSX/\lSX}
+\SolQty{ca}[\frac{\sqrt{\ell^2-h^2}}{\ell}]{sqrt(\lSX^2-\hSX^2)/\lSX}
+\SolQty{FZ}[\frac{\mu\,m\,g}{\cos\alpha+\mu\,\sin\alpha}]{\muGX*\mX*\gX/(\caX+\muGX*\saX)}[\newton]
+\SolQty{FN}[m\,g-F\,\sin\alpha]{\mX*\gX-\FZX*\saX}[\newton]

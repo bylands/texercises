@@ -1,0 +1,33 @@
+{
+  "title": "Photons – problems from learningphysics",
+  "description": "Story problems with realistic numbers from the former Problems tab of the learningphysics.ch app Photons.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "photon",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "photons-01-laser-pointer"
+    },
+    {
+      "exercise": "photons-02-sunburn"
+    },
+    {
+      "exercise": "photons-03-solar-cell"
+    },
+    {
+      "exercise": "photons-04-night-vision"
+    },
+    {
+      "exercise": "photons-05-solar-sail-ikaros"
+    },
+    {
+      "exercise": "photons-06-dental-x-rays"
+    },
+    {
+      "exercise": "photons-07-gamma-backscatter"
+    }
+  ]
+}

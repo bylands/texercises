@@ -1,0 +1,19 @@
+{
+  "title": "A Resistor for an LED",
+  "note": "from learningphysics, Resistor Circuit Trainer, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 1,
+  "default_points": 0,
+  "tags": [
+    "current",
+    "led",
+    "resistor",
+    "series",
+    "voltage"
+  ],
+  "subbranches": [
+    "Circuits"
+  ],
+  "youtube": ""
+}

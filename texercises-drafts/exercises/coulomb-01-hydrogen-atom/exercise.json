@@ -1,0 +1,19 @@
+{
+  "title": "The Hydrogen Atom",
+  "note": "from learningphysics, Coulomb Force, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 1,
+  "default_points": 0,
+  "tags": [
+    "atom",
+    "coulomb law",
+    "electrostatic",
+    "elementary charge",
+    "gravitation"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

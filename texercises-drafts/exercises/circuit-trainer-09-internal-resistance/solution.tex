@@ -1,0 +1,26 @@
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw[dashed, gray] (-1,-0.4) rectangle (2.6,3.2);
+ \node[gray] at (0.8,-0.75) {battery};
+ \draw (0,0) to[battery1, invert, l={$V_0$}] (0,2.5)
+   to[R, l={$r$}] (2.6,2.5)
+   to[short, i={$I$}] (5,2.5)
+   to[lamp, l={$R$}] (5,0) -- (0,0);
+\end{circuitikz}
+\end{center}
+
+\begin{abcliste}
+\abc With the lamp connected, the voltmeter shows the voltage $V_\mathrm{t}$ across the lamp. Hence
+\begin{align}
+ I &= \IF \\
+   &= \frac{\Vt}{\R} \\
+   &= \result{\IP{0}{2}}
+\end{align}
+
+\abc The missing voltage $V_0 - V_\mathrm{t}$ is across the internal resistance $r$, and the same current flows through it:
+\begin{align}
+ r &= \riF \\
+   &= \frac{\Vz-\Vt}{\I} \\
+   &= \result{\riP{0}{2}}
+\end{align}
+\end{abcliste}

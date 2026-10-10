@@ -1,6 +1,6 @@
 #!/bin/bash
-# Deploys learningphysics.ch: every app, the privacy page, KaTeX, the hub page (index.html and
-# lang.js at the web root) and the admin panel's program (hub-admin/hubadmin.py, which nginx does
+# Deploys learningphysics.ch: every app, the privacy page, KaTeX, the hub page (index.html,
+# lang.js and objectives.json at the web root) and the admin panel's program (hub-admin/hubadmin.py, which nginx does
 # not serve; the service restarts by itself when it changes), with rsync. Only changed files are sent (by checksum) and nothing on
 # the server is deleted; the admin panel's data (hub-data/) is never touched.
 #   ./deploy.sh            deploy
@@ -21,6 +21,7 @@ DRY=""
 APPS="bulb-brightness circuit-trainer potential-circuit capacitors force-concepts force-systems impedance induction-match motion-graphs motion-data motion-areas rl-switch torque centre-of-mass interaction coulomb oscillations cyclic-processes wave-propagation interference magnetic-forces charged-particles electric-field electric-potential em-waves photons matter-waves energy-conservation:coe privacy katex"
 
 shared/sync.sh --check >/dev/null || { echo "Shared files differ: run shared/sync.sh first." >&2; exit 1; }
+node hub/build-objectives.js --check >/dev/null || { echo "The hub's learning objectives differ from the apps: run node hub/build-objectives.js first." >&2; exit 1; }
 
 # -c: compare by checksum; no times, owners or groups are set (the folders' setgid bit gives new
 # files the group tpweb). Files are 664 and folders 2775, so that the deploy user and the admin can
@@ -48,7 +49,7 @@ for a in $APPS; do
   src=${a%%:*} dst=${a##*:}
   send "$src/" "$TARGET$dst/" | sed "s|^|$dst/|"
 done
-send hub/index.html hub/lang.js "$TARGET"
+send hub/index.html hub/lang.js hub/objectives.json "$TARGET"
 send --include=hubadmin.py --exclude='*' hub-admin/ "${TARGET}hub-admin/" | sed "s|^|hub-admin/|"
 if [ -n "$OPENRSYNC" ] && [ -z "$DRY" ] && [[ "$TARGET" == *:/* ]]; then
   ssh "${TARGET%%:*}" "cd '${TARGET#*:}' && find . -path ./hub-data -prune -o -user \$(id -un) \( -type f ! -perm 664 -exec chmod 664 {} + -o -type d ! -perm 2775 -exec chmod 2775 {} + \)"

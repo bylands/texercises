@@ -1,0 +1,19 @@
+{
+  "title": "Millikan's Oil Drop",
+  "note": "from learningphysics, Electric Field, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "electric field",
+    "electrostatic",
+    "elementary charge",
+    "millikan",
+    "uniform field"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

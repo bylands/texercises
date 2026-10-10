@@ -1,0 +1,19 @@
+{
+  "title": "The Fine-Beam Tube",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "magnetic force",
+    "electron",
+    "specific charge",
+    "acceleration voltage",
+    "circular motion"
+  ],
+  "subbranches": [
+    "Magnetism"
+  ],
+  "youtube": ""
+}

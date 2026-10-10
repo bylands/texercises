@@ -1,38 +1,51 @@
 // Shared by the learningphysics.ch apps (canonical copy in shared/, copied by sync.sh).
 // Sets of apps for a class: in the admin panel (/admin/), the teacher chooses some apps and, in
-// each, its modes and, for the tutor and practice, the worked examples and the stages. The set is
-// opened at /<name>: the hub page with only its apps, which link to /<app>/?set=<name>. Here, in
-// the app, the set hides what it leaves out (it is a view, not access control). It is remembered
-// for the tab (sessionStorage lp-set: { name, set }, written by the hub page), so that it applies
-// before the app starts; an app opened with ?set= without it waits for /sets.json and reloads.
-// ?set= (empty) leaves the set, and so does the hub page at /.
+// each, its modes (tutor, practice, check) and its learning objectives. The set is opened at
+// /<name>: the hub page with only its apps, which link to /<app>/?set=<name>. Here, in the app, the
+// set hides what it leaves out (it is a view, not access control): with objectives chosen, the
+// tutor shows only their worked examples, practice offers only their topics, and the check asks
+// only them. It is remembered for the tab (sessionStorage lp-set: { name, set }, written by the hub
+// page), so that it applies before the app starts; an app opened with ?set= without it waits for
+// /sets.json and reloads. ?set= (empty) leaves the set, and so does the hub page at /.
+// Sets saved before there were objectives list worked examples (tutor: indices) and practice
+// stages (practice: keys) instead; those still apply as they did.
 //   LPSets.name                the set's name, or null
-//   LPSets.mode(m)             whether mode m (tutor, practice, real, arcade) is in the set
-//   LPSets.tutor()             the indices of the worked examples to show, or null (all)
-//   LPSets.practice()          the keys of the practice stages to offer, or null (all)
-//   LPSets.kinds(kinds)        the arcade's kinds in the set: a kind that is a practice type only
-//                              if a chosen stage has it (all, if none is left)
-//   LPSets.register(what, x)   topics.js ('topics', the app's topics) and tutor.js ('tutor',
-//                              { names() }) say what the app has
+//   LPSets.mode(m)             whether mode m (tutor, practice, check) is in the set
+//   LPSets.objectives()        the ids of the objectives in the set, or null (all), once the
+//                              check has registered
+//   LPSets.tutor()             the indices of the worked examples to show, or null (all): those of
+//                              the set's objectives, once the check has said which they are
+//   LPSets.topics()            the indices of the practice topics to offer, or null (all): likewise
+//   LPSets.practice()          the keys of the practice stages to offer (sets saved before), or null
+//   LPSets.register(what, x)   topics.js ('topics', the app's topics), tutor.js ('tutor',
+//                              { names() }) and check.js ('check', its source, with the
+//                              objectives) say what the app has
+//   LPSets.on(fn)              fn() runs once the set's objectives are known (the check has
+//                              registered): tutor.js and topics.js then limit themselves to them
 //   LPSets.stageKey(stage)     a stage's key: its types joined with '+'
 //   LPSets.lang()              the language the set fixes ('en', 'de'), or null (the student's
 //                              choice); lang.js asks for it
+// The app creates its topics, tutor and check in that order, all at once when it starts (see an
+// app's init), so the limits are in place before anything is shown.
 // With ?outline=1 (the admin panel loads the app in a hidden frame), the app posts its modes,
-// worked examples and topics with their stages to the page that holds the frame (same origin).
+// learning objectives, worked examples and topics with their stages to the page that holds the
+// frame (same origin).
 (function (root) {
   'use strict';
 
   const KEY = 'lp-set', NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
   const stageKey = (stage) => stage.types.join('+');
-  // the types of the stages whose keys are given
-  const typesOf = (topics, keys) => new Set(topics.flatMap((t) => t.stages.filter((s) => keys.includes(stageKey(s))).flatMap((s) => s.types)));
-  function filterKinds(kinds, topics, keys) {
-    if (!keys || !topics) return kinds;
-    const all = typesOf(topics, topics.flatMap((t) => t.stages.map(stageKey))), on = typesOf(topics, keys);
-    const left = kinds.filter((k) => !all.has(k.id) || on.has(k.id));
-    return left.length ? left : kinds;
+  // What a set's objectives (ids) leave of the app's objectives ([{ id, tutor, topic }]): the
+  // objectives, the worked examples and the practice topics, the indices sorted; null if the set
+  // names none of them (then it does not limit the app).
+  function limits(objectives, ids) {
+    if (!Array.isArray(ids)) return null;
+    const chosen = objectives.filter((o) => ids.includes(o.id));
+    if (!chosen.length) return null;
+    const of = (k) => [...new Set(chosen.map((o) => o[k]).filter(Number.isInteger))].sort((a, b) => a - b);
+    return { objectives: chosen, tutor: of('tutor'), topics: of('topic') };
   }
-  const pure = { stageKey, typesOf, filterKinds, NAME };
+  const pure = { stageKey, limits, NAME };
   if (typeof document === 'undefined') { if (typeof module !== 'undefined') module.exports = pure; return; }
 
   const read = () => { try { return JSON.parse(sessionStorage.getItem(KEY)); } catch (e) { return null; } };
@@ -69,14 +82,26 @@
     });
   }
 
-  const modeOn = (m) => !entry || (Array.isArray(entry.modes) && entry.modes.includes(m));
+  // (in a set saved before, the arcade is now the check, and the problems are now practice)
+  const setModes = entry && Array.isArray(entry.modes) ? entry.modes.map((m) => ({ arcade: 'check', real: 'practice' })[m] || m) : [];
+  const modeOn = (m) => !entry || setModes.includes(m);
+  const ids = entry && Array.isArray(entry.objectives) ? entry.objectives.filter((k) => typeof k === 'string') : null;
+  let limit = null; // what the set's objectives leave, once the check has registered (see limits)
+  const listeners = [];
   const LPSets = {
     name: set ? name : null,
     mode: modeOn,
-    tutor: () => (entry && Array.isArray(entry.tutor) ? entry.tutor.filter(Number.isInteger) : null),
-    practice: () => (entry && Array.isArray(entry.practice) ? entry.practice.filter((k) => typeof k === 'string') : null),
-    kinds: (kinds) => filterKinds(kinds, reg.topics, LPSets.practice()),
-    register(what, x) { reg[what] = x; },
+    objectives: () => (limit ? limit.objectives.map((o) => o.id) : null),
+    tutor: () => (limit ? limit.tutor : ids ? null : entry && Array.isArray(entry.tutor) ? entry.tutor.filter(Number.isInteger) : null),
+    topics: () => (limit ? limit.topics : null),
+    practice: () => (!ids && entry && Array.isArray(entry.practice) ? entry.practice.filter((k) => typeof k === 'string') : null),
+    register(what, x) {
+      reg[what] = x;
+      if (what !== 'check' || !ids) return;
+      limit = limits(x.objectives, ids);
+      if (limit) listeners.forEach((fn) => fn());
+    },
+    on(fn) { listeners.push(fn); },
     stageKey,
     lang: () => (set && ['en', 'de'].includes(set.lang) ? set.lang : null),
   };
@@ -87,6 +112,7 @@
     const modes = [...document.querySelectorAll('input[name="mode"]')].map((r) => r.value);
     return {
       type: 'lp-outline', app, modes,
+      objectives: reg.check ? reg.check.objectives.map((o) => ({ id: o.id, name: text(o.name()), tutor: Number.isInteger(o.tutor) ? o.tutor : null, topic: Number.isInteger(o.topic) ? o.topic : null })) : [],
       tutor: reg.tutor ? reg.tutor.names().map(text) : [],
       topics: (reg.topics || []).map((t) => ({ name: text(t.name()), stages: t.stages.map((s) => ({ name: s.name ? text(s.name()) : null, key: stageKey(s) })) })),
     };

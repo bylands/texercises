@@ -1,0 +1,30 @@
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw (0,0) to[sV, l={$V$}] (0,2.5)
+   to[short, i={$I_\mathrm{I}$}] (1,2.5)
+   to[R, l={$R_1$}] (3,2.5)
+   to[R, l={$R_2$}] (5,2.5) -- (5,0) -- (0,0);
+ \draw (7,0) to[sV, l={$V$}] (7,2.5)
+   to[short, i={$I_\mathrm{II}$}] (8,2.5) -- (11,2.5);
+ \draw (7,0) -- (11,0);
+ \draw (9,2.5) to[R, l={$R_1$}, *-*] (9,0);
+ \draw (11,2.5) to[R, l={$R_2$}] (11,0);
+ \node at (2.5,-0.6) {setting I};
+ \node at (9,-0.6) {setting II};
+\end{circuitikz}
+\end{center}
+
+Setting I, in series: the resistances add up.
+\begin{align}
+ I_\mathrm{I} &= \IsF \\
+   &= \frac{\V}{\Ra+\Rb} \\
+   &= \Is \approx \result{\IsP{0}{2}}
+\end{align}
+
+Setting II, in parallel: each wire is at the full mains voltage, and the currents add up.
+\begin{align}
+ I_\mathrm{II} &= \IpF \\
+   &= \frac{\V}{\Ra}+\frac{\V}{\Rb} \\
+   &= \result{\IpP{0}{2}}
+\end{align}
+In parallel, the current is $\ratioP{0}{2}$ times larger: setting II heats much more.

@@ -1,0 +1,19 @@
+{
+  "title": "Raketenstart",
+  "note": "aus learningphysics.ch (Problems)",
+  "language": "GER",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "aktionsprinzip",
+    "kraft",
+    "learningphysics",
+    "newtonsche gesetze",
+    "schub"
+  ],
+  "subbranches": [
+    "Dynamics"
+  ],
+  "youtube": ""
+}

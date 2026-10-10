@@ -1,0 +1,41 @@
+{
+  "title": "Impedance curves – problems from learningphysics",
+  "description": "Impedance curves of real devices (tweeter crossover, guitar pickup, radio, body-fat scale, metal detector, wireless charger, loudspeaker, contactless card, quartz crystal) from the Problems tab of the learningphysics app Impedance Curves. The graphs are drawn from the models of the app.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "ac circuit",
+    "impedance",
+    "reactance",
+    "resonance"
+  ],
+  "items": [
+    {
+      "exercise": "impedance-01-tweeter-capacitor"
+    },
+    {
+      "exercise": "impedance-02-guitar-pickup"
+    },
+    {
+      "exercise": "impedance-03-tuning-a-radio"
+    },
+    {
+      "exercise": "impedance-04-body-fat-scale"
+    },
+    {
+      "exercise": "impedance-05-metal-detector"
+    },
+    {
+      "exercise": "impedance-06-wireless-charger"
+    },
+    {
+      "exercise": "impedance-07-loudspeaker-datasheet"
+    },
+    {
+      "exercise": "impedance-08-contactless-card"
+    },
+    {
+      "exercise": "impedance-09-quartz-crystal"
+    }
+  ]
+}

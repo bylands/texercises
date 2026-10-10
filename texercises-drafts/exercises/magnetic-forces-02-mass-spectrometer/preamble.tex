@@ -1,0 +1,11 @@
+\NewQty{v}{2.0e5}[\mps]
+\NewQty{B}{0.50}[\T]
+\NewQty{mau}{12}[\atomicmassunit]
+\NewQty{mbu}{14}[\atomicmassunit]
+
+\ConvTo{ma}{\ncuX}{mau}{\kg}
+\ConvTo{mb}{\ncuX}{mbu}{\kg}
+
+\SolQty{ra}[\frac{m_a\cdot v}{e\cdot B}]{\maX*\vX/(\nceX*\BX)}[\m]
+\SolQty{rb}[\frac{m_b\cdot v}{e\cdot B}]{\mbX*\vX/(\nceX*\BX)}[\m]
+\SolQty{dx}[\frac{2\cdot v}{e\cdot B}\cdot\left(m_b-m_a\right)]{2*\vX/(\nceX*\BX)*(\mbX-\maX)}[\m]

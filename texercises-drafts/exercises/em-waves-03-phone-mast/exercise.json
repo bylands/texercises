@@ -1,0 +1,19 @@
+{
+  "title": "A Mobile Phone Mast",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "intensity",
+    "electric field",
+    "amplitude",
+    "antenna",
+    "inverse square law"
+  ],
+  "subbranches": [
+    "Electromagnetic Waves"
+  ],
+  "youtube": ""
+}
