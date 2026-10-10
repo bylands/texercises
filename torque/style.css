@@ -7,6 +7,7 @@
   --plate: #e8edf3;
   --beam: #ece9e1;
   --gridline: #e3e0d8;
+  --cand: #7b3fa8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -18,6 +19,7 @@
     --plate: #2d3540;
     --beam: #2a2d31;
     --gridline: #30343a;
+    --cand: #c79bf0;
   }
 }
 
@@ -75,3 +77,17 @@ svg .dimline.hl { stroke: var(--arm); stroke-width: 1.4; }
 
 /* a choice only (a ranking, the error in a sketch): no "first identify, then calculate" */
 #comps-part.only > :is(h3, .note) { display: none; }
+
+/* the ruler (forces along the grid): a segment between two grid points, with its length */
+.ruler-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; margin: -6px 0 14px; }
+.ruler-bar button[aria-pressed="true"] { background: var(--arm); border-color: var(--arm); color: #fff; }
+.ruler-bar .note { min-height: 1.4em; }
+#figure svg.measuring { cursor: crosshair; touch-action: none; -webkit-user-select: none; user-select: none; }
+svg .ruler line { stroke: var(--arm); stroke-width: 2.4; stroke-dasharray: 7 4; stroke-linecap: round; }
+svg .ruler circle { fill: var(--card); stroke: var(--arm); stroke-width: 2; }
+svg .ruler text { fill: var(--arm); font-size: 14px; font-weight: 600; paint-order: stroke fill; stroke: var(--card); stroke-width: 3.5px; stroke-linejoin: round; }
+
+/* the candidates for a lever arm (at an angle, practice): dashed segments with their numbers */
+svg .cand { stroke: var(--cand); stroke-width: 2; stroke-dasharray: 6 4; stroke-linecap: round; }
+svg .cand-disc { fill: var(--card); stroke: var(--cand); stroke-width: 1.5; }
+svg .lbl.cand-n { fill: var(--cand); font-size: 13px; font-weight: 700; font-family: var(--sans, sans-serif); stroke: none; }

@@ -18,7 +18,7 @@
     hard: { name: () => L('Hard', 'Schwierig'), from: 4, to: 5 },
     mixed: { name: () => L('Mixed', 'Gemischt'), from: 1, to: 5 },
   };
-  const pool = (level) => SCENARIOS.filter((s) => !s.choice && s.difficulty >= LEVELS[level].from && s.difficulty <= LEVELS[level].to);
+  const pool = (level) => SCENARIOS.filter((s) => !s.choice && !s.topicOnly && s.difficulty >= LEVELS[level].from && s.difficulty <= LEVELS[level].to);
   const byId = (id) => SCENARIOS.find((s) => s.id === id);
   const same = (x, y) => Math.abs(x - y) <= 0.015 * Math.max(Math.abs(y), 0.05);
 
@@ -84,7 +84,7 @@
   function practiceOf(scenario, seed) {
     const scn = byId(scenario), r = rng(seed);
     const comps = (p) => (scn.comps ? scn.comps(p) : []);
-    const round = (p) => comps(p).every((c) => c.options || c.baseVal == null || Math.abs(100 * c.baseVal * Math[c.fn]((p.alpha * Math.PI) / 180) % 1) < 1e-6 || Math.abs(100 * c.baseVal * Math[c.fn]((p.alpha * Math.PI) / 180) % 1 - 1) < 1e-6);
+    const round = (p) => comps(p).every((c) => c.baseVal == null || Math.abs(100 * c.baseVal * Math[c.fn]((p.alpha * Math.PI) / 180) % 1) < 1e-6 || Math.abs(100 * c.baseVal * Math[c.fn]((p.alpha * Math.PI) / 180) % 1 - 1) < 1e-6);
     const ok = scn.calc === 'always' ? null : (p) => round(p) && neat(scn)(p);
     const ex = exercise(scn, make(scn, r, ok, { pyth: true }));
     return { ...ex, comps: comps(ex.p), seed };
@@ -116,7 +116,9 @@
   // The tutor: the situation with what is wanted, then the steps of the solution.
   function tutorial(lesson) {
     const ex = exercise(byId(lesson.scenario), lesson.p);
-    const wanted = ex.fields.map((f) => `${f.what} $${tex(...f.sym)}$`).join(', ');
+    // each quantity in words with its symbol (f.wanted where the plain order would read oddly,
+    // e.g. “the torque M₁ of F₁”)
+    const wanted = ex.fields.map((f) => f.wanted || `${f.what} $${tex(...f.sym)}$`).join(', ');
     const first = {
       text: `<p class="step-rule">${L('The situation', 'Die Situation')}</p>${ex.text}${wanted ? `<p>${L('Wanted', 'Gesucht')}: ${wanted}.</p>` : ''}`,
       figure: ex.figure({ task: true }),

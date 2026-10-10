@@ -9,7 +9,9 @@
 //   right ranking is that of the torques, the wrong lever arm the one drawn wrong,
 // - that every kind of question of every objective of the check gives four different options,
 //   exactly one right, and flags that name a wrong idea.
-// It also checks the tutor's examples against the answers on the worksheets.
+// It also checks the tutor's examples against the answers on the worksheets, and the stages added
+// later: where to hang the load on a heavy beam, the lever arm at an angle chosen in the drawing,
+// the tutor's “Wanted” and its remark on the muscle force.
 'use strict';
 
 require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../statics.js'); require('../generator.js'); require('../lessons.js'); require('../check-src.js');
@@ -38,6 +40,8 @@ Object.assign(LAWS, {
   // torques about A and about B, and the forces
   plank: (p, v) => [[v.B * p.b, p.m * G * p.len / 2 + p.M * G * p.x], [v.A * p.b, p.m * G * (p.b - p.len / 2) + p.M * G * (p.b - p.x)]],
   arm: (p, v) => [[v.Fm * p.d, p.mA * G * p.c + p.M * G * p.a], [v.Fm, v.E + (p.mA + p.M) * G]],
+  // the load's lever arm about the support (from it, or from the left end)
+  'beam-arm': (p, v) => { const x = p.from === 'end' ? p.s - v.x : v.x; return [[p.m * G * x, p.mb * G * (p.len / 2 - p.s)]]; },
 });
 LAWS.hang2 = LAWS.hang;
 
@@ -140,6 +144,64 @@ function checkChoice(ex, id) {
     const order = right.html.match(/M_(\d)/g).map((x) => Math.abs(ex.v.M[Number(x.slice(2)) - 1]));
     if (order.some((x, k) => k && x <= order[k - 1])) fail(`${id}: the right ranking ${right.html} is not by size: ${order}`);
   }
+}
+
+// The new stages and frames (teacher's notes, October 2026).
+const dollars = (t) => (String(t).replace(/\\\$/g, '').match(/\$/g) || []).length;
+const plainOk = (id, what, t) => { checkText(id, what, t); if (dollars(t) % 2) fail(`${id}: ${what} has an unpaired $: ${t}`); };
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  // Heavy beam, where to hang the load: a lever arm, the load on the beam between its left end and
+  // the support, both ways of asking, at least 12 different exercises
+  const seenArm = new Set(), froms = new Set();
+  for (let seed = 1; seed <= 200; seed++) {
+    const ex = Torque.practiceOf('beam-arm', seed), p = ex.p, id = `${lang} beam-arm-${seed}`;
+    seenArm.add(JSON.stringify(p)); froms.add(p.from);
+    const x = p.from === 'end' ? p.s - ex.v.x : ex.v.x;
+    if (!(x >= 5 && x <= p.s - 5)) fail(`${id}: the load hangs ${x} cm from the support, off the left part`);
+    if (ex.fields.length !== 1 || ex.fields[0].unit !== 'cm') fail(`${id}: it should ask for one distance`);
+    if (!ex.fields[0].traps.some((t) => t.flag === 'end')) fail(`${id}: no trap for the beam's arm measured from the end`);
+    if (p.from === 'end' && !ex.fields[0].traps.some((t) => t.flag === 'fromSupport')) fail(`${id}: no trap for the distance from the support`);
+    [ex.text, ...ex.hints, ...ex.solution, ex.results].forEach((t, k) => plainOk(id, `text ${k}`, t));
+  }
+  if (seenArm.size < 12 || froms.size !== 2) fail(`beam-arm: ${seenArm.size} different exercises, ways of asking ${[...froms]}`);
+  if (Lessons.EXAMPLES[4].practice[1].types[0] !== 'beam-arm' || Lessons.EXAMPLES[4].practice[0].types[0] !== 'beam-weight') fail('heavy beam: the stages');
+  // At an angle: the lever arm chosen among four segments drawn in, exactly one right (from D,
+  // perpendicular to the line of action), the others of other lengths, each with an explanation
+  const seenAngle = new Set();
+  for (let seed = 1; seed <= 200; seed++) {
+    const ex = Torque.practiceOf('angle', seed), p = ex.p, id = `${lang} angle-choice-${seed}`, it = ex.comps[0];
+    seenAngle.add(JSON.stringify(p));
+    if (!p.cands || ex.comps.length !== 1 || !it.options) { fail(`${id}: no segments to choose`); continue; }
+    if (it.options.length !== 4 || it.options.filter((o) => o.right).length !== 1 || new Set(it.options.map((o) => o.html)).size !== 4) fail(`${id}: options ${it.options.map((o) => o.html)}`);
+    if (it.options.some((o) => !o.right && !o.why)) fail(`${id}: a wrong option without explanation`);
+    [it.what, it.value, ...it.options.map((o) => o.html + (o.why || ''))].forEach((t, k) => plainOk(id, `choice ${k}`, t));
+    const cands = globalThis.Scenarios.angleCands(p), right = cands.filter((c) => c.right);
+    if (right.length !== 1 || it.options[right[0].n - 1].right !== true) fail(`${id}: the right segment is not the right option`);
+    const dir = [Math.cos(((180 - p.alpha) * Math.PI) / 180), Math.sin(((180 - p.alpha) * Math.PI) / 180)];
+    const lenOf = (c) => Math.hypot(c.ends[1][0] - c.ends[0][0], c.ends[1][1] - c.ends[0][1]);
+    const [a, b] = right[0].ends, D = p.len / 2 + p.a;
+    if (Math.abs(a[0] - D) > 1e-9 || Math.abs((b[0] - a[0]) * dir[0] + (b[1] - a[1]) * dir[1]) > 1e-6) fail(`${id}: the right segment is not the perpendicular from D`);
+    if (Math.abs(lenOf(right[0]) - p.b * sin(p.alpha)) > 1e-6) fail(`${id}: the right segment is not b sin α long`);
+    // each long enough to see and pick (in px of the drawing), and no two the same
+    const px = 360 / p.len, key = (c) => c.ends.map((e) => e.map((x) => x.toFixed(3)).sort().join()).sort().join('|');
+    cands.forEach((c) => { if (lenOf(c) * px < 25) fail(`${id}: segment ${c.n} (${c.kind}) is only ${lenOf(c) * px} px long`); });
+    if (new Set(cands.map(key)).size !== 4) fail(`${id}: two segments coincide`);
+    const fig = ex.figure({ task: true }), cnt = (f) => (f.match(/class="cand"/g) || []).length;
+    if (cnt(fig) !== 4) fail(`${id}: ${cnt(fig)} segments drawn`);
+    if (cnt(ex.figure({ task: true, show: new Set(['arm']) })) || cnt(ex.solutionFigure())) fail(`${id}: segments drawn once the lever arm is known`);
+    checkText(id, 'figure', fig);
+  }
+  if (seenAngle.size < 12) fail(`angle: ${seenAngle.size} different exercises`);
+  // the check and the tutor draw no segments
+  if (/class="cand"/.test(Torque.generateFor('angle', 3, { nice: true }).figure({ task: true }))) fail('angle: segments outside practice');
+  // Lever arm (tutor): “Wanted: the torque M₁ of F₁”, not “torque of F₁ M₁”
+  const first = Torque.tutorial(Lessons.EXAMPLES[0]).frames[0].text;
+  if (!first.includes(lang === 'en' ? 'the torque $M_1$ of $F_1$' : 'das Drehmoment $M_1$ von $F_1$') || /\$F_1\$ \$M_1\$/.test(first)) fail(`tutor 1 (${lang}): ${first}`);
+  // Force in the joint (tutor): the remark that the force along the muscle is even greater
+  const frames = Torque.tutorial(Lessons.EXAMPLES[8]).frames, last = frames[frames.length - 1];
+  if (!(lang === 'en' ? /even greater/ : /noch grösser/).test(last.text) || !/along the muscle|entlang des Muskels/.test(last.figure)) fail(`tutor 9 (${lang}): no remark on the force along the muscle`);
+  if (/ß/.test(last.text)) fail('tutor 9: ß in Swiss German');
 }
 
 // The check: every kind of every objective, many seeds, both languages.

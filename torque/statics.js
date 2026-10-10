@@ -115,6 +115,13 @@
         P.arrow(B.mid(p.c), [0, -1], 30, 'force k-g', svgSym('G'), [8, 2]);
         P.arrow([p.a, B.h / 2], [0, -1], 30, 'force k-g', `${svgSym('G')}<tspan>′</tspan>`, [8, 6]);
       }
+      // the force along the (slanting) muscle: longer than its vertical component F_M
+      if (show.has('slant')) {
+        const from = B.top(p.d), to = [6 / P.s, B.h + up * 0.75], dx = to[0] - from[0], dy = to[1] - from[1], n = Math.hypot(dx, dy), u = [dx / n, dy / n];
+        const len = 70 / u[1], tip = [from[0] + (u[0] * len) / P.s, from[1] + (u[1] * len) / P.s];
+        P.line(tip, [from[0], from[1] + 70 / P.s], 'action', true);
+        P.arrow(from, u, len, 'force k-h hl', L('along the muscle', 'entlang des Muskels'), [-22, 2]);
+      }
       if (show.has('E')) P.arrow(B.mid(0), [0, -1], 34, `force k-s${view.hl && view.hl.has('E') ? ' hl' : ''}`, svgSym('E'), [-8, 6]);
       return P.svg();
     },
@@ -133,6 +140,9 @@
         step(L('Force in the joint', 'Kraft im Gelenk'),
           `<p>${L('The forces balance as well: the muscle pulls up more than the weights pull down, so the joint pushes down on the forearm:', 'Auch die Kräfte heben sich auf: Der Muskel zieht stärker nach oben, als die Gewichtskräfte nach unten ziehen, also drückt das Gelenk auf den Unterarm nach unten:')}</p>` +
           `$$${T('E')} = ${T('Fm')} - m_\\mathrm{A}\\,g - M\\,g = ${tq(v.Fm, 'N', 1)} - ${tq(WA, 'N')} - ${tq(WB, 'N')} = ${res(v.E, 'N', 1)}$$`, ['F', 'E'], ['E']),
+        step(L('A remark', 'Eine Bemerkung'),
+          `<p>${L(`Here the biceps pulls straight up. In fact it runs at a slant, from the forearm up to the shoulder. Then only the vertical component of its force turns the forearm against the weights; the other component pulls along the forearm, through the elbow, and has no torque about it. So the vertical component must still be ${q(v.Fm, 'N', 1)}, and the force along the muscle is even greater than that.`,
+            `Hier zieht der Bizeps senkrecht nach oben. In Wirklichkeit verläuft er schräg, vom Unterarm hinauf zur Schulter. Dann dreht nur die senkrechte Komponente seiner Kraft den Unterarm gegen die Gewichtskräfte; die andere Komponente zieht entlang des Unterarms, durch den Ellbogen, und hat bezüglich des Ellbogens kein Drehmoment. Die senkrechte Komponente muss also immer noch ${q(v.Fm, 'N', 1)} betragen, und die Kraft entlang des Muskels ist sogar noch grösser.`)}</p>`, ['F', 'slant'], ['slant']),
       ];
     },
   };

@@ -51,8 +51,9 @@
       $('#t-also').innerHTML = examples[ex].also || '';
       $('#t-also').hidden = !examples[ex].also;
       if ($('#t-practise')) {
-        $('#t-practise').hidden = !last || ex === lastEx() || !toPractice;
-        $('#t-practise').textContent = t().practise;
+        // at the very end it takes the place of "Next", so that it looks like every other button to practise
+        $('#t-practise').hidden = !last || !toPractice;
+        $('#t-practise').textContent = ex === lastEx() ? t().done : t().practise;
       }
       $('#t-figure').innerHTML = f.figure;
       $('#t-text').innerHTML = f.text;
@@ -61,6 +62,7 @@
       $('#t-prev').textContent = frame === 0 && ex !== list()[0] ? t().prevEx : t().back;
       $('#t-next').textContent = !last ? t().next : ex !== lastEx() ? t().nextEx : toPractice ? t().done : t().next;
       $('#t-next').disabled = last && ex === lastEx() && !toPractice;
+      $('#t-next').hidden = !!$('#t-practise') && last && ex === lastEx() && toPractice;
       $('#t-bar').style.width = `${(100 * (frame + 1)) / frames.length}%`;
       document.querySelectorAll('input[name="example"]').forEach((r) => { r.checked = Number(r.value) === ex; });
       if (helpers.after) helpers.after();
