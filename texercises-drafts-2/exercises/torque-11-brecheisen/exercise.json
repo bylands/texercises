@@ -1,0 +1,18 @@
+{
+  "title": "Ein Brecheisen",
+  "note": "aus learningphysics.ch (Üben)",
+  "language": "GER",
+  "type": 1,
+  "default_difficulty": 2,
+  "default_points": 0,
+  "tags": [
+    "drehmoment",
+    "hebel",
+    "hebelgesetz",
+    "learningphysics"
+  ],
+  "subbranches": [
+    "Lever"
+  ],
+  "youtube": ""
+}

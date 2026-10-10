@@ -1,0 +1,19 @@
+{
+  "title": "Repelled by a Charged Sphere",
+  "note": "from learningphysics.ch (Practice)",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 4,
+  "default_points": 0,
+  "tags": [
+    "electric potential",
+    "energy conservation",
+    "point charge",
+    "proportionality",
+    "learningphysics"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

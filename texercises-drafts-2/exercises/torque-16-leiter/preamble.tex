@@ -1,0 +1,12 @@
+\NewQty{lL}{5}[\meter]
+\NewQty{mL}{20}[\kg]
+\NewQty{aF}{3}[\meter]
+\NewQty{hW}{4}[\meter]
+\NewQty{MP}{80}[\kg]
+\NewQty{fP}{0.75}
+\NewQty{g}{10}[\mpss]
+
+\SolQty{FWa}[\frac{m\,g\,a}{2\,h}]{\mLX*\gX*\aFX/(2*\hWX)}[\newton]
+\SolQty{mua}[\frac{F_\mathrm{W}}{m\,g}]{\FWaX/(\mLX*\gX)}
+\SolQty{FWb}[\frac{\left(\frac{m}{2}+f\,M\right)g\,a}{h}]{(\mLX/2+\fPX*\MPX)*\gX*\aFX/\hWX}[\newton]
+\SolQty{mub}[\frac{F_\mathrm{W}}{(m+M)\,g}]{\FWbX/((\mLX+\MPX)*\gX)}

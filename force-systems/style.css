@@ -6,6 +6,8 @@
   --f-s: #1d7a3e;
   --f-k: #8a3ab9;
   --f-acc: #55606b;
+  --f-f: #0f7c86;
+  --f-d: #b0367a;
   --slope: #ece9e1;
   --box: #e8edf3;
 }
@@ -18,6 +20,8 @@
     --f-s: #7fd49a;
     --f-k: #d29bff;
     --f-acc: #aab2ba;
+    --f-f: #5fd0da;
+    --f-d: #ff8fc8;
     --slope: #2a2d31;
     --box: #2d3540;
   }
@@ -60,10 +64,16 @@ svg .k-s, .k-s { color: var(--f-s); }
 svg .k-k, .k-k { color: var(--f-k); }
 svg .k-acc, .k-acc { color: var(--f-acc); }
 svg .k-acc line { stroke-width: 1.2; }
+svg .k-f, .k-f { color: var(--f-f); }
+svg .k-d, .k-d { color: var(--f-d); }
+svg .k-v, .k-v { color: var(--f-acc); }
+svg .k-v line { stroke-width: 1.2; stroke-dasharray: 5 3; }
+svg .w.spring { stroke-width: 1.2; stroke-linejoin: round; }
+svg .canopy { fill: var(--slope); stroke: var(--ink); stroke-width: 1.3; stroke-linejoin: round; }
 svg .force.hl line { stroke-width: 3; }
 svg .force.hl text { font-weight: 700; }
 svg .force.dim { opacity: 0.25; }
-.note .k-g, .note .k-n, .note .k-r, .note .k-s, .note .k-k, .note .k-acc { font-weight: 600; }
+.note .k-g, .note .k-n, .note .k-r, .note .k-s, .note .k-k, .note .k-acc, .note .k-f, .note .k-d, .note .k-v { font-weight: 600; }
 
 /* the table of forces in practice: a row per kind of force, a column per box */
 #answers > h3 { margin: 4px 0 6px; }

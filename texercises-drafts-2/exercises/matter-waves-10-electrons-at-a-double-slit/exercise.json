@@ -1,0 +1,20 @@
+{
+  "title": "Electrons at a Double Slit",
+  "note": "from learningphysics.ch (Practice)",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "de broglie",
+    "matter wave",
+    "electron",
+    "double slit",
+    "interference",
+    "learningphysics"
+  ],
+  "subbranches": [
+    "quantum physics"
+  ],
+  "youtube": ""
+}

@@ -695,7 +695,311 @@
     },
   };
 
-  const SCENARIOS = [restUp, restAngle, pullFriction, pushPair, ropePair, atwood, tablePulley, inclinePull, inclinePulley];
+  // ---------------------------------------------------------------- springs and drag
+  // Two kinds of force of their own (scn.extra, see generator.js): the spring force, where the
+  // spring is attached, back towards the spring's relaxed length (a stretched spring pulls, a
+  // compressed one pushes), F = k Δx; and air resistance (drag), against the velocity, growing
+  // with speed. Drawings mark the relaxed length (dashed) and Δx; moving bodies get a velocity
+  // arrow v as well as an acceleration arrow.
+  const tenth = (x) => Math.abs(10 * x - Math.round(10 * x)) < 1e-9;
+  const cm = (x) => q(x, 'cm'), Nm = (x) => q(x, 'Nm');
+  const SPRING_WHAT = {
+    Fs: () => L('spring force on the box', 'Federkraft auf die Kiste'),
+    dx: (p) => (p.state === 'stand' || p.state === 'compress' ? L('compression of the spring', 'Stauchung der Feder') : L('extension of the spring', 'Dehnung der Feder')),
+    k: () => L('spring constant', 'Federkonstante'),
+  };
+  // the marks of a spring: its relaxed end (dashed, across the spring at rel) and Δx from there
+  // to its end now (end), at a distance side along the normal nrm; the dashed line starts at from
+  function springMarks(sc, rel, end, nrm, side = 30, from = -14) {
+    const off = (p, d) => [p[0] + d * nrm[0], p[1] + d * nrm[1]];
+    sc.line(...off(rel, from), ...off(rel, side + 10), 'w dash');
+    sc.line(...off(rel, side), ...off(end, side), 'w thin');
+    const mid = off([(rel[0] + end[0]) / 2, (rel[1] + end[1]) / 2], side + (nrm[0] ? 8 : 0));
+    sc.text(mid[0] + (nrm[0] ? 4 : 0), mid[1] + (nrm[1] ? side > 0 ? 16 : -6 : 5), svgSym('dx'), 'lbl small', nrm[0] ? 'start' : 'middle');
+  }
+
+  const springHang = {
+    id: 'spring-hang', difficulty: 2, still: true, extra: ['f', 'd'],
+    make(r) {
+      const m = pick(r, [0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1, 1.5, 2]), k = pick(r, [20, 25, 40, 50, 80, 100, 200, 250, 400, 500]);
+      const dx = (m * G * 100) / k; // cm
+      if (!tenth(dx) || dx < 1 || dx > 25) return null;
+      return { m, k, state: pick(r, ['hang', 'stand']), given: pick(r, ['k', 'dx']) };
+    },
+    solve: (p) => ({ Fs: p.m * G, dx: (p.m * G * 100) / p.k, k: p.k, a: 0 }),
+    fields: (p) => [{ key: 'Fs', sym: ['Fs'], unit: 'N', what: SPRING_WHAT.Fs() },
+      p.given === 'k' ? { key: 'dx', sym: ['dx'], unit: 'cm', what: SPRING_WHAT.dx(p) } : { key: 'k', sym: ['k'], unit: 'Nm', what: SPRING_WHAT.k() }],
+    title: (p) => (p.state === 'hang' ? L('Hanging from a spring', 'An einer Feder hängend') : L('Resting on a spring', 'Auf einer Feder liegend')),
+    text: (p) => {
+      const dx = (p.m * G * 100) / p.k;
+      const given = p.given === 'k' ? L(`The spring constant is ${Nm(p.k)}.`, `Die Federkonstante beträgt ${Nm(p.k)}.`)
+        : (p.state === 'hang' ? L(`The spring is stretched by ${cm(dx)}.`, `Die Feder ist um ${cm(dx)} gedehnt.`) : L(`The spring is compressed by ${cm(dx)}.`, `Die Feder ist um ${cm(dx)} gestaucht.`));
+      return (p.state === 'hang'
+        ? L(`A box with a mass of ${kg(p.m)} hangs at rest from a spring fixed to the ceiling.`, `Eine Kiste mit der Masse ${kg(p.m)} hängt ruhig an einer Feder, die an der Decke befestigt ist.`)
+        : L(`A box with a mass of ${kg(p.m)} rests on top of a vertical spring that stands on the floor.`, `Eine Kiste mit der Masse ${kg(p.m)} liegt ruhig auf einer senkrechten Feder, die auf dem Boden steht.`)) + ` ${given}`;
+    },
+    boxes: (p) => [L(`the box (${kg(p.m)})`, `die Kiste (${kg(p.m)})`)],
+    scene(p, v) {
+      const sc = new Scene(300, 380, p.state === 'hang' ? L('A box hanging from a spring', 'Eine Kiste an einer Feder') : L('A box on a spring', 'Eine Kiste auf einer Feder'));
+      const bw = 70, bh = 56, cx = 150, rel = p.state === 'hang' ? 92 : 132, s = Math.min(46, 10 + 1.6 * v.dx);
+      let c, att;
+      if (p.state === 'hang') {
+        sc.surface([cx + 60, 24], [cx - 60, 24], 1);
+        const yE = 24 + rel + s;
+        sc.spring([cx, 24], [cx, yE]);
+        springMarks(sc, [cx, 24 + rel], [cx, yE], [1, 0], 34);
+        const at = sc.box([cx - bw / 2, yE + bh], [1, 0], [0, -1], bw, bh, kg(p.m));
+        c = at(bw / 2, bh / 2); att = [cx, yE];
+      } else {
+        const y0 = 360;
+        sc.surface([cx - 60, y0], [cx + 60, y0]);
+        const yE = y0 - rel + s;
+        sc.spring([cx, y0], [cx, yE], 6);
+        springMarks(sc, [cx, y0 - rel], [cx, yE], [1, 0], 48);
+        const at = sc.box([cx - bw / 2, yE], [1, 0], [0, -1], bw, bh, kg(p.m));
+        c = at(bw / 2, bh / 2); att = [cx + 6, yE];
+      }
+      sc.force({ id: 'G', kind: 'g', at: [c[0] - 6, c[1]], dir: [0, 1], sym: ['G'], lab: [-8, 6] });
+      sc.force({ id: 'Fs', kind: 'f', at: att, dir: [0, -1], sym: ['Fs'], lab: [p.state === 'hang' ? -10 : 8, p.state === 'hang' ? 8 : 4] });
+      return sized(sc, { G: p.m * G, Fs: v.Fs });
+    },
+    hints: (p) => [
+      L('Which bodies touch the box? Only the spring. Besides, the Earth pulls it down.', 'Welche Körper berühren die Kiste? Nur die Feder. Ausserdem zieht die Erde sie nach unten.'),
+      p.state === 'hang' ? L('The spring is stretched: it pulls the box back towards its relaxed length, that is up.', 'Die Feder ist gedehnt: Sie zieht die Kiste zurück zu ihrer entspannten Länge, also nach oben.')
+        : L('The spring is compressed: it pushes the box back towards its relaxed length, that is up.', 'Die Feder ist gestaucht: Sie drückt die Kiste zurück zu ihrer entspannten Länge, also nach oben.'),
+      L(`The box is at rest: ${m$(`${T('Fs')} = ${T('m')}\\,g`)}, and ${m$(`${T('Fs')} = k\\,\\Delta x`)} with ${m$('\\Delta x')} in metres.`, `Die Kiste ruht: ${m$(`${T('Fs')} = ${T('m')}\\,g`)}, und ${m$(`${T('Fs')} = k\\,\\Delta x`)} mit ${m$('\\Delta x')} in Metern.`),
+    ],
+    steps(p, v) {
+      const hang = p.state === 'hang', dm = v.dx / 100;
+      return [
+        step(L('Forces on the box', 'Kräfte auf die Kiste'),
+          `<p>${L(`The Earth pulls the box down with its weight ${m$(T('G'))}. The only body that touches the box is the spring: it acts where it is attached, with the spring force ${m$(T('Fs'))}.`, `Die Erde zieht die Kiste mit ihrer Gewichtskraft ${m$(T('G'))} nach unten. Der einzige Körper, der die Kiste berührt, ist die Feder: Sie wirkt dort, wo sie befestigt ist, mit der Federkraft ${m$(T('Fs'))}.`)}</p>` +
+          `<p>${hang ? L('The spring is stretched downwards. But the spring force does not point along the stretch: a stretched spring pulls back towards its relaxed length (dashed), so on the box it points up.', 'Die Feder ist nach unten gedehnt. Doch die Federkraft zeigt nicht in Richtung der Dehnung: Eine gedehnte Feder zieht zurück zu ihrer entspannten Länge (gestrichelt), auf die Kiste also nach oben.')
+            : L('The spring is compressed downwards. But the spring force does not point along the compression: a compressed spring pushes back towards its relaxed length (dashed), so on the box it points up.', 'Die Feder ist nach unten gestaucht. Doch die Federkraft zeigt nicht in Richtung der Stauchung: Eine gestauchte Feder drückt zurück zu ihrer entspannten Länge (gestrichelt), auf die Kiste also nach oben.')}</p>`,
+          ['G', 'Fs'], ['Fs']),
+        step(L('Balance', 'Gleichgewicht'),
+          `<p>${L('The box is at rest, so the spring force balances the weight:', 'Die Kiste ruht, also hält die Federkraft der Gewichtskraft das Gleichgewicht:')} $$${T('Fs')} = ${T('G')} = ${T('m')}\\,g = ${tq(p.m, 'kg')}\\cdot${tq(G, 'a')} = ${res(v.Fs, 'N')}$$</p>`,
+          ['G', 'Fs'], ['G', 'Fs']),
+        step(L('Law of the spring', 'Federgesetz'),
+          `<p>${L(`The spring force is the spring constant times the ${hang ? 'extension' : 'compression'} ${m$('\\Delta x')}, in metres:`, `Die Federkraft ist die Federkonstante mal die ${hang ? 'Dehnung' : 'Stauchung'} ${m$('\\Delta x')}, in Metern:`)}</p>` +
+          (p.given === 'k'
+            ? `$$${T('Fs')} = k\\,\\Delta x \\;\\Rightarrow\\; \\Delta x = \\frac{${T('Fs')}}{k} = \\frac{${tq(v.Fs, 'N')}}{${tq(p.k, 'Nm')}} = ${FS.texNum(dm, 3)}\\,\\mathrm{m} = ${res(v.dx, 'cm')}$$`
+            : `$$${T('Fs')} = k\\,\\Delta x \\;\\Rightarrow\\; k = \\frac{${T('Fs')}}{\\Delta x} = \\frac{${tq(v.Fs, 'N')}}{${FS.texNum(dm, 3)}\\,\\mathrm{m}} = ${res(p.k, 'Nm')}$$`),
+          ['G', 'Fs'], ['Fs']),
+      ];
+    },
+  };
+
+  const springFloor = {
+    id: 'spring-floor', difficulty: 3, extra: ['f', 'd'],
+    make(r) {
+      const m = pick(r, [0.5, 1, 1.5, 2, 2.5, 3, 4]), k = pick(r, [50, 100, 150, 200, 250, 300, 400, 500]), dx = pick(r, [2, 4, 5, 6, 8, 10, 12, 15, 20]);
+      const mu = pick(r, [0.1, 0.2, 0.25, 0.3, 0.4, 0.5]), Fs = (k * dx) / 100, R = mu * m * G, a = (Fs - R) / m;
+      if (Fs > 60 || !tenth(Fs) || !tenth(R) || a < 0.5 || a > 15 || !tenth(a)) return null;
+      return { m, k, dx, mu, state: pick(r, ['stretch', 'compress']) };
+    },
+    solve(p) {
+      const Fs = (p.k * p.dx) / 100, R = p.mu * p.m * G;
+      return { Fs, R, a: (Fs - R) / p.m };
+    },
+    fields: () => [{ key: 'Fs', sym: ['Fs'], unit: 'N', what: SPRING_WHAT.Fs() }, field('R'), field('a')],
+    title: (p) => (p.state === 'stretch' ? L('Pulled back by a spring', 'Von einer Feder zurückgezogen') : L('Pushed away by a spring', 'Von einer Feder weggestossen')),
+    text: (p) => (p.state === 'stretch'
+      ? L(`A box with a mass of ${kg(p.m)} lies on the floor, joined to a wall by a horizontal spring with a spring constant of ${Nm(p.k)}. The box is pulled away from the wall, so that the spring is stretched by ${cm(p.dx)}, and released. It starts to slide back towards the wall. The coefficient of kinetic friction is ${num(p.mu, 2)}. Find the forces and the acceleration just after it starts to slide.`,
+        `Eine Kiste mit der Masse ${kg(p.m)} liegt auf dem Boden und ist mit einer waagrechten Feder mit der Federkonstante ${Nm(p.k)} an einer Wand befestigt. Die Kiste wird von der Wand weggezogen, sodass die Feder um ${cm(p.dx)} gedehnt ist, und losgelassen. Sie beginnt, zur Wand zurückzugleiten. Die Gleitreibungszahl beträgt ${num(p.mu, 2)}. Bestimme die Kräfte und die Beschleunigung gleich nachdem sie zu gleiten beginnt.`)
+      : L(`A box with a mass of ${kg(p.m)} lies on the floor, joined to a wall by a horizontal spring with a spring constant of ${Nm(p.k)}. The box is pushed towards the wall, so that the spring is compressed by ${cm(p.dx)}, and released. It starts to slide away from the wall. The coefficient of kinetic friction is ${num(p.mu, 2)}. Find the forces and the acceleration just after it starts to slide.`,
+        `Eine Kiste mit der Masse ${kg(p.m)} liegt auf dem Boden und ist mit einer waagrechten Feder mit der Federkonstante ${Nm(p.k)} an einer Wand befestigt. Die Kiste wird gegen die Wand geschoben, sodass die Feder um ${cm(p.dx)} gestaucht ist, und losgelassen. Sie beginnt, von der Wand weg zu gleiten. Die Gleitreibungszahl beträgt ${num(p.mu, 2)}. Bestimme die Kräfte und die Beschleunigung gleich nachdem sie zu gleiten beginnt.`)),
+    scene(p, v) {
+      const b = floorBox(p.m, p.mu, 520), str = p.state === 'stretch', rel = 112, s = Math.min(42, 14 + 1.6 * p.dx);
+      // the wall, so that the spring ends at the box
+      const wall = b.at(0, 0)[0] - (rel + (str ? s : -s)), ys = b.y0 - 0.5 * b.bh, y0 = b.y0;
+      b.sc.surface([wall, y0 - b.bh - 40], [wall, y0], -1);
+      const att = b.at(0, 0.5 * b.bh);
+      b.sc.spring([wall, ys], att, 8, 7);
+      springMarks(b.sc, [wall + rel, ys], [att[0], ys], [0, -1], 0.5 * b.bh + 24, 0.5 * b.bh + 6);
+      b.weight(); b.normal();
+      b.sc.forces[0].lab = [-8, 6]; // the weight's label left of it, clear of friction
+      const dir = str ? [-1, 0] : [1, 0];
+      b.sc.force({ id: 'R', kind: 'r', at: [b.at(0, 0)[0] + (str ? 0.7 : 0.3) * b.bw, y0], dir: [-dir[0], 0], sym: ['R'], lab: [str ? 4 : -4, 16] });
+      b.sc.force({ id: 'Fs', kind: 'f', at: att, dir, sym: ['Fs'], ...(str ? { lab: [-4, -12] } : { labTail: true, lab: [-8, -12] }) });
+      const top = b.at(b.bw / 2, b.bh);
+      b.sc.accel({ id: 'a', at: [top[0] + (str ? 23 : -23), top[1] - 46], dir, sym: ['a'], task: 'sym', lab: [0, -12] });
+      return sized(b.sc, { G: p.m * G, N: p.m * G, R: v.R, Fs: v.Fs });
+    },
+    hints: (p) => [
+      L('Which bodies touch the box? The floor (normal force and friction) and the spring. Besides, the Earth pulls it down.', 'Welche Körper berühren die Kiste? Der Boden (Normalkraft und Reibung) und die Feder. Ausserdem zieht die Erde sie nach unten.'),
+      p.state === 'stretch' ? L('The stretched spring pulls the box back towards its relaxed length, towards the wall. Friction acts against the motion.', 'Die gedehnte Feder zieht die Kiste zurück zu ihrer entspannten Länge, zur Wand hin. Die Reibung wirkt gegen die Bewegung.')
+        : L('The compressed spring pushes the box back towards its relaxed length, away from the wall. Friction acts against the motion.', 'Die gestauchte Feder drückt die Kiste zurück zu ihrer entspannten Länge, von der Wand weg. Die Reibung wirkt gegen die Bewegung.'),
+      L(`${m$(`${T('Fs')} = k\\,\\Delta x`)} with ${m$('\\Delta x')} in metres, ${m$(`${T('R')} = ${T('mu')}\\,${T('m')}\\,g`)}, and ${m$(`${T('Fs')} - ${T('R')} = ${T('m')}\\,${T('a')}`)}.`, `${m$(`${T('Fs')} = k\\,\\Delta x`)} mit ${m$('\\Delta x')} in Metern, ${m$(`${T('R')} = ${T('mu')}\\,${T('m')}\\,g`)} und ${m$(`${T('Fs')} - ${T('R')} = ${T('m')}\\,${T('a')}`)}.`),
+    ],
+    steps(p, v) {
+      const str = p.state === 'stretch', FG = p.m * G, base = ['G', 'N', 'R', 'Fs'], all = [...base, 'a'];
+      return [
+        step(L('Forces on the box', 'Kräfte auf die Kiste'),
+          `<p>${L(`Weight ${m$(T('G'))} down, normal force ${m$(T('N'))} up, and where the spring is attached, the spring force ${m$(T('Fs'))}.`, `Gewichtskraft ${m$(T('G'))} nach unten, Normalkraft ${m$(T('N'))} nach oben und dort, wo die Feder befestigt ist, die Federkraft ${m$(T('Fs'))}.`)} ` +
+          (str ? L('The spring is stretched (away from the wall), but it pulls the box back towards its relaxed length (dashed): towards the wall. The spring force never points along the stretch.', 'Die Feder ist gedehnt (von der Wand weg), aber sie zieht die Kiste zurück zu ihrer entspannten Länge (gestrichelt): zur Wand hin. Die Federkraft zeigt nie in Richtung der Dehnung.')
+            : L('The spring is compressed (towards the wall), but it pushes the box back towards its relaxed length (dashed): away from the wall. The spring force never points along the compression.', 'Die Feder ist gestaucht (zur Wand hin), aber sie drückt die Kiste zurück zu ihrer entspannten Länge (gestrichelt): von der Wand weg. Die Federkraft zeigt nie in Richtung der Stauchung.')) +
+          ` ${L(`The box slides that way, so kinetic friction ${m$(T('R'))} acts the other way.`, `Die Kiste gleitet in diese Richtung, also wirkt die Gleitreibung ${m$(T('R'))} in die andere.`)}</p>`,
+          base, ['Fs', 'R']),
+        step(L('Law of the spring', 'Federgesetz'),
+          `<p>${L(`The spring force is the spring constant times the ${str ? 'extension' : 'compression'}, in metres: ${m$(`\\Delta x = ${tq(p.dx, 'cm')} = ${FS.texNum(p.dx / 100, 3)}\\,\\mathrm{m}`)}.`, `Die Federkraft ist die Federkonstante mal die ${str ? 'Dehnung' : 'Stauchung'}, in Metern: ${m$(`\\Delta x = ${tq(p.dx, 'cm')} = ${FS.texNum(p.dx / 100, 3)}\\,\\mathrm{m}`)}.`)}</p>` +
+          `$$${T('Fs')} = k\\,\\Delta x = ${tq(p.k, 'Nm')}\\cdot${FS.texNum(p.dx / 100, 3)}\\,\\mathrm{m} = ${res(v.Fs, 'N')}$$`,
+          base, ['Fs']),
+        step(L('Vertical: balance; friction', 'Senkrecht: Gleichgewicht; Reibung'),
+          `<p>${L('Vertically, nothing accelerates: the normal force equals the weight. Friction is the friction coefficient times the normal force:', 'Senkrecht wird nichts beschleunigt: Die Normalkraft ist gleich der Gewichtskraft. Die Reibung ist die Reibungszahl mal die Normalkraft:')}</p>` +
+          `$$${T('N')} = ${T('m')}\\,g = ${tq(FG, 'N')}, \\qquad ${T('R')} = ${T('mu')}\\,${T('N')} = ${FS.texNum(p.mu, 2)}\\cdot${tq(FG, 'N')} = ${res(v.R, 'N')}$$`,
+          base, ['G', 'N', 'R']),
+        step(L('Newton’s second law', 'Aktionsprinzip'),
+          `<p>${L('Horizontally, in the direction the box starts to move (positive): the spring force minus friction accelerates it.', 'Waagrecht, in die Richtung, in die sich die Kiste zu bewegen beginnt (positiv): Die Federkraft minus die Reibung beschleunigt sie.')}</p>` +
+          `$$${T('Fs')} - ${T('R')} = ${T('m')}\\,${T('a')} \\;\\Rightarrow\\; ${T('a')} = \\frac{${tq(v.Fs, 'N')} - ${tq(v.R, 'N')}}{${tq(p.m, 'kg')}} = ${res(v.a, 'a')}$$`,
+          all, ['Fs', 'R', 'a']),
+      ];
+    },
+  };
+
+  // A skydiver: a body (drawn as a box, under a canopy once the parachute is open), falling.
+  // phase: 'early' (drag less than the weight, she gets faster), 'terminal' (drag equals the
+  // weight, constant speed) or 'chute' (parachute open: drag more than the weight, she slows down).
+  const dragFall = {
+    id: 'drag-fall', difficulty: 2, extra: ['f', 'd'],
+    make(r, o = {}) {
+      const m = pick(r, [50, 60, 70, 75, 80, 90, 100]), phase = o.phase || pick(r, ['early', 'terminal', 'chute']);
+      if (phase === 'terminal') return { m, phase, u: pick(r, [50, 55, 60]) };
+      const a = pick(r, phase === 'early' ? [2, 4, 5, 6, 8] : [2, 5, 10, 15]);
+      return { m, phase, a, D: m * (phase === 'early' ? G - a : G + a), u: pick(r, phase === 'early' ? [10, 20, 25, 30, 40] : [40, 45, 50]) };
+    },
+    solve: (p) => (p.phase === 'terminal' ? { D: p.m * G, a: 0 } : { res: Math.abs(p.m * G - p.D), a: Math.abs(p.m * G - p.D) / p.m }),
+    fields: (p) => (p.phase === 'terminal' ? [{ key: 'D', sym: ['D'], unit: 'N', what: L('air resistance', 'Luftwiderstand') }]
+      : [field('res', '', L('net force on the skydiver', 'resultierende Kraft auf die Fallschirmspringerin')), field('a', '', p.phase === 'chute' ? L('acceleration (upwards: she slows down)', 'Beschleunigung (nach oben: sie wird langsamer)') : L('acceleration', 'Beschleunigung'))]),
+    boxes: (p) => [L(`the skydiver (${kg(p.m)})`, `die Fallschirmspringerin (${kg(p.m)})`)],
+    title: (p) => ({ early: L('Falling faster and faster', 'Immer schneller fallen'), terminal: L('Terminal velocity', 'Endgeschwindigkeit'), chute: L('The parachute opens', 'Der Fallschirm öffnet sich') }[p.phase]),
+    text: (p) => ({
+      early: L(`A skydiver with a mass of ${kg(p.m)} (with her equipment) has jumped from a plane. At a speed of ${q(p.u, 'v')}, falling straight down with her parachute still closed, the air resistance on her is ${q(p.D, 'N')}.`,
+        `Eine Fallschirmspringerin mit der Masse ${kg(p.m)} (mit Ausrüstung) ist aus einem Flugzeug gesprungen. Bei einer Geschwindigkeit von ${q(p.u, 'v')}, senkrecht nach unten und mit noch geschlossenem Fallschirm, beträgt der Luftwiderstand auf sie ${q(p.D, 'N')}.`),
+      terminal: L(`A skydiver with a mass of ${kg(p.m)} (with her equipment) falls straight down with her parachute still closed, at a constant speed of ${q(p.u, 'v')} (her terminal velocity).`,
+        `Eine Fallschirmspringerin mit der Masse ${kg(p.m)} (mit Ausrüstung) fällt mit noch geschlossenem Fallschirm senkrecht nach unten, mit der konstanten Geschwindigkeit ${q(p.u, 'v')} (ihrer Endgeschwindigkeit).`),
+      chute: L(`A skydiver with a mass of ${kg(p.m)} (with her equipment and parachute) has just opened her parachute. She still falls at ${q(p.u, 'v')}, but the air resistance on her and the parachute is now ${q(p.D, 'N')}.`,
+        `Eine Fallschirmspringerin mit der Masse ${kg(p.m)} (mit Ausrüstung und Fallschirm) hat gerade ihren Fallschirm geöffnet. Sie fällt noch mit ${q(p.u, 'v')}, aber der Luftwiderstand auf sie und den Fallschirm beträgt jetzt ${q(p.D, 'N')}.`),
+    }[p.phase]),
+    scene(p, v) {
+      const sc = new Scene(320, 360, L('A falling skydiver', 'Eine fallende Fallschirmspringerin'));
+      const bw = 54, bh = 70, cx = 160, top = 130, D = p.phase === 'terminal' ? v.D : p.D, y = 34;
+      // air resistance acts on the top of her body, or on the canopy once it is open
+      let dAt = [cx + 8, top];
+      if (p.phase === 'chute') {
+        // the canopy, with its lines to the shoulders
+        const hw = 74;
+        dAt = [cx, y - 30];
+        sc.see(cx - hw, y - 30); sc.see(cx + hw, y + 14);
+        sc.add(`<path class="canopy" d="M${cx - hw} ${y + 14} Q${cx - hw} ${y - 30} ${cx} ${y - 30} Q${cx + hw} ${y - 30} ${cx + hw} ${y + 14} Q${cx} ${y} ${cx - hw} ${y + 14} Z"/>`);
+        sc.line(cx - hw, y + 14, cx - bw / 2, top, 'w thin'); sc.line(cx + hw, y + 14, cx + bw / 2, top, 'w thin');
+      }
+      const at = sc.box([cx - bw / 2, top + bh], [1, 0], [0, -1], bw, bh, kg(p.m)), c = at(bw / 2, bh / 2);
+      sc.force({ id: 'G', kind: 'g', at: [c[0] - 6, c[1]], dir: [0, 1], sym: ['G'], lab: [-8, 6] });
+      sc.force({ id: 'D', kind: 'd', at: dAt, dir: [0, -1], sym: ['D'], lab: [8, 4], ...(p.phase === 'terminal' ? {} : { value: q(p.D, 'N'), task: 'value' }) });
+      sc.accel({ id: 'v', kind: 'v', at: [cx + bw / 2 + 24, c[1] - 23], dir: [0, 1], sym: ['v'], task: 'sym', lab: [8, 0] });
+      if (p.phase !== 'terminal') sc.accel({ id: 'a', at: [cx - bw / 2 - 24, c[1] + (p.phase === 'early' ? -23 : 23)], dir: [0, p.phase === 'early' ? 1 : -1], sym: ['a'], task: 'sym', lab: [-8, 0] });
+      return sized(sc, { G: p.m * G, D });
+    },
+    hints: (p) => [
+      L('Which bodies act on the skydiver? The Earth (her weight) and the air, against her velocity. Nothing else pushes her down.', 'Welche Körper wirken auf die Fallschirmspringerin? Die Erde (ihre Gewichtskraft) und die Luft, gegen ihre Geschwindigkeit. Sonst drückt sie nichts nach unten.'),
+      ...{
+        early: [L(`Downwards positive: ${m$(`${T('m')}\\,g - ${T('D')} = ${T('m')}\\,${T('a')}`)}.`, `Nach unten positiv: ${m$(`${T('m')}\\,g - ${T('D')} = ${T('m')}\\,${T('a')}`)}.`)],
+        terminal: [L('Her speed is constant: the forces balance.', 'Ihre Geschwindigkeit ist konstant: Die Kräfte heben sich auf.')],
+        chute: [L('She still moves down, so the air resistance still points up. It is now larger than her weight: she slows down.', 'Sie bewegt sich noch nach unten, also zeigt der Luftwiderstand noch nach oben. Er ist jetzt grösser als ihre Gewichtskraft: Sie wird langsamer.'),
+          L(`Upwards positive: ${m$(`${T('D')} - ${T('m')}\\,g = ${T('m')}\\,${T('a')}`)}.`, `Nach oben positiv: ${m$(`${T('D')} - ${T('m')}\\,g = ${T('m')}\\,${T('a')}`)}.`)],
+      }[p.phase],
+    ],
+    steps(p, v) {
+      const FG = p.m * G, base = ['G', 'D'], all = ['G', 'D', 'v', 'a'];
+      const forces = step(L('Forces on the skydiver', 'Kräfte auf die Fallschirmspringerin'),
+        `<p>${L(`The Earth pulls her down with her weight ${m$(`${T('G')} = ${T('m')}\\,g = ${tq(FG, 'N')}`)}. The air acts against her velocity: she falls down, so the air resistance ${m$(T('D'))} points up.`, `Die Erde zieht sie mit ihrer Gewichtskraft ${m$(`${T('G')} = ${T('m')}\\,g = ${tq(FG, 'N')}`)} nach unten. Die Luft wirkt gegen ihre Geschwindigkeit: Sie fällt nach unten, also zeigt der Luftwiderstand ${m$(T('D'))} nach oben.`)} ` +
+        `${L('There is no other force: nothing pushes her along in the direction of motion. She keeps falling because the Earth pulls her, not because of a “force of motion”.', 'Weitere Kräfte gibt es nicht: Nichts schiebt sie in Bewegungsrichtung an. Sie fällt weiter, weil die Erde sie anzieht, nicht wegen einer „Bewegungskraft“.')}</p>`,
+        p.phase === 'terminal' ? [...base, 'v'] : all, ['D', 'v']);
+      if (p.phase === 'terminal') {
+        return [forces,
+          step(L('Constant speed: balance', 'Konstante Geschwindigkeit: Gleichgewicht'),
+            `<p>${L('Her speed does not change, so her acceleration is zero and the net force is zero: the air resistance balances her weight.', 'Ihre Geschwindigkeit ändert sich nicht, also ist ihre Beschleunigung null und die resultierende Kraft null: Der Luftwiderstand hält ihrer Gewichtskraft das Gleichgewicht.')}</p>` +
+            `$$${T('m')}\\,g - ${T('D')} = 0 \\;\\Rightarrow\\; ${T('D')} = ${T('m')}\\,g = ${res(v.D, 'N')}$$`, [...base, 'v'], base),
+          step(L('Why constant?', 'Warum konstant?'),
+            `<p>${L('Air resistance grows with speed. Earlier, when she was slower, it was smaller than her weight and she got faster; now it has grown until it equals her weight. A constant speed needs no net force: she does not need a force downwards to keep falling.', 'Der Luftwiderstand wächst mit der Geschwindigkeit. Vorher, als sie langsamer war, war er kleiner als ihre Gewichtskraft, und sie wurde schneller; jetzt ist er gewachsen, bis er gleich ihrer Gewichtskraft ist. Eine konstante Geschwindigkeit braucht keine resultierende Kraft: Sie braucht keine Kraft nach unten, um weiterzufallen.')}</p>`, [...base, 'v'], ['D']),
+        ];
+      }
+      if (p.phase === 'early') {
+        return [forces,
+          step(L('Newton’s second law', 'Aktionsprinzip'),
+            `<p>${L('Downwards positive: her weight minus the air resistance is the net force, which accelerates her.', 'Nach unten positiv: Ihre Gewichtskraft minus der Luftwiderstand ist die resultierende Kraft, die sie beschleunigt.')}</p>` +
+            `$$${T('res')} = ${T('m')}\\,g - ${T('D')} = ${tq(FG, 'N')} - ${tq(p.D, 'N')} = ${res(v.res, 'N')}$$` +
+            `$$${T('a')} = \\frac{${T('res')}}{${T('m')}} = \\frac{${tq(v.res, 'N')}}{${tq(p.m, 'kg')}} = ${res(v.a, 'a')}$$`, all, ['G', 'D', 'a']),
+          step(L('Faster and faster, up to terminal velocity', 'Immer schneller, bis zur Endgeschwindigkeit'),
+            `<p>${L(`As she gets faster, the air resistance grows, the net force shrinks, and so does her acceleration. Once the air resistance is as large as her weight, ${m$(tq(FG, 'N'))}, the forces balance: she falls at a constant speed, her terminal velocity.`, `Während sie schneller wird, wächst der Luftwiderstand, die resultierende Kraft wird kleiner und damit auch ihre Beschleunigung. Sobald der Luftwiderstand so gross ist wie ihre Gewichtskraft, ${m$(tq(FG, 'N'))}, heben sich die Kräfte auf: Sie fällt mit konstanter Geschwindigkeit, ihrer Endgeschwindigkeit.`)}</p>`, all, ['G', 'D']),
+          step(L('Against the velocity, not the acceleration', 'Gegen die Geschwindigkeit, nicht gegen die Beschleunigung'),
+            `<p>${L('Here the velocity and the acceleration both point down, so the air resistance is against both. But it is the velocity that counts: once she opens her parachute, she still falls but slows down. Her acceleration then points up, and the air resistance still points up, against her velocity.', 'Hier zeigen Geschwindigkeit und Beschleunigung beide nach unten, also wirkt der Luftwiderstand gegen beide. Aber es zählt die Geschwindigkeit: Sobald sie den Fallschirm öffnet, fällt sie weiter, wird aber langsamer. Ihre Beschleunigung zeigt dann nach oben, und der Luftwiderstand zeigt immer noch nach oben, gegen ihre Geschwindigkeit.')}</p>`, all, ['D', 'v']),
+        ];
+      }
+      return [forces,
+        step(L('Newton’s second law', 'Aktionsprinzip'),
+          `<p>${L('She slows down, so her acceleration points up, against her velocity. Upwards positive: the air resistance minus her weight is the net force.', 'Sie wird langsamer, also zeigt ihre Beschleunigung nach oben, gegen ihre Geschwindigkeit. Nach oben positiv: Der Luftwiderstand minus ihre Gewichtskraft ist die resultierende Kraft.')}</p>` +
+          `$$${T('res')} = ${T('D')} - ${T('m')}\\,g = ${tq(p.D, 'N')} - ${tq(FG, 'N')} = ${res(v.res, 'N')}$$` +
+          `$$${T('a')} = \\frac{${T('res')}}{${T('m')}} = \\frac{${tq(v.res, 'N')}}{${tq(p.m, 'kg')}} = ${res(v.a, 'a')}$$`, all, ['G', 'D', 'a']),
+        step(L('Against the velocity, not the acceleration', 'Gegen die Geschwindigkeit, nicht gegen die Beschleunigung'),
+          `<p>${L('Air resistance and acceleration both point up here. The air resistance does not point against the acceleration: it points against the velocity, and she still moves down. As she slows down, it shrinks, until it equals her weight again at a new, smaller terminal velocity.', 'Luftwiderstand und Beschleunigung zeigen hier beide nach oben. Der Luftwiderstand zeigt nicht gegen die Beschleunigung: Er zeigt gegen die Geschwindigkeit, und sie bewegt sich noch nach unten. Während sie langsamer wird, nimmt er ab, bis er bei einer neuen, kleineren Endgeschwindigkeit wieder gleich ihrer Gewichtskraft ist.')}</p>`, all, ['D', 'v', 'a']),
+      ];
+    },
+  };
+
+  // A cyclist who stops pedalling and coasts on a level road: drag slows her down.
+  const dragBike = {
+    id: 'drag-bike', difficulty: 2, extra: ['f', 'd'],
+    make(r) {
+      const m = pick(r, [50, 60, 70, 75, 80, 90, 100]), D = pick(r, [10, 15, 20, 24, 25, 30, 36, 40, 45, 50, 60, 75]), a = D / m;
+      return tenth(a) && a > 0 ? { m, D, u: pick(r, [6, 8, 10, 12, 15]) } : null;
+    },
+    solve: (p) => ({ N: p.m * G, a: p.D / p.m }),
+    fields: () => [field('N', '', L('normal force from the road', 'Normalkraft der Strasse')), field('a', '', L('acceleration (backwards: she slows down)', 'Beschleunigung (nach hinten: sie wird langsamer)'))],
+    boxes: (p) => [L(`the cyclist and her bike (${kg(p.m)})`, `die Radfahrerin mit Velo (${kg(p.m)})`)],
+    title: () => L('Coasting on a bike', 'Mit dem Velo ausrollen'),
+    text: (p) => L(`A cyclist stops pedalling and coasts along a level road; together with her bike she has a mass of ${kg(p.m)}. At a speed of ${q(p.u, 'v')}, the air resistance on her is ${q(p.D, 'N')}. Rolling resistance is negligible.`,
+      `Eine Radfahrerin hört auf zu treten und rollt auf einer waagrechten Strasse aus; zusammen mit ihrem Velo hat sie die Masse ${kg(p.m)}. Bei einer Geschwindigkeit von ${q(p.u, 'v')} beträgt der Luftwiderstand auf sie ${q(p.D, 'N')}. Der Rollwiderstand ist vernachlässigbar.`),
+    scene(p, v) {
+      const sc = new Scene(460, 300, L('A cyclist coasting on a level road', 'Eine Radfahrerin rollt auf einer waagrechten Strasse aus'));
+      const y0 = 230, bw = 96, bh = 56, rw = 17, x0 = (460 - bw) / 2;
+      sc.surface([40, y0], [420, y0]);
+      [x0 + rw, x0 + bw - rw].forEach((x) => { sc.circle(x, y0 - rw, rw, 'pulley'); sc.circle(x, y0 - rw, 2.5, 'dot'); });
+      const at = sc.box([x0, y0 - 2 * rw], [1, 0], [0, -1], bw, bh, kg(p.m)), c = at(bw / 2, bh / 2), top = at(bw / 2, bh);
+      sc.force({ id: 'G', kind: 'g', at: [c[0] - 6, c[1]], dir: [0, 1], sym: ['G'], lab: [-8, 10] });
+      sc.force({ id: 'N', kind: 'n', at: [c[0] + 6, y0], dir: [0, -1], sym: ['N'], lab: [8, 4] });
+      sc.force({ id: 'D', kind: 'd', at: at(0, bh / 2), dir: [-1, 0], sym: ['D'], value: q(p.D, 'N'), task: 'value', lab: [0, -12] });
+      sc.accel({ id: 'v', kind: 'v', at: [top[0] - 23, top[1] - 16], dir: [1, 0], sym: ['v'], task: 'sym', lab: [0, -12] });
+      sc.accel({ id: 'a', at: [top[0] + 23, top[1] - 48], dir: [-1, 0], sym: ['a'], task: 'sym', lab: [0, -12] });
+      return sized(sc, { G: p.m * G, N: p.m * G, D: p.D });
+    },
+    hints: () => [
+      L('Which bodies act on her? The Earth, the road (only up: rolling resistance is negligible) and the air. Once she stops pedalling, nothing pushes her forward.', 'Welche Körper wirken auf sie? Die Erde, die Strasse (nur nach oben: der Rollwiderstand ist vernachlässigbar) und die Luft. Sobald sie nicht mehr tritt, schiebt sie nichts nach vorn.'),
+      L('The air resistance points against her velocity: backwards.', 'Der Luftwiderstand zeigt gegen ihre Geschwindigkeit: nach hinten.'),
+      L(`Backwards positive: ${m$(`${T('D')} = ${T('m')}\\,${T('a')}`)}.`, `Nach hinten positiv: ${m$(`${T('D')} = ${T('m')}\\,${T('a')}`)}.`),
+    ],
+    steps(p, v) {
+      const FG = p.m * G, base = ['G', 'N', 'D', 'v'], all = [...base, 'a'];
+      return [
+        step(L('Forces on the cyclist', 'Kräfte auf die Radfahrerin'),
+          `<p>${L(`Her weight ${m$(T('G'))} down, the normal force ${m$(T('N'))} of the road up, and the air resistance ${m$(T('D'))} against her velocity: backwards. Nothing pushes her forward: there is no “force of motion”. She keeps rolling because nothing stops her at once (inertia), not because a force drives her.`, `Ihre Gewichtskraft ${m$(T('G'))} nach unten, die Normalkraft ${m$(T('N'))} der Strasse nach oben und der Luftwiderstand ${m$(T('D'))} gegen ihre Geschwindigkeit: nach hinten. Nichts schiebt sie nach vorn: Es gibt keine „Bewegungskraft“. Sie rollt weiter, weil nichts sie sofort anhält (Trägheit), nicht weil eine Kraft sie antreibt.`)}</p>`,
+          base, ['D', 'v']),
+        step(L('Vertical: balance', 'Senkrecht: Gleichgewicht'),
+          `<p>${L('She does not move up or down:', 'Sie bewegt sich weder nach oben noch nach unten:')} $$${T('N')} = ${T('m')}\\,g = ${res(v.N, 'N')}$$</p>`, base, ['G', 'N']),
+        step(L('Horizontal: Newton’s second law', 'Waagrecht: Aktionsprinzip'),
+          `<p>${L('The air resistance is the only horizontal force, so it is the net force. Backwards positive:', 'Der Luftwiderstand ist die einzige waagrechte Kraft, also ist er die resultierende Kraft. Nach hinten positiv:')}</p>` +
+          `$$${T('D')} = ${T('m')}\\,${T('a')} \\;\\Rightarrow\\; ${T('a')} = \\frac{${tq(p.D, 'N')}}{${tq(p.m, 'kg')}} = ${res(v.a, 'a')}$$` +
+          `<p>${L('Her acceleration points backwards: she slows down. As she gets slower, the air resistance shrinks, and she slows down less and less quickly.', 'Ihre Beschleunigung zeigt nach hinten: Sie wird langsamer. Je langsamer sie wird, desto kleiner wird der Luftwiderstand, und sie bremst immer weniger stark ab.')}</p>`,
+          all, ['D', 'a']),
+        step(L('Against the velocity, not the acceleration', 'Gegen die Geschwindigkeit, nicht gegen die Beschleunigung'),
+          `<p>${L('The air resistance points backwards, against her velocity, and so does her acceleration. Drawn against the acceleration, it would point forwards and speed her up: wrong.', 'Der Luftwiderstand zeigt nach hinten, gegen ihre Geschwindigkeit, und ihre Beschleunigung ebenfalls. Gegen die Beschleunigung gezeichnet, zeigte er nach vorn und würde sie schneller machen: falsch.')}</p>`,
+          all, ['D', 'v', 'a']),
+      ];
+    },
+  };
+
+  const SCENARIOS = [restUp, restAngle, pullFriction, pushPair, ropePair, atwood, tablePulley, inclinePull, inclinePulley, springHang, springFloor, dragFall, dragBike];
 
   root.Scenarios = { SCENARIOS };
   if (typeof module !== 'undefined') module.exports = root.Scenarios;

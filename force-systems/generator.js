@@ -21,11 +21,15 @@
   // The kinds of force in the table of forces (see draw.js): weight, normal force, friction, a push
   // or pull from outside, and the rope or contact force between the boxes. Friction is static
   // friction on a box that stands still, kinetic friction on one that slides.
+  // A scenario may add kinds of its own (scn.extra), after these: the spring force (f) and drag
+  // (d), so that the student has to tell them apart.
   const KINDS = ['g', 'n', 'r', 's', 'k'];
+  const kindsOf = (scn) => [...KINDS, ...(scn.extra || [])];
   const KIND_NAMES = {
     g: () => L('weight', 'Gewichtskraft'), n: () => L('normal force', 'Normalkraft'),
     r: (scn) => (scn.still ? L('static friction', 'Haftreibung') : L('kinetic friction', 'Gleitreibung')),
     s: () => L('push or pull from outside', 'Zug- oder Druckkraft von aussen'), k: () => L('rope or contact force', 'Seil- oder Kontaktkraft'),
+    f: () => L('spring force', 'Federkraft'), d: () => L('air resistance (drag)', 'Luftwiderstand'),
   };
   // the force a student may add that does not exist
   const MOTION = () => L('a force in the direction of motion', 'eine Kraft in Bewegungsrichtung');
@@ -35,29 +39,30 @@
   // coefficient, does not act). cells[box][kind] are the ids of the forces in a cell.
   function forceTable(scn, p, v) {
     const boxes = scn.boxes ? scn.boxes(p) : [L(`the box (${FS.q(p.m, 'kg')})`, `die Kiste (${FS.q(p.m, 'kg')})`)];
-    const table = boxes.map(() => KINDS.map(() => false)), cells = boxes.map(() => KINDS.map(() => []));
+    const kinds = kindsOf(scn), table = boxes.map(() => kinds.map(() => false)), cells = boxes.map(() => kinds.map(() => []));
     scn.scene(p, v, {}).forces.forEach((f) => {
-      const j = KINDS.indexOf(f.kind), i = boxOf(scn, f);
+      const j = kinds.indexOf(f.kind), i = boxOf(scn, f);
       if (j >= 0 && i < boxes.length && f.mag > 1e-9) { table[i][j] = true; cells[i][j].push(f.id); }
     });
-    return { boxes, kinds: KINDS.map((k) => ({ kind: k, name: KIND_NAMES[k](scn) })), table, cells };
+    return { boxes, kinds: kinds.map((k) => ({ kind: k, name: KIND_NAMES[k](scn) })), table, cells };
   }
   const boxOf = (scn, f) => (scn.forceOn && f.id in scn.forceOn ? scn.forceOn[f.id] : /2$/.test(f.id) ? 1 : 0);
 
   // Arrows for the forces ticked in the table that do not act (or have no arrow), so that a
   // wrong tick shows a force too: at a fixed length, placed and turned as such a force would be:
   // a normal force pushing up from below, friction against the motion at the contact point, a
-  // push or pull from outside along the motion, a rope pulling up. The box's centre comes from
-  // its weight, the contact point from its normal force, the motion from the acceleration arrows.
+  // push or pull from outside along the motion, a rope pulling up, a spring pushing up, drag
+  // against the motion. The box's centre comes from its weight, the contact point from its normal
+  // force, the motion from the velocity arrow (v) or else the acceleration arrows.
   const PHANTOM = 40; // px
   function phantoms(scn, sc, t) {
     const out = [], two = t.boxes.length > 1;
     t.boxes.forEach((b, i) => {
       const own = sc.forces.filter((f) => boxOf(scn, f) === i), of = (k) => own.find((f) => f.kind === k);
       const C = of('g').at, N = of('n');
-      const mark = sc.marks.length === 1 ? sc.marks[0] : sc.marks.find((m) => m.id === `a${i + 1}`);
+      const mark = sc.marks.find((m) => m.id === 'v') || (sc.marks.length === 1 ? sc.marks[0] : sc.marks.find((m) => m.id === `a${i + 1}`));
       const m = mark ? mark.dir : null;
-      KINDS.forEach((k, j) => {
+      kindsOf(scn).forEach((k, j) => {
         if (t.cells[i][j].length) return;
         const zero = of(k); // e.g. friction of size zero: its place in the drawing
         // each kind in a column of its own, beside the weight in the middle
@@ -66,8 +71,10 @@
           : k === 'n' ? { at: [C[0] + 22, C[1] + 28], dir: [0, -1] }
             : k === 'r' ? { at: N ? [N.at[0] - 24, N.at[1]] : [C[0] + 40, C[1] + 8], dir: m ? [-m[0], -m[1]] : [-1, 0] }
               : k === 's' ? { at: vertical ? [C[0] - 24, C[1] - 6] : [C[0] + 16, C[1] - 14], dir: m || [1, 0] }
-                : { at: [C[0] - 20, C[1] - 26], dir: [0, -1] };
-        const key = { g: 'G', n: 'N', r: 'R', s: 'F', k: two ? 'K' : 'S' }[k];
+                : k === 'f' ? { at: [C[0] - 30, C[1] + 22], dir: [0, -1] }
+                  : k === 'd' ? { at: m && vertical ? [C[0] + 24, C[1] - 6] : [C[0] - 16, C[1] - 14], dir: m ? [-m[0], -m[1]] : [0, -1] }
+                    : { at: [C[0] - 20, C[1] - 26], dir: [0, -1] };
+        const key = { g: 'G', n: 'N', r: 'R', s: 'F', k: two ? 'K' : 'S', f: 'Fs', d: 'D' }[k];
         out.push({ id: `ph${i}${k}`, kind: k, ...place, fixed: PHANTOM, sym: [key, two ? String(i + 1) : ''], lab: [8, 0] });
       });
     });
@@ -80,7 +87,7 @@
     const sc = scn.scene(p, v, { task: true });
     sc.forces.push(...phantoms(scn, sc, t)); // always there, so that the drawing keeps its size
     const ids = new Set();
-    t.boxes.forEach((b, i) => KINDS.forEach((k, j) => {
+    t.boxes.forEach((b, i) => t.kinds.forEach(({ kind: k }, j) => {
       if (!ticked.has(`${i}:${j}`)) return;
       if (t.cells[i][j].length) t.cells[i][j].forEach((id) => ids.add(id));
       else ids.add(`ph${i}${k}`);
@@ -231,8 +238,9 @@
     return { ...exercise(scn, make(scn, rng(seed), (p) => whole(p) && Object.values(scn.solve(p)).every(tenth), { pyth: true })), seed };
   }
 
-  // An exercise of the given situation, with any angles (for the check).
-  const generateFor = (scenario, seed) => ({ ...exercise(byId(scenario), make(byId(scenario), rng(seed))), seed });
+  // An exercise of the given situation, with any angles (for the check); o as for scn.make (e.g.
+  // { phase: 'chute' } for drag-fall).
+  const generateFor = (scenario, seed, o) => ({ ...exercise(byId(scenario), make(byId(scenario), rng(seed), null, o)), seed });
 
   // The tutor: the situation with what is wanted, then the steps of the solution, each with the
   // forces it talks about highlighted. "Find the error": the attempt, then each step checked.
@@ -252,6 +260,6 @@
     return { frames: [first, ...frames] };
   }
 
-  root.Forces = { SCENARIOS, KINDS, MOTION, ERRORS, generateFor, practiceOf, tutorial };
+  root.Forces = { SCENARIOS, KINDS, kindsOf, MOTION, ERRORS, generateFor, practiceOf, tutorial };
   if (typeof module !== 'undefined') module.exports = root.Forces;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,0 +1,16 @@
+\NewQty{Ls}{13.5}[\cm][e-2][\m]
+\NewQty{UA}{2.5}[\kilo\volt][e3][\V]
+\NewQty{UB}{3.5}[\kilo\volt][e3][\V]
+\NewQty{UC}{4.0}[\kilo\volt][e3][\V]
+\NewQty{UD}{4.5}[\kilo\volt][e3][\V]
+\NewQty{UE}{5.0}[\kilo\volt][e3][\V]
+\NewQty{rA}{15.8}[\mm][e-3][\m]
+\NewQty{rB}{13.1}[\mm][e-3][\m]
+\NewQty{rC}{12.1}[\mm][e-3][\m]
+\NewQty{rD}{11.6}[\mm][e-3][\m]
+\NewQty{rE}{11.0}[\mm][e-3][\m]
+
+\SolQty{la}[\frac{h}{\sqrt{2 m_e e U}}]{\nchX/sqrt(2*\ncmeX*\nceX*\UAX)}[\m]
+\SolQty{sl}[\frac{\sum r_i/\sqrt{U_i}}{\sum 1/U_i}]{(\rAX/sqrt(\UAX)+\rBX/sqrt(\UBX)+\rCX/sqrt(\UCX)+\rDX/sqrt(\UDX)+\rEX/sqrt(\UEX))/(1/\UAX+1/\UBX+1/\UCX+1/\UDX+1/\UEX)}
+\SolQty{kmm}[k]{\slX*1e3/sqrt(1e3)}
+\SolQty{dg}[\frac{L\,h}{k\,\sqrt{2 m_e e}}]{\LsX*\nchX/(\slX*sqrt(2*\ncmeX*\nceX))}[\m]

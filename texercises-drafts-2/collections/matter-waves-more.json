@@ -1,0 +1,33 @@
+{
+  "title": "Matter waves – more exercises from learningphysics",
+  "description": "Exercises from the practice generators of the learningphysics.ch app Matter waves that were dropped in the module overhaul: de Broglie wavelengths, electron diffraction at graphite and at a double slit, and the uncertainty relation.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "matter wave",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "matter-waves-07-electrons-through-150-volts"
+    },
+    {
+      "exercise": "matter-waves-08-big-and-small-particles"
+    },
+    {
+      "exercise": "matter-waves-09-electrons-diffracted-by-graphite"
+    },
+    {
+      "exercise": "matter-waves-10-electrons-at-a-double-slit"
+    },
+    {
+      "exercise": "matter-waves-11-electron-and-grain-of-dust"
+    },
+    {
+      "exercise": "matter-waves-12-uncertainty-at-a-single-slit"
+    },
+    {
+      "exercise": "matter-waves-13-no-rest-in-a-small-space"
+    }
+  ]
+}

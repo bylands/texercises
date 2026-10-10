@@ -1,0 +1,13 @@
+\NewQty{Aa}{2}[\cm][e-2][\meter]
+\NewQty{Ta}{0.8}[\second]
+\NewQty{tca}{0.2}[\second]
+\NewQty{Ab}{3}[\cm][e-2][\meter]
+\NewQty{Tb}{4}[\second]
+\NewQty{tcb}{2.5}[\second]
+
+\SolQty{wa}[\frac{2\pi}{T}]{2*pi/\TaX}[\per\second]
+\SolQty{pha}[\omega\,t_1]{\waX*\tcaX}[\radian]
+\SolQty{wb}[\frac{2\pi}{T}]{2*pi/\TbX}[\per\second]
+\SolQty{phbr}[\omega\,t_1]{\wbX*\tcbX}[\radian]
+\SolQty{phb}[\omega\,t_1-2\pi]{\phbrX-2*pi}[\radian]
+\SolQty{yb}[A\cos\varphi_0]{\AbX*cos(\phbX)}[\meter]

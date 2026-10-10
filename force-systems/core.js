@@ -27,8 +27,15 @@
     m: { en: ['m', ''], de: ['m', ''] },
     mu: { en: ['μ', 'k'], de: ['μ', 'G'] },
     alpha: { en: ['α', ''], de: ['α', ''] },
+    // spring force (F_s, Federkraft F_F), drag (F_D, Luftwiderstand F_L), spring constant,
+    // extension or compression, velocity
+    Fs: { en: ['F', 's'], de: ['F', 'F'] },
+    D: { en: ['F', 'D'], de: ['F', 'L'] },
+    k: { en: ['k', ''], de: ['k', ''] },
+    dx: { en: ['Δx', ''], de: ['Δx', ''] },
+    v: { en: ['v', ''], de: ['v', ''] },
   };
-  const TEX_LETTER = { μ: '\\mu', α: '\\alpha' };
+  const TEX_LETTER = { μ: '\\mu', α: '\\alpha', Δx: '\\Delta x' };
   const parts = (key, i = '') => { const [l, s] = SYM[key][getLang()]; return [l, `${s}${i}`]; };
 
   // KaTeX: F_\mathrm{N1}, m_1, \mu_\mathrm{G}
@@ -56,8 +63,8 @@
   const num = (x, dec) => String(round(x, dec)); // decimal point in both languages
   const texNum = (x, dec) => String(round(x, dec));
 
-  const UNITS = { N: 'N', a: 'm/s²', kg: 'kg', deg: '°', '': '' };
-  const TEX_UNITS = { N: '\\mathrm{N}', a: '\\mathrm{m/s^2}', kg: '\\mathrm{kg}', deg: '^\\circ' };
+  const UNITS = { N: 'N', a: 'm/s²', kg: 'kg', deg: '°', cm: 'cm', Nm: 'N/m', v: 'm/s', '': '' };
+  const TEX_UNITS = { N: '\\mathrm{N}', a: '\\mathrm{m/s^2}', kg: '\\mathrm{kg}', deg: '^\\circ', cm: '\\mathrm{cm}', Nm: '\\mathrm{N/m}', v: '\\mathrm{m/s}' };
   // A quantity: "14 N", in text or in KaTeX.
   const q = (x, u) => (u === 'deg' ? `${num(x)}°` : `${num(x)} ${UNITS[u]}`);
   const tq = (x, u) => (u === 'deg' ? `${texNum(x)}^\\circ` : `${texNum(x)}\\,${TEX_UNITS[u]}`);

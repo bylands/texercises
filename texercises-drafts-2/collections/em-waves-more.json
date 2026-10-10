@@ -1,0 +1,33 @@
+{
+  "title": "Electromagnetic waves – more exercises from learningphysics",
+  "description": "Exercises from the former practice generators of the learningphysics.ch app Electromagnetic waves (echo distances, LC circuit, intensity and fields, polarization, standing waves).",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "electromagnetic waves",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "em-waves-08-moon-and-radar-echo"
+    },
+    {
+      "exercise": "em-waves-09-energy-in-an-lc-circuit"
+    },
+    {
+      "exercise": "em-waves-10-further-from-the-lamp"
+    },
+    {
+      "exercise": "em-waves-11-laser-beam-intensity"
+    },
+    {
+      "exercise": "em-waves-12-fields-of-sunlight-and-radio"
+    },
+    {
+      "exercise": "em-waves-13-light-through-crossed-filters"
+    },
+    {
+      "exercise": "em-waves-14-standing-microwave"
+    }
+  ]
+}

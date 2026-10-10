@@ -1,0 +1,18 @@
+{
+  "title": "Magnetic forces – more exercises from learningphysics",
+  "description": "Exercises from the practice generators of the learningphysics.ch app Magnetic forces that were dropped in the module overhaul: radius and period of a charged particle in a field, and the magnetic force between two moving charges.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "magnetic force",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "magnetic-forces-08-radius-and-period"
+    },
+    {
+      "exercise": "magnetic-forces-09-two-moving-charges"
+    }
+  ]
+}

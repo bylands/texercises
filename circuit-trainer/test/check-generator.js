@@ -4,10 +4,12 @@
 // - givens and answers are nice numbers,
 // - the worked solution reaches every unknown, using only givens and earlier steps,
 // - both diagrams render,
-// - the tutorial has a frame for the task, each group, each step and the results.
+// - the tutorial has a frame for the task, each group, each step and the results,
+// - the meters (an ammeter and a voltmeter, or one of them connected the wrong way) show what a
+//   nodal analysis of the circuit with nearly ideal meters in it gives.
 'use strict';
 
-const { LEVELS, generate, tutorial, padded, fval } = require('../generator.js');
+const { LEVELS, generate, tutorial, meters, meterTutorial, padded, fval } = require('../generator.js');
 const { solve } = require('./mna.js');
 
 const SAMPLES = 400;
@@ -101,12 +103,66 @@ for (const level of Object.keys(LEVELS)) {
 for (const [i, e] of require('../lessons.js').EXAMPLES.entries()) {
   const tag = `tutor example ${i + 1} (${e.name.en})`;
   let tut;
-  try { tut = tutorial(e.level, e.seed, e.path); } catch (err) { fail(`${tag}: ${err.message}`); continue; }
+  try { tut = (e.meters ? meterTutorial : tutorial)(e.level, e.seed, e.path); } catch (err) { fail(`${tag}: ${err.message}`); continue; }
   const c = tut.circuit, g = (k) => fval(c.nodes[Number(k.slice(1))][k[0]]);
   for (const st of tut.steps) if (!st.rel.holds(g)) fail(`${tag}: ${st.rel.rule} step for ${st.key} does not hold`);
   for (const f of tut.frames) if (/undefined|NaN|\[object/.test(f.figure + f.text)) fail(`${tag}: bad frame: ${f.text.slice(0, 120)}`);
   console.log(`${tag}: ${tut.frames.length} frames`);
 }
+
+// Meters: the circuit with nearly ideal meters in it (an ammeter of 1e-7 kΩ, a voltmeter of 1e9 kΩ):
+// in series with a resistor, across it, or in the main line beside the battery.
+const RA = 1e-7, RV = 1e9;
+function meterNetlist(c, ms) {
+  const E = [], main = ms.find((m) => m.at === 0 && !m.across);
+  let next = 3;
+  if (main) { E.push(['V', 'V', 2, 0, fval(c.root.V)], ['R', 'M' + main.m, 2, 1, main.m === 'A' ? RA : RV]); } else E.push(['V', 'V', 1, 0, fval(c.root.V)]);
+  (function place(node, a, b) {
+    if (node.t === 'R') {
+      const ser = ms.find((m) => m.at === node.id && !m.across), acr = ms.find((m) => m.at === node.id && m.across);
+      if (ser) { const mid = next++; E.push(['R', 'n' + node.id, a, mid, fval(node.R)], ['R', 'M' + ser.m, mid, b, ser.m === 'A' ? RA : RV]); } else E.push(['R', 'n' + node.id, a, b, fval(node.R)]);
+      if (acr) E.push(['R', 'M' + acr.m, a, b, acr.m === 'A' ? RA : RV]);
+      return;
+    }
+    if (node.t === 'P') { node.kids.forEach((k) => place(k, a, b)); return; }
+    node.kids.forEach((k, i) => {
+      const to = i === node.kids.length - 1 ? b : next++;
+      place(k, a, to);
+      a = to;
+    });
+  })(c.root, 1, 0);
+  return E;
+}
+const kinds = {};
+for (const stage of ['read', 'wrong']) {
+  for (let seed = 1; seed <= SAMPLES; seed++) {
+    const tag = `meters ${stage} seed ${seed}`;
+    let ex;
+    try { ex = meters(stage, seed); } catch (e) { fail(`${tag}: ${e.message}`); continue; }
+    kinds[`${stage}:${ex.kind}:${ex.level}`] = (kinds[`${stage}:${ex.kind}:${ex.level}`] || 0) + 1;
+    const s = solve(meterNetlist(ex.circuit, ex.meters));
+    for (const m of ex.meters) {
+      const shown = m.m === 'A' ? Math.abs(s.i('M' + m.m)) : Math.abs(s.i('M' + m.m)) * RV;
+      if (Math.abs(shown - m.value) > 1e-3 * Math.max(1, m.value)) fail(`${tag}: the ${m.m} meter shows ${shown}, not ${m.value}`);
+      if (m.key && Math.abs(fval(ex.circuit.nodes[Number(m.key.slice(1))][m.key[0]]) - m.value) > 1e-9) fail(`${tag}: reading of ${m.m} is not ${m.key}`);
+    }
+    if (stage === 'read' && !(ex.meters.length === 2 && ex.meters.every((m) => m.key))) fail(`${tag}: not an ammeter and a voltmeter in their places`);
+    for (const f of ex.fields) if (!isHalf(f.value) || f.value < 0 || (f.value === 0 && ex.kind !== 'vseries')) fail(`${tag}: reading ${f.key} = ${f.value} is not nice`);
+    const known = new Set(ex.givens), g = (k) => fval(ex.circuit.nodes[Number(k.slice(1))][k[0]]);
+    for (const st of ex.steps) {
+      for (const k of st.from) if (!known.has(k)) fail(`${tag}: step for ${st.key} uses unknown ${k}`);
+      if (!st.rel.holds(g)) fail(`${tag}: ${st.rel.rule} step for ${st.key} does not hold numerically`);
+      known.add(st.key);
+    }
+    for (const sol of [false, true]) {
+      const html = ex.figure(sol, 'A');
+      if (!html.includes('<svg') || /NaN|undefined/.test(html) || (html.match(/class="lbl meter-l"/g) || []).length !== ex.meters.length) fail(`${tag}: bad figure`);
+    }
+    if (!ex.plain(ex.circuit.leaves[0].id).includes('<svg')) fail(`${tag}: bad plain figure`);
+    for (const t of [...ex.hints, ...ex.solution, ex.text, ex.results]) if (/undefined|NaN|\[object/.test(t)) fail(`${tag}: bad text: ${t.slice(0, 120)}`);
+  }
+}
+console.log('meters: ' + Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(', '));
 
 if (failures) { console.error(`\n${failures} failure(s)`); process.exit(1); }
 console.log('\nGenerator OK');

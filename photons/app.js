@@ -16,7 +16,7 @@
       revealNote: (n) => `The solution unlocks once you have solved the exercise, used all hints or made ${n} attempts.`,
       stars: (d) => `Difficulty: ${d} of 5`, score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
-      fill: 'Answer every question, then check.', okWell: 'All correct, well done!',
+      fill: 'Answer every question, then check.', next: 'Right. Now answer the next part.', okWell: 'All correct, well done!',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the solution.',
       correct: 'Correct', notThis: 'Not this one: check your reasoning, or take a hint.', notAll: 'Not all the answers that fit are chosen yet.', stmtsWrong: (n) => (n === 1 ? 'One statement is judged wrong.' : `${n} statements are judged wrong.`), missed: 'This one fits too:', shown: 'The right answers are filled in.',
       number: 'Enter a number', sign: 'Wrong sign', prefix: 'Off by a factor of 1000: check the unit prefix', power: 'Check the power of ten', close: 'Close: check your rounding', wrong: 'Not correct',
@@ -29,7 +29,7 @@
       revealNote: (n) => `Die Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder ${n} Versuche gemacht hast.`,
       stars: (d) => `Schwierigkeit: ${d} von 5`, score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
-      fill: 'Beantworte jede Frage und prüfe dann.', okWell: 'Alles richtig, gut gemacht!',
+      fill: 'Beantworte jede Frage und prüfe dann.', next: 'Richtig. Beantworte jetzt den nächsten Teil.', okWell: 'Alles richtig, gut gemacht!',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die Lösung anschauen.',
       correct: 'Richtig', notThis: 'Das stimmt nicht: Überprüfe deine Überlegung, oder nimm einen Tipp.', notAll: 'Noch sind nicht alle passenden Antworten gewählt.', stmtsWrong: (n) => (n === 1 ? 'Eine Aussage ist falsch beurteilt.' : `${n} Aussagen sind falsch beurteilt.`), missed: 'Auch diese passt:', shown: 'Die richtigen Antworten sind eingetragen.',
       number: 'Gib eine Zahl ein', sign: 'Falsches Vorzeichen', prefix: 'Um den Faktor 1000 daneben: Prüfe die Einheit', power: 'Prüfe die Zehnerpotenz', close: 'Knapp daneben: Prüfe deine Rundung', wrong: 'Nicht richtig',
@@ -76,6 +76,7 @@
   // ---------------------------------------------------------------- questions
   // num: a number field; choice: a row of options; pick: drawings; multi: statements to tick.
   // Number fields that follow each other share one grid, so that their inputs line up.
+  // A question with after: '<key>' stays hidden until that question has been answered right.
   function questionHtml(q) {
     if (q.type === 'num') {
       return `<div class="field" data-key="${q.key}"><span class="what">${q.label}</span><label class="sym" for="in-${q.key}">${q.sym ? `${q.sym}&nbsp;=` : ''}</label><input id="in-${q.key}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" spellcheck="false"><span class="unit">${q.unit}</span><span class="fb" aria-live="polite"></span></div>`;
@@ -91,11 +92,19 @@
   function questionsHtml(qs) {
     let out = '', nums = '';
     const flush = () => { if (nums) out += `<div class="fields">${nums}</div>`; nums = ''; };
-    for (const q of qs) { if (q.type === 'num') nums += questionHtml(q); else { flush(); out += questionHtml(q); } }
+    for (const q of qs) {
+      if (q.type === 'num') nums += questionHtml(q);
+      else { flush(); out += q.after ? `<div class="after" data-after="${q.after}" hidden>${questionHtml(q)}</div>` : questionHtml(q); }
+    }
     flush();
     return out;
   }
-  // Marks every answer; true if all are right, null if one is missing.
+  // Shows the questions waiting for key, once it is answered right; notes that one was opened.
+  let unlocked = false;
+  function showAfter(key) {
+    document.querySelectorAll(`#fields .after[data-after="${key}"][hidden]`).forEach((el) => { el.hidden = false; unlocked = true; });
+  }
+  // Marks every answer; true if all are right, null if one is missing (or still hidden).
   // While the exercise is open, a wrong answer gets a nudge, not the solution: the steps of the
   // solution are taken out of its explanation, and single statements or missed options are not marked.
   function feedback() {
@@ -143,6 +152,7 @@
       }
       const o = q.options[on[0]], row = $(`.qrow[data-key="${q.key}"]`);
       row.className = `qrow ${o.ok ? 'ok' : 'bad'}`;
+      if (o.ok) showAfter(q.key);
       row.querySelector('.fb').innerHTML = o.ok ? ui().correct : nudge(o.why);
       if (!o.ok) all = false;
     }
@@ -195,7 +205,7 @@
     if (st) st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
     el.textContent = !kind ? '' : kind === 'fill' ? ui().fill : kind === 'shown' ? ui().shown
-      : kind === 'ok' ? ui().okWell + (st.advance ? ` ${st.advance}` : '') : ui().notYet(st.tries) + (!canReveal() ? ui().tryAgain : ui().canReveal);
+      : kind === 'next' ? ui().next : kind === 'ok' ? ui().okWell + (st.advance ? ` ${st.advance}` : '') : ui().notYet(st.tries) + (!canReveal() ? ui().tryAgain : ui().canReveal);
   }
   const lock = () => document.querySelectorAll('#fields input').forEach((x) => { x.disabled = true; });
   function check(evt) {
@@ -204,7 +214,8 @@
     if (st.revealed) return;
     const r = feedback();
     st.checked = true;
-    if (r === null) { showStatus('fill'); return; }
+    if (r === null) { showStatus(unlocked ? 'next' : 'fill'); unlocked = false; return; }
+    unlocked = false;
     st.tries++;
     if (r) solved(); else showStatus('bad');
     updateButtons();
@@ -238,6 +249,7 @@
   }
   // The right answers filled in and marked.
   function markRight() {
+    document.querySelectorAll('#fields .after[hidden]').forEach((el) => { el.hidden = false; });
     for (const q of ex.questions) {
       if (q.type === 'num') $(`#in-${q.key}`).value = typed(q);
       else if (q.type === 'multi') q.statements.forEach((s, k) => { $(`.stmts li[data-k="${k}"] input`).checked = s.ok; });

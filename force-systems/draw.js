@@ -50,6 +50,16 @@
       this.circle(cx, cy, Math.max(3, r * 0.3), 'hub');
       return this.circle(cx, cy, 1.8, 'dot');
     }
+    // A coil spring from p1 to p2 (a zigzag of n coils between short straight ends), r wide.
+    spring(p1, p2, n = 7, r = 8) {
+      const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]), t = [(p2[0] - p1[0]) / len, (p2[1] - p1[1]) / len], nn = [-t[1], t[0]];
+      const end = Math.min(10, len / 6), step = (len - 2 * end) / (2 * n), pt = (s, w) => [p1[0] + s * t[0] + w * nn[0], p1[1] + s * t[1] + w * nn[1]];
+      const pts = [p1, pt(end, 0)];
+      for (let k = 0; k < 2 * n; k++) pts.push(pt(end + (k + 0.5) * step, k % 2 ? -r : r));
+      pts.push(pt(len - end, 0), p2);
+      pts.forEach((q) => this.see(...q));
+      return this.add(`<polyline class="w spring" points="${pts.map((q) => q.map(f).join(',')).join(' ')}"/>`);
+    }
     // A box from its bottom-left corner, along the unit vector u (its base) and n (upwards).
     box(o, u, n, w, h, label) {
       const at = (s, t) => [o[0] + s * u[0] + t * n[0], o[1] + s * u[1] + t * n[1]];
@@ -63,7 +73,8 @@
     // label from the tip (from the tail with labTail), max: the longest it may be drawn }. The arrow starts where the force
     // acts, also for pushes.
     force(spec) { this.forces.push(spec); return this; }
-    // An acceleration arrow { id, at, dir, sym, value, task, lab }, drawn with a fixed length.
+    // An acceleration arrow { id, at, dir, sym, value, task, lab }, drawn with a fixed length; with
+    // kind 'v', a velocity arrow.
     accel(spec) { this.marks.push(spec); return this; }
     // An angle: arc around c from direction a0 to a1 (degrees, counter-clockwise, y up).
     angle(c, r, a0, a1, label, dist = 14) {
@@ -119,7 +130,7 @@
       };
       // forces not shown still reserve their room at the diagram's scale
       for (const s of all) arrow(s, length(s, shown(s) ? scale : scaleAll), cls(s, s.kind), shown(s));
-      for (const s of this.marks) arrow(s, s.len || 46, cls(s, 'acc'), shown(s));
+      for (const s of this.marks) arrow(s, s.len || 46, cls(s, s.kind || 'acc'), shown(s));
       const PAD = 10, [x0, y0, x1, y1] = bounds.box0.map((v, k) => Math.round(v + (k < 2 ? -PAD : PAD)));
       return `<div class="fig"><svg viewBox="${x0} ${y0} ${x1 - x0} ${y1 - y0}" width="${x1 - x0}" role="img" aria-label="${this.label}">` +
         this.parts.join('') + out.join('') + '</svg></div>';

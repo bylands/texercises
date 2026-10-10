@@ -1,0 +1,19 @@
+{
+  "title": "Oscillations – more exercises from learningphysics",
+  "description": "More exercises from the practice of the Oscillations app on learningphysics.ch that were dropped in the overhaul: amplitude, period and phase read off a graph, and the energy shares of a harmonic oscillation.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "oscillation",
+    "simple harmonic motion",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "oscillations-09-amplitude-period-phase"
+    },
+    {
+      "exercise": "oscillations-10-energy-shares"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "title": "Electrons Through 150 Volts",
+  "note": "from learningphysics.ch (Practice)",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 1,
+  "default_points": 0,
+  "tags": [
+    "de broglie",
+    "matter wave",
+    "electron",
+    "acceleration voltage",
+    "momentum",
+    "learningphysics"
+  ],
+  "subbranches": [
+    "quantum physics"
+  ],
+  "youtube": ""
+}

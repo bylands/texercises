@@ -1,0 +1,27 @@
+{
+  "title": "Photons – more exercises from learningphysics",
+  "description": "Exercises from the former practice generators of the learningphysics.ch app Photons (photon energy and wavelength, photon rate, momentum of light, X-ray spectrum, Compton effect).",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "photon",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "photons-08-from-energy-to-wavelength"
+    },
+    {
+      "exercise": "photons-09-infrared-remote-control"
+    },
+    {
+      "exercise": "photons-10-momentum-of-light"
+    },
+    {
+      "exercise": "photons-11-reading-an-x-ray-spectrum"
+    },
+    {
+      "exercise": "photons-12-comparing-compton-shifts"
+    }
+  ]
+}
