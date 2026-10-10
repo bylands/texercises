@@ -423,7 +423,7 @@
       </div>
     </a>
 
-    <a class="app" href="/torque/" data-modes="tutor practice real arcade">
+    <a class="app" href="/torque/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A beam balanced on a support: a light load far out on the left, a heavy load close in on the right">
         <path class="guide" d="M50 40 H120 M120 40 H155 M50 34 V46 M120 34 V46 M155 34 V46"/>
         <rect class="res" x="30" y="56" width="180" height="9" rx="1"/>
@@ -440,8 +440,24 @@
         <text class="label" x="112" y="112">D</text>
       </svg>
       <div class="text">
-        <h2>Torque</h2>
-        <p>Lever arms and torques: levers and tools, beams on supports, ladders, tipping over, and centres of mass.</p>
+        <h2>Torque and Equilibrium</h2>
+        <p>Lever arms and torques with their sense of rotation, the weight at the centre of mass, and both conditions of equilibrium, including the force at the pivot.</p>
+      </div>
+    </a>
+
+    <a class="app" href="/centre-of-mass/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A block tilted onto its edge: the vertical through its centre of mass still meets the floor inside the edge">
+        <path class="wire" d="M20 128 H220"/>
+        <polygon class="res" points="140,128 93,111 124,26 171,43"/>
+        <path class="guide" d="M132 77 V128"/>
+        <circle class="wire" cx="132" cy="77" r="5"/>
+        <path class="force" d="M132 82 V108"/>
+        <path class="forcehead" d="M127 104 L132 114 L137 104 Z"/>
+        <text class="label" x="139" y="74">S</text>
+      </svg>
+      <div class="text">
+        <h2>Centre of Mass and Tipping</h2>
+        <p>Centres of mass of wire figures, stable, unstable and neutral equilibrium, and when a tilted body falls over.</p>
       </div>
     </a>
 
@@ -490,7 +506,7 @@
       </div>
     </a>
 
-    <a class="app" href="/force-concepts/" data-modes="tutor practice arcade">
+    <a class="app" href="/force-concepts/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A ball thrown at an angle; at the top of its path only its weight acts, while its velocity points forward">
         <path class="guide" d="M24 128 Q120 -20 216 128"/>
         <path class="axis" d="M10 128 H230"/>
@@ -503,8 +519,25 @@
         <text class="label" x="128" y="104">F<tspan dy="3">G</tspan></text>
       </svg>
       <div class="text">
-        <h2>Force Concepts</h2>
-        <p>Gravity, inertia, net force and interaction: spot the misconceptions behind tempting answers.</p>
+        <h2>Force and Motion</h2>
+        <p>Inertia, the net force and acceleration, balanced forces in motion and the force towards the centre on a circle: spot the misconceptions behind tempting answers.</p>
+      </div>
+    </a>
+
+    <a class="app" href="/interaction/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="The Earth and an apple pull on each other with equally large, opposite forces">
+        <circle class="bulb" cx="62" cy="75" r="40"/>
+        <circle class="bulb" cx="196" cy="75" r="9"/>
+        <path class="force" d="M104 75 H126"/>
+        <path class="forcehead" d="M124 70 L135 75 L124 80 Z"/>
+        <path class="force" d="M185 75 H163"/>
+        <path class="forcehead" d="M165 70 L154 75 L165 80 Z"/>
+        <text class="label" x="108" y="62">F</text>
+        <text class="label" x="166" y="62">F</text>
+      </svg>
+      <div class="text">
+        <h2>Interaction</h2>
+        <p>Newton’s third law: equal and opposite forces on different bodies, finding the partner of a force, and why weight and normal force are no pair.</p>
       </div>
     </a>
 
@@ -542,19 +575,53 @@
       </div>
     </a>
 
-    <a class="app" href="/motion-graphs/" data-modes="tutor practice arcade">
-      <svg viewBox="0 0 240 150" role="img" aria-label="A position graph that curves upward, and its velocity: a rising straight line">
-        <path class="axis" d="M14 120 H112 M20 126 V24 M128 120 H226 M134 126 V24"/>
-        <path class="curve" d="M20 112 Q62 112 104 40"/>
-        <path class="vel" d="M134 112 L218 40"/>
+    <a class="app" href="/motion-data/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A stroboscope picture with growing gaps, and the same positions as dots on a parabola in an s(t) graph">
+        <path class="axis" d="M18 30 H222"/>
+        <circle class="node" cx="24" cy="30" r="3.5"/><circle class="node" cx="32" cy="30" r="3.5"/><circle class="node" cx="48" cy="30" r="3.5"/><circle class="node" cx="72" cy="30" r="3.5"/><circle class="node" cx="104" cy="30" r="3.5"/><circle class="node" cx="144" cy="30" r="3.5"/><circle class="node" cx="192" cy="30" r="3.5"/>
+        <path class="axis" d="M20 132 H226 M26 138 V56"/>
+        <path class="guide" d="M26 128 Q110 128 194 66"/>
+        <circle class="node" cx="26" cy="128" r="3.5"/><circle class="node" cx="54" cy="125" r="3.5"/><circle class="node" cx="82" cy="119" r="3.5"/><circle class="node" cx="110" cy="110" r="3.5"/><circle class="node" cx="138" cy="98" r="3.5"/><circle class="node" cx="166" cy="84" r="3.5"/><circle class="node" cx="194" cy="66" r="3.5"/>
+        <text class="label" x="34" y="66">s</text>
+        <text class="label" x="218" y="146">t</text>
+      </svg>
+      <div class="text">
+        <h2>Motion Data</h2>
+        <p>Positions and distances, instants and intervals: value tables, stroboscope pictures and s(t) graphs, uniform or uniformly accelerated.</p>
+      </div>
+    </a>
+
+    <a class="app" href="/motion-graphs/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A position graph that rises and falls, with a slope triangle, and its velocity: a falling line that crosses zero">
+        <path class="axis" d="M14 120 H112 M20 126 V24 M128 76 H226 M134 126 V24"/>
+        <path class="curve" d="M20 110 Q62 10 104 90"/>
+        <path class="guide" d="M28 93 H48 V63"/>
+        <path class="vel" d="M134 36 L218 116"/>
         <text class="label" x="28" y="30">s</text>
         <text class="label" x="142" y="30">v</text>
         <text class="label" x="104" y="140">t</text>
+        <text class="label" x="218" y="96">t</text>
+      </svg>
+      <div class="text">
+        <h2>Slopes of Motion Graphs</h2>
+        <p>Velocity as the slope of s(t), negative velocities, and sketching v(t) from s(t) and a(t) from v(t).</p>
+      </div>
+    </a>
+
+    <a class="app" href="/motion-areas/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A velocity graph that falls below zero, with the area under it hatched, and the position: it rises, then falls">
+        <path class="axis" d="M14 86 H112 M20 126 V24 M128 120 H226 M134 126 V24"/>
+        <path class="guide" d="M30 54 V86 M40 62 V86 M50 70 V86 M60 77 V86 M80 93 V86 M90 101 V86 M100 109 V86"/>
+        <path class="vel" d="M20 46 L104 112"/>
+        <path class="curve" d="M134 100 Q185 20 218 70"/>
+        <text class="label" x="28" y="30">v</text>
+        <text class="label" x="142" y="30">s</text>
+        <text class="label" x="104" y="80">t</text>
         <text class="label" x="218" y="140">t</text>
       </svg>
       <div class="text">
-        <h2>Motion Graphs</h2>
-        <p>Speed and direction, value tables, stroboscope pictures, slopes and areas: from position to velocity and back.</p>
+        <h2>Areas under Motion Graphs</h2>
+        <p>Displacement as the area under v(t), negative below the axis: who is farther, mean velocity, and sketching s(t) from v(t) and v(t) from a(t).</p>
       </div>
     </a>
 
@@ -741,11 +808,13 @@
         impedance: ['Impedanzkurven', 'Lies R, L und C aus der Impedanzkurve von RL-, RC- und RLC-Schaltungen ab und ordne Schaltungen ihren Kurven zu.', 'Impedanzkurve einer RLC-Serienschaltung mit ihrem Minimum R bei der Resonanzfrequenz'],
         coulomb: ['Coulombkraft', 'Punktladungen: das Coulombgesetz, Faktoren und resultierende Kräfte als Vektoren, von Ladungen auf einer Geraden bis zu Rangfolgen und Punkten ohne Kraft.', 'Drei Punktladungen: die Kräfte zweier negativer Ladungen auf eine positive, im rechten Winkel, und ihre Summe'],
         coe: ['Energieerhaltung', 'Fallen, Würfe, Pendel und Federn: von der Energie in jedem Zustand zu Geschwindigkeiten und Höhen, mit Zahlen oder Formeln.', 'Ein Ball, aus einer Höhe fallen gelassen und auf halbem Weg, mit Balken seiner Lage- und kinetischen Energie'],
-        'force-concepts': ['Kraftkonzepte', 'Gewichtskraft, Trägheit, resultierende Kraft und Wechselwirkung: Erkenne die Fehlvorstellungen hinter verlockenden Antworten.', 'Ein schräg geworfener Ball: Im höchsten Punkt wirkt nur seine Gewichtskraft, während seine Geschwindigkeit nach vorne zeigt'],
+        'force-concepts': ['Kraft und Bewegung', 'Trägheit, resultierende Kraft und Beschleunigung, Kräftegleichgewicht in Bewegung und die Kraft zum Zentrum auf der Kreisbahn: Erkenne die Fehlvorstellungen hinter verlockenden Antworten.', 'Ein schräg geworfener Ball: Im höchsten Punkt wirkt nur seine Gewichtskraft, während seine Geschwindigkeit nach vorne zeigt'],
+        interaction: ['Wechselwirkung', 'Das dritte Newtonsche Gesetz: gleich grosse, entgegengesetzte Kräfte auf verschiedene Körper, die Gegenkraft finden, und warum Gewichtskraft und Normalkraft kein Paar sind.', 'Die Erde und ein Apfel ziehen sich mit gleich grossen, entgegengesetzten Kräften an'],
         'force-systems': ['Kräftesysteme', 'Kisten, Seile, Rollen und schiefe Ebenen: Bestimme Kräfte und Beschleunigungen mit dem Aktionsprinzip.', 'Eine Kiste wird einen Hang hinaufgezogen: Ihre Gewichtskraft zeigt nach unten, die Zugkraft hangaufwärts'],
         'induction-match': ['Elektromagnetische Induktion', 'Vom Flussdiagramm zur induzierten Spannung und zurück, eine Schleife, die durch ein Feld fährt, die Lenzsche Regel: Es zählt die Steigung, nicht der Wert.', 'Ein Flussdiagramm, das steigt, gleich bleibt und fällt, und die induzierte Spannung: negativ, null, dann positiv'],
         'rl-switch': ['Schaltvorgänge mit Spulen', 'Unmittelbar nach dem Umlegen eines Schalters in einem Stromkreis mit Spulen: Der Spulenstrom kann nicht springen.', 'Stromkreis mit einer Batterie, einem Schalter, einem Widerstand und einer Spule'],
-        torque: ['Drehmoment', 'Hebelarme und Drehmomente: Hebel und Werkzeuge, Balken auf Stützen, Leitern, Kippen und Schwerpunkte.', 'Ein Balken im Gleichgewicht auf einer Stütze: links eine leichte Last weit aussen, rechts eine schwere Last nahe an der Stütze'],
+        torque: ['Drehmoment und Gleichgewicht', 'Hebelarme und Drehmomente mit Drehsinn, die Gewichtskraft im Schwerpunkt und beide Gleichgewichtsbedingungen, auch mit der Kraft in der Drehachse.', 'Ein Balken im Gleichgewicht auf einer Stütze: links eine leichte Last weit aussen, rechts eine schwere Last nahe an der Stütze'],
+        'centre-of-mass': ['Schwerpunkt und Kippen', 'Schwerpunkte von Drahtfiguren, stabiles, labiles und indifferentes Gleichgewicht, und wann ein geneigter Körper umkippt.', 'Ein auf die Kante gekippter Block: Die Senkrechte durch seinen Schwerpunkt trifft den Boden noch innerhalb der Kante'],
         oscillations: ['Schwingungen', 'Harmonisch oder nicht: Bewegungsgleichungen, ihre Perioden und Graphen, und Geschwindigkeit und Beschleunigung eines schwingenden Körpers.', 'Eine harmonische Schwingung: die Auslenkung gegen die Zeit, eine Sinuskurve, mit ihrer Periode markiert'],
         'wave-propagation': ['Wellenausbreitung', 'Wellenbuckel auf einem Seil: wie sie laufen, wie sich ein Ort bewegt, wie sie sich überlagern und wie sie an einem festen oder losen Ende reflektiert werden.', 'Ein Wellenbuckel auf einem Seil läuft auf ein festes Ende an einer Wand zu'],
         'electric-field': ['Elektrisches Feld', 'Feldlinien und ihre Regeln, Kräfte auf Ladungen, Felder, die sich addieren, Dipole und Ladungen, die durch einen Kondensator fliegen.', 'Feldlinien, die von einer positiven zu einer negativen Ladung laufen'],
@@ -755,7 +824,9 @@
         'magnetic-forces': ['Magnetische Kräfte', 'Handregeln für Ladungen und Ströme, Kräfte zwischen Strömen, Kreise und Schraubenbahnen geladener Teilchen und das Geschwindigkeitsfilter.', 'Eine positive Ladung bewegt sich durch ein Magnetfeld in die Seite hinein; die Kraft auf sie zeigt nach oben'],
         'em-waves': ['Elektromagnetische Wellen', 'Das Spektrum und c = λ·f, Licht in Materie, der Schwingkreis, die Felder E und B, Intensität, Polarisationsfilter, Antennen und stehende Wellen.', 'Eine elektromagnetische Welle: Das elektrische und das magnetische Feld schwingen in Phase, senkrecht zueinander und zur Ausbreitungsrichtung'],
         'cyclic-processes': ['Kreisprozesse', 'Prozesse eines idealen Gases im p(V)-, p(T)- und V(T)-Diagramm: beschreiben, zeichnen, lesen und zwischen ihnen wechseln.', 'Ein Kreisprozess im p(V)-Diagramm: eine Isotherme, eine Isochore und eine Isobare'],
-        'motion-graphs': ['Bewegungsdiagramme', 'Tempo und Richtung, Wertetabellen, Stroboskopbilder, Steigungen und Flächen: vom Ort zur Geschwindigkeit und zurück.', 'Ein Ort-Zeit-Diagramm, das nach oben gekrümmt ist, und seine Geschwindigkeit: eine steigende Gerade'],
+        'motion-data': ['Bewegungsdaten', 'Orte und Wege, Zeitpunkte und Zeitintervalle: Wertetabellen, Stroboskopbilder und s(t)-Graphen, gleichförmig oder gleichmässig beschleunigt.', 'Ein Stroboskopbild mit wachsenden Abständen und dieselben Orte als Punkte auf einer Parabel im s(t)-Diagramm'],
+        'motion-graphs': ['Steigungen in Bewegungsdiagrammen', 'Geschwindigkeit als Steigung von s(t), negative Geschwindigkeiten und das Skizzieren von v(t) aus s(t) und a(t) aus v(t).', 'Ein Ort-Zeit-Diagramm, das steigt und fällt, mit einem Steigungsdreieck, und seine Geschwindigkeit: eine fallende Gerade, die null kreuzt'],
+        'motion-areas': ['Flächen unter Bewegungsdiagrammen', 'Die Verschiebung als Fläche unter v(t), unter der Achse negativ: wer weiter weg ist, mittlere Geschwindigkeit, und das Skizzieren von s(t) aus v(t) und v(t) aus a(t).', 'Ein Geschwindigkeitsdiagramm, das unter null fällt, mit schraffierter Fläche darunter, und der Ort: Er steigt, dann fällt er'],
       };
       // the modes of the apps: worked examples, practice, a check of the learning objectives, problems from everyday life, a timed game
       const MODES = {

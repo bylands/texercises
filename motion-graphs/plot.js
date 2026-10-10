@@ -160,30 +160,22 @@
   }
 
   // The answer graph for the tutorial: its first opts.upto pieces, with opts.marks and
-  // opts.overlay as for sourceGraph. For the arcade, opts.vals and opts.axis draw another graph
-  // (a wrong option) in place of the answer.
+  // opts.overlay as for sourceGraph. For the check and find the error, opts.vals and opts.axis
+  // draw another graph (an option, a sketch) in place of the answer.
   function answerGraph(ex, opts = {}) {
     const q = ex.to, vals = opts.vals || ex.answer, axis = opts.axis || ex.axes.target;
     const { s, svg: grid } = frame(ex, axis, q, opts.marks);
-    const start = ex.dir === 'int' ? `<circle class="fixed" cx="${s.x(0)}" cy="${s.y(vals[0].y0)}" r="${R_HANDLE - 1}"/>` : '';
-    return svg(`<g class="qc-${q}">${grid}${curve(ex, vals, s, ' drawn', opts.upto)}${start}${opts.overlay ? opts.overlay(s) : ''}</g>`, say(`Graph of ${q} against time`, `Graph von ${q} gegen die Zeit`));
+    return svg(`<g class="qc-${q}">${grid}${curve(ex, vals, s, ' drawn', opts.upto)}${opts.overlay ? opts.overlay(s) : ''}</g>`, say(`Graph of ${q} against time`, `Graph von ${q} gegen die Zeit`));
   }
 
   // ---------------------------------------------------------------- tutorial marks
   // Given the scales s: a dashed line from (t0, y0) to (t1, y1); a short tangent through (t, y)
-  // with the slope k (in units of the graph); the area between a straight piece from (t0, g0)
-  // to (t1, g1) and the t axis, split by sign; a dot; a label with a halo.
+  // with the slope k (in units of the graph); a dot; a label with a halo.
   const Tut = {
     chord: (s, t0, y0, t1, y1) => `<line class="chord" x1="${s.x(t0)}" y1="${s.y(y0)}" x2="${s.x(t1)}" y2="${s.y(y1)}"/>`,
     tangent(s, t, y, k, half = 30) {
       const dx = s.x(1) - s.x(0), dy = s.y(k) - s.y(0), n = Math.hypot(dx, dy), ux = (dx / n) * half, uy = (dy / n) * half;
       return `<line class="tangent" x1="${f1(s.x(t) - ux)}" y1="${f1(s.y(y) - uy)}" x2="${f1(s.x(t) + ux)}" y2="${f1(s.y(y) + uy)}"/>`;
-    },
-    area(s, t0, g0, t1, g1) {
-      const poly = (pts, cls) => `<polygon class="area ${cls}" points="${pts.map(([t, v]) => `${s.x(t)},${s.y(v)}`).join(' ')}"/>`;
-      if (g0 * g1 >= 0) return poly([[t0, 0], [t0, g0], [t1, g1], [t1, 0]], g0 + g1 >= 0 ? 'pos' : 'neg');
-      const tc = t0 + ((t1 - t0) * g0) / (g0 - g1); // where the piece crosses the axis
-      return poly([[t0, 0], [t0, g0], [tc, 0]], g0 > 0 ? 'pos' : 'neg') + poly([[tc, 0], [t1, g1], [t1, 0]], g1 > 0 ? 'pos' : 'neg');
     },
     dot: (s, t, y, cls = '') => `<circle class="tdot ${cls}" cx="${s.x(t)}" cy="${s.y(y)}" r="4"/>`,
     tag: (s, t, y, text, place = 'above') => {
@@ -193,25 +185,14 @@
     },
   };
 
-  // Handles of the drawing, in the order the arrow keys go through them.
-  // Derivative: the breakpoints n0 … n5. Integral: the breakpoints n1 … n5 (n0 is given) and
-  // the middles m0 … m4, which bend the pieces.
+  // Handles of the drawing, in the order the arrow keys go through them: the breakpoints n0 … n5.
   function handles(ex, vals) {
-    const s = scales(ex.axes.target), out = [];
-    if (ex.dir === 'diff') out.push({ id: 'n0', kind: 'n', i: 0, x: s.x(0), y: s.y(vals[0].y0), value: vals[0].y0, t: 0 });
-    ex.pieces.forEach((p, i) => {
-      const v = vals[i];
-      if (ex.dir === 'int') out.push({ id: `m${i}`, kind: 'm', i, x: s.x((p.t0 + p.t1) / 2), y: s.y(v.ym), value: v.ym, t: (p.t0 + p.t1) / 2 });
-      out.push({ id: `n${i + 1}`, kind: 'n', i: i + 1, x: s.x(p.t1), y: s.y(v.y1), value: v.y1, t: p.t1 });
-    });
+    const s = scales(ex.axes.target), out = [{ id: 'n0', kind: 'n', i: 0, x: s.x(0), y: s.y(vals[0].y0), value: vals[0].y0, t: 0 }];
+    ex.pieces.forEach((p, i) => out.push({ id: `n${i + 1}`, kind: 'n', i: i + 1, x: s.x(p.t1), y: s.y(vals[i].y1), value: vals[i].y1, t: p.t1 }));
     return out;
   }
 
-  function handleShape(h, cls) {
-    const r = R_HANDLE;
-    if (h.kind === 'm') return `<path class="${cls} mid" d="M${h.x},${f1(h.y - r)} L${f1(h.x + r)},${h.y} L${h.x},${f1(h.y + r)} L${f1(h.x - r)},${h.y} Z"/>`;
-    return `<circle class="${cls}" cx="${h.x}" cy="${h.y}" r="${r}"/>`;
-  }
+  const handleShape = (h, cls) => `<circle class="${cls}" cx="${h.x}" cy="${h.y}" r="${R_HANDLE}"/>`;
 
   // The drawing: opts.marks (per piece 'ok' | 'bad'), opts.solution (show the correct graph),
   // opts.active (id of the selected or dragged handle), opts.locked (no handles),
@@ -223,7 +204,6 @@
     body += curve(ex, vals, s, ' drawn');
     if (o.solution) body += curve(ex, ex.answer, s, ' solution');
     body += hoverMark(ex.axes.target, q, o.hover);
-    if (ex.dir === 'int') body += `<circle class="fixed" cx="${s.x(0)}" cy="${s.y(vals[0].y0)}" r="${R_HANDLE - 1}"/>`;
     if (!o.locked) {
       const hs = handles(ex, vals);
       for (const h of hs) body += handleShape(h, `handle${h.id === o.active ? ' active' : ''}`);

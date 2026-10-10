@@ -1,13 +1,10 @@
 // The graph the student draws, in an <svg> element.
-// The drawn graph is continuous, with a dot at every breakpoint.
-// Derivative (piecewise linear): dragging the line of a piece moves both of its dots.
-// Integral: the dot at t = 0 is given, and a diamond in the middle of every piece bends the
-//   piece into a parabola.
+// The drawn graph is continuous and piecewise linear, with a dot at every breakpoint; dragging
+// the line of a piece moves both of its dots.
 // Keyboard: ←/→ select a handle, ↑/↓ move it.
 (function (root) {
   'use strict';
 
-  const { MID_STEP } = root.Motion;
   const { scales, targetGraph, handles, UNIT, num, svgPoint, hoverPoint } = root.Plot;
   const L = (en, de) => root.Lang.L(en, de);
 
@@ -18,27 +15,21 @@
     let st, drag = null, active = null, hover = null, view = { marks: null, solution: false, locked: false };
 
     function reset() {
-      st = { nodes: Array(n + 1).fill(ex.dir === 'diff' ? 0 : ex.pieces[0].G0), bends: Array(n).fill(0) };
+      st = { nodes: Array(n + 1).fill(0) };
     }
 
     function values() {
       return ex.pieces.map((p, i) => {
         const y0 = st.nodes[i], y1 = st.nodes[i + 1];
-        return { y0, ym: (y0 + y1) / 2 + st.bends[i], y1 };
+        return { y0, ym: (y0 + y1) / 2, y1 };
       });
     }
 
     // Sets the value of a handle (snapped and kept on the axis).
     function set(id, value) {
-      const i = Number(id.slice(1));
-      if (id[0] === 'n') st.nodes[i] = clamp(snap(value, axis.step));
-      else if (id[0] === 'm') {
-        const chord = (st.nodes[i] + st.nodes[i + 1]) / 2;
-        st.bends[i] = snap(clamp(value) - chord, MID_STEP);
-      }
+      st.nodes[Number(id.slice(1))] = clamp(snap(value, axis.step));
     }
     const valueOf = (id) => handles(ex, values()).find((h) => h.id === id);
-    const stepOf = (id) => (id[0] === 'm' ? MID_STEP : axis.step);
 
     // ---------------------------------------------------------------- drawing
     function render() {
@@ -60,7 +51,7 @@
       hover = g;
       render();
     }
-    // The handle under the pointer, or (derivative) the line of a piece.
+    // The handle under the pointer, or the line of a piece.
     function find(pt) {
       const r = Math.max(14, 22 / (el.getScreenCTM().a || 1));
       let best = null, score = Infinity;
@@ -68,7 +59,7 @@
         const d = Math.hypot(pt.x - h.x, pt.y - h.y);
         if (d <= r && d < score) { score = d; best = h.id; }
       }
-      if (best || ex.dir !== 'diff') return best;
+      if (best) return best;
       // the line of a piece: move the whole piece
       const vals = values();
       const i = ex.pieces.findIndex((p) => pt.x > s.x(p.t0) + r / 2 && pt.x < s.x(p.t1) - r / 2);
@@ -137,7 +128,7 @@
         active = order[(k + (evt.key === 'ArrowLeft' ? order.length - 1 : 1)) % order.length];
         render();
       } else if (evt.key === 'ArrowUp' || evt.key === 'ArrowDown') {
-        set(active, valueOf(active).value + (evt.key === 'ArrowUp' ? 1 : -1) * stepOf(active));
+        set(active, valueOf(active).value + (evt.key === 'ArrowUp' ? 1 : -1) * axis.step);
         edited();
       } else {
         return;

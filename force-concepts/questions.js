@@ -2,7 +2,6 @@
 //   choice  one option (radio buttons)          two   a prediction and a reason
 //   tf      true/false for each statement        rank  items dragged into boxes, largest first;
 //   match   items dragged onto the choices             equal ones share a box
-//           (or, for partners, into pairs)
 // Dragging works with mouse, pen and touch; an item can also be tapped (or selected with the
 // keyboard) and then its box tapped. Rankings are read as ranks (1, 2, 2, 4), matchings as the
 // index of the chosen choice, as before.
@@ -55,13 +54,6 @@
           <p class="end">▼ ${T('smallest', 'am kleinsten')}</p>
           <p class="fb qfb"></p></div>`;
       case 'match':
-        if (q.same) {
-          return `<div class="field match dnd${ro ? ' ro' : ''}" data-key="${q.key}">${head}
-            <p class="note dnd-note">${T('Drag the forces into pairs: each box takes one force and its partner.', 'Ziehe die Kräfte paarweise in die Felder: In jedes Feld kommt eine Kraft mit ihrer Gegenkraft.')} ${tapNote()}</p>
-            ${pool(q, ro)}
-            <div class="pairs">${Array.from({ length: q.items.length / 2 }, (z, b) => zone('pair', b, `<span class="zone-label">${T('Pair', 'Paar')} ${b + 1}</span>`, ro, 2)).join('')}</div>
-            ${itemFb(q)}</div>`;
-        }
         return `<div class="field match dnd${ro ? ' ro' : ''}" data-key="${q.key}">${head}
           <p class="note dnd-note">${T('Drag each item onto the answer that fits. An answer can take several items, or none.', 'Ziehe jedes Element auf die passende Antwort. Eine Antwort kann mehrere Elemente aufnehmen oder keines.')} ${tapNote()}</p>
           ${pool(q, ro)}
@@ -77,7 +69,6 @@
   const radio = (name) => { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? Number(el.value) : null; };
   // Where each card lies: 'pool' or the id of its box.
   const zones = (q) => { const f = $q(q); return q.items.map((x, i) => { const z = f.querySelector(`.chip[data-i="${i}"]`).closest('.zone'); return z ? z.dataset.zone : 'pool'; }); };
-  const partnerChoice = (q, p) => q.choices.findIndex((c) => c.id === q.items[p].name);
   function state(q) {
     switch (q.type) {
       case 'two': return [radio(`pred-${q.key}`), radio(`reason-${q.key}`)];
@@ -87,14 +78,7 @@
         const zs = zones(q), used = [...new Set(zs.filter((z) => z !== 'pool').map(Number))].sort((a, b) => a - b);
         return zs.map((z) => (z === 'pool' ? null : 1 + zs.filter((w) => w !== 'pool' && used.indexOf(Number(w)) < used.indexOf(Number(z))).length));
       }
-      case 'match': {
-        const zs = zones(q);
-        if (!q.same) return zs.map((z) => (z === 'pool' ? null : Number(z)));
-        return zs.map((z, i) => {
-          const with_ = zs.map((w, j) => (w === z && j !== i ? j : -1)).filter((j) => j >= 0);
-          return z === 'pool' || with_.length !== 1 ? null : partnerChoice(q, with_[0]);
-        });
-      }
+      case 'match': return zones(q).map((z) => (z === 'pool' ? null : Number(z)));
       default: return radio(`opt-${q.key}`);
     }
   }
@@ -112,20 +96,7 @@
         s.forEach((v, i) => place(q, i, v == null ? 'pool' : distinct.indexOf(v)));
         break;
       }
-      case 'match':
-        if (q.same) {
-          let box = 0;
-          const placed = new Set();
-          s.forEach((v, i) => {
-            if (placed.has(i)) return;
-            if (v == null) { place(q, i, 'pool'); return; }
-            const p = q.items.findIndex((x) => x.name === q.choices[v].id);
-            place(q, i, box); placed.add(i);
-            if (p >= 0 && !placed.has(p)) { place(q, p, box); placed.add(p); }
-            box++;
-          });
-        } else s.forEach((v, i) => place(q, i, v == null ? 'pool' : v));
-        break;
+      case 'match': s.forEach((v, i) => place(q, i, v == null ? 'pool' : v)); break;
       default: check(`opt-${q.key}`, s);
     }
   }
@@ -226,12 +197,7 @@
       box.querySelectorAll('.field.dnd').forEach((f) => f.classList.toggle('placing', !!selected && selected.closest('.field') === f));
     };
     function move(card, z) {
-      const f = card.closest('.field'), drop = z.querySelector('.drop'), cap = Number(z.dataset.cap || 0);
-      if (cap) {
-        const others = [...drop.querySelectorAll('.chip')].filter((c) => c !== card);
-        if (others.length >= cap) f.querySelector('.zone.pool .drop').appendChild(others[0]); // a full pair box: the oldest goes back
-      }
-      drop.appendChild(card);
+      z.querySelector('.drop').appendChild(card);
       card.dispatchEvent(new Event('change', { bubbles: true }));
     }
 

@@ -1,8 +1,8 @@
-// The situations of the worksheets “Übungen Drehmomente” and “Übungen Schwerpunkt”: torques of
-// forces on a plate, levers in balance, where to hang a beam, and the centre of mass of wire
-// figures. A scenario has an id, a family (torque, lever, hang or com: the kind of task), a
-// difficulty from 1 to 5 (for practice levels and the arcade), calc ('always' if its results need a
-// calculator, 'trig' if only some of its angles do), and:
+// The situations of the worksheet “Übungen Drehmomente”: torques of forces on a plate, levers in
+// balance and where to hang a beam. A scenario has an id, a family (torque, lever or hang: the kind
+// of task), a difficulty from 1 to 5 (for the practice levels of earlier links), calc ('always' if
+// its results need a calculator, 'trig' if only some of its angles do), choice (true if the student
+// only chooses, see comps, and enters no numbers), and:
 //   make(r, o)         random parameters (null if they do not fit); with o.nice, no calculator
 //                      is needed (angles of 30°, 90° or 150°)
 //   solve(p, o)        the wanted quantities, exact; o switches on a typical wrong idea (see why)
@@ -16,19 +16,20 @@
 //   hints(p, v), steps(p, v)  hints and the worked solution: steps { text, show, hl }
 //   comps(p)           what the student identifies first in practice (identify.js), whose value
 //                      the app then gives: a component { key, what, sym, base, baseVal, fn, unit,
-//                      why } or a ready item { key, what, options, value }
+//                      why } or a ready item { key, what, options, value } (options may carry the
+//                      flag of a wrong idea, for the check)
+//   results(p, v)      (optional) the short result, where there are no fields
 (function (root) {
   'use strict';
 
   const TQ = root.TQ, { Pic } = root.Draw;
-  const { L, G, tex: T, tq, q, num, svgSym, pick, rad } = TQ;
+  const { L, G, tex: T, tq, q, svgSym, pick, rad } = TQ;
   const res = (x, u, dec) => `\\htmlClass{result}{${tq(x, u, dec)}}`;
   const m$ = (s) => `$${s}$`;
   // Angles of right triangles with whole sides (3-4-5, 5-12-13, …): with a length that is a multiple
   // of the hypotenuse, the lever arm is a whole number.
   const TRIANGLES = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
   const PYTH = TRIANGLES.flatMap(([a, b]) => [Math.atan2(a, b), Math.atan2(b, a)].map((x) => (x * 180) / Math.PI));
-  const A345 = (Math.atan2(3, 4) * 180) / Math.PI;
   const step = (rule, text, show = [], hl) => ({ text: (rule ? `<p class="step-rule">${rule}</p>` : '') + text, show, hl: hl || show });
   const exact = (x) => Math.round(x * 1e6) / 1e6;
   const CCW = () => L('counterclockwise', 'im Gegenuhrzeigersinn'), CW = () => L('clockwise', 'im Uhrzeigersinn');
@@ -100,20 +101,33 @@
     const px = [0, ...p.forces.map((f) => f.P[0])], py = [0, ...p.forces.map((f) => f.P[1])];
     P.rect([Math.min(...px) - 0.9, Math.min(...py) - 0.9], [Math.max(...px) + 0.9, Math.max(...py) + 0.9], 'plate', 16);
     void xs;
+    // a lever arm from D to the point e, with its label (and, at the foot of a perpendicular, the
+    // right angle with the line of action along u)
+    const armTo = (e, k, cls, u) => {
+      P.line([0, 0], e, cls, true);
+      P.dot(e, 'dot small', 2);
+      if (u) {
+        const n = Math.hypot(...e), a = 0.28, w = [(-e[0] / n) * a, (-e[1] / n) * a], along = [u[0] * a, u[1] * a];
+        P.path([[e[0] + w[0], e[1] + w[1]], [e[0] + w[0] - along[0], e[1] + w[1] - along[1]], [e[0] - along[0], e[1] - along[1]]], 'w thin', true);
+      }
+      if (k) P.text([e[0] / 2, e[1] / 2], `<tspan font-style="italic">d</tspan><tspan class="sub" dy="4">${k}</tspan>`, 'lbl arm-lbl', 'middle', [e[1] >= 0 && Math.abs(e[0]) > 0.1 ? -10 : 10, Math.abs(e[0]) < 0.1 ? 0 : -10]);
+    };
+    // a student's sketch (find the error): every lever arm drawn, one of them (p.wrong) to the point
+    // of application; with show 'fix', the right one beside it
+    const student = p.wrong != null;
     p.forces.forEach((f, i) => {
       const k = i + 1, tip = [f.P[0] + (f.u[0] * arrowLen(f.F)) / PX, f.P[1] + (f.u[1] * arrowLen(f.F)) / PX];
-      if (show.has(`arm${k}`)) {
+      if (student || show.has(`arm${k}`)) {
         const { foot } = armOf(f);
         // the line of action, as far as the grid goes
         const ts = [[-6.5, 6.5, 0], [-5, 5, 1]].flatMap(([lo, hi, k]) => (Math.abs(f.u[k]) < 1e-9 ? [] : [(lo - f.P[k]) / f.u[k], (hi - f.P[k]) / f.u[k]]));
         const inside = (t) => Math.abs(f.P[0] + t * f.u[0]) <= 6.5 + 1e-9 && Math.abs(f.P[1] + t * f.u[1]) <= 5 + 1e-9;
         const tt = ts.filter(inside), t0 = Math.min(...tt), t1 = Math.max(...tt);
         P.line([f.P[0] + t0 * f.u[0], f.P[1] + t0 * f.u[1]], [f.P[0] + t1 * f.u[0], f.P[1] + t1 * f.u[1]], 'action', true);
-        if (v.M[i] !== 0) {
-          P.line([0, 0], foot, `arm${hl.has(`arm${k}`) ? ' hl' : ''}`, true);
-          P.dot(foot, 'dot small', 2);
-          P.text([foot[0] / 2, foot[1] / 2], `<tspan font-style="italic">d</tspan><tspan class="sub" dy="4">${k}</tspan>`, 'lbl arm-lbl', 'middle', [foot[1] >= 0 && Math.abs(foot[0]) > 0.1 ? -10 : 10, Math.abs(foot[0]) < 0.1 ? 0 : -10]);
-        }
+        const cls = `arm${hl.has(`arm${k}`) ? ' hl' : ''}`;
+        if (student && i === p.wrong) {
+          if (show.has('fix')) { armTo(f.P, 0, 'arm wrong', null); armTo(foot, k, cls, f.u); } else armTo(f.P, k, cls, null);
+        } else if (v.M[i] !== 0) armTo(foot, k, cls, f.u);
       }
       const cls = `force${hl.size && !hl.has(`F${k}`) && !hl.has(`arm${k}`) ? ' dim' : ''}${hl.has(`F${k}`) || hl.has(`arm${k}`) ? ' hl' : ''}`;
       const off = [f.u[0] * 12 + (Math.abs(f.u[0]) < 0.5 ? 8 : 0), -f.u[1] * 12 + (Math.abs(f.u[1]) < 0.5 ? 0 : f.u[1] > 0 ? -2 : 4)];
@@ -191,6 +205,97 @@
       },
     };
   }
+
+  // ================================================================ ranking and finding the error
+  // Choices only, no numbers to enter (choice: true): the item to choose is in comps. Ranking: the
+  // order of the torques of a plate by size. Find the error: a student's sketch of the lever arms,
+  // one of them drawn to the point of application instead of to the line of action.
+  const orderTex = (o) => `$${o.map((i) => `M_${i + 1}`).join(' < ')}$`;
+  // all orders of the indices 0 … n−1
+  const perms = (n) => (n <= 1 ? [[0]] : perms(n - 1).flatMap((q) => Array.from({ length: n }, (_, k) => [...q.slice(0, k), n - 1, ...q.slice(k)])));
+  const orderBy = (xs) => xs.map((x, i) => ({ x, i })).sort((a, b) => a.x - b.x || a.i - b.i).map((o) => o.i);
+  // The ranking to choose: the right one, the order of the forces alone, the order of F times the
+  // distance to the point of application (the wrong idea of the lever arm), then other orders. In
+  // the order of their texts, so that the right one is not always first.
+  function rankItem(p) {
+    const v = p.forces.map((f) => Math.abs(torqueOf(f))), wrongArm = p.forces.map((f) => f.F * Math.hypot(...f.P));
+    const opts = [{ order: orderBy(v), right: true }];
+    const add = (order, flag, why) => { if (opts.length < 4 && !opts.some((o) => o.order.join() === order.join())) opts.push({ order, flag, why }); };
+    add(orderBy(p.forces.map((f) => f.F)), 'force', L('That is the order of the forces. A torque depends on the lever arm as well: M = F · d.', 'Das ist die Reihenfolge der Kräfte. Ein Drehmoment hängt auch vom Hebelarm ab: M = F · d.'));
+    add(orderBy(wrongArm), 'arm', L('That is the order of F times the distance from D to where the force acts. The lever arm is the distance from D to the line of action.', 'Das ist die Reihenfolge von F mal dem Abstand von D zum Angriffspunkt. Der Hebelarm ist der Abstand von D zur Wirkungslinie.'));
+    perms(p.forces.length).forEach((o) => add(o, null, L('Work out F · d for each force, with d the lever arm.', 'Bestimme F · d für jede Kraft, mit d dem Hebelarm.')));
+    opts.sort((a, b) => (orderTex(a.order) < orderTex(b.order) ? -1 : 1));
+    const right = opts.find((o) => o.right).order;
+    return {
+      key: 'rank', what: L('The torques by size, the smallest first:', 'Die Drehmomente nach Betrag, das kleinste zuerst:'),
+      options: opts.map((o) => ({ html: orderTex(o.order), right: !!o.right, flag: o.flag, why: o.why })),
+      value: `${orderTex(right)}: ${right.map((i) => `$M_${i + 1} = ${tq(v[i], 'Nm')}$`).join(', ')}`,
+    };
+  }
+  function rank(id, difficulty, n, oblique) {
+    const base = plate(id, difficulty, n, oblique);
+    return {
+      ...base, family: 'torque', choice: true,
+      // the largest force must not settle it: its order differs from that of the torques
+      make: (r) => { const p = plateMake(r, n, oblique); return p && orderBy(p.forces.map((f) => f.F)).join() !== orderBy(p.forces.map((f) => Math.abs(torqueOf(f)))).join() ? p : null; },
+      traps: [],
+      fields: () => [],
+      comps: (p) => [rankItem(p)],
+      results: (p) => rankItem(p).value,
+      title: () => L('Ranking torques', 'Drehmomente ordnen'),
+      text: () => L(`A flat plate can turn about a fixed axis through D, perpendicular to the plate. ${n === 3 ? 'Three' : 'Four'} forces act on it, drawn on a grid of 10 cm squares. Rank their torques about D by size.`,
+        `Eine flache Platte ist um eine feste Achse durch D drehbar, die senkrecht zur Platte steht. ${n === 3 ? 'Drei' : 'Vier'} Kräfte wirken auf sie, gezeichnet auf einem Gitter aus Kästchen von 10 cm. Ordne ihre Drehmomente bezüglich D nach dem Betrag.`),
+      hints: (p) => [...base.hints(p).slice(0, -1),
+        L('Work out M = F · d for each force. The largest force need not have the largest torque.', 'Bestimme M = F · d für jede Kraft. Die grösste Kraft hat nicht unbedingt das grösste Drehmoment.')],
+    };
+  }
+
+  // A student's sketch: three forces along the grid, every lever arm drawn, one (wrong) from D to
+  // the point of application. Each force acts away from the foot of its perpendicular, so that the
+  // wrong arm can be told from the right ones.
+  const student = (p, i) => { const f = p.forces[i]; return i === p.wrong ? Math.hypot(...f.P) * UNIT : armOf(f).d; };
+  const armError = {
+    id: 'arm-error', family: 'torque', difficulty: 2, choice: true,
+    make(r) {
+      const p = plateMake(r, 3, false);
+      if (!p || !p.forces.every((f) => { const { foot } = armOf(f); return Math.hypot(f.P[0] - foot[0], f.P[1] - foot[1]) >= 1; })) return null;
+      return { ...p, wrong: Math.floor(r() * 3) };
+    },
+    solve: (p) => plate('', 0, 3, false).solve(p),
+    traps: [],
+    fields: () => [],
+    comps: (p) => [{
+      key: 'wrong', what: L('The lever arm drawn wrong:', 'Der falsch gezeichnete Hebelarm:'),
+      options: [...p.forces.map((f, i) => ({ html: `$d_${i + 1}$`, right: i === p.wrong, flag: i === p.wrong ? undefined : 'arm',
+        why: L(`$d_${i + 1}$ runs from D to the line of action of $F_${i + 1}$ and meets it at a right angle: that is its lever arm.`, `$d_${i + 1}$ führt von D zur Wirkungslinie von $F_${i + 1}$ und trifft sie rechtwinklig: Das ist ihr Hebelarm.`) })),
+      { html: L('none', 'keiner'), right: false, flag: 'arm', why: L('Check whether each lever arm meets the line of action at a right angle.', 'Prüfe, ob jeder Hebelarm die Wirkungslinie rechtwinklig trifft.') }],
+      value: L(`$d_${p.wrong + 1}$ runs to the point where $F_${p.wrong + 1}$ acts, not perpendicular to its line of action.`, `$d_${p.wrong + 1}$ führt zum Angriffspunkt von $F_${p.wrong + 1}$, nicht senkrecht zu ihrer Wirkungslinie.`),
+    }],
+    results: (p) => L(`the lever arm $d_${p.wrong + 1}$`, `der Hebelarm $d_${p.wrong + 1}$`),
+    title: () => L('Find the error', 'Finde den Fehler'),
+    text: (p) => L(`A plate can turn about an axis through D; three forces act on it (squares of 10 cm). A student drew the lines of action and the lever arms and found the torques:`,
+      `Eine Platte ist um eine Achse durch D drehbar; drei Kräfte wirken auf sie (Kästchen von 10 cm). Eine Schülerin hat die Wirkungslinien und die Hebelarme gezeichnet und die Drehmomente bestimmt:`) +
+      `</p><p>${p.forces.map((f, i) => `$M_${i + 1} = ${f.F}\\,\\mathrm{N}\\cdot ${tq(student(p, i) / 100, 'm', 3)} = ${tq((f.F * student(p, i)) / 100, 'Nm', 2)}$`).join(', ')}.</p><p>` +
+      L('One of the lever arms is drawn wrong. Which?', 'Einer der Hebelarme ist falsch gezeichnet. Welcher?'),
+    figure: plateFigure,
+    hints: () => [
+      L('The lever arm is the distance from D to the line of action: the perpendicular from D onto the extended arrow.', 'Der Hebelarm ist der Abstand von D zur Wirkungslinie: das Lot von D auf den verlängerten Pfeil.'),
+      L('A lever arm meets the line of action at a right angle. It need not end where the force acts.', 'Ein Hebelarm trifft die Wirkungslinie rechtwinklig. Er muss nicht dort enden, wo die Kraft angreift.'),
+    ],
+    steps(p, v) {
+      const out = [step(L('The lever arm', 'Der Hebelarm'),
+        `<p>${L('The lever arm of a force is the distance from the axis D to its line of action: the perpendicular from D onto the extended arrow. It meets the line of action at a right angle and need not end where the force acts. Check each arm in the sketch:', 'Der Hebelarm einer Kraft ist der Abstand der Drehachse D von ihrer Wirkungslinie: das Lot von D auf den verlängerten Pfeil. Er trifft die Wirkungslinie rechtwinklig und muss nicht dort enden, wo die Kraft angreift. Prüfe jeden Arm in der Skizze:')}</p>`)];
+      p.forces.forEach((f, i) => {
+        const k = i + 1, d = armOf(f).d, M = Math.abs(v.M[i]);
+        const body = i === p.wrong
+          ? L(`$d_${k}$ runs from D to the point where $F_${k}$ acts; it does not meet the line of action at a right angle. <b>This is the error.</b> The lever arm is the perpendicular onto the line of action, $d_${k} = ${tq(d, 'cm')}$, so $M_${k} = ${f.F}\\,\\mathrm{N}\\cdot ${tq(d / 100, 'm')} = ${res(M, 'Nm')}$, not ${q((f.F * student(p, i)) / 100, 'Nm', 2)}.`,
+            `$d_${k}$ führt von D zum Angriffspunkt von $F_${k}$; er trifft die Wirkungslinie nicht rechtwinklig. <b>Das ist der Fehler.</b> Der Hebelarm ist das Lot auf die Wirkungslinie, $d_${k} = ${tq(d, 'cm')}$, also $M_${k} = ${f.F}\\,\\mathrm{N}\\cdot ${tq(d / 100, 'm')} = ${res(M, 'Nm')}$, nicht ${q((f.F * student(p, i)) / 100, 'Nm', 2)}.`)
+          : L(`$d_${k}$ meets the line of action of $F_${k}$ at a right angle: right. $M_${k} = ${tq(M, 'Nm')}$.`, `$d_${k}$ trifft die Wirkungslinie von $F_${k}$ rechtwinklig: richtig. $M_${k} = ${tq(M, 'Nm')}$.`);
+        out.push(step(L(`Force ${k}`, `Kraft ${k}`), `<p>${body}</p>`, i >= p.wrong ? ['fix'] : [], [`arm${k}`]));
+      });
+      return out;
+    },
+  };
 
   // ================================================================ levers in balance
   // A beam on a support or an axis: the torques that turn it one way balance those that turn it
@@ -516,249 +621,6 @@
     };
   }
 
-  // ================================================================ centre of mass of wire figures
-  // A figure of thin wire of the same kind throughout: the mass of each part is proportional to its
-  // length, and each part's own centre of mass is its middle (a ring: its centre). The centre of
-  // mass is the length-weighted mean: x_S = Σ ℓ_i x_i / Σ ℓ_i. Coordinates in cm from the
-  // origin O, x to the right and y up.
-  // A part: { kind: 'seg', a, b } or { kind: 'ring', c, r }.
-  // a part: a straight piece { kind: 'seg', a, b }, a ring { kind: 'ring', c, r } or a square
-  // { kind: 'square', c, s } (its four sides as one part: opposite sides meet in the middle, so its
-  // centre of mass is its centre)
-  const lengthOf = (pt) => (pt.kind === 'seg' ? Math.hypot(pt.b[0] - pt.a[0], pt.b[1] - pt.a[1]) : pt.kind === 'square' ? 4 * pt.s : 2 * Math.PI * pt.r);
-  const centreOf = (pt) => (pt.kind === 'seg' ? [(pt.a[0] + pt.b[0]) / 2, (pt.a[1] + pt.b[1]) / 2] : pt.c);
-  function comOf(parts, o = {}) {
-    const w = parts.map((pt) => (o.count ? 1 : o.diam && pt.kind === 'ring' ? 2 * pt.r : lengthOf(pt)));
-    const W = w.reduce((s, x) => s + x, 0);
-    return [0, 1].map((k) => exact(parts.reduce((s, pt, i) => s + w[i] * centreOf(pt)[k], 0) / W));
-  }
-
-  const seg = (a, b) => ({ kind: 'seg', a, b });
-  // a right triangle with whole sides [base, height, slant], in either orientation, scaled so that
-  // the slant is at most max (cm); with div, the base and height are multiples of div
-  function triangle(r, max, div = 1) {
-    const list = [];
-    for (const [x, y, z] of TRIANGLES) for (const k of [1, 2, 3, 4]) if (k * z <= max) for (const [b, h] of [[x, y], [y, x]]) if ((k * b) % div === 0 && (k * h) % div === 0) list.push([k * b, k * h, k * z]);
-    return pick(r, list);
-  }
-  // two sides of different lengths: with equal ones, weighting by length would make no difference
-  const differ = (p) => (p.h === p.b ? null : p);
-  // Step by step, as in class: combine two parts (or groups) at a time. Their common centre lies on
-  // the line between their centres, closer to the heavier one: m_A a_A = m_B a_B, where a_A, a_B are
-  // the distances from the common centre to each, and a_A + a_B = D. Two parts of equal mass are
-  // combined first (they meet in their middle). Masses are the lengths (proportional to them).
-  // Gives [{ A, B, D, aA, aB, S }] with A, B, S = { m, c, name } (name: the parts' numbers, '' for
-  // the whole figure).
-  function combos(parts) {
-    const dirOf = (pt) => { if (pt.kind !== 'seg') return null; const d = [pt.b[0] - pt.a[0], pt.b[1] - pt.a[1]], n = Math.hypot(...d); return [d[0] / n, d[1] / n]; };
-    let items = parts.map((pt, i) => ({ m: lengthOf(pt), c: centreOf(pt), name: `${i + 1}`, dir: dirOf(pt) }));
-    const out = [];
-    while (items.length > 1) {
-      // the pair to combine: equal masses first, then a pair whose distance and common centre
-      // come out in round numbers, else the first two
-      const tenth = (x) => Math.abs(10 * x - Math.round(10 * x)) < 1e-9;
-      let best = null;
-      for (let a = 0; a < items.length; a++) {
-        for (let b = a + 1; b < items.length; b++) {
-          const A = items[a], B = items[b], M = A.m + B.m, D = Math.hypot(B.c[0] - A.c[0], B.c[1] - A.c[1]);
-          const c = [A.c[0] + ((B.c[0] - A.c[0]) * B.m) / M, A.c[1] + ((B.c[1] - A.c[1]) * B.m) / M];
-          const parallel = A.dir && B.dir && Math.abs(Math.abs(A.dir[0] * B.dir[0] + A.dir[1] * B.dir[1]) - 1) < 1e-9;
-          // centres at the same point first, then mirror images (equal, parallel, the farthest apart),
-          // then equal masses, then round numbers
-          const score = D < 1e-9 ? 4 : Math.abs(A.m - B.m) < 1e-9 ? (parallel ? 3 + D / 1e4 : 2) : tenth(D) && c.every(tenth) ? 1 : 0;
-          if (!best || score > best.score) best = { score, a, b };
-        }
-      }
-      const i = best.a, j = best.b;
-      const A = items[i], B = items[j], M = A.m + B.m, D = Math.hypot(B.c[0] - A.c[0], B.c[1] - A.c[1]);
-      const S = { m: M, c: [A.c[0] + ((B.c[0] - A.c[0]) * B.m) / M, A.c[1] + ((B.c[1] - A.c[1]) * B.m) / M], name: items.length === 2 ? '' : [...(A.name + B.name)].sort().join('') };
-      out.push({ A, B, D, aA: (D * B.m) / M, aB: (D * A.m) / M, S });
-      items = [S, ...items.filter((x, k) => k !== i && k !== j)];
-    }
-    return out;
-  }
-
-  const SHAPES = {
-    // the worksheet's a): a vertical side and a top bar to the right, as Γ
-    L: { difficulty: 2, make: (r) => differ({ h: pick(r, [6, 8, 10, 12, 16, 20]), b: pick(r, [4, 6, 8, 10, 12]) }),
-      parts: (p) => [{ kind: 'seg', a: [0, 0], b: [0, p.h], name: 'a' }, { kind: 'seg', a: [0, p.h], b: [p.b, p.h], name: 'b' }],
-      title: () => L('An angle of wire', 'Ein Drahtwinkel'), ask: ['x', 'y'], offWire: true },
-    U: { difficulty: 3, make: (r) => differ({ h: pick(r, [6, 8, 10, 12, 16]), b: pick(r, [6, 8, 10, 12, 16]) }),
-      parts: (p) => [{ kind: 'seg', a: [0, 0], b: [0, p.h] }, { kind: 'seg', a: [0, p.h], b: [p.b, p.h] }, { kind: 'seg', a: [p.b, p.h], b: [p.b, 0] }],
-      title: () => L('A gate of wire', 'Ein Drahttor'), ask: ['x', 'y'], offWire: true },
-    T: { difficulty: 2, make: (r) => differ({ h: pick(r, [6, 8, 10, 12, 16]), b: pick(r, [6, 8, 10, 12, 16]) }),
-      parts: (p) => [{ kind: 'seg', a: [0, p.h], b: [p.b, p.h] }, { kind: 'seg', a: [p.b / 2, 0], b: [p.b / 2, p.h] }],
-      title: () => L('A T of wire', 'Ein T aus Draht'), ask: ['x', 'y'] },
-    tri: { difficulty: 3, make: (r) => ({ k: pick(r, [1, 2, 3, 4]), t: pick(r, [[3, 4, 5], [4, 3, 5]]) }),
-      // a right triangle with the right angle at the bottom right, legs (base, height) and hypotenuse
-      parts: (p) => { const [bx, hy] = [p.t[1] * p.k, p.t[0] * p.k]; return [{ kind: 'seg', a: [0, 0], b: [bx, 0] }, { kind: 'seg', a: [bx, 0], b: [bx, hy] }, { kind: 'seg', a: [bx, hy], b: [0, 0] }]; },
-      title: () => L('A triangle of wire', 'Ein Drahtdreieck'), ask: ['x', 'y'], offWire: true },
-    // E: a vertical bar and three equal bars to the right, at the bottom, middle and top
-    E: { difficulty: 3, make: (r) => ({ a: pick(r, [4, 5, 6, 8, 10]), b: pick(r, [4, 6, 8, 10, 12]) }),
-      parts: (p) => [seg([0, 0], [0, 2 * p.a]), seg([0, 0], [p.b, 0]), seg([0, p.a], [p.b, p.a]), seg([0, 2 * p.a], [p.b, 2 * p.a])],
-      title: () => L('An E of wire', 'Ein E aus Draht'), ask: ['x', 'y'] },
-    // an isosceles triangle: base 2b, slanted sides c, height h (b, h, c a right triangle)
-    iso: { difficulty: 3, make: (r) => { const [b, h, c] = triangle(r, 17); return { b, h, c }; },
-      parts: (p) => [seg([0, 0], [2 * p.b, 0]), seg([0, 0], [p.b, p.h]), seg([2 * p.b, 0], [p.b, p.h])],
-      title: () => L('A gable of wire', 'Ein Giebel aus Draht'), ask: ['x', 'y'], offWire: true },
-    // a house: floor 2b, walls w, a gable roof (b, h, c a right triangle)
-    house: { difficulty: 4, make: (r) => { const [b, h, c] = triangle(r, 12); return { b, h, c, w: pick(r, [4, 6, 8, 10, 12]) }; },
-      parts: (p) => [seg([0, 0], [2 * p.b, 0]), seg([0, 0], [0, p.w]), seg([2 * p.b, 0], [2 * p.b, p.w]), seg([0, p.w], [p.b, p.w + p.h]), seg([2 * p.b, p.w], [p.b, p.w + p.h])],
-      title: () => L('A house of wire', 'Ein Haus aus Draht'), ask: ['x', 'y'], offWire: true },
-    // a square on a stick: the origin at the foot of the stick
-    sqstick: { difficulty: 4, make: (r) => ({ h: pick(r, [6, 8, 10, 12, 15, 16, 20]), s: pick(r, [2, 3, 4, 5, 6, 8]) }),
-      parts: (p) => [seg([0, 0], [0, p.h]), { kind: 'square', c: [0, p.h + p.s / 2], s: p.s }],
-      title: () => L('A square on a stick', 'Ein Quadrat auf einem Stab'), ask: ['y'] },
-    // an isosceles triangle on a stick (b, t, c a right triangle), apex up
-    tristick: { difficulty: 4, make: (r) => { const [b, t, c] = triangle(r, 10); return { h: pick(r, [6, 8, 10, 12, 15, 16, 20]), b, t, c }; },
-      parts: (p) => [seg([0, 0], [0, p.h]), seg([-p.b, p.h], [p.b, p.h]), seg([-p.b, p.h], [0, p.h + p.t]), seg([p.b, p.h], [0, p.h + p.t])],
-      title: () => L('A triangle on a stick', 'Ein Dreieck auf einem Stab'), ask: ['y'] },
-    // a dumbbell: two squares of different sizes joined by a bar; the origin at the left end
-    bell: { difficulty: 5, make: (r) => { const s1 = pick(r, [2, 3, 4, 5]), s2 = s1 + pick(r, [1, 2, 3, 4]); return { s1, s2, c: pick(r, [4, 5, 6, 8, 10, 12]) }; },
-      parts: (p) => [{ kind: 'square', c: [p.s1 / 2, 0], s: p.s1 }, seg([p.s1, 0], [p.s1 + p.c, 0]), { kind: 'square', c: [p.s1 + p.c + p.s2 / 2, 0], s: p.s2 }],
-      title: () => L('A dumbbell of wire', 'Eine Hantel aus Draht'), ask: ['x'] },
-  };
-
-  function comFigure(shape, p, v, view = {}) {
-    const S = SHAPES[shape], parts = S.parts(p), show = view.show || new Set();
-    const half = (pt) => (pt.kind === 'square' ? pt.s / 2 : pt.r);
-    const ext = parts.flatMap((pt) => (pt.kind === 'seg' ? [pt.a, pt.b] : [[pt.c[0] - half(pt), pt.c[1] - half(pt)], [pt.c[0] + half(pt), pt.c[1] + half(pt)]]));
-    const W = Math.max(...ext.map((e) => e[0])) - Math.min(...ext.map((e) => e[0])), H = Math.max(...ext.map((e) => e[1])) - Math.min(...ext.map((e) => e[1]));
-    const P = new Pic(Math.min(230 / Math.max(W, H, 1), 26), L('A figure of wire with the origin O', 'Eine Figur aus Draht mit dem Ursprung O'));
-    const s = P.s, xMin = Math.min(...ext.map((e) => e[0])), yMin = Math.min(...ext.map((e) => e[1]));
-    // the axes from O
-    P.arrow([Math.min(0, xMin) - 12 / s, 0], [1, 0], (Math.max(...ext.map((e) => e[0])) - Math.min(0, xMin)) * s + 40, 'axis', svgSym('x'), [4, 12]);
-    P.arrow([0, Math.min(0, yMin) - 12 / s], [0, 1], (Math.max(...ext.map((e) => e[1])) - Math.min(0, yMin)) * s + 40, 'axis', svgSym('y'), [-12, 2]);
-    parts.forEach((pt, i) => {
-      const cls = `wire${show.has(`part${i}`) ? ' hl' : ''}`;
-      if (pt.kind === 'seg') P.path([pt.a, pt.b], cls);
-      else if (pt.kind === 'square') { const q = pt.s / 2, [x, y] = pt.c; P.path([[x - q, y - q], [x + q, y - q], [x + q, y + q], [x - q, y + q], [x - q, y - q]], cls); } else P.circle(pt.c, pt.r, cls);
-    });
-    // dimensions: each length once, next to a side of that length, outside the figure (away from
-    // its middle); the rings' radii
-    const cx = (Math.max(...ext.map((e) => e[0])) + xMin) / 2, cy = (Math.max(...ext.map((e) => e[1])) + yMin) / 2, labelled = new Set();
-    // the side of a straight piece away from the middle of the figure (for its length); its centre's
-    // label goes on the other side
-    const outward = (pt) => {
-      const len = lengthOf(pt), m = centreOf(pt);
-      let n = [-(pt.b[1] - pt.a[1]) / len, (pt.b[0] - pt.a[0]) / len];
-      const dot = n[0] * (m[0] - cx) + n[1] * (m[1] - cy);
-      if (dot < -1e-9 || (Math.abs(dot) <= 1e-9 && (n[0] < -1e-9 || (Math.abs(n[0]) <= 1e-9 && n[1] < 0)))) n = [-n[0], -n[1]];
-      return n;
-    };
-    parts.forEach((pt) => {
-      if (pt.kind === 'square') { P.text([pt.c[0], pt.c[1] + pt.s / 2], cm(pt.s), 'lbl small dimtext', 'middle', [0, -12]); return; }
-      if (pt.kind === 'seg') {
-        // each length once per direction (the bars of an E, the walls of a house: one label)
-        const len = lengthOf(pt), mid = centreOf(pt), d0 = [(pt.b[0] - pt.a[0]) / len, (pt.b[1] - pt.a[1]) / len];
-        const tag = `${num(len, 2)}:${num(Math.abs(d0[0]), 2)}:${num(d0[0] * d0[1] >= 0 ? 1 : -1, 0)}`;
-        if (labelled.has(tag)) return;
-        labelled.add(tag);
-        const n = outward(pt), off = [14 * n[0], -14 * n[1]];
-        P.text(mid, cm(len), 'lbl small dimtext', Math.abs(off[0]) < 5 ? 'middle' : off[0] > 0 ? 'start' : 'end', [off[0], off[1] + (off[1] > 0 ? 2 : 0)]);
-      } else {
-        P.line(pt.c, [pt.c[0] + pt.r * Math.cos(rad(45)), pt.c[1] + pt.r * Math.sin(rad(45))], 'w thin', true);
-        P.dot(pt.c, 'dot', 1.8);
-        P.text([pt.c[0] + pt.r * 0.35, pt.c[1] + pt.r * 0.35], `r = ${cm(pt.r)}`, 'lbl small dimtext', 'end', [-2, -6]);
-      }
-    });
-    P.dot([0, 0], 'dot', 2.4);
-    P.text([0, 0], 'O', 'lbl', 'end', [-6, 12]);
-    const sName = (n) => `S<tspan class="sub" dy="4">${n}</tspan><tspan dy="-4">\u200b</tspan>`;
-    if (show.has('mids')) {
-      parts.forEach((pt, i) => {
-        const n = pt.kind === 'seg' ? outward(pt) : [0.7, -0.7], off = [-12 * n[0], 12 * n[1] + 4];
-        P.dot(centreOf(pt), `dot mid${show.has(`part${i}`) ? ' hl' : ''}`, 3);
-        P.text(centreOf(pt), sName(i + 1), 'lbl small com-lbl', Math.abs(off[0]) < 4 ? 'middle' : off[0] > 0 ? 'start' : 'end', off);
-      });
-    }
-    combos(parts).forEach((k, i) => {
-      if (!show.has(`comb${i}`)) return;
-      P.line(k.A.c, k.B.c, `join${view.hl && view.hl.has(`comb${i}`) ? ' hl' : ''}`, true);
-      if (k.S.name) { P.dot(k.S.c, 'dot mid', 3.4); P.text(k.S.c, sName(k.S.name), 'lbl small com-lbl', 'end', [-6, -9]); }
-    });
-    if (show.has('S')) P.com(v.S, 'S');
-    return P.svg();
-  }
-
-  function com(shape) {
-    const S = SHAPES[shape];
-    const fieldsOf = () => S.ask.map((k) => ({ key: k, sym: [k === 'x' ? 'xS' : 'yS'], unit: 'cm', dec: 1, what: L('centre of mass', 'Schwerpunkt') }));
-    return {
-      id: `com-${shape}`, family: 'com', difficulty: S.difficulty, calc: S.calc,
-      make: (r) => S.make(r),
-      solve(p, o = {}) { const c = comOf(S.parts(p), o); return { x: c[0], y: c[1], S: c }; },
-      traps: S.calc ? ['count', 'diam'] : ['count'],
-      // a ring's wire is as long as its circumference: identified first, the app gives its length
-      comps: (p) => S.parts(p).map((pt, i) => [pt, i]).filter(([pt]) => pt.kind === 'ring').map(([pt, i]) => ({
-        key: `ring${i}`, what: L(`The length of the wire of the ring with r = ${cm(pt.r)}:`, `Die Länge des Drahts des Rings mit r = ${cm(pt.r)}:`),
-        options: [
-          { html: '$2\\pi r$', right: true },
-          { html: '$\\pi r$', why: L('That is half the circumference.', 'Das ist der halbe Umfang.') },
-          { html: '$2r$', why: L('That is the diameter: the wire runs all the way round.', 'Das ist der Durchmesser: Der Draht läuft ganz herum.') },
-          { html: '$\\pi r^2$', why: L('That is the area of the disc, not a length.', 'Das ist die Fläche der Scheibe, keine Länge.') },
-        ],
-        value: `$\\ell = 2\\pi r = 2\\pi\\cdot ${tq(pt.r, 'cm')} \\approx ${tq(lengthOf(pt), 'cm', 1)}$`,
-      })),
-      why: {
-        count: () => L('Each part counts with its mass, which is proportional to its length, not each part the same.', 'Jedes Teil zählt mit seiner Masse, und die ist proportional zu seiner Länge; nicht jedes Teil gleich viel.'),
-        diam: () => L('A ring’s wire is as long as its circumference, 2πr.', 'Der Draht eines Rings ist so lang wie sein Umfang, 2πr.'),
-      },
-      fields: fieldsOf,
-      title: () => S.title(),
-      text: () => L(`A figure is bent from one piece of uniform wire. Find its centre of mass S: its coordinates in the system drawn, with the origin O.${S.ask.length === 1 ? ` (By symmetry, ${S.ask[0] === 'x' ? 'y' : 'x'}<sub>S</sub> = 0.)` : ''}`,
-        `Eine Figur ist aus einem gleichmässigen Draht gebogen. Bestimme ihren Schwerpunkt S: seine Koordinaten im eingezeichneten System mit dem Ursprung O.${S.ask.length === 1 ? ` (Aus Symmetriegründen ist ${S.ask[0] === 'x' ? 'y' : 'x'}<sub>S</sub> = 0.)` : ''}`),
-      figure: (p, v, view) => comFigure(shape, p, v, view),
-      hints: (p) => { const hasSquare = S.parts(p).some((pt) => pt.kind === 'square'); return [
-        hasSquare ? L('Split the figure into simple parts: straight pieces and squares. The mass of each part is proportional to its length (a square: its four sides).', 'Zerlege die Figur in einfache Teile: gerade Stücke und Quadrate. Die Masse jedes Teils ist proportional zu seiner Länge (beim Quadrat: seine vier Seiten).')
-          : L('Split the figure into simple parts: its straight pieces. The mass of each part is proportional to its length.', 'Zerlege die Figur in einfache Teile: ihre geraden Stücke. Die Masse jedes Teils ist proportional zu seiner Länge.'),
-        hasSquare ? L('Find the centre of mass of each part: the middle of a straight piece, the centre of a square (its opposite sides meet in the middle).', 'Bestimme den Schwerpunkt jedes Teils: die Mitte eines geraden Stücks, den Mittelpunkt eines Quadrats (seine gegenüberliegenden Seiten treffen sich in der Mitte).')
-          : L('Find the centre of mass of each part: the middle of each straight piece.', 'Bestimme den Schwerpunkt jedes Teils: die Mitte jedes geraden Stücks.'),
-        L('Combine the parts two at a time. The common centre of mass lies on the line between their centres, closer to the heavier part: m₁ · a₁ = m₂ · a₂, where a₁ and a₂ are its distances from the two centres. Then combine the result with the next part.',
-          'Fasse die Teile schrittweise zu zweit zusammen. Der gemeinsame Schwerpunkt liegt auf der Verbindungslinie ihrer Schwerpunkte, näher beim schwereren Teil: m₁ · a₁ = m₂ · a₂, wobei a₁ und a₂ seine Abstände von den beiden Schwerpunkten sind. Fasse das Ergebnis dann mit dem nächsten Teil zusammen.'),
-      ]; },
-      steps(p, v) {
-        const parts = S.parts(p), lens = parts.map(lengthOf), cs = parts.map(centreOf), total = lens.reduce((a, b) => a + b, 0);
-        const lenTex = (pt) => (pt.kind === 'ring' ? `2\\pi\\cdot ${tq(pt.r, 'cm')} = ${tq(lengthOf(pt), 'cm', 1)}` : pt.kind === 'square' ? `4\\cdot ${tq(pt.s, 'cm')} = ${tq(lengthOf(pt), 'cm')}` : tq(lengthOf(pt), 'cm'));
-        const pt$ = (c) => `(${num(c[0], 1)}\\,|\\,${num(c[1], 1)})`;
-        const rows = parts.map((pt, i) => `<li>${pt.kind === 'ring' ? L('ring', 'Ring') : pt.kind === 'square' ? L('square (its centre: opposite sides meet in the middle)', 'Quadrat (sein Mittelpunkt: gegenüberliegende Seiten treffen sich in der Mitte)') : L('straight piece', 'gerades Stück')} ${i + 1}: ${L('length', 'Länge')} $${lenTex(pt)}$, ${L('centre of mass', 'Schwerpunkt')} $S_${i + 1} = ${pt$(cs[i])}$</li>`).join('');
-        void lens; void total;
-        const out = [step(L('1 · Split into parts', '1 · In Teile zerlegen'),
-          `<p>${(parts.some((pt) => pt.kind === 'square') ? L('The figure consists of these parts. Each part’s mass is proportional to its length, so the lengths can stand for the masses. A straight piece has its centre of mass in its middle, a square in its centre:', 'Die Figur besteht aus diesen Teilen. Die Masse jedes Teils ist proportional zu seiner Länge, also können die Längen für die Massen stehen. Ein gerades Stück hat seinen Schwerpunkt in seiner Mitte, ein Quadrat in seinem Mittelpunkt:') : L('The figure consists of these parts. Each part’s mass is proportional to its length, so the lengths can stand for the masses. A straight piece has its centre of mass in its middle:', 'Die Figur besteht aus diesen Teilen. Die Masse jedes Teils ist proportional zu seiner Länge, also können die Längen für die Massen stehen. Ein gerades Stück hat seinen Schwerpunkt in seiner Mitte:'))}</p><ul>${rows}</ul>`,
-          ['mids', ...parts.map((x, i) => `part${i}`)], ['mids'])];
-        const ks = combos(parts), sTex = (n) => (n ? `S_{${n}}` : 'S'), mTex = (n) => `m_{${n}}`;
-        ks.forEach((k, i) => {
-          const A = k.A.name, B = k.B.name, equal = Math.abs(k.A.m - k.B.m) < 1e-9;
-          const shown = ['mids', ...ks.slice(0, i + 1).map((x, j) => `comb${j}`), ...(k.S.name ? [] : ['S'])];
-          const where = `$${sTex(k.S.name)} = ${k.S.name ? pt$(k.S.c) : `(${res(k.S.c[0], 'cm', 1)}\\,|\\,${res(k.S.c[1], 'cm', 1)})`}$`;
-          const straight = Math.abs(k.A.c[0] - k.B.c[0]) < 1e-9 || Math.abs(k.A.c[1] - k.B.c[1]) < 1e-9;
-          const f = k.B.m / (k.A.m + k.B.m), dx = k.B.c[0] - k.A.c[0], dy = k.B.c[1] - k.A.c[1];
-          // an oblique line: the lever rule divides its horizontal and vertical extents alike
-          const oblique = L(`The masses at $${sTex(A)}$ and $${sTex(B)}$ are in the ratio of the lengths, $${mTex(A)} : ${mTex(B)} = ${num(k.A.m, 1)} : ${num(k.B.m, 1)}$. Their common centre of mass lies on the line between them, closer to the heavier part, with $${mTex(A)}\\cdot a_{${A}} = ${mTex(B)}\\cdot a_{${B}}$: it is the fraction $\\frac{${mTex(B)}}{${mTex(A)} + ${mTex(B)}} = \\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}}$ of the way from $${sTex(A)}$ to $${sTex(B)}$. The line runs ${q(Math.abs(dx), 'cm', 1)} ${dx > 0 ? 'to the right' : 'to the left'} and ${q(Math.abs(dy), 'cm', 1)} ${dy > 0 ? 'up' : 'down'}; both are divided in the same ratio:`,
-            `Die Massen in $${sTex(A)}$ und $${sTex(B)}$ stehen im Verhältnis der Längen, $${mTex(A)} : ${mTex(B)} = ${num(k.A.m, 1)} : ${num(k.B.m, 1)}$. Ihr gemeinsamer Schwerpunkt liegt auf ihrer Verbindungslinie, näher beim schwereren Teil, mit $${mTex(A)}\\cdot a_{${A}} = ${mTex(B)}\\cdot a_{${B}}$: Er liegt beim Bruchteil $\\frac{${mTex(B)}}{${mTex(A)} + ${mTex(B)}} = \\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}}$ des Wegs von $${sTex(A)}$ nach $${sTex(B)}$. Die Linie verläuft ${q(Math.abs(dx), 'cm', 1)} nach ${dx > 0 ? 'rechts' : 'links'} und ${q(Math.abs(dy), 'cm', 1)} nach ${dy > 0 ? 'oben' : 'unten'}; beides wird im gleichen Verhältnis geteilt:`) +
-            `$$\\Delta x = ${tq(dx, 'cm', 1)}\\cdot\\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}} = ${tq(dx * f, 'cm', 2)},\\qquad \\Delta y = ${tq(dy, 'cm', 1)}\\cdot\\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}} = ${tq(dy * f, 'cm', 2)}$$` +
-            L(`from $${sTex(A)}$: `, `von $${sTex(A)}$ aus: `);
-          const body = k.D < 1e-9
-            ? L(`$${sTex(A)}$ and $${sTex(B)}$ are at the same point, so their common centre of mass is there too: ${where}.`,
-              `$${sTex(A)}$ und $${sTex(B)}$ liegen im selben Punkt, also liegt auch ihr gemeinsamer Schwerpunkt dort: ${where}.`)
-            : equal
-            ? L(`$${sTex(A)}$ and $${sTex(B)}$ belong to parts of equal mass, so their common centre of mass lies in the middle between them: ${where}.`,
-              `$${sTex(A)}$ und $${sTex(B)}$ gehören zu Teilen gleicher Masse, also liegt ihr gemeinsamer Schwerpunkt in der Mitte dazwischen: ${where}.`)
-            : !straight ? `${oblique}${where}.` : L(`The masses at $${sTex(A)}$ and $${sTex(B)}$ are in the ratio of the lengths, $${mTex(A)} : ${mTex(B)} = ${num(k.A.m, 1)} : ${num(k.B.m, 1)}$. Their common centre of mass lies on the line between them, ${q(k.D, 'cm', 2)} long, closer to the heavier part:`,
-              `Die Massen in $${sTex(A)}$ und $${sTex(B)}$ stehen im Verhältnis der Längen, $${mTex(A)} : ${mTex(B)} = ${num(k.A.m, 1)} : ${num(k.B.m, 1)}$. Ihr gemeinsamer Schwerpunkt liegt auf ihrer Verbindungslinie, die ${q(k.D, 'cm', 2)} lang ist, näher beim schwereren Teil:`) +
-              `$$${mTex(A)}\\cdot a_{${A}} = ${mTex(B)}\\cdot a_{${B}},\\quad a_{${A}} + a_{${B}} = ${tq(k.D, 'cm', 2)}$$ ` +
-              `$$a_{${A}} = ${tq(k.D, 'cm', 2)}\\cdot\\frac{${mTex(B)}}{${mTex(A)} + ${mTex(B)}} = ${tq(k.D, 'cm', 2)}\\cdot\\frac{${num(k.B.m, 1)}}{${num(k.A.m + k.B.m, 1)}} = ${tq(k.aA, 'cm', 2)}$$` +
-              L(`from $${sTex(A)}$ toward $${sTex(B)}$: ${where}.`, `von $${sTex(A)}$ aus in Richtung $${sTex(B)}$: ${where}.`);
-          const more = k.S.name ? L(` Together they count as one part at $${sTex(k.S.name)}$, with the mass $${mTex(k.S.name)} = ${mTex(A)} + ${mTex(B)}$ (length ${q(k.S.m, 'cm', 1)}).`, ` Zusammen zählen sie als ein Teil in $${sTex(k.S.name)}$ mit der Masse $${mTex(k.S.name)} = ${mTex(A)} + ${mTex(B)}$ (Länge ${q(k.S.m, 'cm', 1)}).`)
-            : S.offWire ? `</p><p>${L('S need not lie on the wire.', 'S muss nicht auf dem Draht liegen.')}` : '';
-          out.push(step(L(`${i + 2} · Combine ${sTex(A).replace(/[{}]/g, '')} and ${sTex(B).replace(/[{}]/g, '')}`, `${i + 2} · ${sTex(A).replace(/[{}]/g, '')} und ${sTex(B).replace(/[{}]/g, '')} zusammenfassen`).replace(/S_(\d+)/g, (x, n) => `S${n.replace(/\d/g, (d) => '₀₁₂₃₄₅₆₇₈₉'[d])}`),
-            `<p>${body}${more}</p>`, shown, [`comb${i}`, ...(k.S.name ? [] : ['S'])]));
-        });
-        return out;
-      },
-    };
-  }
-
   const SCENARIOS = [
     plate('plate-axis', 2, 3, false),
     plate('plate', 4, 4, true),
@@ -768,11 +630,13 @@
     angled,
     hang('hang', 3, false),
     hang('hang2', 4, true),
-    com('L'), com('T'), com('U'), com('E'), com('tri'), com('iso'), com('house'), com('sqstick'), com('tristick'), com('bell'),
+    rank('rank-axis', 2, 3, false),
+    rank('rank', 4, 4, true),
+    armError,
   ];
 
   // helpers for the situations of statics.js, which adds its own to SCENARIOS
   const H = { step, res, exact, beamPic, kg, cm, N, senseWord };
-  root.Scenarios = { SCENARIOS, SHAPES, comOf, armOf, torqueOf, UNIT, H };
+  root.Scenarios = { SCENARIOS, armOf, torqueOf, UNIT, H };
   if (typeof module !== 'undefined') module.exports = root.Scenarios;
 })(typeof window !== 'undefined' ? window : globalThis);

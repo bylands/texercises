@@ -1,24 +1,26 @@
-// Verifies the force-concept exercises: run with `node force-concepts/test/check-generator.js`.
-// For many seeds of every topic it checks that
+// Verifies the force-and-motion exercises: run with `node force-concepts/test/check-generator.js`.
+// For many seeds of every exercise type it checks that
 // - every question has exactly one right option, at least three options with distinct labels,
 //   and an explanation for each option; every wrong option names a known misconception,
 // - there are four hints and a worked solution whose steps all have a picture,
 // - the text has no NaN or undefined, the SVG is balanced, and the same seed gives the same exercise,
 // - the physics behind the right options holds: forces compared in the right way for every
 //   motion (speeding up, constant, slowing down; up or down), the speed after a kick, the
-//   direction of two forces, and that the picture options are far enough apart,
+//   direction of two forces, the net force towards the centre, and that the picture options are
+//   far enough apart,
 // - every misconception appears among the wrong options, and the tutor lessons build,
 // - the German version matches the English one and has no English left (and no ß),
-// - every exercise type has a difficulty, and every practice level gives its difficulties.
+// - every exercise type has a difficulty and a name, and every practice stage lists known types,
+// - every learning objective of the check has question kinds that give four options, one right.
 'use strict';
 
 require('../lang.js');
 require('../draw.js');
 const FC = require('../core.js');
-['gravity', 'inertia', 'force', 'interact', 'sorting', 'predict', 'truefalse'].forEach((f) => require(`../${f}.js`));
-const { EXAMPLES } = require('../lessons.js');
+['gravity', 'inertia', 'force', 'sorting', 'predict', 'truefalse'].forEach((f) => require(`../${f}.js`));
+const { EXAMPLES, OBJECTIVES } = require('../lessons.js');
 
-const SAMPLES = 600;
+const SAMPLES = 150;
 let failures = 0, checked = 0;
 const fail = (msg) => { failures++; if (failures < 30) console.error('  FAIL ' + msg); };
 const strip = (s) => s.replace(/<[^>]+>/g, '');
@@ -91,20 +93,18 @@ function checkQuestion(q, where) {
 const right = (ex, key) => strip(ex.questions.find((q) => q.key === key).options.find((o) => o.ok).text);
 
 // ---------------------------------------------------------------- random exercises
-const codes = new Set(), gens = new Set();
-for (const topic of Object.keys(FC.TOPICS)) {
+const TYPES = Object.entries(FC.POOLS).flatMap(([topic, gs]) => gs.map((g) => `${topic}/${g.name}`));
+const codes = new Set();
+for (const type of TYPES) {
   for (let seed = 1; seed <= SAMPLES; seed++) {
     let ex;
-    try { ex = FC.generate(topic, seed); } catch (e) { fail(`${topic}-${seed}: ${e.message}`); continue; }
-    checkExercise(ex, `${topic}-${seed}`);
-    if (seed <= 50 && JSON.stringify(FC.generate(topic, seed)) !== JSON.stringify(ex)) fail(`${topic}-${seed}: not deterministic`);
-    if (ex.id !== `${topic}-${seed}`) fail(`${topic}-${seed}: wrong id ${ex.id}`);
-    gens.add(ex.gen);
+    try { ex = FC.generateGen(type, seed); } catch (e) { fail(`${type}-${seed}: ${e.message}`); continue; }
+    checkExercise(ex, `${type}-${seed}`);
+    if (seed <= 30 && JSON.stringify(FC.generateGen(type, seed)) !== JSON.stringify(ex)) fail(`${type}-${seed}: not deterministic`);
+    if (ex.id !== `${type}-${seed}`) fail(`${type}-${seed}: wrong id ${ex.id}`);
     ex.questions.forEach((q) => FC.misreads(q).forEach((m) => codes.add(m.code)));
   }
 }
-const allGens = new Set(Object.values(FC.POOLS).flat().map((g) => g.name));
-for (const g of allGens) if (!gens.has(g)) fail(`generator ${g} never drawn`);
 for (const c of Object.keys(FC.MIS)) if (!codes.has(c)) fail(`misconception ${c} never offered`);
 
 // ---------------------------------------------------------------- physics
@@ -125,13 +125,6 @@ for (const obj of ['crate', 'car', 'elevator', 'skydiver']) {
       if (!along.ok && along.code !== 'active-force') fail(`balance ${obj} ${phase} ${dir}: active-force not flagged`);
     }
   }
-}
-// push-car: the pair is always equal; the push on the van follows the van's acceleration.
-for (const phase of ['speeding', 'constant', 'slowing']) {
-  const ex = FC.GENS['push-car'](r(), { phase });
-  if (!right(ex, 'pair').includes('equally large')) fail(`push-car ${phase}: pair not equal`);
-  const want = { speeding: 'larger than', constant: 'equal to', slowing: 'smaller than' }[phase];
-  if (!right(ex, 'van').includes(want)) fail(`push-car ${phase}: expected ${want}`);
 }
 // kick: speed after a kick at right angles.
 for (const vu of [[4, 3], [3, 4], [8, 6], [12, 5], [5, 12]]) {
@@ -174,17 +167,13 @@ for (const vu of [[4, 3], [3, 4], [8, 6], [12, 5], [5, 12]]) {
     if (Number(ex.steps[0].text.match(/about ([\d.]+)&nbsp;N/)[1]) !== Number(R.toPrecision(2))) fail(`${at}: stated net force wrong`);
   }
 }
-// collision and pushing apart: the interaction forces are always equal.
-for (const kase of ['headon', 'parkedTruck', 'parkedCar', 'rear']) {
-  const ex = FC.GENS.collision(r(), { case: kase });
-  if (!right(ex, 'force').includes('equally large')) fail(`collision ${kase}: forces not equal`);
-}
-for (let seed = 1; seed <= 100; seed++) {
-  const ex = FC.GENS['push-apart'](FC.rng(seed), {});
-  if (!right(ex, 'force').includes('equally large')) fail(`push-apart ${seed}: forces not equal`);
-  const m = ex.situation.match(/(\w+) \((\d+) kg\) and (\w+) \((\d+) kg\)/);
-  const light = Number(m[2]) < Number(m[4]) ? m[1] : m[3];
-  if (!right(ex, 'speed').startsWith(light)) fail(`push-apart ${seed}: the lighter one should be faster`);
+// centre: the net force points to the centre, and the force that provides it is named.
+for (const scene of ['car', 'moon', 'stone', 'electron']) {
+  const ex = FC.GENS.centre(r(), { scene });
+  checkExercise(ex, `centre ${scene}`);
+  if (!right(ex, 'net').startsWith('Towards the centre')) fail(`centre ${scene}: net force`);
+  const want = { car: 'friction', moon: 'gravitational pull', stone: 'string', electron: 'electric' }[scene];
+  if (!right(ex, 'source').includes(want)) fail(`centre ${scene}: source “${right(ex, 'source')}”`);
 }
 // throw: only the weight, acceleration g downward, at every phase.
 for (const kind of ['vertical', 'oblique']) for (const phase of ['rising', 'top', 'falling']) {
@@ -194,20 +183,6 @@ for (const kind of ['vertical', 'oblique']) for (const phase of ['rising', 'top'
   if (!right(ex, 'acc').startsWith('Straight down, with size g')) fail(`throw ${kind} ${phase}: acceleration`);
 }
 
-// ---------------------------------------------------------------- formats
-// Every topic in every format gives an exercise of that format.
-const FORMAT_TYPES = { choice: ['choice'], sort: ['rank', 'match'], predict: ['two'], tf: ['tf'] };
-for (const topic of Object.keys(FC.TOPICS)) {
-  for (const format of Object.keys(FORMAT_TYPES)) {
-    for (let seed = 1; seed <= 60; seed++) {
-      const ex = FC.generate(topic, seed, format);
-      checkExercise(ex, `${topic}-${format}-${seed}`);
-      if (ex.id !== `${topic}-${format}-${seed}`) fail(`${topic}-${format}-${seed}: wrong id ${ex.id}`);
-      if (!ex.questions.some((q) => FORMAT_TYPES[format].includes(q.type || 'choice'))) fail(`${topic}-${format}-${seed}: no ${format} question`);
-    }
-  }
-}
-
 // What must not change between the languages, and all the text of a question.
 const sig = (q) => ({ choice: () => q.options.map((o) => o.code), two: () => [q.options.map((o) => o.code), q.reasons.map((o) => o.code)],
   tf: () => q.items.map((x) => [x.value, x.code]), rank: () => q.items.map((x) => x.value), match: () => q.items.map((x) => x.answer) }[q.type || 'choice']());
@@ -215,49 +190,18 @@ const qTexts = (q) => [q.prompt, q.reasonPrompt || '', ...(q.options || []).flat
   ...(q.items || []).flatMap((x) => [x.text || x.label, x.why || '', ...Object.values(x.wrong || {}).map((w) => w.why)]), q.why || '',
   ...(q.traps || []).map((t) => t.why), ...(q.choices || []).filter((c) => !/<svg/.test(c.label)).map((c) => c.label)];
 
-// ---------------------------------------------------------------- variety
-// New exercises (freshSeed, as the app uses it) do not repeat a type among the last
-// min(8, ⌊n/2⌋) of n types, and every type still comes up.
-for (const topic of Object.keys(FC.TOPICS)) {
-  for (const format of ['all', ...Object.keys(FORMAT_TYPES)]) {
-    const types = new Set(FC.pool(topic, format).map((g) => g.name)), w = Math.min(8, Math.floor(types.size / 2));
-    const rand = FC.rng(topic.length * 31 + format.length), recent = [], seen = new Set();
-    for (let k = 0; k < 400; k++) {
-      const seed = FC.freshSeed(topic, format, recent, rand.next), gen = FC.genOf(topic, seed, format);
-      if (w && recent.slice(-w).includes(gen)) { fail(`variety ${topic}/${format}: ${gen} again after ${recent.length - recent.lastIndexOf(gen)}`); break; }
-      if (FC.generate(topic, seed, format).gen !== gen) { fail(`variety ${topic}/${format}: genOf disagrees with generate`); break; }
-      recent.push(gen);
-      seen.add(gen);
-    }
-    if (seen.size !== types.size) fail(`variety ${topic}/${format}: only ${seen.size} of ${types.size} types came up`);
-  }
-}
-
 // ---------------------------------------------------------------- adapting to the student
-// Every type has a name in both languages. A type marked hard comes up clearly more often than
-// types marked easy (limited by the no-repeat rule, which still holds), and easy ones still come.
+// Every type has a name in both languages and a difficulty; the moving average of the scores
+// gives a hard type up to four times the weight of a mastered one.
 for (const g of new Set(Object.values(FC.POOLS).flat().map((x) => x.name))) {
   if (!FC.TYPE_NAMES[g] || FC.TYPE_NAMES[g].some((x) => !x)) fail(`type ${g} has no name`);
+  if (!FC.DIFFICULTY[g]) fail(`type ${g} has no difficulty`);
 }
 {
-  const types = [...new Set(FC.pool('mixed').map((g) => g.name))], hard = 'rank-elevator';
-  let stats = {};
-  for (const t of types) stats = FC.recordResult(stats, t, t === hard ? 1 : 0);
-  if (FC.weightOf(stats, hard) !== 4 || FC.weightOf(stats, 'drop') !== 1) fail('weights for hard and easy types');
-  stats = FC.recordResult(stats, hard, 0);
-  if (Math.abs(stats[hard].s - 0.6) > 1e-9 || stats[hard].n !== 2) fail('moving average of the scores');
-  stats = FC.recordResult(stats, hard, 1);
-  const rand = FC.rng(99), recent = [], count = {};
-  for (let k = 0; k < 3000; k++) {
-    const gen = FC.genOf('mixed', FC.freshSeed('mixed', 'all', recent, rand.next, stats), 'all');
-    if (recent.slice(-8).includes(gen)) { fail(`adaptive: ${gen} repeated too soon`); break; }
-    recent.push(gen);
-    count[gen] = (count[gen] || 0) + 1;
-  }
-  const easy = types.filter((t) => t !== hard).map((t) => count[t] || 0), mean = easy.reduce((a, b) => a + b, 0) / easy.length;
-  // weight 3.3 (s = 0.76), but in Mixed a type can come at most every 9th time: expect about 1.8×
-  if (count[hard] < 1.5 * mean) fail(`adaptive: the hard type came ${count[hard]} times, easy ones ${mean.toFixed(0)} on average`);
-  if (easy.some((c) => c === 0)) fail('adaptive: some easy type never came up');
+  let stats = FC.recordResult({}, 'drop', 1);
+  if (FC.weightOf(stats, 'drop') !== 4 || FC.weightOf(FC.recordResult({}, 'drop', 0), 'drop') !== 1) fail('weights for hard and easy types');
+  stats = FC.recordResult(stats, 'drop', 0);
+  if (Math.abs(stats.drop.s - 0.6) > 1e-9 || stats.drop.n !== 2) fail('moving average of the scores');
 }
 
 // ---------------------------------------------------------------- German
@@ -265,23 +209,23 @@ for (const g of new Set(Object.values(FC.POOLS).flat().map((x) => x.name))) {
 // in the same order, same misconceptions); the German text is complete, in Swiss spelling (no ß)
 // and has no English left in it.
 const ENGLISH = /\b(the|and|is|are|with|which|does|of|from|it)\b/i;
-for (const topic of Object.keys(FC.TOPICS)) {
-  for (let seed = 1; seed <= 200; seed++) {
+for (const type of TYPES) {
+  for (let seed = 1; seed <= 60; seed++) {
     FC.setLang('en');
-    const en = FC.generate(topic, seed);
+    const en = FC.generateGen(type, seed);
     FC.setLang('de');
     let de;
-    try { de = FC.generate(topic, seed); } catch (e) { fail(`de ${topic}-${seed}: ${e.message}`); continue; }
-    checkExercise(de, `de ${topic}-${seed}`);
+    try { de = FC.generateGen(type, seed); } catch (e) { fail(`de ${type}-${seed}: ${e.message}`); continue; }
+    checkExercise(de, `de ${type}-${seed}`);
     const shape = (ex) => ex.gen + ex.questions.map((q) => q.key + JSON.stringify(sig(q))).join('|');
-    if (shape(en) !== shape(de)) fail(`de ${topic}-${seed}: differs from the English exercise`);
+    if (shape(en) !== shape(de)) fail(`de ${type}-${seed}: differs from the English exercise`);
     const texts = [de.title, de.situation, ...de.hints, ...de.steps.flatMap((s) => [s.title, s.text]),
       ...de.questions.flatMap(qTexts)].map(strip);
     const svgWords = [de.figure, ...de.steps.map((s) => s.figure)].join('').match(/<text class="txt"[^>]*>([^<]*)</g) || [];
     for (const t of [...texts, ...svgWords.map(strip)]) {
-      if (/ß/.test(t)) fail(`de ${topic}-${seed}: ß in “${t.slice(0, 60)}”`);
+      if (/ß/.test(t)) fail(`de ${type}-${seed}: ß in “${t.slice(0, 60)}”`);
       const m = t.match(ENGLISH);
-      if (m) fail(`de ${topic}-${seed}: English “${m[0]}” in “${t.slice(0, 80)}”`);
+      if (m) fail(`de ${type}-${seed}: English “${m[0]}” in “${t.slice(0, 80)}”`);
     }
   }
 }
@@ -301,19 +245,36 @@ for (const lang of FC.LANGS) {
 }
 FC.setLang('en');
 
-for (const g of FC.pool('mixed')) if (!FC.DIFFICULTY[g.name]) fail(`${g.name}: no difficulty`);
-for (const [level, ds] of Object.entries(FC.LEVELS)) {
-  const seen = {};
-  for (let seed = 1; seed <= 300; seed++) {
-    const ex = FC.generate(level, seed);
-    if (!ds.includes(ex.difficulty)) fail(`${level}-${seed}: difficulty ${ex.difficulty}`);
-    if (ex.id !== `${level}-${seed}`) fail(`${level}-${seed}: id ${ex.id}`);
-    seen[ex.difficulty] = (seen[ex.difficulty] || 0) + 1;
-  }
-  if (Object.keys(seen).length !== ds.length) fail(`${level}: difficulties ${JSON.stringify(seen)}`);
-  console.log(`${level}: ${JSON.stringify(seen)}`);
-}
+// Every practice stage lists registered types, and every type is practised somewhere.
+const practised = new Set(EXAMPLES.flatMap((l) => l.practice.flatMap((st) => st.types)));
+for (const t of practised) if (!TYPES.includes(t)) fail(`practice type ${t} is not registered`);
+for (const t of TYPES) if (!practised.has(t)) fail(`type ${t} is not practised`);
 
-console.log(`${checked} exercises checked, ${allGens.size} scenarios, ${[...codes].filter((c) => FC.MIS[c]).length} misconceptions offered.`);
+// ---------------------------------------------------------------- check
+// Every objective has a name in both languages, its worked example and practice topic, and kinds
+// of practice types that give questions with four distinct options, exactly one right, each wrong
+// one explained and with a known code; the same kind and seed give the same question.
+for (const ob of OBJECTIVES) {
+  if (!ob.name.en || !ob.name.de || !EXAMPLES[ob.tutor] || !EXAMPLES[ob.topic] || !ob.kinds.length) fail(`objective ${ob.id} incomplete`);
+  for (const kind of ob.kinds) {
+    if (!TYPES.includes(kind.split(':')[0])) fail(`objective ${ob.id}: kind ${kind} of an unknown type`);
+    for (const lang of FC.LANGS) {
+      FC.setLang(lang);
+      for (let seed = 1; seed <= 60; seed++) {
+        let q;
+        try { q = FC.checkQuestion(kind, seed); } catch (e) { fail(`check ${kind} ${seed}: ${e.message}`); continue; }
+        const at = `check ${lang} ${kind} ${seed}`;
+        if (q.options.length !== 4 || q.options.filter((o) => o.ok).length !== 1) fail(`${at}: ${q.options.length} options, ${q.options.filter((o) => o.ok).length} right`);
+        if (new Set(q.options.map((o) => o.html)).size !== 4) fail(`${at}: duplicate options`);
+        if (q.options.some((o) => !o.ok && (!explained(o.why) || !known(o.code)))) fail(`${at}: wrong option unexplained`);
+        if (!q.ask || !q.ex.title) fail(`${at}: no question`);
+        if (seed <= 10 && JSON.stringify(FC.checkQuestion(kind, seed).options) !== JSON.stringify(q.options)) fail(`${at}: not deterministic`);
+      }
+    }
+  }
+}
+FC.setLang('en');
+
+console.log(`${checked} exercises checked, ${TYPES.length} types, ${[...codes].filter((c) => FC.MIS[c]).length} misconceptions offered.`);
 if (failures) { console.error(`${failures} failure(s).`); process.exit(1); }
 console.log('All checks passed.');

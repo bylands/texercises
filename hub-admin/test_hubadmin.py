@@ -243,10 +243,10 @@ class Service(unittest.TestCase):
         self.assertEqual(st, 200)
         data = json.loads(body)
         self.assertEqual(data["sets"], {})
-        self.assertIn({"id": "torque", "name": "Torque", "modes": ["tutor", "practice", "real", "arcade"]}, data["apps"])
+        self.assertIn({"id": "impedance", "name": "Impedance Curves", "modes": ["tutor", "practice", "real", "arcade"]}, data["apps"])
         new = {"sets": {"3a-elektro": {"title": "Klasse 3a", "lang": "de", "apps": [
             {"id": "electric-field", "modes": ["tutor", "practice", "arcade"], "tutor": [0, 1, 3], "practice": ["force-dir", "lines-pick+lines-read"]},
-            {"id": "torque", "modes": ["real"]}]}}}
+            {"id": "impedance", "modes": ["real"]}]}}}
         self.assertEqual(self.req("/api/sets", json.dumps(new).encode(), "application/json")[0], 403)
         self.assertEqual(self.req("/api/sets", json.dumps(new).encode(), "text/plain", cookie)[0], 415)
         st, _, body = self.req("/api/sets", json.dumps(new).encode(), "application/json", cookie)

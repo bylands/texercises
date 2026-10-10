@@ -77,16 +77,6 @@
       rect(x, by - h, w, h, 'obj', 0.06 * w) + ball(x + 0.22 * w, by, r, 'wheel') + ball(x + 0.78 * w, by, r, 'wheel');
   }
 
-  // Truck or van of length w on the road at height y; its cab is at the front (dir = 1: right).
-  function truck(x, y, w, dir = 1, tall = 0.42) {
-    const r = 0.07 * w, by = y - r, cabW = 0.24 * w, gap = 0.02 * w, boxW = w - cabW - gap;
-    const cabX = dir > 0 ? x + w - cabW : x, boxX = dir > 0 ? x : x + cabW + gap;
-    const win = dir > 0 ? cabX + cabW * 0.45 : cabX + cabW * 0.1;
-    return rect(boxX, by - tall * w, boxW, tall * w - r * 0.4, 'obj', 2) + rect(cabX, by - 0.3 * w, cabW, 0.3 * w - r * 0.4, 'obj', 4) +
-      rect(win, by - 0.27 * w, cabW * 0.45, 0.1 * w, 'win', 2) +
-      ball(boxX + 0.18 * boxW, by, r, 'wheel') + ball(boxX + 0.78 * boxW, by, r, 'wheel') + ball(cabX + cabW / 2, by, r, 'wheel');
-  }
-
   // Stick figure of height h standing at (x, y). pose: 'push' (arms forward toward dir), 'hold'
   // (arms forward but relaxed, bent), 'down'.
   function person(x, y, h, dir = 1, pose = 'down', skates = false) {
@@ -147,7 +137,7 @@
       text(x0 + w - 2, y0 + 16, xl, 'lbl ax', 'end') + text(x0 - 6, y0 - h + 10, yl, 'lbl ax', 'end');
   }
 
-  const api = { n, esc, svg, lab, text, words, arrow, line, path, poly, dot, ghost, ground, ceiling, ball, rect, table, crate, car, truck, person, probe, plane, puck, elevator, skydiver, axes };
+  const api = { n, esc, svg, lab, text, words, arrow, line, path, poly, dot, ghost, ground, ceiling, ball, rect, table, crate, car, person, probe, plane, puck, elevator, skydiver, axes };
   root.Draw = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -154,9 +154,14 @@
         T(` But ${actual}.`, ` Aber ${actual}.`);
       return o(label, misled ? 'active-force' : 'other', why);
     };
+    // without numbers? The motion is enough.
+    const enough = T(`The motion is enough: the ${name} ${doing}, so the net force ${acc ? `points ${acc > 0 ? fwd : back}` : 'is zero'}.`,
+      `Die Bewegung genügt: ${cap(N.nom)} ${doing}, also ist die resultierende Kraft ${acc ? `${acc > 0 ? fwd : back} gerichtet` : 'null'}.`);
     const questions = [
-      q(r, 'compare', T(`How does ${X.what} (${X.html}) compare with ${Y.what} (${Y.html})?`, `Wie gross ist ${X.what} (${X.html}) im Vergleich zu ${Y.dat} (${Y.html})?`), [1, 0, -1].map(relOpt)),
-      q(r, 'net', T(`Which way does the net force on the ${name} point?`, `Wohin zeigt die resultierende Kraft auf ${N.acc}?`), ['with', 'against', 'none'].map(netOpt)),
+      q(r, 'compare', T(`How does ${X.what} (${X.html}) compare with ${Y.what} (${Y.html})?`, `Wie gross ist ${X.what} (${X.html}) im Vergleich zu ${Y.dat} (${Y.html})?`), [...[1, 0, -1].map(relOpt),
+        o(T('That cannot be told without the values of the forces.', 'Das lässt sich ohne die Werte der Kräfte nicht sagen.'), 'other', T(`It can: the forces need not be known. ${enough}`, `Doch: Die Kräfte muss man nicht kennen. ${enough}`))]),
+      q(r, 'net', T(`Which way does the net force on the ${name} point?`, `Wohin zeigt die resultierende Kraft auf ${N.acc}?`), [...['with', 'against', 'none'].map(netOpt),
+        o(T(`That depends on the mass of the ${name}.`, `Das hängt von der Masse ${{ f: 'der', m: 'des', n: 'des' }[N.g]} ${N.word}${N.g === 'f' ? '' : 's'} ab.`), 'other', T(`The mass sets how large the net force is for a given acceleration, not which way it points. ${enough}`, `Die Masse bestimmt, wie gross die resultierende Kraft für eine bestimmte Beschleunigung ist, nicht wohin sie zeigt. ${enough}`))]),
     ];
 
     const gapWord = T({ speeding: 'grow', constant: 'stay the same', slowing: 'shrink' }[phase], { speeding: 'wachsen', constant: 'bleiben gleich', slowing: 'schrumpfen' }[phase]);
@@ -432,8 +437,152 @@
     };
   }
 
+  // ================================================================ centre: what keeps a body on its circle
+  // A body moving at constant speed on a circle: the net force points to the centre, and one of
+  // the forces that act provides it (friction, gravity, the string, the electric pull).
+  function scenes() {
+    return {
+      car: {
+        obj: 'car', N: noun('n', 'Auto'), sym: 'f', title: T('Round the bend', 'Durch die Kurve'),
+        text: T('A car drives round a flat, circular bend at constant speed.', 'Ein Auto fährt mit konstanter Geschwindigkeit durch eine flache, kreisförmige Kurve.'),
+        label: T('Top view: a car in a circular bend', 'Ansicht von oben: ein Auto in einer kreisförmigen Kurve'),
+        force: T('the friction of the road on the tyres', 'die Reibungskraft der Strasse auf die Reifen'),
+        others: T('Its weight and the normal force of the road are vertical and cancel; the driving force only makes up for the air resistance, along the motion.', 'Gewichtskraft und Normalkraft der Strasse sind vertikal und heben sich auf; die Antriebskraft gleicht in Bewegungsrichtung nur den Luftwiderstand aus.'),
+        without: T('On black ice, without that friction, the car would slide straight on along the tangent.', 'Auf Glatteis, ohne diese Reibung, würde das Auto geradeaus entlang der Tangente weiterrutschen.'),
+        options: (why) => [
+          o(T('The friction of the road on the tyres.', 'Die Reibungskraft der Strasse auf die Reifen.'), 'ok', why.ok),
+          o(T('The driving force of the engine.', 'Die Antriebskraft des Motors.'), 'active-force', T('The driving force points along the motion, not to the centre: at constant speed it only makes up for the air resistance.', 'Die Antriebskraft zeigt in Bewegungsrichtung, nicht zum Zentrum: Bei konstanter Geschwindigkeit gleicht sie nur den Luftwiderstand aus.')),
+          o(T('The normal force of the road.', 'Die Normalkraft der Strasse.'), 'other', T('The normal force of a flat road points up: it balances the weight and cannot pull the car sideways.', 'Die Normalkraft einer flachen Strasse zeigt nach oben: Sie hält der Gewichtskraft das Gleichgewicht und kann das Auto nicht seitlich ziehen.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+      moon: {
+        obj: 'Moon', N: noun('m', 'Mond'), sym: 'G', title: T('The Moon', 'Der Mond'),
+        text: T('The Moon goes round the Earth at constant speed on a (nearly) circular orbit.', 'Der Mond umkreist die Erde mit konstanter Geschwindigkeit auf einer (fast) kreisförmigen Bahn.'),
+        label: T('The Moon on its orbit round the Earth', 'Der Mond auf seiner Bahn um die Erde'),
+        force: T('the gravitational pull of the Earth on the Moon', 'die Gravitationskraft der Erde auf den Mond'),
+        others: T('Far out in space, no other force of any size acts on the Moon.', 'Weit draussen im Weltraum wirkt keine andere nennenswerte Kraft auf den Mond.'),
+        without: T('Without the pull of the Earth, the Moon would fly off along the tangent.', 'Ohne die Anziehung der Erde würde der Mond entlang der Tangente davonfliegen.'),
+        options: (why) => [
+          o(T('The gravitational pull of the Earth.', 'Die Gravitationskraft der Erde.'), 'ok', why.ok),
+          o(T('A force along its orbit that keeps it moving.', 'Eine Kraft entlang der Bahn, die ihn in Bewegung hält.'), 'active-force', T('Moving on needs no force: in empty space the Moon keeps its speed by itself. A force along the orbit would make it faster.', 'Weiterbewegen braucht keine Kraft: Im leeren Weltraum behält der Mond sein Tempo von selbst. Eine Kraft entlang der Bahn würde ihn schneller machen.')),
+          o(T('None: so far out in space, no force acts on it.', 'Keine: So weit draussen im Weltraum wirkt keine Kraft auf ihn.'), 'other', T('Without any force, the Moon would move in a straight line. The gravity of the Earth reaches far out into space and bends its path.', 'Ohne jede Kraft würde sich der Mond geradlinig bewegen. Die Gravitation der Erde reicht weit in den Weltraum hinaus und krümmt seine Bahn.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+      stone: {
+        obj: 'stone', N: noun('m', 'Stein'), sym: 'T', title: T('On a string', 'An der Schnur'),
+        text: T('A stone tied to a string slides round a pin on smooth ice, at constant speed.', 'Ein Stein an einer Schnur gleitet auf glattem Eis mit konstanter Geschwindigkeit um einen Pfosten.'),
+        label: T('Top view: a stone on a string sliding round a pin', 'Ansicht von oben: ein Stein an einer Schnur gleitet um einen Pfosten'),
+        force: T('the pull of the string', 'die Seilkraft der Schnur'),
+        others: T('Its weight and the push of the ice are vertical and cancel; friction is negligible.', 'Gewichtskraft und Normalkraft des Eises sind vertikal und heben sich auf; die Reibung ist vernachlässigbar.'),
+        without: T('If the string broke, the stone would slide straight on along the tangent.', 'Risse die Schnur, würde der Stein geradeaus entlang der Tangente weitergleiten.'),
+        options: (why) => [
+          o(T('The pull of the string.', 'Die Seilkraft der Schnur.'), 'ok', why.ok),
+          o(T('The push it was given at the start.', 'Der Stoss, den er am Anfang bekommen hat.'), 'impetus', T('The push is over: it is not stored in the stone. The stone keeps its speed by itself, and the string bends its path.', 'Der Stoss ist vorbei: Er ist nicht im Stein gespeichert. Der Stein behält sein Tempo von selbst, und die Schnur krümmt seine Bahn.')),
+          o(T('Its weight.', 'Seine Gewichtskraft.'), 'other', T('The weight points down, not to the pin; the push of the ice balances it.', 'Die Gewichtskraft zeigt nach unten, nicht zum Pfosten; die Normalkraft des Eises hält ihr das Gleichgewicht.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+      electron: {
+        obj: 'electron', N: noun('n', 'Elektron'), sym: 'el', title: T('In the atom', 'Im Atom'),
+        text: T('In a simple model of the hydrogen atom, the electron circles the nucleus, a proton, at constant speed.', 'In einem einfachen Modell des Wasserstoffatoms umkreist das Elektron den Kern, ein Proton, mit konstanter Geschwindigkeit.'),
+        label: T('An electron circling a nucleus', 'Ein Elektron umkreist einen Kern'),
+        force: T('the electric attraction of the nucleus', 'die elektrische Anziehung des Kerns'),
+        others: T('The gravitational pull of the nucleus also points there, but it is about 10³⁹ times weaker: it plays no part.', 'Die Gravitationskraft des Kerns zeigt auch dorthin, ist aber etwa 10³⁹-mal schwächer: Sie spielt keine Rolle.'),
+        without: T('Without the electric pull, the electron would fly off along the tangent.', 'Ohne die elektrische Anziehung würde das Elektron entlang der Tangente davonfliegen.'),
+        options: (why) => [
+          o(T('The electric attraction of the nucleus.', 'Die elektrische Anziehung des Kerns.'), 'ok', why.ok),
+          o(T('The gravitational pull of the nucleus.', 'Die Gravitationskraft des Kerns.'), 'other', T('It does point to the nucleus, but it is about 10³⁹ times weaker than the electric pull: far too weak to matter.', 'Sie zeigt zwar zum Kern, ist aber etwa 10³⁹-mal schwächer als die elektrische Anziehung: viel zu schwach, um eine Rolle zu spielen.')),
+          o(T('A force along its orbit that keeps it moving.', 'Eine Kraft entlang der Bahn, die es in Bewegung hält.'), 'active-force', T('Moving on needs no force; a force along the orbit would make the electron faster.', 'Weiterbewegen braucht keine Kraft; eine Kraft entlang der Bahn würde das Elektron schneller machen.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+    };
+  }
+
+  function centre(r, p) {
+    const key = p.scene || r.pick(['car', 'moon', 'stone', 'electron']), sc = scenes()[key], N = sc.N;
+    const The = cap(T(`the ${sc.obj}`, N.nom)), acc = T(`the ${sc.obj}`, N.acc);
+    const s = r.pick([1, -1]); // 1: clockwise in the picture
+    const phi = (r.pick([0, 45, 90, 135, 180, 225, 270, 315]) * Math.PI) / 180;
+    const C = [170, 130], R = 88;
+    const pt = (a, rr = R) => [C[0] + rr * Math.cos(a), C[1] + rr * Math.sin(a)];
+    const tan = (a) => [-s * Math.sin(a), s * Math.cos(a)], inw = (a) => [-Math.cos(a), -Math.sin(a)];
+    const P = pt(phi), FS = F(sc.sym);
+
+    // ---------------------------------------------------------- figure (top view)
+    function body(x, y, a) {
+      if (key === 'car') return `<g transform="rotate(${D.n((a * 180) / Math.PI + 90)} ${D.n(x)} ${D.n(y)})">${D.rect(x - 9, y - 15, 18, 30, 'obj', 4)}${D.rect(x - 7, y - 6 * s - 4, 14, 8, 'win', 2)}</g>`;
+      if (key === 'moon') return D.ball(x, y, 10);
+      if (key === 'electron') return `<circle class="mag-s" cx="${D.n(x)}" cy="${D.n(y)}" r="7"/>` + D.text(x, y + 4, '−', 'lbl small');
+      return D.ball(x, y, 8);
+    }
+    function figure(o = {}) {
+      let g = D.rect(0, 0, 340, 260, key === 'stone' ? 'ice' : key === 'car' ? 'table-top' : 'space', 6);
+      if (key === 'car') g += `<circle class="channel" cx="${C[0]}" cy="${C[1]}" r="${R}"/>` + D.dot(C[0], C[1], 3, 'pt') + D.words(C[0], C[1] + 18, T('centre', 'Zentrum'));
+      else g += `<circle class="trace" cx="${C[0]}" cy="${C[1]}" r="${R}" fill="none"/>`;
+      if (key === 'moon') g += `<circle class="obj earth" cx="${C[0]}" cy="${C[1]}" r="26"/>` + D.words(C[0], C[1] + 44, T('Earth', 'Erde'));
+      if (key === 'electron') g += `<circle class="mag-n" cx="${C[0]}" cy="${C[1]}" r="10"/>` + D.text(C[0], C[1] + 4, '+', 'lbl small');
+      if (key === 'stone') g += D.dot(C[0], C[1], 3.5, 'pin') + D.line(C[0], C[1], P[0], P[1], 'cable');
+      if (o.turn) [-0.9, -1.8].forEach((da) => {
+        const a = phi + s * da, [x, y] = pt(a), t = tan(a);
+        g += D.ghost(body(x, y, a)) + D.arrow(x, y, x + 40 * t[0], y + 40 * t[1], 'v', '');
+      });
+      g += body(P[0], P[1], phi) + D.text(P[0] - 22 * inw(phi)[0] - 10 * tan(phi)[0], P[1] - 22 * inw(phi)[1] - 10 * tan(phi)[1] + 4, 'P', 'lbl');
+      const t = tan(phi), n = inw(phi);
+      g += D.arrow(P[0] + 12 * t[0], P[1] + 12 * t[1], P[0] + 54 * t[0], P[1] + 54 * t[1], 'v', 'v');
+      if (o.net) g += D.arrow(P[0] + 12 * n[0], P[1] + 12 * n[1], P[0] + 50 * n[0], P[1] + 50 * n[1], 'net', FL('net'), { at: [P[0] + 50 * n[0] + 10 * t[0], P[1] + 50 * n[1] + 10 * t[1] + 12], anchor: 'middle' });
+      if (o.force) g += D.arrow(P[0] + 12 * n[0], P[1] + 12 * n[1], P[0] + 50 * n[0], P[1] + 50 * n[1], 'f', FL(sc.sym), { at: [P[0] + 50 * n[0] - 12 * t[0], P[1] + 50 * n[1] - 12 * t[1] + 4], anchor: 'middle' });
+      if (o.tangent) g += D.line(P[0], P[1], P[0] + 150 * t[0], P[1] + 150 * t[1], 'guide');
+      return D.svg(340, 260, g, sc.label);
+    }
+
+    // ---------------------------------------------------------- questions
+    const turns = T(`${The} keeps its speed, but its direction of motion changes all the time.`, `${The} behält sein Tempo, aber die Bewegungsrichtung ändert sich ständig.`);
+    const inward = T('The velocity changes towards the inside of the curve, so the acceleration — and with it the net force — points to the centre.', 'Die Geschwindigkeit ändert sich zur Innenseite der Kurve hin, also zeigt die Beschleunigung — und damit die resultierende Kraft — zum Zentrum.');
+    const noOut = T(`No force pushes ${acc} outward: there is no “centrifugal force”. ${sc.without}`, `Keine Kraft drückt ${N.acc} nach aussen: Es gibt keine „Zentrifugalkraft“. ${sc.without}`);
+    const why = {
+      ok: T(`Right: ${sc.force} points to the centre; it provides the net force. ${sc.others}`, `Richtig: ${cap(sc.force)} zeigt zum Zentrum; sie liefert die resultierende Kraft. ${sc.others}`),
+      out: T(`${noOut} The force towards the centre is ${sc.force}.`, `${noOut} Die Kraft zum Zentrum ist ${sc.force}.`),
+    };
+    const questions = [
+      q(r, 'net', T(`Which way does the net force on ${acc} point at P?`, `Wohin zeigt die resultierende Kraft auf ${N.acc} im Punkt P?`), [
+        o(T('Towards the centre of the circle.', 'Zum Zentrum des Kreises.'), 'ok', T(`Right: ${turns} ${inward}`, `Richtig: ${turns} ${inward}`)),
+        o(T('Forward, along its velocity.', 'Nach vorn, in Richtung der Geschwindigkeit.'), 'active-force', T(`Moving on needs no force. A net force forward would make ${acc} faster, but its speed stays the same. ${inward}`, `Weiterbewegen braucht keine Kraft. Eine resultierende Kraft nach vorn würde ${N.acc} schneller machen, aber das Tempo bleibt gleich. ${inward}`)),
+        o(T('Outward, away from the centre.', 'Nach aussen, weg vom Zentrum.'), 'centrifugal', T(`${noOut} ${inward}`, `${noOut} ${inward}`)),
+        o(T('There is none, since its speed is constant.', 'Es gibt keine, weil das Tempo konstant ist.'), 'constant-speed', T(`${turns} So its velocity changes, and that takes a net force. ${inward}`, `${turns} Die Geschwindigkeit ändert sich also, und dazu braucht es eine resultierende Kraft. ${inward}`)),
+      ]),
+      q(r, 'source', T(`Which force provides this net force towards the centre?`, `Welche Kraft liefert diese resultierende Kraft zum Zentrum?`), sc.options(why)),
+    ];
+
+    const steps = [
+      { title: T('The velocity turns', 'Die Geschwindigkeit dreht sich'), figure: figure({ turn: true, net: true }),
+        text: T(`${turns} ${inward} Second law: ${F('net')} = <i>m·a</i>, towards the centre.`, `${turns} ${inward} Zweites Newtonsches Gesetz: ${F('net')} = <i>m·a</i>, zum Zentrum hin.`) },
+      { title: T('Which force points there?', 'Welche Kraft zeigt dorthin?'), figure: figure({ force: true }),
+        text: T(`List the forces on ${acc}: ${sc.force} (${FS}) points to the centre. ${sc.others} So ${FS} is the net force.`, `Zähle die Kräfte auf ${N.acc} auf: ${cap(sc.force)} (${FS}) zeigt zum Zentrum. ${sc.others} Also ist ${FS} die resultierende Kraft.`) },
+      { title: T('Nothing pushes outward', 'Nichts drückt nach aussen'), figure: figure({ force: true, tangent: true }),
+        text: T(`The force towards the centre is not an extra force: it is ${sc.force}. ${noOut}`, `Die Kraft zum Zentrum ist keine zusätzliche Kraft: Es ist ${sc.force}. ${noOut}`) },
+    ];
+
+    return {
+      title: sc.title,
+      situation: `<p>${sc.text}</p>`,
+      figure: figure(),
+      questions,
+      hints: [
+        T(`${The} moves at constant speed. Does its velocity change?`, `${The} bewegt sich mit konstantem Tempo. Ändert sich seine Geschwindigkeit?`),
+        T('Plan: the change of velocity gives the direction of the acceleration, the second law the direction of the net force; then look for the force that points that way.', 'Plan: Die Änderung der Geschwindigkeit ergibt die Richtung der Beschleunigung, das zweite Gesetz die Richtung der resultierenden Kraft; suche dann die Kraft, die in diese Richtung zeigt.'),
+        T(`Second law: ${F('net')} = <i>m·a</i>. On a circle at constant speed, the acceleration points to the centre.`, `Zweites Gesetz: ${F('net')} = <i>m·a</i>. Auf einer Kreisbahn mit konstantem Tempo zeigt die Beschleunigung zum Zentrum.`),
+        T(`Here: which body pulls or pushes ${acc} towards the centre? ${sc.others}`, `Hier: Welcher Körper zieht oder drückt ${N.acc} zum Zentrum? ${sc.others}`),
+      ],
+      steps,
+    };
+  }
+
   register('inertia', 'balance', balance, { phase: 'constant' });
   register('force', 'balance', balance);
   register('force', 'thruster', thruster);
   register('force', 'two-forces', twoForces);
+  register('force', 'centre', centre);
 })(typeof window !== 'undefined' ? window : globalThis);
