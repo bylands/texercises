@@ -2,34 +2,22 @@
 // formulas of the app, random numbers for the exercises, and how numbers are written.
 //   λ = h/p, p = m·v = √(2·m·E_kin)                 de Broglie (slow particles, no relativity)
 //   p = √(2·m·q·U)                                  a particle of charge q accelerated through U
-//   Δx = λ·L/d                                      fringe spacing behind a double slit or grating
-//   sin α = λ/b                                     first minimum behind a single slit of width b
+//   E_n = n²·h²/(8·m·L²)                            a particle in a box of width L (infinite walls)
+//   Δx = L·√(1/12 − 1/(2n²π²))                      the uncertainty of its position in the state n
 //   Δx·Δp ≥ h/(4π)                                  Heisenberg's uncertainty relation
-//   T ≈ e^(−2κd), κ = √(2·m·(V₀ − E))/ħ             tunnelling through a barrier of width d
 // Units inside: SI (m, kg, J); energies given in eV.
 (function (root) {
   'use strict';
 
-  const h = 6.626e-34, hbar = h / (2 * Math.PI), c = 2.998e8, e = 1.602e-19, u = 1.661e-27;
-  const me = 9.109e-31, mp = 1.673e-27, mn = 1.675e-27, ma = 6.645e-27;
+  const h = 6.626e-34, c = 2.998e8, e = 1.602e-19;
+  const me = 9.109e-31, mp = 1.673e-27;
 
   // ---------------------------------------------------------------- formulas
-  const pOfE = (m, EeV) => Math.sqrt(2 * m * EeV * e); // kg·m/s from a kinetic energy in eV
   const pOfU = (m, U, q = 1) => Math.sqrt(2 * m * q * e * U); // accelerated through U (V), charge q·e
-  const lambda = (p) => h / p; // m
   const lambdaU = (U, m = me, q = 1) => h / pOfU(m, U, q); // m
   const minDp = (dx) => h / (4 * Math.PI * dx); // kg·m/s
-  const kappa = (m, dE) => Math.sqrt(2 * m * dE * e) / hbar; // 1/m, dE = V₀ − E in eV
-  const trans = (m, dE, d) => Math.exp(-2 * kappa(m, dE) * d);
-  const toEV = (J) => J / e;
-
-  // Particles: mass, charge (in e), names.
-  const PARTICLES = {
-    e: { en: 'an electron', de: 'ein Elektron', name: { en: 'electron', de: 'Elektron' }, m: me, q: 1, sym: 'e' },
-    p: { en: 'a proton', de: 'ein Proton', name: { en: 'proton', de: 'Proton' }, m: mp, q: 1, sym: 'p' },
-    n: { en: 'a neutron', de: 'ein Neutron', name: { en: 'neutron', de: 'Neutron' }, m: mn, q: 0, sym: 'n' },
-    a: { en: 'an alpha particle', de: 'ein Alphateilchen', name: { en: 'alpha particle', de: 'Alphateilchen' }, m: ma, q: 2, sym: 'α' },
-  };
+  const boxE = (n, L, m = me) => (n * n * h * h) / (8 * m * L * L); // J
+  const boxDx = (n) => Math.sqrt(1 / 12 - 1 / (2 * n * n * Math.PI * Math.PI)); // in units of L
 
   // ---------------------------------------------------------------- random numbers
   function rng(seed) {
@@ -95,7 +83,7 @@
   }
 
   const api = {
-    h, hbar, c, e, u, me, mp, mn, ma, pOfE, pOfU, lambda, lambdaU, minDp, kappa, trans, toEV, PARTICLES,
+    h, c, e, me, mp, pOfU, lambdaU, minDp, boxE, boxDx,
     rng, round, plain, sci, num, pow, expOf, lenUnit, MINUS,
   };
   root.MatterWave = api;

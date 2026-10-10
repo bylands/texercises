@@ -1,16 +1,17 @@
-// Verifies Matter Waves: run with `node matter-waves/test/check-exercises.js`. It checks
-// - the physics against values worked out by hand: an electron through 150 V has λ = 0.100 nm; a
-//   thermal neutron (0.025 eV) 0.181 nm; C₆₀ at 200 m/s 2.77 pm; confined to 0.1 nm, an electron
-//   has Δp ≥ 5.27 · 10⁻²⁵ kg·m/s and Δv ≥ 579 km/s; 1 eV below the top of a barrier, κ = 5.12/nm
-//   and T(0.5 nm) = 6.0 · 10⁻³; the ring radii of graphite give back d = 0.213 nm,
+// Verifies Matter Waves and the Particle in a Box: run with `node matter-waves/test/check-exercises.js`.
+// It checks
+// - the physics against values worked out by hand: an electron through 150 V has λ = 0.100 nm; an
+//   electron in a box of 0.5 nm has E₁ = 1.50 eV; in a box, Δx = 0.181·L for n = 1 and 0.266·L for
+//   n = 2; confined to 0.1 nm, an electron has Δp ≥ 5.27 · 10⁻²⁵ kg·m/s,
 // - for every type, in both languages and many seeds: no undefined or NaN in any text or drawing;
 //   hints and a solution; each choice or drawing has exactly one right option, every wrong one a
 //   reason, no two alike; no HTML inside a drawing; statements are mixed; every number is finite, and its typical mistakes
 //   give clearly different values; the right option of a choice is not always in the same place,
-// - the numbers the student types (3.8e-24, 3.8·10^-24, 3,8 · 10⁻²⁴, the full number for a field
-//   in 10⁻²⁴ kg·m/s) and how they are judged (a typical mistake gets its own reason),
-// - the arcade: three or four different options (as many as a choice has), exactly one right,
-// - every problem.
+// - the numbers the student types and how they are judged (a typical mistake gets its own reason),
+// - the check: every objective has kinds, a worked example and a practice topic; each of its kinds
+//   gives questions with four different options, exactly one right, every wrong one with a flag
+//   that names a misconception or none,
+// - the worked examples.
 'use strict';
 
 global.window = globalThis;
@@ -18,14 +19,13 @@ const Lang = require('../lang.js');
 const P = require('../physics.js');
 const G = require('../plot.js');
 const X = require('../exercises.js');
-const R = require('../realproblems.js');
 require('../app.js');
 const A = globalThis.MatterApp;
 
 let failures = 0;
 const fail = (msg) => { failures++; if (failures < 30) console.error('  FAIL ' + msg); };
 const bad = (html) => /undefined|NaN|\[object|Infinity|[>(=:"]null\b/.test(html);
-const badText = (html) => /undefined|NaN|\[object|Infinity|>null\b/.test(html); // the arcade's options carry flag: null
+const badText = (html) => /undefined|NaN|\[object|Infinity|>null\b/.test(html); // the check's options carry flag: null
 // HTML inside a drawing breaks it: SVG text takes <tspan>, not <i>, <sub>, <sup> or <b>
 const htmlInSvg = (html) => (String(html).match(/<svg[\s\S]*?<\/svg>/g) || []).some((svg) => /<(i|sub|sup|b)>/.test(svg));
 const json = (e) => JSON.stringify(e, (k, v) => (typeof v === 'function' ? undefined : v));
@@ -34,16 +34,15 @@ const SEEDS = 120;
 
 // ---------------------------------------------------------------- the physics
 if (!near(P.lambdaU(150), 1.001e-10)) fail('150 V: 0.100 nm');
-if (!near(P.lambda(P.pOfE(P.mn, 0.025)), 1.809e-10)) fail('a thermal neutron: 0.181 nm');
-if (!near(P.h / (720 * P.u * 200), 2.77e-12)) fail('C60 at 200 m/s: 2.77 pm');
-if (!near(P.minDp(1e-10), 5.27e-25) || !near(P.minDp(1e-10) / P.me, 5.79e5)) fail('an electron in 0.1 nm');
-if (!near(P.kappa(P.me, 1), 5.12e9) || !near(P.trans(P.me, 1, 0.5e-9), 5.97e-3, 0.01)) fail('tunnelling 1 eV below the top');
-for (let seed = 1; seed <= 60; seed++) { const e = X.make('rings', seed); if (!near(e.questions[1].value, 0.213, 0.03)) fail(`rings ${seed}: d = ${e.questions[1].value}`); }
-if (['double', 'which', 'single', 'classical', 'narrow', 'smear'].some((k) => bad(G.screen(k, 50, 1))) || bad(G.tube({ U: '1 kV' })) || bad(G.rings([10, 18], { label: true })) || bad(G.doubleSlit({})) || bad(G.slitGraph([{ b: 10, lam: 0.5 }])) || bad(G.rGraph({ pts: [[0.5, 12]], slope: 24, solve: true }))) fail('a drawing');
-for (const k of ['ok', 'longer', 'shorter', 'zero', 'same', 'inside']) if (bad(G.barrier({ after: k, dE: true, labels: true }))) fail(`the barrier ${k}`);
+if (!near(P.boxE(1, 0.5e-9) / P.e, 1.505)) fail('an electron in 0.5 nm: E1 = 1.50 eV');
+if (!near(P.boxE(3, 1e-9), 9 * P.boxE(1, 1e-9), 1e-9) || !near(P.boxE(1, 2e-9), P.boxE(1, 1e-9) / 4, 1e-9)) fail('E ∝ n²/L²');
+if (!near(P.boxDx(1), 0.1808) || !near(P.boxDx(2), 0.2658)) fail('Δx in a box');
+if (!near(P.minDp(1e-10), 5.27e-25)) fail('an electron in 0.1 nm');
+if (bad(G.tube({ U: '1 kV' })) || bad(G.rings([10, 18], { label: true, max: 30 })) || bad(G.slitGraph([{ b: 10, lam: 0.5 }])) || bad(G.levels(3)) || bad(G.packet(0.5, 0.1, { ymax: 5 }))) fail('a drawing');
+for (const kind of ['ok', 'walls', 'onewall', 'outside', 'flat', 'psi']) for (const sq of [false, true]) if (bad(G.box({ n: 2, sq, kind, ticks: true })) || htmlInSvg(G.box({ n: 2, sq, kind }))) fail(`the box ${kind}`);
 
 // ---------------------------------------------------------------- typing numbers
-const PARSE = [['3.8e-24', 3.8e-24], ['3.8·10^-24', 3.8e-24], ['3,8 · 10^-24', 3.8e-24], ['3.8 x 10^-24', 3.8e-24], ['3.8*10^(-24)', 3.8e-24], ['3.8·10⁻²⁴', 3.8e-24], ['−0.75', -0.75], ['100 pm', 100], ['.5', 0.5], ['abc', NaN], ['', NaN]];
+const PARSE = [['3.8e-24', 3.8e-24], ['3.8·10^-24', 3.8e-24], ['3,8 · 10^-24', 3.8e-24], ['33,3', 33.3], ['−0.75', -0.75], ['100 pm', 100], ['13.5 eV', 13.5], ['.5', 0.5], ['abc', NaN], ['', NaN]];
 for (const [s, v] of PARSE) { const x = A.parse(s); if (!(Number.isNaN(v) ? Number.isNaN(x) : near(x, v, 1e-9))) fail(`parse ${s}: ${x}`); }
 Lang.set('en', true);
 {
@@ -81,7 +80,6 @@ function checkQuestions(tag, e) {
 {
   const at = {}, note = (tag, e) => { for (const q of e.questions) if (q.options) (at[`${tag} ${q.key}`] = at[`${tag} ${q.key}`] || new Set()).add(q.options.findIndex((o) => o.ok)); };
   for (const type of X.TYPES) for (let seed = 1; seed <= SEEDS; seed++) note(type, X.make(type, seed));
-  R.PROBLEMS.forEach((p, k) => { for (let seed = 1; seed <= 40; seed++) note(p.id, R.realOf(k, seed)); });
   for (const [k, v] of Object.entries(at)) if (v.size === 1 && ![].includes(k)) fail(`${k}: the right option is always number ${[...v][0] + 1}`);
 }
 for (const lang of ['en', 'de']) {
@@ -94,31 +92,28 @@ for (const lang of ['en', 'de']) {
       if (!e.hints.length || !e.solution.length || !e.title || !e.p) fail(`${tag}: no hints, solution, title or parameters`);
       checkQuestions(tag, e);
       if (lang === 'de') continue;
-      if (type === 'debroglie' && !near(e.questions[2].value, 1226.4 / Math.sqrt(e.p.Uv), 0.002)) fail(`${tag}: λ = 1.226 nm / √U`);
+      if (type === 'debroglie' && !near(e.questions[0].value, 100 / e.p.k, 1e-9)) fail(`${tag}: λ = 100 pm/k`);
+      if (type === 'box-energy' && !near(e.questions[0].value, e.p.k * e.p.k * e.p.e1, 1e-9)) fail(`${tag}: E = k²·E1`);
     }
   }
-  R.PROBLEMS.forEach((p, k) => {
-    for (let seed = 1; seed <= 40; seed++) {
-      const e = R.realOf(k, seed), tag = `real ${p.id} ${seed} ${lang}`;
-      if (bad(json(e))) fail(`${tag}: undefined or NaN`);
-      if (htmlInSvg(json(e))) fail(`${tag}: HTML in a drawing`);
-      if (!e.hints.length || !e.solution.length) fail(`${tag}: no hints or solution`);
-      checkQuestions(tag, e);
-    }
-  });
-  // the arcade
-  for (const [kind] of A.KINDS) {
-    for (let seed = 1; seed <= 40; seed++) {
-      const q = A.arcadeQuestion(kind, seed), tag = `arcade ${kind} ${seed} ${lang}`;
-      if (q.options.length < 3 || q.options.length > 4) fail(`${tag}: ${q.options.length} options`);
-      if (q.options.filter((o) => o.correct).length !== 1) fail(`${tag}: not exactly one right option`);
-      if (new Set(q.options.map((o) => o.html)).size !== q.options.length) fail(`${tag}: two options alike`);
-      if (badText(json(q)) || badText(q.explain())) fail(`${tag}: undefined or NaN`);
+  // the check
+  for (const o of A.OBJECTIVES) {
+    if (!o.kinds.length || !o.name() || !A.LESSONS[o.tutor] || !A.TOPICS[o.topic]) fail(`objective ${o.id}: kinds, name, worked example or topic`);
+    for (const kind of o.kinds) {
+      if (!X.TYPES.includes(kind)) fail(`objective ${o.id}: no type ${kind}`);
+      for (let seed = 1; seed <= 60; seed++) {
+        const q = A.checkQuestion(kind, seed), tag = `check ${kind} ${seed} ${lang}`;
+        if (q.options.length !== 4) fail(`${tag}: ${q.options.length} options`);
+        if (q.options.filter((x) => x.correct).length !== 1) fail(`${tag}: not exactly one right option`);
+        if (new Set(q.options.map((x) => x.html)).size !== q.options.length) fail(`${tag}: two options alike`);
+        if (q.options.some((x) => !x.correct && x.flag && x.flag !== 'other' && !A.CONCEPT[x.flag])) fail(`${tag}: a flag without a misconception (${q.options.map((x) => x.flag)})`);
+        if (badText(json(q)) || badText(q.explain()) || !q.ask) fail(`${tag}: undefined or NaN`);
+      }
     }
   }
   // the worked examples
   A.LESSONS.forEach((l, k) => { for (const fr of l.frames()) if (bad(fr.text + fr.figure) || htmlInSvg(fr.figure)) fail(`tutor ${k + 1} ${lang}: undefined or NaN`); });
 }
-console.log(`${X.TYPES.length} types × ${SEEDS} seeds, ${R.PROBLEMS.length} problems, ${A.KINDS.length} arcade kinds and ${A.LESSONS.length} worked examples, in both languages`);
+console.log(`${X.TYPES.length} types × ${SEEDS} seeds, ${A.OBJECTIVES.length} objectives of the check and ${A.LESSONS.length} worked examples, in both languages`);
 if (failures) { console.error(`${failures} failures`); process.exit(1); }
 console.log('all checks passed');

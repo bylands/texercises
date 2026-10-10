@@ -1,25 +1,25 @@
 // Verifies the Electromagnetic Waves generator: run with `node em-waves/test/check-generator.js`.
 // For many seeds per exercise type and both languages it checks
-// - the answers, worked out again here from the parameters (c = λ·f, v = c/n, Thomson's formula,
-//   E = c·B, E × B along c, I = P/(4πr²), I = ½ε₀cÊ², Malus' law, λ/2 and λ/4 antennas, standing
-//   waves) and the region of the spectrum from the wavelength,
+// - the answers, worked out again here from the parameters (c = λ·f, v = c/n, E = c·B, E × B along
+//   c), the region of the spectrum from the wavelength, and the order of the spectrum,
+// - that the given numbers give round results (mental arithmetic),
 // - one right option per choice, distinct options, an explanation for every wrong one, traps that
-//   differ from the answer, four options in every arcade question,
+//   differ from the answer, four options in every question of the check,
 // - that texts, hints, solutions and figures contain no undefined values (and no ß in German),
 // - that every type has enough different exercises,
-// - the tutor's examples and topics, and the problems.
+// - the tutor's examples and topics, and the check's objectives and their questions.
 'use strict';
 
 const Lang = require('../lang.js');
 global.window = globalThis;
-for (const f of ['core', 'plot', 'figkit', 'figures', 'scenarios', 'generator', 'realproblems', 'lessons']) require(`../${f}.js`);
-const { EW, EWaves, Scenarios, Lessons, EWProblems } = globalThis;
+for (const f of ['core', 'plot', 'figkit', 'figures', 'scenarios', 'generator', 'lessons', 'check-src']) require(`../${f}.js`);
+const { EW, EWaves, Scenarios, Lessons, CheckSource } = globalThis;
+const Check = require('../check.js');
 
 let failures = 0, checked = 0;
 const fail = (msg) => { failures++; if (failures < 400) console.log('  FAIL ' + msg); };
 const close = (a, b, tol = 2e-3) => Math.abs(a - b) <= tol * Math.max(1e-300, Math.abs(b));
-const c = 3.00e8, eps0 = 8.854e-12, DEG = Math.PI / 180;
-const Ehat = (I) => Math.sqrt((2 * I) / (c * eps0));
+const c = 3.00e8;
 
 // the region of the spectrum of a wavelength (borders as in a textbook)
 function region(lam) {
@@ -40,22 +40,16 @@ const same = (a, b) => a.every((x, i) => x === b[i]);
 const EXPECT = {
   'spec-lf': (p, v) => ({ lam: EW.sig(p.x, 3), f: c / v.lam, reg: region(p.x) }), // the wavelength given to 3 digits
   'spec-fl': (p, v) => ({ f: EW.sig(c / p.x, 3), lam: c / v.f, reg: region(c / v.f) }),
-  'spec-echo': (p) => ({ d: (c * p.t) / 2 }),
   medium: (p) => { const n = Scenarios.MATS[p.m][2]; return { v: c / n, f: c / p.lam0, lam: p.lam0 / n }; },
   'medium-back': (p, v) => ({ n: p.lam0 / v.lam, v: (c * v.lam) / p.lam0 }),
-  'lc-f': (p) => ({ f: 1 / (2 * Math.PI * Math.sqrt(p.L * p.C)), T: 2 * Math.PI * Math.sqrt(p.L * p.C) }),
-  'lc-c': (p) => ({ C: 1 / (4 * Math.PI ** 2 * p.f ** 2 * p.L), lam: c / p.f }),
-  'lc-energy': (p) => ({ W: 0.5 * p.C * p.U ** 2, I: p.U * Math.sqrt(p.C / p.L) }), // ½CU² = ½LI²
   'eb-ratio': (p, v) => (p.give === 'E' ? { B: p.E / c } : { E: EW.sig(p.E / c, 3) * c }),
-  point: (p) => { const I = p.P / (4 * Math.PI * p.r ** 2); return { I, E: Ehat(I) }; },
-  'inv-sq': (p) => ({ I2: p.I1 / p.k ** 2, e: 1 / p.k }),
-  beam: (p) => { const I = p.P / (Math.PI * (p.d / 2) ** 2); return { I, E: Ehat(I) }; },
-  'eb-int': (p) => ({ E: Ehat(p.I), B: Ehat(p.I) / c }),
-  malus: (p) => ({ I1: p.I0 / 2, I2: (p.I0 / 2) * Math.cos(p.a * DEG) ** 2 }),
-  'malus-angle': (p) => ({ a: Math.acos(Math.sqrt(p.s)) / DEG }),
-  'malus-three': (p) => ({ I2: (p.I0 / 2) * Math.cos(p.a * DEG) ** 2, I3: (p.I0 / 2) * Math.cos(p.a * DEG) ** 2 * Math.sin(p.a * DEG) ** 2 }),
-  dipole: (p) => ({ lam: c / p.f, l: (c / p.f) / (p.kind === 'half' ? 2 : 4) }),
-  standing: (p) => ({ lam: (2 * p.d) / (p.m - 1), f: (c * (p.m - 1)) / (2 * p.d) }),
+  // the longest wave of the four is the answer when the longest wavelength or the lowest frequency
+  // or photon energy is asked
+  'spec-order': (p) => {
+    const lam = (k) => { const g = globalThis.Figures.REGIONS.find((x) => x.key === k); return 10 ** ((g.lo + g.hi) / 2); };
+    const byLam = p.regs.slice().sort((x, y) => lam(x) - lam(y));
+    return { ans: (p.by === 'lam') === p.hi ? byLam[3] : byLam[0] };
+  },
 };
 
 const bad = /undefined|NaN|Infinity|\[object|\$\$\$/;
@@ -105,6 +99,8 @@ for (const lang of ['en', 'de']) {
         }
       }
       for (const f of ex.fields) if (f.type === 'num' && !close(f.value, EW.inUnit(ex.v[f.key], f.unit), 1e-9)) fail(`${where}: ${f.key} not in its unit`);
+      // round results for c = λ·f and E = c·B: three significant digits at most
+      if (/^spec|^eb-ratio/.test(scn.id)) for (const f of ex.fields) if (f.type === 'num' && !close(f.value, EW.sig(f.value, 3), 1e-6)) fail(`${where}: ${f.key} = ${f.value} is not round`);
       if (scn.id === 'eb-dir') {
         const { E, B, c: cc, ans } = ex.v;
         if (!same(cross(DIR[E], DIR[B]), DIR[cc])) fail(`${where}: E × B is not along c`);
@@ -115,13 +111,7 @@ for (const lang of ['en', 'de']) {
         if (ex.p.ask === 'zero' ? s > 1e-9 : s < 1 - 1e-9) fail(`${where}: ${ex.v.pt} is not where B is ${ex.p.ask}`);
         if (ex.p.xs.filter((y) => (ex.p.ask === 'zero' ? Math.abs(Math.sin(2 * Math.PI * y)) < 1e-9 : Math.abs(Math.sin(2 * Math.PI * y)) > 1 - 1e-9)).length !== 1) fail(`${where}: not one point fits`);
       }
-      if (scn.id === 'lc-scale') {
-        const LC = ex.p.what === 'both' ? ex.p.k ** 2 : ex.p.k, f = ex.fields[0], right = f.options.find((o) => o[0] === 'right');
-        const shown = right[1].match(/\\times (?:\\tfrac\{1\}\{([\d.]+)\}|([\d.]+))/);
-        const factor = shown[1] ? 1 / Number(shown[1]) : Number(shown[2]);
-        if (!close(factor, 1 / Math.sqrt(LC), 1e-2)) fail(`${where}: factor ${factor}, expected ${1 / Math.sqrt(LC)}`);
-      }
-      // the arcade's question
+      // the question of the check
       const qz = EWaves.quiz(ex, seed);
       if (qz.options.length !== 4) fail(`${where}: quiz with ${qz.options.length} options`);
       if (qz.options.filter((o) => o.correct).length !== 1) fail(`${where}: quiz without one right option`);
@@ -129,33 +119,6 @@ for (const lang of ['en', 'de']) {
     }
     if (seen.size < 8) fail(`${lang} ${scn.id}: only ${seen.size} different exercises`);
   }
-
-  // the problems
-  EWProblems.PROBLEMS.forEach((pb, i) => {
-    for (let seed = 1; seed <= 60; seed++) {
-      const where = `${lang} problem ${pb.id} seed ${seed}`;
-      let ex;
-      try { ex = EWProblems.realOf(i, seed); } catch (e) { fail(`${where}: ${e.message}`); continue; }
-      checked++;
-      checkFields(ex, where);
-      const all = texts(ex);
-      if (bad.test(all)) fail(`${where}: ${all.match(bad)[0]} in the texts`);
-      if (lang === 'de' && /ß/.test(all)) fail(`${where}: ß`);
-      const { p, v } = ex;
-      const want = {
-        oven: () => ({ lam: 2 * p.d, c: 2 * p.d * p.f }),
-        radio: () => ({ Cmin: 1 / (4 * Math.PI ** 2 * 108e6 ** 2 * p.L), Cmax: 1 / (4 * Math.PI ** 2 * 87.5e6 ** 2 * p.L) }),
-        mast: () => { const I = p.P / (4 * Math.PI * p.r ** 2); return { I, E: Ehat(I), ok: Ehat(I) <= 5 ? 'yes' : 'no' }; },
-        sun: () => ({ P: 1361 * 4 * Math.PI * (1.496e11) ** 2 }),
-        mars: () => ({ t: p.d / c, t2: (2 * p.d) / c }),
-        glasses: () => ({ share: Math.cos(p.a * DEG) ** 2, b: Math.acos(Math.sqrt(p.s)) / DEG }),
-        router: () => ({ l1: c / p.f1 / 4, l2: c / p.f2 / 4 }),
-      }[pb.id]();
-      for (const [k, x] of Object.entries(want)) {
-        if (typeof x === 'string') { if (v[k] !== x) fail(`${where}: ${k} = ${v[k]}, expected ${x}`); } else if (!close(v[k], x)) fail(`${where}: ${k} = ${v[k]}, expected ${x}`);
-      }
-    }
-  });
 
   // the tutor's examples and the topics
   Lessons.EXAMPLES.forEach((e, i) => {
@@ -171,12 +134,36 @@ for (const lang of ['en', 'de']) {
     if (!Lessons.EXAMPLES[ex]) fail(`topic ${i} stage ${k}: no example ${ex}`);
   }));
   for (const s of EWaves.SCENARIOS) if (!types.has(s.id)) fail(`type ${s.id} is in no topic`);
+
+  // the check: every objective's kinds give questions with four options, one of them right, a
+  // known misconception behind every flag, and links to an example and a topic that exist
+  const names = CheckSource.concepts();
+  CheckSource.objectives.forEach((o, i) => {
+    if (!o.name() || bad.test(o.name())) fail(`${lang} objective ${i}: name`);
+    if (!Lessons.EXAMPLES[o.tutor] || !Lessons.TOPICS[o.topic]) fail(`${lang} objective ${o.id}: tutor ${o.tutor}, topic ${o.topic}`);
+    for (const kind of o.kinds) {
+      if (!EWaves.byId(kind)) { fail(`objective ${o.id}: unknown kind ${kind}`); continue; }
+      if (!Lessons.TOPICS[o.topic].stages.some((s) => s.types.includes(kind)) && !kind.startsWith('concept')) fail(`objective ${o.id}: ${kind} not in topic ${o.topic}`);
+      for (let seed = 1; seed <= 80; seed++) {
+        const where = `${lang} check ${o.id} ${kind} seed ${seed}`, q = CheckSource.question(kind, seed);
+        checked++;
+        if (q.options.length !== 4) fail(`${where}: ${q.options.length} options`);
+        if (q.options.filter((x) => x.correct).length !== 1) fail(`${where}: not one right option`);
+        if (new Set(q.options.map((x) => x.html)).size !== 4) fail(`${where}: options alike`);
+        for (const x of q.options) if (x.flag && !(CheckSource.concept[x.flag] in names)) fail(`${where}: flag ${x.flag} without an idea`);
+        const all = [q.title, q.text, q.ask, q.figure, ...q.options.map((x) => x.html + (x.why || '')), q.explain()].join('\n');
+        if (bad.test(all)) fail(`${where}: ${all.match(bad)[0]}`);
+      }
+    }
+  });
+  const plan = Check.plan(CheckSource.objectives, Math.random);
+  if (plan.length !== CheckSource.objectives.length * Check.perObjective(CheckSource.objectives.length)) fail(`check of ${plan.length} questions`);
 }
 
-// the example in the tutor: 532 nm is green light at 564 THz
+// the example in the tutor: of microwaves, UV, radio waves and light, UV has the largest photons
 Lang.set('en', true);
-const green = EWaves.exercise(EWaves.byId('spec-lf'), Lessons.EXAMPLES[0].p);
-if (!close(green.v.f, 5.64e14, 1e-3) || green.v.reg !== 'vis') fail(`tutor example 1: f = ${green.v.f}, ${green.v.reg}`);
+const tutorEx = EWaves.exercise(EWaves.byId('spec-order'), Lessons.EXAMPLES[0].p);
+if (tutorEx.v.ans !== 'uv') fail(`tutor example 1: ${tutorEx.v.ans}`);
 
 console.log(failures ? `${failures} failures in ${checked} exercises` : `All ${checked} exercises passed.`);
 process.exit(failures ? 1 : 0);

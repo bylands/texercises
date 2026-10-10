@@ -44,6 +44,7 @@
     medium: () => L('How the rope moves', 'Wie sich das Seil bewegt'), speed: () => L('Speed and timing', 'Geschwindigkeit und Zeit'), sup: () => L('Two crests meet', 'Zwei Buckel begegnen sich'),
     refl: () => L('Reflection', 'Reflexion'), reflsum: () => L('Reflection with overlap', 'Reflexion mit Überlagerung'), mirror: () => L('The mirror crest', 'Der Spiegelbuckel'),
     end: () => L('The end itself', 'Das Ende selbst'), draw: () => L('Draw the rope', 'Zeichne das Seil'),
+    stand: () => L('Standing waves', 'Stehende Wellen'), error: () => L('Find the error', 'Finde den Fehler'),
   };
 
   // ---------------------------------------------------------------- animations
@@ -332,6 +333,8 @@
           frame(L('A fixed end', 'Ein festes Ende'), `<p>${L('The rope is tied to a wall at x = 5 m: the end cannot move.', 'Das Seil ist bei x = 5 m an einer Wand festgemacht: Das Ende kann sich nicht bewegen.')} ${W.RULE.fixed()}</p>`, anim({ sc: fixed, t0: 0, t1: 3.5, show: ['sum'], Y: 11 })),
           frame(L('The mirror trick', 'Der Spiegeltrick'), `<p>${W.RULE.mirror()}</p><p>${L('Behind the end (shaded) runs the mirror crest, upside down at a fixed end; on the rope the two add up, so the end stays at 0.', 'Hinter dem Ende (schattiert) läuft der Spiegelbuckel, bei einem festen Ende auf dem Kopf; auf dem Seil addieren sich die beiden, sodass das Ende bei 0 bleibt.')}</p>`, anim({ sc: fixed, t0: 0, t1: 3.5, show: ['parts', 'sum'], virtual: true, Y: 11 })),
           frame(L('A free end', 'Ein loses Ende'), `<p>${L('Now the end at x = 5 m is free (a ring on a pole): the mirror crest is upright, and the crest comes back upright. At the end the two add: it moves twice as far.', 'Jetzt ist das Ende bei x = 5 m lose (ein Ring an einer Stange): Der Spiegelbuckel steht aufrecht, und der Buckel kommt aufrecht zurück. Am Ende addieren sich die beiden: Es bewegt sich doppelt so weit.')}</p>`, anim({ sc: free, t0: 0, t1: 3.5, show: ['parts', 'sum'], virtual: true, Y: 11 })),
+          frame(L('Find the error', 'Finde den Fehler'), `<p>${L('A student sketched the crest (dashed) after its reflection at a wall (solid). It is reversed, as it should be, but it comes back upright: wrong, a fixed end turns it upside down. Check every reflection twice: which way up (the kind of end), and reversed (the front comes back first).', 'Eine Schülerin hat den Buckel (gestrichelt) nach seiner Reflexion an einer Wand skizziert (ausgezogen). Er ist seitenverkehrt, wie es sein muss, kommt aber aufrecht zurück: falsch, ein festes Ende dreht ihn um. Prüfe jede Reflexion zweimal: wie herum (die Art des Endes) und seitenverkehrt (die Front kommt zuerst zurück).')}</p>`,
+            ['sketch', 'right'].map((k) => fig(P.graph({ ...W.reflSketch(W.pulse(W.LIN.ws, 0.5, 1, 1), 7, 'fixed', 9, k === 'sketch'), label: k === 'sketch' ? L('The student’s sketch: wrong', 'Die Skizze der Schülerin: falsch') : L('Right: upside down', 'Richtig: umgedreht') }))).join('')),
         ];
       },
     },
@@ -349,6 +352,28 @@
         ];
       },
     },
+    {
+      topic: 7, name: () => L('Standing waves', 'Stehende Wellen'),
+      idea: () => L('A wave and its reflection make a standing wave: a node at a fixed end, an antinode at a free end, neighbouring nodes λ/2 apart.', 'Eine Welle und ihre Reflexion bilden eine stehende Welle: ein Knoten an einem festen Ende, ein Bauch an einem losen Ende, benachbarte Knoten λ/2 voneinander entfernt.'),
+      frames: () => {
+        // a long wave train (λ = 2 m) running into a fixed end at x = 6 m
+        const train = W.pulse({ w: 16, lin: false, f: (u) => 3 * Math.sin(Math.PI * u) }, -15, 1, 1), sc = { pulses: [train], end: { x: 6, type: 'fixed' } };
+        const FF = ['fixed', 'fixed'], FL = ['fixed', 'free'];
+        const nodes = [0, 2, 4, 6].map((x) => ({ x, y: 0, label: 'N' })), antis = [1, 3, 5].map((x) => ({ x, y: W.AMP, label: 'A' }));
+        return [
+          frame(L('A wave meets its reflection', 'Eine Welle trifft ihre Reflexion'), `<p>${L('A long wave (λ = 2 m) runs into a wall at x = 6 m. Its reflection (orange, upside down) runs back over it. Where the two overlap, the rope no longer shows a wave running along: some points never move, the others swing up and down in step. Move the slider near the end and watch.', 'Eine lange Welle (λ = 2 m) läuft auf eine Wand bei x = 6 m zu. Ihre Reflexion (orange, umgedreht) läuft über sie zurück. Wo sich die beiden überlagern, zeigt das Seil keine laufende Welle mehr: Einige Punkte bewegen sich nie, die anderen schwingen im Gleichtakt auf und ab. Schieb den Regler gegen das Ende und schau zu.')}</p>`,
+            anim({ sc, t0: 0, t1: 13, show: ['parts', 'sum'], virtual: true, Y: 7, arrows: false })),
+          frame(L('Nodes and antinodes', 'Knoten und Bäuche'), `<p>${W.RULE.stand()} ${W.RULE.ends()}</p><p>${L('The picture shows the rope at its two extreme positions: nodes N, antinodes A. Here λ = 4 m: the nodes are 2 m apart. The same holds for every wave: in a microwave oven without its turntable, chocolate melts in spots λ/2 apart, at the antinodes.', 'Das Bild zeigt das Seil in seinen beiden äussersten Lagen: Knoten N, Bäuche A. Hier ist λ = 4 m: Die Knoten sind 2 m voneinander entfernt. Das gilt für jede Welle: In einem Mikrowellenofen ohne Drehteller schmilzt Schokolade an Stellen im Abstand λ/2, in den Bäuchen.')}</p>`,
+            fig(P.graph(W.standFig(6, FF, 6, 0, { dots: [...nodes, ...antis] })))),
+          frame(L('Fixed at both ends', 'An beiden Enden fest'), `<p>${L('A node at each end: a whole number n of loops fits, ℓ = n·λ/2. The rope of 6 m: λ₁ = 2ℓ = 12 m (the fundamental), then 6 m, 4 m, …: λ = λ₁/n.', 'Ein Knoten an jedem Ende: Eine ganze Zahl n von Schleifen passt, ℓ = n·λ/2. Das Seil von 6 m: λ₁ = 2ℓ = 12 m (die Grundschwingung), dann 6 m, 4 m, …: λ = λ₁/n.')}</p>`,
+            [1, 2, 3].map((n) => fig(P.graph(W.standFig(6, FF, 2 * n, 0, { label: n === 1 ? 'λ₁ = 12 m' : `λ = ${12 / n} m = λ₁/${n}` })))).join('')),
+          frame(L('One end free', 'Ein Ende lose'), `<p>${L('A node at the fixed end, an antinode at the free end: the last piece is a quarter wavelength. ℓ = q·λ/4 with q = 1, 3, 5, …: λ₁ = 4ℓ = 24 m, then λ₁/3, λ₁/5, …', 'Ein Knoten am festen Ende, ein Bauch am losen Ende: Das letzte Stück ist eine Viertelwellenlänge. ℓ = q·λ/4 mit q = 1, 3, 5, …: λ₁ = 4ℓ = 24 m, dann λ₁/3, λ₁/5, …')}</p>`,
+            [1, 3, 5].map((q) => fig(P.graph(W.standFig(6, FL, q, 0, { label: q === 1 ? 'λ₁ = 24 m' : `λ = ${W.num(24 / q)} m = λ₁/${q}` })))).join('')),
+          frame(L('Find the error', 'Finde den Fehler'), `<p>${L('A student sketched a standing wave on a rope fixed at the left and free at the right. Check each end: at the wall the sketch has an antinode, impossible, as a fixed end cannot move (and a node at the ring, where the rope moves most). Corrected: a node at the wall, an antinode at the ring.', 'Eine Schülerin hat eine stehende Welle auf einem Seil skizziert, das links fest und rechts lose ist. Prüfe jedes Ende: An der Wand hat die Skizze einen Bauch, unmöglich, denn ein festes Ende kann sich nicht bewegen (und einen Knoten beim Ring, wo sich das Seil am meisten bewegt). Richtig: ein Knoten an der Wand, ein Bauch beim Ring.')}</p>`,
+            fig(P.graph(W.standFig(6, FL, 3, 1, { label: L('The student’s sketch: wrong', 'Die Skizze der Schülerin: falsch') }))) + fig(P.graph(W.standFig(6, FL, 3, 0, { label: L('Right', 'Richtig') })))),
+        ];
+      },
+    },
   ];
 
   // ---------------------------------------------------------------- practice topics
@@ -358,26 +383,31 @@
     { name: () => L('How the rope moves', 'Wie sich das Seil bewegt'), example: 0, stages: [{ name: () => L('straight crests', 'gerade Buckel'), types: ['medium-lin'] }, { name: () => L('smooth crests', 'runde Buckel'), types: ['medium-smooth'] }] },
     { name: () => L('Speed and timing', 'Geschwindigkeit und Zeit'), example: 1, stages: [{ name: () => L('two snapshots', 'zwei Momentbilder'), types: ['speed-x'] }, { name: () => L('the length', 'die Länge'), types: ['speed-len'] }, { name: () => L('two places', 'zwei Orte'), types: ['speed-t'] }] },
     { name: () => L('Superposition', 'Überlagerung'), example: 2, stages: [{ name: () => L('straight crests', 'gerade Buckel'), types: ['sup-lin'] }, { name: () => L('smooth crests', 'runde Buckel'), types: ['sup-smooth'] }, { name: () => L('draw it', 'zeichnen'), types: ['draw-sup'] }] },
-    { name: () => L('Reflection', 'Reflexion'), example: 3, stages: [{ name: () => L('fixed end', 'festes Ende'), types: ['refl-fixed'] }, { name: () => L('free end', 'loses Ende'), types: ['refl-free'] }, { name: () => L('the mirror crest', 'der Spiegelbuckel'), types: ['mirror-lin', 'mirror-smooth'] }, { name: () => L('the end itself', 'das Ende selbst'), types: ['end-lin', 'end-smooth'] }, { name: () => L('smooth crests', 'runde Buckel'), types: ['refl-smooth'] }, { name: () => L('draw it', 'zeichnen'), types: ['draw-refl'] }] },
+    { name: () => L('Reflection', 'Reflexion'), example: 3, stages: [{ name: () => L('fixed end', 'festes Ende'), types: ['refl-fixed'] }, { name: () => L('free end', 'loses Ende'), types: ['refl-free'] }, { name: () => L('the mirror crest', 'der Spiegelbuckel'), types: ['mirror-lin', 'mirror-smooth'] }, { name: () => L('the end itself', 'das Ende selbst'), types: ['end-lin', 'end-smooth'] }, { name: () => L('smooth crests', 'runde Buckel'), types: ['refl-smooth'] }, { name: () => L('draw it', 'zeichnen'), types: ['draw-refl'] }, { name: () => L('find the error', 'finde den Fehler'), types: ['error-refl'] }] },
     { name: () => L('Reflection with overlap', 'Reflexion mit Überlagerung'), example: 4, stages: [{ name: () => L('straight crests', 'gerade Buckel'), types: ['reflsum-lin'] }, { name: () => L('smooth crests', 'runde Buckel'), types: ['reflsum-smooth'] }, { name: () => L('draw it', 'zeichnen'), types: ['draw-reflsum'] }] },
+    { name: () => L('Standing waves', 'Stehende Wellen'), example: 5, stages: [{ name: () => L('nodes and antinodes', 'Knoten und Bäuche'), types: ['stand-pic'] }, { name: () => L('the wavelength', 'die Wellenlänge'), types: ['stand-count'] }, { name: () => L('λ as a fraction of λ₁', 'λ als Bruchteil von λ₁'), types: ['stand-ratio'] }, { name: () => L('find the error', 'finde den Fehler'), types: ['error-stand'] }] },
   ];
 
   // ---------------------------------------------------------------- check
   // The learning objectives (check.js), each with the exercise types it is asked about, its worked
   // example and its practice topic. Four options: diagrams, or values; how the rope moves as
-  // "which point moves up". The wrong options carry the typical wrong idea behind them (FLAG).
+  // "which point moves up"; "find the error" as "which sketch is wrong". The wrong options carry the typical wrong idea behind them (FLAG).
   const OBJECTIVES = [
     { id: 'medium', kinds: ['move-lin', 'medium-lin', 'yt-lin'], tutor: 0, topic: 0,
       name: () => L('Tell the motion of the wave from the motion of the rope: where a crest is later, how a point of the rope moves, and its y(t) graph.',
         'Die Bewegung der Welle von der Bewegung des Seils unterscheiden: wo ein Buckel später ist, wie sich ein Punkt des Seils bewegt, und sein y(t)-Bild.') },
-    { id: 'reflect', kinds: ['refl-fixed', 'refl-free', 'mirror-lin'], tutor: 3, topic: 5,
+    { id: 'reflect', kinds: ['refl-fixed', 'refl-free', 'mirror-lin', 'error-refl'], tutor: 3, topic: 5,
       name: () => L('Predict the crest reflected at a fixed end (upside down) and at a free end (upright).',
         'Den an einem festen Ende (umgedreht) und an einem losen Ende (aufrecht) reflektierten Buckel vorhersagen.') },
     { id: 'superpose', kinds: ['sup-lin', 'sup-smooth'], tutor: 2, topic: 4,
       name: () => L('Add the displacements of two overlapping crests point by point.',
         'Die Auslenkungen zweier sich überlagernder Buckel Punkt für Punkt addieren.') },
+    { id: 'standing', kinds: ['stand-pic', 'stand-count', 'stand-ratio', 'error-stand'], tutor: 5, topic: 7,
+      name: () => L('Locate the nodes and antinodes of a standing wave on a rope: nodes λ/2 apart, a node at a fixed end, an antinode at a free end.',
+        'Die Knoten und Bäuche einer stehenden Welle auf einem Seil finden: Knoten im Abstand λ/2, ein Knoten an einem festen Ende, ein Bauch an einem losen Ende.') },
   ];
-  const FLAG = { dist: 'distance', dir: 'direction', turn: 'turn', flip: 'flip', copy: 'yt', back: 'yt', dur: 'yt', time: 'distance', max: 'sum', apart: 'sum', sign: 'reflection', order: 'reflection', cut: 'sum', single: 'reflection', inverse: 'formula', total: 'formula' };
+  const FLAG = { dist: 'distance', dir: 'direction', turn: 'turn', flip: 'flip', copy: 'yt', back: 'yt', dur: 'yt', time: 'distance', max: 'sum', apart: 'sum', sign: 'reflection', order: 'reflection', cut: 'sum', single: 'reflection', inverse: 'formula', total: 'formula',
+    ends: 'ends', errStand: 'ends', errRefl: 'reflection', even: 'halfwave', halfS: 'halfwave', count: 'halfwave', ratio: 'halfwave' };
   // two crests subtracted instead of added: the sum, not a reflection
   const flagOf = (e, tag) => (e.kind === 'sup' && tag === 'sign' ? 'sum' : FLAG[tag] || 'other');
   function checkQuestion(kind, seed) {
@@ -390,17 +420,18 @@
       return { title: TITLE.medium(), text: `<p>${e.text}</p>`, figure, ask: L(`Which point ${want}?`, `Welcher Punkt ${want}?`), options: e.questions.map((q) => ({ html: q.label, correct: q.options.find((o) => o.ok).label === want, flag: 'medium', why: q.options.find((o) => o.ok).why })), explain };
     }
     const q = e.questions[0];
-    if (q.type === 'pick') return { title: TITLE[e.kind](), text: `<p>${e.text}</p>`, figure, ask: L('Which diagram is right?', 'Welches Diagramm stimmt?'), options: q.options.map((o) => ({ html: P.graph(o.fig, { small: true }), correct: o.ok, flag: flagOf(e, o.tag), why: o.why })), explain };
+    if (q.type === 'pick') return { title: TITLE[e.kind](), text: `<p>${e.text}</p>`, figure, ask: e.kind === 'error' ? L('Which sketch is wrong?', 'Welche Skizze ist falsch?') : L('Which diagram is right?', 'Welches Diagramm stimmt?'), options: q.options.map((o) => ({ html: P.graph(o.fig, { small: true }), correct: o.ok, flag: flagOf(e, o.tag), why: o.why })), explain };
     return { title: TITLE[e.kind](), text: `<p>${e.text}</p>`, figure, ask: q.label, options: q.options.map((o) => ({ html: o.label, correct: o.ok, flag: flagOf(e, o.tag), why: o.why })), explain };
   }
   const checkSource = {
     id: 'wav',
     objectives: OBJECTIVES,
     question: checkQuestion,
-    concept: { distance: 'distance', direction: 'direction', turn: 'turn', yt: 'yt', sum: 'sum', reflection: 'reflection', medium: 'medium' },
+    concept: { distance: 'distance', direction: 'direction', turn: 'turn', yt: 'yt', sum: 'sum', reflection: 'reflection', medium: 'medium', ends: 'ends', halfwave: 'halfwave' },
     concepts: () => ({
       distance: L('the distance v·t', 'die Strecke v·t'), direction: L('the direction of the crest', 'die Richtung des Buckels'), turn: L('a crest that turns round', 'einen Buckel, der sich umdreht'),
       yt: L('the y(t) graph not reversed', 'das y(t)-Bild nicht seitenverkehrt'), sum: L('the overlap not added', 'die Überlagerung nicht addiert'), reflection: L('the reflection wrong way up or not reversed', 'die Reflexion falsch herum oder nicht seitenverkehrt'), medium: L('how the rope moves', 'wie sich das Seil bewegt'),
+      ends: L('a node at a free end or an antinode at a fixed end', 'einen Knoten an einem losen Ende oder einen Bauch an einem festen Ende'), halfwave: L('a loop taken as a whole wavelength, or the nodes counted instead of the loops', 'eine Schleife als ganze Wellenlänge, oder die Knoten statt der Schleifen gezählt'),
     }),
   };
 

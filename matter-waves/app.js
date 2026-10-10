@@ -2,16 +2,16 @@
   'use strict';
 
   const P = window.MatterWave, X = window.MatterEx, G = window.MatterPlot;
-  const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
   const { plain, sci } = P;
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Matter Waves', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
-      tutor: 'Tutor', practice: 'Practice', real: 'Problems', arcade: 'Arcade', new: 'New exercise', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
-      tutorNote: 'Use the arrow keys ← → to step through. Numbers can be typed as 3.8e-24 or 3.8·10^-24; a comma works as a decimal point too.',
+      title: 'Matter Waves and the Particle in a Box', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
+      tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
+      tutorNote: 'Use the arrow keys ← → to step through. In practice, the numbers are worked out by ratios, without a calculator; a comma works as a decimal point too.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution',
       revealNote: (n) => `The solution unlocks once you have solved the exercise, used all hints or made ${n} attempts.`,
       stars: (d) => `Difficulty: ${d} of 5`, score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
@@ -22,9 +22,9 @@
       number: 'Enter a number', sign: 'Wrong sign', prefix: 'Off by a factor of 1000: check the unit prefix', power: 'Check the power of ten', close: 'Close: check your rounding', wrong: 'Not correct',
     },
     de: {
-      title: 'Materiewellen', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
-      tutor: 'Tutor', practice: 'Üben', real: 'Praxisaufgaben', arcade: 'Arcade', new: 'Neue Aufgabe', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
-      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Zahlen kannst du als 3.8e-24 oder 3.8·10^-24 eingeben; ein Komma geht auch als Dezimalzeichen.',
+      title: 'Materiewellen und das Teilchen im Kasten', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
+      tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
+      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Beim Üben rechnest du mit Verhältnissen, ohne Taschenrechner; ein Komma geht auch als Dezimalzeichen.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung',
       revealNote: (n) => `Die Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder ${n} Versuche gemacht hast.`,
       stars: (d) => `Schwierigkeit: ${d} von 5`, score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
@@ -37,7 +37,7 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null, problems = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
   function stored(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; } }
   function store(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable */ } }
   function showScore() { const s = stored('mw-score', { solved: 0, clean: 0 }); $('#score').textContent = s.solved ? ui().score(s.solved, s.clean) : ''; }
@@ -159,10 +159,10 @@
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null };
     if (location.hash !== `#${ex.id}`) history.replaceState(null, '', `#${ex.id}`);
     render();
-    if (ex.real == null) topics.shown(ex);
+    topics.shown(ex);
   }
   const fresh = () => open(topics.next(ex));
-  const again = (e) => (e.real != null ? problems.parse(e.id) : topics.parse(e.id) || X.make(e.type, e.seed));
+  const again = (e) => topics.parse(e.id) || X.make(e.type, e.seed);
 
   function render() {
     $('#title').innerHTML = `${ex.title} ${starsOf(ex.difficulty)}`;
@@ -185,7 +185,7 @@
     $('#reveal').title = canReveal() ? '' : ui().unlocks(MAX_TRIES);
     $('#reveal-note').textContent = ui().revealNote(MAX_TRIES);
     $('#reveal-note').hidden = canReveal() || st.revealed;
-    $('#check').textContent = st.solved ? (ex.real != null ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     $('#check').disabled = st.revealed && !st.solved;
@@ -200,7 +200,7 @@
   const lock = () => document.querySelectorAll('#fields input').forEach((x) => { x.disabled = true; });
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (ex.real != null) problems.next(); else fresh(); return; }
+    if (st.solved) { fresh(); return; }
     if (st.revealed) return;
     const r = feedback();
     st.checked = true;
@@ -218,8 +218,7 @@
     st.solved = true;
     Practice.markSolved(PRACTICE, ex.id);
     finish();
-    st.advance = ex.real != null ? '' : topics.solved(st, ex);
-    if (ex.real != null) problems.solved(ex);
+    st.advance = topics.solved(st, ex);
     lock();
     showStatus('ok');
   }
@@ -261,79 +260,91 @@
   // ---------------------------------------------------------------- tutor
   const frame = (title, text, figure) => ({ text: `<p class="step-rule">${title}</p>${text}`, figure: figure ? `<div class="figs">${figure}</div>` : '' });
   const fig = (html) => `<div class="fig">${html}</div>`;
-  const { i, sb } = X;
-  const lam = i('λ'), p = i('p'), m = i('m'), v = i('v'), h = i('h'), U = i('U'), Ek = `${i('E')}${sb('kin')}`, dx = `Δ${i('x')}`, dp = `Δ${i('p')}`, kap = i('κ'), T = i('T'), d = i('d');
+  const { i, sb, ofL } = X;
+  const lam = i('λ'), p = i('p'), m = i('m'), v = i('v'), h = i('h'), U = i('U'), Ek = `${i('E')}${sb('kin')}`, dx = `Δ${i('x')}`, dp = `Δ${i('p')}`, d = i('d'), Lb = i('L'), n = i('n'), E1 = `${i('E')}${sb('1')}`, En = `${i('E')}${sb('n')}`, psi2 = `|${i('ψ')}|²`, xm = `⟨${i('x')}⟩`;
+  // the rings of graphite (mm) at a voltage in kV: r = L·λ/d, L = 13.5 cm, d = 0.213 nm and 0.123 nm
+  const ringsAt = (kV) => [0.213e-9, 0.123e-9].map((dd) => (0.135 * P.lambdaU(kV * 1e3)) / dd * 1e3);
   const LESSONS = [
-    { topic: 0, stage: 0, name: () => L('Particles as waves', 'Teilchen als Wellen'), idea: () => L('Every particle has a wavelength λ = h/p. For an electron accelerated through U: p = √(2·m·e·U).', 'Jedes Teilchen hat eine Wellenlänge λ = h/p. Für ein Elektron, das mit U beschleunigt wird: p = √(2·m·e·U).'),
+    { topic: 0, stage: 0, name: () => L('The wavelength by comparison', 'Die Wellenlänge im Vergleich'), idea: () => L('λ = h/p. Work it out once (an electron through 150 V: 100 pm), then compare: for a particle with mass p = √(2·m·E_kin), never E/c, so λ ∝ 1/√U.', 'λ = h/p. Einmal ausrechnen (ein Elektron durch 150 V: 100 pm), dann vergleichen: Für ein Teilchen mit Masse ist p = √(2·m·E_kin), nie E/c, also λ ∝ 1/√U.'),
       frames: () => {
-        const Uv = 150, pp = P.pOfU(P.me, Uv), vv = pp / P.me, lm = P.h / pp, lPh = (P.h * P.c) / (Uv * P.e), ball = P.h / (0.057 * 50);
+        const Uv = 150, pp = P.pOfU(P.me, Uv), lm = P.h / pp, lPh = (P.h * P.c) / (Uv * P.e), ball = P.h / (0.057 * 50);
         return [
-          frame(L('De Broglie’s idea', 'De Broglies Idee'), `<p>${L(`Light is a wave, yet it comes in photons with the momentum ${p} = ${h}/${lam}. In 1924 Louis de Broglie turned this round: every particle with the momentum ${p} is a wave too, with the wavelength`, `Licht ist eine Welle, kommt aber in Photonen mit dem Impuls ${p} = ${h}/${lam}. 1924 drehte Louis de Broglie das um: Jedes Teilchen mit dem Impuls ${p} ist auch eine Welle, mit der Wellenlänge`)}</p><p class="law">${lam} = ${h}/${p} = ${h}/(${m}·${v})</p>`),
-          frame(L('An electron through 150 V', 'Ein Elektron durch 150 V'), `<p>${L(`An electron accelerated through ${U} = ${Uv} V gains ${Ek} = ${i('e')}·${U} = ${Uv} eV = ½·${m}·${v}². So ${v} = √(2${i('e')}${U}/${m}) = ${sci(vv)} m/s and ${p} = ${m}·${v} = √(2·${m}·${i('e')}·${U}) = ${sci(pp)} kg·m/s.`, `Ein Elektron, das mit ${U} = ${Uv} V beschleunigt wird, gewinnt ${Ek} = ${i('e')}·${U} = ${Uv} eV = ½·${m}·${v}². Also ${v} = √(2${i('e')}${U}/${m}) = ${sci(vv)} m/s und ${p} = ${m}·${v} = √(2·${m}·${i('e')}·${U}) = ${sci(pp)} kg·m/s.`)}</p>`, fig(G.tube({ U: '150 V' }))),
-          frame(L('Its wavelength', 'Seine Wellenlänge'), `<p>${L(`${lam} = ${h}/${p} = 6.626 · 10<sup>−34</sup> J·s / ${sci(pp)} kg·m/s = ${plain(lm * 1e9)} nm: about the distance between the atoms of a crystal. A crystal should diffract electrons as it diffracts X-rays, and it does.`, `${lam} = ${h}/${p} = 6.626 · 10<sup>−34</sup> J·s / ${sci(pp)} kg·m/s = ${plain(lm * 1e9)} nm: etwa der Abstand der Atome eines Kristalls. Ein Kristall sollte Elektronen beugen wie Röntgenstrahlung, und er tut es.`)}</p><p class="law">${lam} = ${h}/√(2·${m}·${i('e')}·${U})</p>`, fig(G.rings([12, 21], { label: true }))),
+          frame(L('One value, worked out once', 'Ein Wert, einmal ausgerechnet'), `<p>${L(`An electron accelerated through ${U} = ${Uv} V gains ${Ek} = ${i('e')}·${U} = ${Uv} eV = ${p}²/(2${m}). So ${p} = √(2·${m}·${i('e')}·${U}) = ${sci(pp)} kg·m/s and ${lam} = ${h}/${p} = ${plain(lm * 1e12)} pm: about the distance between the atoms of a crystal.`, `Ein Elektron, das mit ${U} = ${Uv} V beschleunigt wird, gewinnt ${Ek} = ${i('e')}·${U} = ${Uv} eV = ${p}²/(2${m}). Also ${p} = √(2·${m}·${i('e')}·${U}) = ${sci(pp)} kg·m/s und ${lam} = ${h}/${p} = ${plain(lm * 1e12)} pm: etwa der Abstand der Atome eines Kristalls.`)}</p><p class="law">${lam} = ${h}/${p} = ${h}/√(2·${m}·${i('e')}·${U})</p>`, fig(G.tube({ U: '150 V' }))),
+          frame(L('Then by ratios', 'Dann mit Verhältnissen'), `<p>${L(`${p} ∝ √${U}, so ${lam} ∝ 1/√${U}. Through 600 V, four times the voltage: twice the momentum, <b>half</b> the wavelength, 50 pm. Through 37.5 V, a quarter of the voltage: 200 pm. Not a quarter of the wavelength: the square root makes four times the voltage only twice the momentum.`, `${p} ∝ √${U}, also ${lam} ∝ 1/√${U}. Durch 600 V, die vierfache Spannung: doppelter Impuls, <b>halbe</b> Wellenlänge, 50 pm. Durch 37.5 V, ein Viertel der Spannung: 200 pm. Nicht ein Viertel der Wellenlänge: Wegen der Wurzel gibt die vierfache Spannung nur den doppelten Impuls.`)}</p><p class="law">${lam}${sb('2')}/${lam}${sb('1')} = √(${U}${sb('1')}/${U}${sb('2')})</p>`),
           frame(L('The trap', 'Die Falle'), `<p>${L(`For a photon ${p} = ${i('E')}/${i('c')}; for an electron that is wrong. With it, ${Uv} eV would give ${lam} = ${h}${i('c')}/${i('E')} = ${plain(lPh * 1e9)} nm, ${plain(lPh / lm, 2)} times too long. A particle with mass has ${p} = √(2·${m}·${Ek}).`, `Für ein Photon ist ${p} = ${i('E')}/${i('c')}; für ein Elektron ist das falsch. Damit ergäben ${Uv} eV ${lam} = ${h}${i('c')}/${i('E')} = ${plain(lPh * 1e9)} nm, ${plain(lPh / lm, 2)}-mal zu lang. Ein Teilchen mit Masse hat ${p} = √(2·${m}·${Ek}).`)}</p>`),
-          frame(L('Why we do not see it', 'Warum wir es nicht sehen'), `<p>${L(`A tennis ball (57 g) at 50 m/s: ${lam} = 6.626 · 10<sup>−34</sup> J·s / (0.057 kg · 50 m/s) = ${sci(ball)} m, unimaginably shorter than anything it could be diffracted by. The heavier and faster, the shorter the wave: only for electrons, neutrons, atoms and small molecules is it long enough to show.`, `Ein Tennisball (57 g) mit 50 m/s: ${lam} = 6.626 · 10<sup>−34</sup> J·s / (0.057 kg · 50 m/s) = ${sci(ball)} m, unvorstellbar viel kürzer als alles, woran er gebeugt werden könnte. Je schwerer und schneller, desto kürzer die Welle: Nur bei Elektronen, Neutronen, Atomen und kleinen Molekülen ist sie lang genug, um sich zu zeigen.`)}</p>`),
+          frame(L('Other particles', 'Andere Teilchen'), `<p>${L(`A proton is about 1840 times as heavy as an electron. At the same speed, ${p} = ${m}·${v}: its wavelength is 1840 times shorter. At the same kinetic energy, ${p} = √(2·${m}·${Ek}): √1840 ≈ 43 times shorter. A tennis ball (57 g) at 50 m/s: ${lam} = ${sci(ball)} m, unimaginably shorter than anything it could be diffracted by. Only for electrons, neutrons, atoms and small molecules is the wave long enough to show.`, `Ein Proton ist etwa 1840-mal so schwer wie ein Elektron. Bei gleicher Geschwindigkeit ist ${p} = ${m}·${v}: Seine Wellenlänge ist 1840-mal kürzer. Bei gleicher kinetischer Energie ist ${p} = √(2·${m}·${Ek}): √1840 ≈ 43-mal kürzer. Ein Tennisball (57 g) mit 50 m/s: ${lam} = ${sci(ball)} m, unvorstellbar viel kürzer als alles, woran er gebeugt werden könnte. Nur bei Elektronen, Neutronen, Atomen und kleinen Molekülen ist die Welle lang genug, um sich zu zeigen.`)}</p>`),
         ];
       } },
-    { topic: 0, stage: 2, name: () => L('Electrons diffracted by graphite', 'Elektronenbeugung an Graphit'), idea: () => L('Electrons passing a graphite foil make rings on the screen, as X-rays do. The rings shrink as the voltage grows: r ∝ λ ∝ 1/√U.', 'Elektronen, die eine Graphitfolie durchqueren, bilden Ringe auf dem Schirm, wie Röntgenstrahlung. Die Ringe schrumpfen, wenn die Spannung wächst: r ∝ λ ∝ 1/√U.'),
+    { topic: 0, stage: 2, name: () => L('Electron diffraction', 'Elektronenbeugung'), idea: () => L('Electrons passing a graphite foil make rings, as X-rays do. The rings shrink as the voltage grows, exactly as λ = h/p predicts: electrons are waves.', 'Elektronen, die eine Graphitfolie durchqueren, bilden Ringe, wie Röntgenstrahlung. Die Ringe schrumpfen, wenn die Spannung wächst, genau wie λ = h/p es vorhersagt: Elektronen sind Wellen.'),
       frames: () => {
-        const e2 = X.make('rings', 4);
+        const r4 = ringsAt(4), r16 = ringsAt(16), max = r4[1] * 1.08;
         return [
-          frame(L('The diffraction tube', 'Die Beugungsröhre'), `<p>${L('Electrons from a hot cathode are accelerated through a few kilovolts and pass a thin foil of graphite: tiny crystals in all orientations. On the screen, they make bright rings around the central spot.', 'Elektronen aus einer Glühkathode werden mit einigen Kilovolt beschleunigt und durchqueren eine dünne Graphitfolie: winzige Kristalle in allen Orientierungen. Auf dem Schirm bilden sie helle Ringe um den zentralen Fleck.')}</p>`, fig(G.tube()) + fig(G.rings([12, 21]))),
-          frame(L('Bragg reflection', 'Bragg-Reflexion'), `<p>${L(`The lattice planes reflect the electron waves where 2${d}·sin θ = ${lam}. The beam is turned by 2θ, so for small angles a ring of radius ${i('r')} = ${i('L')}·2θ = ${i('L')}·${lam}/${d} appears. Two kinds of planes (${d} = 0.213 nm and 0.123 nm) give two rings.`, `Die Netzebenen reflektieren die Elektronenwellen dort, wo 2${d}·sin θ = ${lam} gilt. Der Strahl wird um 2θ abgelenkt; für kleine Winkel erscheint also ein Ring mit dem Radius ${i('r')} = ${i('L')}·2θ = ${i('L')}·${lam}/${d}. Zwei Arten von Ebenen (${d} = 0.213 nm und 0.123 nm) ergeben zwei Ringe.`)}</p><p class="law">${i('r')} = ${i('L')}·${lam}/${d}</p>`, fig(G.tube())),
-          frame(L('The measurements', 'Die Messungen'), `<p>${e2.text}</p>`, e2.figs),
-          frame(L('A straight line', 'Eine Gerade'), `<p>${e2.solution[1]}</p>`, e2.solFig),
-          frame(L('The proof', 'Der Beweis'), `<p>${e2.solution[2]}</p>`, e2.solFig),
+          frame(L('The diffraction tube', 'Die Beugungsröhre'), `<p>${L('Electrons from a hot cathode are accelerated through a few kilovolts and pass a thin foil of graphite: tiny crystals in all orientations. On the screen, they make bright rings around the central spot.', 'Elektronen aus einer Glühkathode werden mit einigen Kilovolt beschleunigt und durchqueren eine dünne Graphitfolie: winzige Kristalle in allen Orientierungen. Auf dem Schirm bilden sie helle Ringe um den zentralen Fleck.')}</p>`, fig(G.tube()) + fig(G.rings(r4, { max }))),
+          frame(L('Bragg reflection', 'Bragg-Reflexion'), `<p>${L(`The planes of atoms reflect the electron waves where 2${d}·sin θ = ${lam}: only there do the waves from all the planes add up. The beam is turned by 2θ, so for small angles a ring of radius ${i('r')} = ${Lb}·2θ = ${Lb}·${lam}/${d} appears. Two kinds of planes (${d} = 0.213 nm and 0.123 nm) give two rings.`, `Die Atomebenen reflektieren die Elektronenwellen dort, wo 2${d}·sin θ = ${lam} gilt: Nur dort verstärken sich die Wellen aller Ebenen. Der Strahl wird um 2θ abgelenkt; für kleine Winkel erscheint also ein Ring mit dem Radius ${i('r')} = ${Lb}·2θ = ${Lb}·${lam}/${d}. Zwei Arten von Ebenen (${d} = 0.213 nm und 0.123 nm) ergeben zwei Ringe.`)}</p><p class="law">${i('r')} = ${Lb}·${lam}/${d} ∝ ${lam} ∝ 1/√${U}</p>`, fig(G.tube())),
+          frame(L('The test', 'Der Test'), `<p>${L(`Raise the voltage from 4 kV to 16 kV. Four times the voltage, half the wavelength: the rings must shrink to <b>half</b> their radius, not to a quarter. They do: the inner ring goes from ${plain(r4[0], 2)} mm to ${plain(r16[0], 2)} mm.`, `Erhöhe die Spannung von 4 kV auf 16 kV. Vierfache Spannung, halbe Wellenlänge: Die Ringe müssen auf den <b>halben</b> Radius schrumpfen, nicht auf ein Viertel. Das tun sie: Der innere Ring geht von ${plain(r4[0], 2)} mm auf ${plain(r16[0], 2)} mm.`)}</p>`, fig(G.rings(r4, { max, label: true })) + fig(G.rings(r16, { max, label: true })) + `<p class="note legend">4 kV · 16 kV</p>`),
+          frame(L('Why this is evidence', 'Warum das ein Beweis ist'), `<p>${L('Sharp rings at fixed angles are a diffraction pattern: only waves do that. Particles bouncing off the atoms at random would make a smooth spot. A magnet near the tube moves the rings, so they are made by the electrons, not by X-rays. And their size follows λ = h/p of the electrons exactly (Davisson and Germer, G. P. Thomson, 1927).', 'Scharfe Ringe bei festen Winkeln sind ein Beugungsmuster: Das können nur Wellen. Teilchen, die zufällig von den Atomen abprallen, ergäben einen verschmierten Fleck. Ein Magnet neben der Röhre verschiebt die Ringe, also stammen sie von den Elektronen, nicht von Röntgenstrahlung. Und ihre Grösse folgt genau dem λ = h/p der Elektronen (Davisson und Germer, G. P. Thomson, 1927).')}</p>`),
         ];
       } },
-    { topic: 1, stage: 0, name: () => L('One electron at a time', 'Ein Elektron nach dem anderen'), idea: () => L('Each electron lands as one dot, at a random place; the fringes build up from many dots. Whoever finds out which slit the electron took destroys them.', 'Jedes Elektron landet als ein Punkt, an einem zufälligen Ort; die Streifen bauen sich aus vielen Punkten auf. Wer herausfindet, welchen Spalt das Elektron nahm, zerstört sie.'),
-      frames: () => [
-        frame(L('Very few electrons', 'Sehr wenige Elektronen'), `<p>${L('Electrons are sent through a double slit so rarely that only one is ever on its way. Each makes one dot on the screen: it arrives whole, at one place. After 20 electrons, the dots look scattered at random.', 'Elektronen werden so selten durch einen Doppelspalt geschickt, dass immer nur eines unterwegs ist. Jedes macht einen Punkt auf dem Schirm: Es kommt ganz an, an einem Ort. Nach 20 Elektronen sehen die Punkte zufällig verstreut aus.')}</p>`, fig(G.doubleSlit({ source: L('electron gun', 'Elektronenkanone') })) + fig(G.screen('double', 20, 1))),
-        frame(L('More and more', 'Immer mehr'), `<p>${L('After 200 electrons a pattern begins to show; after thousands, there are clear fringes: the interference pattern of a wave through two slits. Yet no two electrons ever met.', 'Nach 200 Elektronen zeigt sich ein Muster; nach Tausenden gibt es klare Streifen: das Interferenzmuster einer Welle durch zwei Spalte. Dabei sind sich nie zwei Elektronen begegnet.')}</p>`, fig(G.screen('double', 200, 2)) + fig(G.screen('double', 1500, 3))),
-        frame(L('A wave of probability', 'Eine Welle der Wahrscheinlichkeit'), `<p>${L('Where a single electron lands cannot be predicted. The wave, passing through both slits, only says how likely each place is: where it is bright, many electrons land, where it is dark, (almost) none. Each electron interferes with itself.', 'Wo ein einzelnes Elektron landet, lässt sich nicht vorhersagen. Die Welle, die durch beide Spalte geht, sagt nur, wie wahrscheinlich jeder Ort ist: Wo sie hell ist, landen viele Elektronen, wo sie dunkel ist, (fast) keine. Jedes Elektron interferiert mit sich selbst.')}</p>`, fig(G.screen('smear', 0, 1))),
-        frame(L('Which slit?', 'Welcher Spalt?'), `<p>${L('A detector at the slits shows which slit each electron passes. The fringes are gone: a broad band remains, the sum of two single slits. Knowing the path, and having fringes, exclude each other. Little balls would give two narrow bands; electrons never do.', 'Ein Detektor an den Spalten zeigt, durch welchen Spalt jedes Elektron geht. Die Streifen sind weg: Ein breiter Bereich bleibt, die Summe zweier Einzelspalte. Den Weg kennen und Streifen haben schliessen sich aus. Kleine Kugeln ergäben zwei schmale Streifen; Elektronen nie.')}</p>`, fig(G.screen('which', 1500, 4)) + fig(G.screen('classical', 1500, 5))),
-      ] },
-    { topic: 2, stage: 0, name: () => L('The uncertainty relation', 'Die Unschärferelation'), idea: () => L('A particle never has an exact position and an exact momentum at once: Δx·Δp ≥ h/(4π). The tighter it is confined, the faster it must move.', 'Ein Teilchen hat nie zugleich einen genauen Ort und einen genauen Impuls: Δx·Δp ≥ h/(4π). Je enger es eingesperrt ist, desto schneller muss es sich bewegen.'),
+    { topic: 1, stage: 0, name: () => L('The particle in a box', 'Das Teilchen im Kasten'), idea: () => L('Between infinitely high walls only standing waves fit: L = n·λ/2. So p_n = n·h/(2L) and E_n = n²·h²/(8mL²): the energies are quantised, E_n ∝ n² and ∝ 1/L².', 'Zwischen unendlich hohen Wänden passen nur stehende Wellen: L = n·λ/2. Also p_n = n·h/(2L) und E_n = n²·h²/(8mL²): Die Energien sind gequantelt, E_n ∝ n² und ∝ 1/L².'),
+      frames: () => {
+        const e1 = P.boxE(1, 0.5e-9) / P.e;
+        return [
+          frame(L('A wave between two walls', 'Eine Welle zwischen zwei Wänden'), `<p>${L(`A particle is trapped between two infinitely high walls a distance ${Lb} apart. It is never at or beyond them: its wavefunction ${i('ψ')} is zero at both walls, like a string fixed at both ends. Only standing waves fit, with a whole number ${n} of half waves: ${Lb} = ${n}·${lam}/2. A wave with antinodes at the walls, or one that goes on beyond them, is not allowed.`, `Ein Teilchen ist zwischen zwei unendlich hohen Wänden im Abstand ${Lb} gefangen. Es ist nie an oder hinter ihnen: Seine Wellenfunktion ${i('ψ')} ist an beiden Wänden null, wie eine Saite, die an beiden Enden eingespannt ist. Nur stehende Wellen passen, mit einer ganzen Zahl ${n} halber Wellen: ${Lb} = ${n}·${lam}/2. Eine Welle mit Bäuchen an den Wänden, oder eine, die über sie hinausläuft, ist nicht erlaubt.`)}</p><p class="law">${lam}${sb('n')} = 2${Lb}/${n}</p>`, [1, 2, 3].map((k) => fig(G.box({ n: k, small: true, w: 220, h: 120 }))).join('')),
+          frame(L('Only certain energies', 'Nur bestimmte Energien'), `<p>${L(`Each standing wave has its own momentum and energy: ${p}${sb('n')} = ${h}/${lam}${sb('n')} = ${n}·${h}/(2${Lb}), ${En} = ${p}²/(2${m}). The energies are ${E1}, 4${E1}, 9${E1}, …, and nothing in between, since no standing wave in between fits. That is what <b>quantised</b> means.`, `Jede stehende Welle hat ihren eigenen Impuls und ihre eigene Energie: ${p}${sb('n')} = ${h}/${lam}${sb('n')} = ${n}·${h}/(2${Lb}), ${En} = ${p}²/(2${m}). Die Energien sind ${E1}, 4${E1}, 9${E1}, …, und nichts dazwischen, weil keine stehende Welle dazwischen passt. Das bedeutet <b>gequantelt</b>.`)}</p><p class="law">${En} = ${n}²·${h}²/(8${m}${Lb}²) = ${n}²·${E1}</p>`, fig(G.levels(3))),
+          frame(L('By ratios', 'Mit Verhältnissen'), `<p>${L(`${En} ∝ ${n}²/(${m}·${Lb}²). An electron in a box of 0.5 nm has ${E1} = ${plain(e1)} eV. The state ${n} = 3: 9 times as much, ${plain(9 * e1)} eV (not 3 times). A box twice as wide: a quarter, ${plain(e1 / 4)} eV (not half). A proton in the same box: 1840 times less, since the same wavelengths give the same momenta.`, `${En} ∝ ${n}²/(${m}·${Lb}²). Ein Elektron in einem Kasten von 0.5 nm hat ${E1} = ${plain(e1)} eV. Der Zustand ${n} = 3: 9-mal so viel, ${plain(9 * e1)} eV (nicht 3-mal). Ein doppelt so breiter Kasten: ein Viertel, ${plain(e1 / 4)} eV (nicht die Hälfte). Ein Proton im selben Kasten: 1840-mal weniger, weil dieselben Wellenlängen dieselben Impulse ergeben.`)}</p>`),
+          frame(L('Never at rest', 'Nie in Ruhe'), `<p>${L(`There is no state ${n} = 0: zero half waves means ${i('ψ')} = 0 everywhere, no particle at all. The lowest energy ${E1} is not zero: a particle in a box always moves. The narrower the box, the more: confined to ${dx} ≈ ${Lb}, its momentum must spread by ${dp} ≳ ${h}/(4π·${Lb}).`, `Es gibt keinen Zustand ${n} = 0: null halbe Wellen heisst ${i('ψ')} = 0 überall, gar kein Teilchen. Die kleinste Energie ${E1} ist nicht null: Ein Teilchen im Kasten bewegt sich immer. Je schmaler der Kasten, desto mehr: Auf ${dx} ≈ ${Lb} eingesperrt, muss sein Impuls um ${dp} ≳ ${h}/(4π·${Lb}) streuen.`)}</p>`),
+        ];
+      } },
+    { topic: 2, stage: 0, name: () => L('Reading |ψ|²', '|ψ|² lesen'), idea: () => L('|ψ|² is the probability density: where the particle is likely to be found. The mean of many measurements is the expectation value ⟨x⟩, their spread the uncertainty Δx: a property of the state, not a measurement error.', '|ψ|² ist die Wahrscheinlichkeitsdichte: wo man das Teilchen wahrscheinlich findet. Der Mittelwert vieler Messungen ist der Erwartungswert ⟨x⟩, ihre Streuung die Unschärfe Δx: eine Eigenschaft des Zustands, kein Messfehler.'),
+      frames: () => {
+        const ymax = 1.08 / (0.05 * Math.sqrt(2 * Math.PI));
+        return [
+          frame(L('Where the particle is found', 'Wo man das Teilchen findet'), `<p>${L(`${psi2} is the probability density: ${psi2}·Δ${i('x')} is the probability of finding the particle in a small piece Δ${i('x')}. In the ground state of a box, it is most likely found in the middle and never at the walls. In the state ${n} = 2, it is never found in the middle: there ${i('ψ')} has a node.`, `${psi2} ist die Wahrscheinlichkeitsdichte: ${psi2}·Δ${i('x')} ist die Wahrscheinlichkeit, das Teilchen in einem kleinen Stück Δ${i('x')} zu finden. Im Grundzustand eines Kastens findet man es am wahrscheinlichsten in der Mitte und nie an den Wänden. Im Zustand ${n} = 2 findet man es nie in der Mitte: Dort hat ${i('ψ')} einen Knoten.`)}</p>`, fig(G.box({ n: 1, sq: true, small: true, w: 240, h: 120 })) + fig(G.box({ n: 2, sq: true, small: true, w: 240, h: 120 }))),
+          frame(L('One measurement, many measurements', 'Eine Messung, viele Messungen'), `<p>${L(`A measurement of the position finds the particle at one place, and which place cannot be predicted. Only when the position is measured on many particles in the same state do the places pile up as ${psi2} says: often where it is high, never where it is zero.`, `Eine Messung des Orts findet das Teilchen an einem Ort, und welcher es ist, lässt sich nicht vorhersagen. Erst wenn man den Ort an vielen Teilchen im selben Zustand misst, häufen sich die Orte so, wie ${psi2} es sagt: oft, wo es hoch ist, nie, wo es null ist.`)}</p>`),
+          frame(L('The expectation value', 'Der Erwartungswert'), `<p>${L(`The mean of the places found is the expectation value ${xm}. For ${n} = 2, ${psi2} is symmetric about the middle, so ${xm} = ${ofL(1, 2)}, although the particle is never found there. A mean need not be a likely place: the most likely places are near ${ofL(1, 4)} and ${ofL(3, 4)}.`, `Der Mittelwert der gefundenen Orte ist der Erwartungswert ${xm}. Für ${n} = 2 ist ${psi2} symmetrisch zur Mitte, also ${xm} = ${ofL(1, 2)}, obwohl man das Teilchen dort nie findet. Ein Mittelwert muss kein wahrscheinlicher Ort sein: Die wahrscheinlichsten Orte liegen bei ${ofL(1, 4)} und ${ofL(3, 4)}.`)}</p>`, fig(G.box({ n: 2, sq: true, ticks: true }))),
+          frame(L('The uncertainty is not an error', 'Die Unschärfe ist kein Fehler'), `<p>${L(`The spread of the places found (their standard deviation) is the uncertainty ${dx}: the width of ${psi2}. In a box, ${dx} ≈ ${plain(P.boxDx(1), 2)}·${Lb} for ${n} = 1 and ${plain(P.boxDx(2), 2)}·${Lb} for ${n} = 2. With a perfect instrument the results still scatter: ${dx} is not a measurement error. The particle in this state has no exact position.`, `Die Streuung der gefundenen Orte (ihre Standardabweichung) ist die Unschärfe ${dx}: die Breite von ${psi2}. Im Kasten ist ${dx} ≈ ${plain(P.boxDx(1), 2)}·${Lb} für ${n} = 1 und ${plain(P.boxDx(2), 2)}·${Lb} für ${n} = 2. Auch mit einem perfekten Instrument streuen die Ergebnisse: ${dx} ist kein Messfehler. Das Teilchen hat in diesem Zustand keinen genauen Ort.`)}</p>`, fig(G.packet(0.5, 0.05, { ymax, small: true })) + fig(G.packet(0.5, 0.15, { ymax, small: true })) + `<p class="note legend">${L(`small ${dx} · large ${dx}`, `kleines ${dx} · grosses ${dx}`)}</p>`),
+        ];
+      } },
+    { topic: 2, stage: 1, name: () => L('The uncertainty relation', 'Die Unschärferelation'), idea: () => L('A particle never has an exact position and an exact momentum at once: Δx·Δp ≥ h/(4π). The tighter it is confined, the more its momentum spreads.', 'Ein Teilchen hat nie zugleich einen genauen Ort und einen genauen Impuls: Δx·Δp ≥ h/(4π). Je enger es eingesperrt ist, desto stärker streut sein Impuls.'),
       frames: () => {
         const dpe = P.minDp(1e-10), dve = dpe / P.me, dvg = P.minDp(1e-6) / 1e-9;
         return [
-          frame(L('A narrower slit, a wider pattern', 'Schmalerer Spalt, breiteres Muster'), `<p>${L(`A slit of width ${i('b')} fixes where a quantum passes to within Δy ≈ ${i('b')}. Behind it the quanta spread: the first minimum is at sin α = ${lam}/${i('b')}. Make the slit narrower, and they spread more. Sideways they now have a momentum of up to ${p}·sin α = ${h}/${i('b')}.`, `Ein Spalt der Breite ${i('b')} legt fest, wo ein Quant durchgeht, auf Δy ≈ ${i('b')} genau. Dahinter streuen die Quanten: Das erste Minimum liegt bei sin α = ${lam}/${i('b')}. Wird der Spalt schmaler, streuen sie stärker. Seitwärts haben sie nun einen Impuls bis zu ${p}·sin α = ${h}/${i('b')}.`)}</p>`, fig(G.slitGraph([{ b: 20, lam: 0.633, cls: 'old', dash: true }, { b: 10, lam: 0.633, cls: 'new' }], { amax: 10 })) + `<p class="note legend"><span class="k-old">- - -</span> ${i('b')} = 20 µm · <span class="k-new">—</span> ${i('b')} = 10 µm</p>`),
-          frame(L('Heisenberg', 'Heisenberg'), `<p>${L(`This holds for every quantum object: the more precisely its position is fixed, the larger the spread of its momentum. Heisenberg (1927):`, `Das gilt für jedes Quantenobjekt: Je genauer sein Ort festgelegt ist, desto grösser die Streuung seines Impulses. Heisenberg (1927):`)}</p><p class="law">${dx}·${dp} ≥ ${h}/(4π)</p><p>${L('It is not a flaw of the instruments: the particle does not have both an exact position and an exact momentum.', 'Das ist kein Mangel der Instrumente: Das Teilchen hat nicht zugleich einen genauen Ort und einen genauen Impuls.')}</p>`),
-          frame(L('An electron in an atom', 'Ein Elektron im Atom'), `<p>${L(`Confined to ${dx} = 0.1 nm: ${dp} ≥ ${h}/(4π·${dx}) = ${sci(dpe)} kg·m/s, so Δ${v} = ${dp}/${m} = ${plain(dve / 1e3)} km/s. The velocity is hugely uncertain: an electron in an atom has no orbit. And it can never be at rest: a confined particle has a minimum kinetic energy.`, `Auf ${dx} = 0.1 nm beschränkt: ${dp} ≥ ${h}/(4π·${dx}) = ${sci(dpe)} kg·m/s, also Δ${v} = ${dp}/${m} = ${plain(dve / 1e3)} km/s. Die Geschwindigkeit ist riesig unscharf: Ein Elektron im Atom hat keine Bahn. Und es kann nie ruhen: Ein eingesperrtes Teilchen hat eine minimale kinetische Energie.`)}</p>`),
+          frame(L('A narrower slit, a wider pattern', 'Schmalerer Spalt, breiteres Muster'), `<p>${L(`A slit of width ${i('b')} fixes where a quantum passes to within Δy ≈ ${i('b')}. Behind it the quanta spread: the first minimum is at sin α = ${lam}/${i('b')}. Make the slit narrower, and they spread more, not less. Sideways they now have a momentum of up to ${p}·sin α = ${h}/${i('b')}.`, `Ein Spalt der Breite ${i('b')} legt fest, wo ein Quant durchgeht, auf Δy ≈ ${i('b')} genau. Dahinter streuen die Quanten: Das erste Minimum liegt bei sin α = ${lam}/${i('b')}. Wird der Spalt schmaler, streuen sie stärker, nicht schwächer. Seitwärts haben sie nun einen Impuls bis zu ${p}·sin α = ${h}/${i('b')}.`)}</p>`, fig(G.slitGraph([{ b: 20, lam: 0.633, cls: 'old', dash: true }, { b: 10, lam: 0.633, cls: 'new' }], { amax: 10 })) + `<p class="note legend"><span class="k-old">- - -</span> ${i('b')} = 20 µm · <span class="k-new">—</span> ${i('b')} = 10 µm</p>`),
+          frame(L('Heisenberg', 'Heisenberg'), `<p>${L('This holds for every quantum object: the more precisely its position is fixed, the larger the spread of its momentum. Heisenberg (1927):', 'Das gilt für jedes Quantenobjekt: Je genauer sein Ort festgelegt ist, desto grösser die Streuung seines Impulses. Heisenberg (1927):')}</p><p class="law">${dx}·${dp} ≥ ${h}/(4π)</p><p>${L('It is not a flaw of the instruments: the particle does not have both an exact position and an exact momentum.', 'Das ist kein Mangel der Instrumente: Das Teilchen hat nicht zugleich einen genauen Ort und einen genauen Impuls.')}</p>`),
+          frame(L('An electron in an atom', 'Ein Elektron im Atom'), `<p>${L(`Confined to ${dx} = 0.1 nm: ${dp} ≥ ${h}/(4π·${dx}) = ${sci(dpe)} kg·m/s, so Δ${v} = ${dp}/${m} = ${plain(dve / 1e3)} km/s. The velocity is hugely uncertain: an electron in an atom has no orbit. Half the region, twice the ${dp}, four times the energy: as in the box, ${i('E')} ∝ 1/${dx}².`, `Auf ${dx} = 0.1 nm beschränkt: ${dp} ≥ ${h}/(4π·${dx}) = ${sci(dpe)} kg·m/s, also Δ${v} = ${dp}/${m} = ${plain(dve / 1e3)} km/s. Die Geschwindigkeit ist riesig unscharf: Ein Elektron im Atom hat keine Bahn. Halber Bereich, doppeltes ${dp}, vierfache Energie: wie im Kasten, ${i('E')} ∝ 1/${dx}².`)}</p>`),
           frame(L('A grain of dust', 'Ein Staubkorn'), `<p>${L(`A grain of dust of 1 µg located to 1 µm: Δ${v} ≥ ${sci(dvg)} m/s. Far below anything measurable: for everyday things, h is too small to matter.`, `Ein Staubkorn von 1 µg, auf 1 µm genau lokalisiert: Δ${v} ≥ ${sci(dvg)} m/s. Weit unter allem Messbaren: Für Alltagsdinge ist h zu klein, um eine Rolle zu spielen.`)}</p>`),
-        ];
-      } },
-    { topic: 3, stage: 0, name: () => L('Tunnelling', 'Der Tunneleffekt'), idea: () => L('A wave decays inside a barrier but does not stop: a particle gets through with the probability T ≈ e^(−2κd), κ = √(2m(V₀ − E))/ħ.', 'Eine Welle klingt in einer Barriere ab, hört aber nicht auf: Ein Teilchen kommt mit der Wahrscheinlichkeit T ≈ e^(−2κd) durch, κ = √(2m(V₀ − E))/ħ.'),
-      frames: () => {
-        const k1 = P.kappa(P.me, 1), t5 = P.trans(P.me, 1, 0.5e-9), t10 = P.trans(P.me, 1, 1e-9);
-        return [
-          frame(L('A wall too high', 'Eine zu hohe Wand'), `<p>${L(`A ball rolling at a hill higher than its energy rolls back, always. An electron of energy ${i('E')} meeting a barrier of height ${i('V')}${sb('0')} > ${i('E')} would, classically, do the same.`, `Eine Kugel, die gegen einen Hügel rollt, der höher ist als ihre Energie, rollt zurück, immer. Ein Elektron der Energie ${i('E')}, das auf eine Barriere der Höhe ${i('V')}${sb('0')} > ${i('E')} trifft, würde klassisch dasselbe tun.`)}</p>`, fig(G.barrier({ wave: false }))),
-          frame(L('The wave goes on', 'Die Welle läuft weiter'), `<p>${L('But the electron is a wave. Inside the barrier it does not oscillate; it decays exponentially. If the barrier is thin, something is left at its end, and goes on as a wave of the same wavelength, only weaker. The electron may be found behind the barrier: it tunnels.', 'Aber das Elektron ist eine Welle. In der Barriere schwingt sie nicht; sie klingt exponentiell ab. Ist die Barriere dünn, bleibt an ihrem Ende etwas übrig und läuft als Welle derselben Wellenlänge weiter, nur schwächer. Das Elektron kann hinter der Barriere gefunden werden: Es tunnelt.')}</p>`, fig(G.barrier({ after: 'ok', labels: true }))),
-          frame(L('How much gets through', 'Wie viel durchkommt'), `<p>${L(`The amplitude falls as e<sup>−${kap}x</sup> with ${kap} = √(2${m}(${i('V')}${sb('0')} − ${i('E')}))/ħ; the probability, its square, as e<sup>−2${kap}x</sup>. For 1 eV below the top: ${kap} = ${plain(k1 * 1e-9)} 1/nm. Width 0.5 nm: ${T} ≈ ${sci(t5, 2)}; width 1.0 nm: ${T} ≈ ${sci(t10, 2)}. Twice the width, the transmission squared.`, `Die Amplitude fällt wie e<sup>−${kap}x</sup> mit ${kap} = √(2${m}(${i('V')}${sb('0')} − ${i('E')}))/ħ; die Wahrscheinlichkeit, ihr Quadrat, wie e<sup>−2${kap}x</sup>. Für 1 eV unter der Oberkante: ${kap} = ${plain(k1 * 1e-9)} 1/nm. Breite 0.5 nm: ${T} ≈ ${sci(t5, 2)}; Breite 1.0 nm: ${T} ≈ ${sci(t10, 2)}. Doppelte Breite, quadrierte Transmission.`)}</p><p class="law">${T} ≈ e<sup>−2${kap}${d}</sup></p>`, fig(G.barrier({ after: 'ok', labels: true }))),
-          frame(L('Where it matters', 'Wo es zählt'), `<p>${L(`Heavier particles have a larger ${kap} and hardly tunnel; electrons do it all the time. The scanning tunnelling microscope measures a tunnelling current that changes tenfold when the tip moves 0.1 nm, and sees single atoms. Alpha particles escape their nucleus by tunnelling; protons in the Sun fuse by tunnelling through their electric repulsion.`, `Schwerere Teilchen haben ein grösseres ${kap} und tunneln kaum; Elektronen tun es ständig. Das Rastertunnelmikroskop misst einen Tunnelstrom, der sich verzehnfacht, wenn sich die Spitze um 0.1 nm bewegt, und sieht einzelne Atome. Alphateilchen entkommen ihrem Kern durch Tunneln; Protonen in der Sonne verschmelzen, indem sie durch ihre elektrische Abstossung tunneln.`)}</p>`),
         ];
       } },
   ];
   const stage = (name, types) => ({ name, types });
   const TOPICS = [
-    { name: () => L('The de Broglie wavelength', 'Die de-Broglie-Wellenlänge'), example: (s) => (s >= 2 ? 1 : 0), stages: [stage(() => L('electrons', 'Elektronen'), ['debroglie']), stage(() => L('other particles', 'andere Teilchen'), ['particle', 'same-lambda']), stage(() => L('diffraction rings', 'Beugungsringe'), ['rings'])] },
-    { name: () => L('Single quanta', 'Einzelne Quanten'), example: () => 2, stages: [stage(() => L('screens', 'Schirme'), ['buildup']), stage(() => L('statements', 'Aussagen'), ['quanta-stmts']), stage(() => L('fringes', 'Streifen'), ['fringes'])] },
-    { name: () => L('The uncertainty relation', 'Die Unschärferelation'), example: () => 3, stages: [stage(() => L('Δx and Δp', 'Δx und Δp'), ['uncert']), stage(() => L('single slit', 'Einzelspalt'), ['slit-spread']), stage(() => L('consequences', 'Folgen'), ['estimate', 'uncert-stmts'])] },
-    { name: () => L('Tunnelling', 'Der Tunneleffekt'), example: () => 4, stages: [stage(() => L('the wave', 'die Welle'), ['tunnel-pick', 'tunnel-rank']), stage(() => L('numbers', 'Zahlen'), ['tunnel'])] },
+    { name: () => L('The de Broglie wavelength', 'Die de-Broglie-Wellenlänge'), example: (s) => (s >= 2 ? 1 : 0), stages: [stage(() => L('by ratios', 'mit Verhältnissen'), ['debroglie']), stage(() => L('other particles', 'andere Teilchen'), ['same-lambda']), stage(() => L('diffraction', 'Beugung'), ['diffraction'])] },
+    { name: () => L('The particle in a box', 'Das Teilchen im Kasten'), example: () => 2, stages: [stage(() => L('standing waves', 'stehende Wellen'), ['box-pick']), stage(() => L('energies', 'Energien'), ['box-energy'])] },
+    { name: () => L('Probability and uncertainty', 'Wahrscheinlichkeit und Unschärfe'), example: (s) => (s >= 1 ? 4 : 3), stages: [stage(() => L('reading |ψ|²', '|ψ|² lesen'), ['density']), stage(() => L('the uncertainty relation', 'die Unschärferelation'), ['uncert-stmts'])] },
   ];
   const lessons = () => LESSONS.map((l) => ({ name: l.name(), idea: l.idea(), frames: l.frames, also: topics.also(l.topic) }));
 
-  // ---------------------------------------------------------------- arcade
-  // One question of an exercise: a number becomes four values (the right one, those of typical
-  // mistakes, then multiples), choices and drawings stay; the statements become "which is correct?".
-  const KINDS = [['debroglie', 1], ['particle', 2], ['same-lambda', 2], ['buildup', 2], ['quanta-stmts', 2], ['uncert', 2], ['uncert-stmts', 2], ['tunnel-pick', 2], ['fringes', 3], ['slit-spread', 3], ['estimate', 3], ['tunnel-rank', 3], ['tunnel', 3], ['rings', 4]];
-  const STMTS = { 'quanta-stmts': X.BANK_Q, 'uncert-stmts': X.BANK_U };
+  // ---------------------------------------------------------------- check
+  // The learning objectives (check.js), each with the exercise types it is asked about, its worked
+  // example and its practice topic. A question of the check is one question of an exercise with
+  // four options: a number becomes four values (the right one, those of typical mistakes, then
+  // multiples), choices and drawings stay, the statements become "which is correct?". The tags of
+  // the wrong options are the flags of the check.
+  const OBJECTIVES = [
+    { id: 'debroglie', kinds: ['debroglie', 'same-lambda', 'diffraction'], tutor: 0, topic: 0,
+      name: () => L('Work out de Broglie wavelengths by ratios with λ = h/p and p = √(2·m·E_kin), not E/c, and explain why electron diffraction shows that electrons are waves.', 'De-Broglie-Wellenlängen mit λ = h/p und p = √(2·m·E_kin), nicht E/c, über Verhältnisse bestimmen und erklären, warum die Elektronenbeugung zeigt, dass Elektronen Wellen sind.') },
+    { id: 'box', kinds: ['box-pick', 'box-energy'], tutor: 2, topic: 1,
+      name: () => L('Sketch the standing waves of a particle in a box, and explain why its energies are quantised, with E_n ∝ n² and ∝ 1/L².', 'Die stehenden Wellen eines Teilchens im Kasten skizzieren und erklären, warum seine Energien gequantelt sind, mit E_n ∝ n² und ∝ 1/L².') },
+    { id: 'psi', kinds: ['density', 'uncert-stmts'], tutor: 3, topic: 2,
+      name: () => L('Read |ψ|² as a probability density, with its expectation value and its uncertainty, and tell the uncertainty from a measurement error.', '|ψ|² als Wahrscheinlichkeitsdichte lesen, mit Erwartungswert und Unschärfe, und die Unschärfe von einem Messfehler unterscheiden.') },
+  ];
+  const STMTS = { 'uncert-stmts': X.BANK_U };
   const CONCEPT = {
-    photonp: 'momentum', sqrt: 'momentum', inverse: 'momentum', units: 'momentum', mass: 'mass', charge: 'mass', scale: 'scale', particle: 'scale',
-    classical: 'single', which: 'single', single: 'single', wave: 'single', determinism: 'chance',
-    hbar: 'uncert', square: 'uncert', width: 'uncert', tunnel: 'tunnel', factor2: 'tunnel', linear: 'tunnel', energyloss: 'tunnel', inside: 'tunnel',
+    photonp: 'momentum', sqrt: 'root', inverse: 'inverse', mass: 'mass', charge: 'mass', particle: 'particle',
+    count: 'standing', walls: 'standing', half: 'standing', nl: 'standing', psisq: 'psisq', classical: 'classical',
+    linear: 'energy', lsq: 'energy', widthdir: 'energy', mean: 'mean', height: 'width', width: 'width', error: 'error', hidden: 'error', heisenberg: 'uncert', uncert: 'uncert',
   };
-  const valueLabel = (val, q) => `${plain(val)}${q.unit ? (/^10/.test(q.unit) ? ` · ${q.unit}` : ` ${q.unit}`) : ''}`;
+  const valueLabel = (val, q) => `${plain(val)}${q.unit ? ` ${q.unit}` : ''}`;
   function numOptions(q, seed) {
     const out = [{ value: q.value, correct: true }];
     const fits = (x) => Number.isFinite(x) && x > 0 && out.every((o) => Math.abs(Math.log(x / o.value)) > Math.log(1.18)) && !out.some((o) => valueLabel(o.value, q) === valueLabel(x, q));
@@ -342,35 +353,35 @@
     for (const k of factors) if (out.length < 4 && fits(q.value * k)) out.push({ value: q.value * k, flag: null, why: null });
     return out.sort((a, b) => a.value - b.value).map((o) => ({ html: valueLabel(o.value, q), correct: !!o.correct, flag: o.flag || null, why: o.why || null }));
   }
-  function arcadeQuestion(kind, seed) {
+  function checkQuestion(kind, seed) {
     if (STMTS[kind]) {
       const bank = STMTS[kind], r = P.rng(seed * 7 + 1), t = r.pick(bank.filter((s) => s[1])), fs = r.shuffle(bank.filter((s) => !s[1])).slice(0, 3);
       return {
         title: L('True or false', 'Richtig oder falsch'), text: '', figure: '', ask: L('Which statement is correct?', 'Welche Aussage ist richtig?'),
-        options: r.shuffle([t, ...fs]).map((s) => ({ html: s[0](), correct: s[1], flag: s[1] ? null : kind === 'quanta-stmts' ? 'single' : 'uncert', why: s[1] ? null : s[2]() })),
+        options: r.shuffle([t, ...fs]).map((s) => ({ html: s[0](), correct: s[1], flag: s[1] ? null : 'uncert', why: s[1] ? null : s[2]() })),
         explain: () => `<div class="steps"><p>✓ ${t[0]()} ${t[2]()}</p>${fs.map((s) => `<p>✗ ${s[0]()} ${s[2]()}</p>`).join('')}</div>`, key: `${kind}-${bank.indexOf(t)}`,
       };
     }
     const e = X.make(kind, seed);
-    const explain = () => `${e.solFig ? `<div class="figs">${e.solFig}</div>` : ''}<div class="steps">${e.solution.map((s) => `<p>${s}</p>`).join('')}</div>`;
-    const qs = e.questions.filter((q) => q.type !== 'multi'), q = qs[seed % qs.length];
-    const ask = `${q.label.replace(/^\([a-d]\) /, '')}${q.type === 'num' && q.sym ? ` ${q.sym}` : ''}`;
+    const qs = e.questions.filter((q) => q.type === 'num' || (q.type !== 'multi' && q.options.length === 4)), q = qs[seed % qs.length];
+    const ask = `${q.label.replace(/^\([a-d]\) /, '').replace(/, without a calculator$|, ohne Taschenrechner$/, '')}${q.type === 'num' && q.sym ? `: ${q.sym} = ?` : ''}`;
     const options = q.type === 'num' ? numOptions(q, seed) : q.options.map((o) => ({ html: o.html || o.label, correct: o.ok, flag: o.ok ? null : o.tag || 'other', why: o.why }));
-    return { title: e.title, text: e.text, figure: `<div class="figs">${e.figs || ''}</div>`, ask, options, explain, key: `${kind}-${q.key}-${JSON.stringify(e.p)}` };
+    return {
+      title: e.title, text: e.text, figure: e.figs || '', ask, options, key: `${kind}-${q.key}-${JSON.stringify(e.p)}`,
+      explain: () => `${e.solFig ? `<div class="figs">${e.solFig}</div>` : ''}<div class="steps">${e.solution.map((s) => `<p>${s}</p>`).join('')}</div>`,
+    };
   }
-  const arcadeSource = {
-    id: 'mw', kinds: KINDS.map(([id, difficulty]) => ({ id, difficulty })), question: arcadeQuestion, concept: CONCEPT,
+  const checkSource = {
+    id: 'mw', objectives: OBJECTIVES, question: checkQuestion, concept: CONCEPT,
     concepts: () => ({
-      momentum: L('λ = h/p with p = √(2mE)', 'λ = h/p mit p = √(2mE)'), mass: L('heavier particles, shorter waves', 'schwerere Teilchen, kürzere Wellen'),
-      scale: L('when the wave nature shows', 'wann sich die Wellennatur zeigt'), single: L('single quanta and the fringes', 'einzelne Quanten und die Streifen'),
-      chance: L('only probabilities', 'nur Wahrscheinlichkeiten'), uncert: L('the uncertainty relation', 'die Unschärferelation'), tunnel: L('tunnelling', 'das Tunneln'),
+      momentum: L('p = E/c, the photon’s formula, for a particle with mass', 'p = E/c, die Formel des Photons, für ein Teilchen mit Masse'), root: L('λ ∝ 1/√U: the square root', 'λ ∝ 1/√U: die Wurzel'),
+      inverse: L('more momentum, shorter wavelength', 'mehr Impuls, kürzere Wellenlänge'), mass: L('the mass (and charge) in the momentum', 'die Masse (und Ladung) im Impuls'),
+      particle: L('electrons only as particles in diffraction', 'Elektronen bei der Beugung nur als Teilchen'), standing: L('standing waves: zero at the walls, n half waves', 'stehende Wellen: null an den Wänden, n halbe Wellen'),
+      psisq: L('ψ and |ψ|² told apart', 'ψ und |ψ|² unterscheiden'), classical: L('the particle as a ball bouncing in the box', 'das Teilchen als Kugel, die im Kasten hin- und herprallt'),
+      energy: L('E_n ∝ n²/(m·L²)', 'E_n ∝ n²/(m·L²)'), mean: L('the expectation value as the most likely place', 'der Erwartungswert als wahrscheinlichster Ort'),
+      width: L('the uncertainty as the width of |ψ|²', 'die Unschärfe als Breite von |ψ|²'), error: L('the uncertainty taken for a measurement error', 'die Unschärfe als Messfehler verstanden'),
+      uncert: L('the uncertainty relation Δx·Δp ≥ h/(4π)', 'die Unschärferelation Δx·Δp ≥ h/(4π)'),
     }),
-    intro: () => ({
-      tag: L('De Broglie waves, single quanta, the uncertainty relation and tunnelling: answer as many questions as you can in <b>5 minutes</b>.', 'De-Broglie-Wellen, einzelne Quanten, die Unschärferelation und das Tunneln: Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich.'),
-      rule: L('Questions get harder as you go. Choose one of the answers: click it or press its number. Have a calculator ready.', 'Die Fragen werden nach und nach schwieriger. Wähle eine der Antworten: Klicke sie an oder drücke ihre Nummer. Halte einen Taschenrechner bereit.'),
-      example: L('that an electron has the momentum p = E/c, like a photon', 'dass ein Elektron den Impuls p = E/c hat, wie ein Photon'),
-    }),
-    hero: () => `<div class="figs"><div class="fig">${G.screen('double', 700, 11)}</div></div><p class="ar-law">${i('λ')} = ${i('h')}/${i('p')}</p>`,
   };
 
   // ---------------------------------------------------------------- language and modes
@@ -378,7 +389,6 @@
     document.title = ui().title;
     Lang.apply(ui());
     if (topics) topics.relabel();
-    if (problems) problems.menu();
   }
   function switchLang() {
     applyStatic();
@@ -390,8 +400,8 @@
       ex = again(ex);
       render();
       st = keep;
-      typedIn.forEach(([k, v]) => { const x = $(`#in-${k}`); if (x) x.value = v; });
-      chosen.forEach(([n, v]) => { const x = document.querySelector(`input[name="${n}"][value="${v}"]`); if (x) x.checked = true; });
+      typedIn.forEach(([k, val]) => { const x = $(`#in-${k}`); if (x) x.value = val; });
+      chosen.forEach(([nm, val]) => { const x = document.querySelector(`input[name="${nm}"][value="${val}"]`); if (x) x.checked = true; });
       if (st.revealed) markRight(); else if (st.checked) feedback();
       if (st.solved) lock();
       showStatus(status);
@@ -401,48 +411,42 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
-  function setMode(m) {
-    document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
-    store('mw-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); });
-    $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
+  function setMode(md) {
+    document.querySelector(`input[name="mode"][value="${md}"]`).checked = true;
+    store('mw-mode', md);
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = md !== 'practice'; });
+    $('#tutor').hidden = md !== 'tutor';
+    $('#ck').hidden = md !== 'check';
+    if (md !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
   function practise() {
     setMode('practice');
-    if (ex && ex.real == null) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
   }
-  function realMode() {
-    setMode('real');
-    if (problems.is(ex)) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else problems.resume();
-  }
-  function play() { setMode('arcade'); arcade.show(); if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade'); }
+  function checkMode() { setMode('check'); checker.show(); if (location.hash !== '#check') history.replaceState(null, '', '#check'); }
   function fromHash() {
     const hsh = location.hash.slice(1);
-    if (hsh === 'arcade') { if ($('#arcade').hidden) play(); return true; }
-    const m = hsh.match(/^tutor-(\d+)$/);
-    if (m && Number(m[1]) >= 1 && Number(m[1]) <= LESSONS.length) {
+    // the arcade of earlier versions is now the check
+    if (hsh === 'check' || hsh === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
+    const mt = hsh.match(/^tutor-(\d+)$/);
+    if (mt && Number(mt[1]) >= 1 && Number(mt[1]) <= LESSONS.length) {
       setMode('tutor');
-      if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
+      if (tutor.current() !== Number(mt[1]) - 1 || !tutor.shown()) tutor.open(Number(mt[1]) - 1);
       return true;
     }
-    const re = problems.parse(hsh);
-    if (re) { setMode('real'); if (!ex || ex.id !== hsh) open(re); problems.menu(); return true; }
     const te = topics.parse(hsh);
     if (te) { setMode('practice'); if (!ex || ex.id !== hsh) open(te); return true; }
-    const d = hsh.match(/^([a-z]+(?:-[a-z]+)*)-(\d+)$/);
-    if (d && X.TYPES.includes(d[1])) { setMode('practice'); if (!ex || ex.id !== hsh) open(X.make(d[1], Number(d[2]))); return true; }
+    const dd = hsh.match(/^([a-z]+(?:-[a-z]+)*)-(\d+)$/);
+    if (dd && X.TYPES.includes(dd[1])) { setMode('practice'); if (!ex || ex.id !== hsh) open(X.make(dd[1], Number(dd[2]))); return true; }
     return false;
   }
 
   function init() {
     Lang.init();
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     topics = window.Topics.create({
       app: PRACTICE,
       topics: TOPICS.map((t) => ({ name: t.name, stages: t.stages, example: (s) => ({ i: t.example(s), name: () => LESSONS[t.example(s)].name() }) })),
@@ -451,10 +455,6 @@
       tutor: (k) => { setMode('tutor'); tutor.open(k); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.MatterProblems.PROBLEMS, make: window.MatterProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
     applyStatic();
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
@@ -476,19 +476,24 @@
     window.addEventListener('hashchange', fromHash);
     window.addEventListener('resize', markScrollable);
     tutor = window.createTutor(lessons(), { after: markScrollable, done: practise, practise: (k) => { topics.go(LESSONS[k].topic, LESSONS[k].stage); setMode('practice'); fresh(); } });
-    arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable, stored, store });
+    checker = Check.create(checkSource, {
+      math: () => {}, markScrollable, stored, store,
+      tutor: (k) => { setMode('tutor'); tutor.open(k); },
+      practise: (t) => { topics.go(t); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
+    // the arcade of earlier versions is now the check, its problems are gone
     const last = stored('mw-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (typeof document !== 'undefined' && typeof window.Lang !== 'undefined') {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
   }
-  window.MatterApp = { parse, judge: (x, q) => judge(x, q), arcadeQuestion, KINDS, LESSONS, TOPICS };
+  window.MatterApp = { parse, judge: (x, q) => judge(x, q), checkQuestion, OBJECTIVES, CONCEPT, LESSONS, TOPICS };
 })();
