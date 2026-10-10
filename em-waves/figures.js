@@ -51,7 +51,8 @@
     s += text(X(4) + 4, y1 + 22, it('λ'), 'tb-axis', 'end');
     if (lambda) {
       const x = X(Math.max(-13, Math.min(4, Math.log10(lambda))));
-      s += `<polygon class="ew-mark" points="${f(x - 7)},${y0 - 13} ${f(x + 7)},${y0 - 13} ${f(x)},${y0 - 1}"/>` + path(`M${f(x)} ${y0} V${y1}`, 'ew-markline');
+      // the line leaves a gap for the name of the region
+      s += `<polygon class="ew-mark" points="${f(x - 7)},${y0 - 13} ${f(x + 7)},${y0 - 13} ${f(x)},${y0 - 1}"/>` + path(`M${f(x)} ${y0} V${y0 + 5} M${f(x)} ${y0 + 22} V${y1}`, 'ew-markline');
     }
     // to the left: shorter waves, higher frequency, larger photon energy
     if (o.trend) s += vec(X(4) - 20, 26, X(-13) + 10, 26, 'ew-c ew-small') + text((X(-13) + X(4)) / 2, 15, L(`higher frequency ${it('f')}, larger photon energy ${it('E')}`, `höhere Frequenz ${it('f')}, grössere Photonenenergie ${it('E')}`), 'tb-cap ew-vislabel');
