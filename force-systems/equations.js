@@ -263,6 +263,83 @@
 
   const of = (id, p) => EQS[id](p, T('N'), T('R'), T('S'), T('K'), T('F'));
 
-  root.Equations = { of, WHY };
+  // Results worked out with numbers, as a student writes them below the equations (for "find the
+  // error" with springs and drag): like the equations, a right one and three with a typical slip.
+  // claims(id, p, v): [] for the situations without any.
+  const tq = FS.tq;
+  const CLAIMS = {
+    'spring-hang': (p, v) => {
+      const Fs = T('Fs'), FG = p.m * FS.G, dm = v.dx / 100;
+      const unit = L('Δx comes out in metres; in centimetres it is a hundred times as much.', 'Δx ergibt sich in Metern; in Zentimetern ist es hundertmal so viel.');
+      const flip = L('The law of the spring is F = k Δx: the force divided by k gives Δx, not k divided by the force.', 'Das Federgesetz lautet F = k Δx: Die Kraft geteilt durch k ergibt Δx, nicht k geteilt durch die Kraft.');
+      const mass = L('The spring force is the weight m g, in newtons, not the mass.', 'Die Federkraft ist die Gewichtskraft m g, in Newton, nicht die Masse.');
+      if (p.given === 'k') {
+        const dx = (x) => `\\Delta x = ${x}`;
+        return [eq('dx', L('The extension or compression:', 'Die Dehnung bzw. Stauchung:'), dx(`\\frac{${Fs}}{k} = \\frac{${tq(FG, 'N')}}{${tq(p.k, 'Nm')}} = ${FS.texNum(dm, 3)}\\,\\mathrm{m} = ${tq(v.dx, 'cm')}`),
+          L('The spring force equals the weight; Δx in metres, then in centimetres.', 'Die Federkraft ist gleich der Gewichtskraft; Δx in Metern, dann in Zentimetern.'),
+          [[dx(`\\frac{${Fs}}{k} = \\frac{${tq(FG, 'N')}}{${tq(p.k, 'Nm')}} = ${FS.texNum(dm, 3)}\\,\\mathrm{cm}`), 'hooke', unit],
+            [dx(`\\frac{k}{${Fs}} = \\frac{${tq(p.k, 'Nm')}}{${tq(FG, 'N')}} = ${FS.texNum(p.k / FG, 2)}\\,\\mathrm{cm}`), 'hooke', flip],
+            [dx(`\\frac{m}{k} = \\frac{${tq(p.m, 'kg')}}{${tq(p.k, 'Nm')}} = ${FS.texNum(v.dx / FS.G, 2)}\\,\\mathrm{cm}`), 'hooke', mass]])];
+      }
+      const k = (x) => `k = ${x}`;
+      return [eq('k', L('The spring constant:', 'Die Federkonstante:'), k(`\\frac{${Fs}}{\\Delta x} = \\frac{${tq(FG, 'N')}}{${FS.texNum(dm, 3)}\\,\\mathrm{m}} = ${tq(p.k, 'Nm')}`),
+        L('The spring force equals the weight; Δx in metres.', 'Die Federkraft ist gleich der Gewichtskraft; Δx in Metern.'),
+        [[k(`\\frac{${Fs}}{\\Delta x} = \\frac{${tq(FG, 'N')}}{${tq(v.dx, 'cm')}} = ${tq(FG / v.dx, 'Nm')}`), 'hooke', L('Δx must be in metres, not centimetres.', 'Δx muss in Metern stehen, nicht in Zentimetern.')],
+          [k(`${Fs}\\,\\Delta x = ${tq(FG, 'N')}\\cdot${FS.texNum(dm, 3)}\\,\\mathrm{m} = ${FS.texNum(FG * dm, 3)}\\,\\mathrm{N/m}`), 'hooke', flip],
+          [k(`\\frac{m}{\\Delta x} = \\frac{${tq(p.m, 'kg')}}{${FS.texNum(dm, 3)}\\,\\mathrm{m}} = ${tq(p.k / FS.G, 'Nm')}`), 'hooke', mass]])];
+    },
+    'spring-floor': (p, v) => {
+      const Fs = T('Fs'), R = T('R'), a = (x) => `a = ${x}`;
+      return [eq('a', L('The acceleration:', 'Die Beschleunigung:'), a(`\\frac{${Fs} - ${R}}{m} = \\frac{${tq(v.Fs, 'N')} - ${tq(v.R, 'N')}}{${tq(p.m, 'kg')}} = ${tq(v.a, 'a')}`),
+        L('The spring force minus friction, divided by the mass.', 'Die Federkraft minus die Reibung, geteilt durch die Masse.'),
+        [[a(`\\frac{${Fs}}{m} = \\frac{${tq(v.Fs, 'N')}}{${tq(p.m, 'kg')}} = ${tq(v.Fs / p.m, 'a')}`), 'noFric'],
+          [a(`\\frac{${Fs} + ${R}}{m} = \\frac{${tq(v.Fs, 'N')} + ${tq(v.R, 'N')}}{${tq(p.m, 'kg')}} = ${tq((v.Fs + v.R) / p.m, 'a')}`), 'dir', L('Friction acts against the motion: subtract it.', 'Die Reibung wirkt gegen die Bewegung: Zieh sie ab.')],
+          [a(`\\frac{k\\,\\Delta x - ${R}}{m} = \\frac{${tq(p.k, 'Nm')}\\cdot${tq(p.dx, 'cm')} - ${tq(v.R, 'N')}}{${tq(p.m, 'kg')}} = ${tq((p.k * p.dx - v.R) / p.m, 'a')}`), 'hooke', L('Δx must be in metres, not centimetres.', 'Δx muss in Metern stehen, nicht in Zentimetern.')]])];
+    },
+    'drag-fall': (p, v) => {
+      const D = T('D'), Fn = T('res'), FG = p.m * FS.G;
+      if (p.phase === 'terminal') {
+        const d = (x) => `${D} = ${x}`;
+        return [
+          eq('D', L('The air resistance:', 'Der Luftwiderstand:'), d(`${mg()} = ${tq(p.m, 'kg')}\\cdot${tq(FS.G, 'a')} = ${tq(FG, 'N')}`),
+            L('At terminal velocity, the air resistance balances her weight.', 'Bei der Endgeschwindigkeit hält der Luftwiderstand ihrer Gewichtskraft das Gleichgewicht.'),
+            [[d(`0\\,\\mathrm{N}`), 'noDrag', L('Air resistance does not vanish at a constant speed: it balances her weight.', 'Der Luftwiderstand verschwindet bei konstanter Geschwindigkeit nicht: Er hält ihrer Gewichtskraft das Gleichgewicht.')],
+              [d(`m\\,v = ${tq(p.m, 'kg')}\\cdot${tq(p.u, 'v')} = ${tq(p.m * p.u, 'N')}`), 'motion', L('There is no force m v: at a constant speed the forces balance, so the air resistance equals her weight.', 'Es gibt keine Kraft m v: Bei konstanter Geschwindigkeit heben sich die Kräfte auf, also ist der Luftwiderstand gleich ihrer Gewichtskraft.')],
+              [d(`m = ${tq(p.m, 'N')}`), 'other', L('Her weight is m g, in newtons: the mass times g.', 'Ihre Gewichtskraft ist m g, in Newton: die Masse mal g.')]]),
+          eq('res', L('The net force on her:', 'Die resultierende Kraft auf sie:'), `${Fn} = ${mg()} - ${D} = 0\\,\\mathrm{N}`,
+            L('Her speed is constant: no net force.', 'Ihre Geschwindigkeit ist konstant: keine resultierende Kraft.'),
+            [[`${Fn} = ${mg()} = ${tq(FG, 'N')}`, 'noDrag', L('The air resistance acts on her as well; at a constant speed it cancels her weight.', 'Der Luftwiderstand wirkt auch auf sie; bei konstanter Geschwindigkeit hebt er ihre Gewichtskraft auf.')],
+              [`${Fn} = ${mg()} + ${D} = ${tq(2 * FG, 'N')}`, 'dir', L('Weight and air resistance point in opposite directions: subtract them.', 'Gewichtskraft und Luftwiderstand zeigen in entgegengesetzte Richtungen: Zieh sie voneinander ab.')],
+              [`${Fn} = m\\,v = ${tq(p.m * p.u, 'N')}`, 'motion', L('There is no force m v: a constant speed needs no net force.', 'Es gibt keine Kraft m v: Eine konstante Geschwindigkeit braucht keine resultierende Kraft.')]]),
+        ];
+      }
+      const early = p.phase === 'early', dir = L('Weight and air resistance point in opposite directions: subtract them.', 'Gewichtskraft und Luftwiderstand zeigen in entgegengesetzte Richtungen: Zieh sie voneinander ab.');
+      const terminal = L('Her speed changes: the forces do not balance, so the net force is not zero.', 'Ihre Geschwindigkeit ändert sich: Die Kräfte heben sich nicht auf, also ist die resultierende Kraft nicht null.');
+      const net = early ? `${mg()} - ${D} = ${tq(FG, 'N')} - ${tq(p.D, 'N')}` : `${D} - ${mg()} = ${tq(p.D, 'N')} - ${tq(FG, 'N')}`;
+      const a = (x) => `a = ${x}`;
+      return [
+        eq('res', L('The net force on her:', 'Die resultierende Kraft auf sie:'), `${Fn} = ${net} = ${tq(v.res, 'N')}`,
+          early ? L('Her weight minus the air resistance.', 'Ihre Gewichtskraft minus der Luftwiderstand.') : L('The air resistance minus her weight.', 'Der Luftwiderstand minus ihre Gewichtskraft.'),
+          [[`${Fn} = ${mg()} + ${D} = ${tq(FG + p.D, 'N')}`, 'dir', dir], [`${Fn} = 0\\,\\mathrm{N}`, 'terminal', terminal],
+            [`${Fn} = ${D} = ${tq(p.D, 'N')}`, 'other', L('The air resistance alone is not the net force: her weight acts too.', 'Der Luftwiderstand allein ist nicht die resultierende Kraft: Ihre Gewichtskraft wirkt auch.')]]),
+        eq('a', early ? L('Her acceleration (downwards):', 'Ihre Beschleunigung (nach unten):') : L('Her acceleration (upwards):', 'Ihre Beschleunigung (nach oben):'), a(`\\frac{${Fn}}{m} = \\frac{${tq(v.res, 'N')}}{${tq(p.m, 'kg')}} = ${tq(v.a, 'a')}`),
+          L('The net force divided by her mass.', 'Die resultierende Kraft geteilt durch ihre Masse.'),
+          [[a(`g = ${tq(FS.G, 'a')}`), 'noDrag', L('She does not fall freely: the air resistance acts against her velocity.', 'Sie fällt nicht frei: Der Luftwiderstand wirkt gegen ihre Geschwindigkeit.')],
+            [a(`\\frac{${D}}{m} = \\frac{${tq(p.D, 'N')}}{${tq(p.m, 'kg')}} = ${tq(p.D / p.m, 'a')}`), 'other', L('Divide the net force by the mass, not the air resistance alone.', 'Teile die resultierende Kraft durch die Masse, nicht den Luftwiderstand allein.')],
+            [a(`0\\,\\mathrm{m/s^2}`), 'terminal', terminal]]),
+      ];
+    },
+    'drag-bike': (p, v) => {
+      const D = T('D'), a = (x) => `a = ${x}`;
+      return [eq('a', L('Her acceleration (backwards):', 'Ihre Beschleunigung (nach hinten):'), a(`\\frac{${D}}{m} = \\frac{${tq(p.D, 'N')}}{${tq(p.m, 'kg')}} = ${tq(v.a, 'a')}`),
+        L('The air resistance is the net force: divided by her mass.', 'Der Luftwiderstand ist die resultierende Kraft: geteilt durch ihre Masse.'),
+        [[a(`\\frac{${D}}{${mg()}} = \\frac{${tq(p.D, 'N')}}{${tq(p.m * FS.G, 'N')}} = ${FS.texNum(p.D / p.m / FS.G, 3)}\\,\\mathrm{m/s^2}`), 'mass', L('Divide by her mass, in kilograms, not by her weight.', 'Teile durch ihre Masse, in Kilogramm, nicht durch ihre Gewichtskraft.')],
+          [a(`0\\,\\mathrm{m/s^2}`), 'motion', L('Nothing pushes her forwards: the air resistance is the net force, so she slows down.', 'Nichts schiebt sie nach vorn: Der Luftwiderstand ist die resultierende Kraft, also wird sie langsamer.')],
+          [a(`\\frac{${mg()} - ${D}}{m} = ${tq((p.m * FS.G - p.D) / p.m, 'a')}`), 'other', L('Her weight acts vertically, not along the road.', 'Ihre Gewichtskraft wirkt senkrecht, nicht entlang der Strasse.')]])];
+    },
+  };
+  const claims = (id, p, v) => (CLAIMS[id] ? CLAIMS[id](p, v) : []);
+
+  root.Equations = { of, claims, WHY };
   if (typeof module !== 'undefined') module.exports = root.Equations;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -65,9 +65,9 @@
 
   const UNITS = { N: 'N', a: 'm/s²', kg: 'kg', deg: '°', cm: 'cm', Nm: 'N/m', v: 'm/s', '': '' };
   const TEX_UNITS = { N: '\\mathrm{N}', a: '\\mathrm{m/s^2}', kg: '\\mathrm{kg}', deg: '^\\circ', cm: '\\mathrm{cm}', Nm: '\\mathrm{N/m}', v: '\\mathrm{m/s}' };
-  // A quantity: "14 N", in text or in KaTeX.
+  // A quantity: "14 N", in text or in KaTeX (dec: decimal places, at most one by default).
   const q = (x, u) => (u === 'deg' ? `${num(x)}°` : `${num(x)} ${UNITS[u]}`);
-  const tq = (x, u) => (u === 'deg' ? `${texNum(x)}^\\circ` : `${texNum(x)}\\,${TEX_UNITS[u]}`);
+  const tq = (x, u, dec) => (u === 'deg' ? `${texNum(x, dec)}^\\circ` : `${texNum(x, dec)}\\,${TEX_UNITS[u]}`);
 
   // ---------------------------------------------------------------- random numbers
   function rng(seed) {

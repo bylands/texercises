@@ -152,7 +152,7 @@ Lang.set('en', true);
 // linked from practice while an exercise of its type is shown
 for (const t of TOPICS) for (const [type, i] of Object.entries(t.byType || {})) {
   const e = EXAMPLES[i];
-  if (!e || !e.pair || `${e.circuit.kind}-${e.circuit.conn}` !== type || !t.stages.some((s) => s.types.includes(type))) fail(`byType ${type}: example ${i}`);
+  if (!e || !e.circuit || `${e.circuit.kind}-${e.circuit.conn}` !== type || !t.stages.some((s) => s.types.includes(type))) fail(`byType ${type}: example ${i}`);
 }
 console.log(`pair lessons: ${pairs.length}`);
 

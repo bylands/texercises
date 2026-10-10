@@ -1,9 +1,11 @@
 // The situations of the worksheet “Übungen Kräftesysteme”: one box at rest or pulled across the
 // floor, two boxes pushed or joined by a rope, pulleys and slopes. A scenario has an id, a
 // difficulty from 1 to 5, trig if its results need sine or cosine, and:
-//   make(r, o)         random parameters (null if they do not fit); with o.pyth, angles of right
-//                      triangles with whole sides (3-4-5, 5-12-13, …): the student identifies each
-//                      component and the app gives its value (comps)
+//   make(r, o)         random parameters (null if they do not fit); with o.nice (practice), angles
+//                      whose sine and cosine the text gives as short decimals (NICE: 37° and 53°
+//                      with 0.6 and 0.8, 30° and 60° with 0.5 and 0.87), so that everything can be
+//                      worked out in the head: the student identifies each component, the app gives
+//                      its value (comps), and the student works out a result (nums)
 //   solve(p)           the wanted quantities (for the tutor's worked solutions)
 //   fields(p)          the wanted quantities, in order: { key, sym: [symbol, index], unit, what }
 //   text(p), scene(p)  the situation, in words and as a drawing (see draw.js)
@@ -11,6 +13,9 @@
 //                      which forces of the drawing to show and highlight
 //   comps(p)           the components the student identifies first (see identify.js): { key, what,
 //                      sym, base, baseVal, fn }, with the angle p.alpha
+//   nums(p, v)         the results the student works out (practice), each a choice of four values:
+//                      { key, what, sym, unit, value, calc (TeX: the calculation), wrongs: [[value,
+//                      flag, why]] } with the wrong values of typical mistakes (see generator.js)
 //   still              the box stands still (its friction, if any, is static friction)
 //   boxes(p)           (two boxes) the names of box 1 and box 2, for the table of forces;
 //                      forceOn { id: box } where a force without index 2 acts on box 2 (index 1)
@@ -40,16 +45,28 @@
   const field = (key, idx = '', what) => ({ key: key + idx, sym: [key === 'a' ? 'a' : key, idx], unit: key === 'a' ? 'a' : 'N', what: what || WHAT[key]() });
   const m$ = (s) => `$${s}$`;
 
-  // Angles of right triangles with whole sides: with a force that is a multiple of the hypotenuse,
-  // both components are whole numbers (e.g. 26 N at 22.6°: 10 N and 24 N).
-  const TRIANGLES = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
-  const PYTH = TRIANGLES.flatMap(([a, b]) => [Math.atan2(a, b), Math.atan2(b, a)].map((x) => (x * 180) / Math.PI));
-  // forces and masses that fit them: multiples of 5, 13, 17, 25 and 29 (N), of 0.5, 1.3, 1.7, 2.5
-  // and 2.9 kg (m g)
-  const PYTH_F = [5, 10, 13, 15, 17, 20, 25, 26, 29, 30, 34, 39, 40, 50, 51, 52, 58];
-  const PYTH_M = [1, 1.3, 1.5, 1.7, 2, 2.5, 2.6, 2.9, 3, 3.4, 3.9, 4, 5, 5.1, 5.2, 5.8, 6];
+  // Angles for practice whose sine and cosine are short decimals, given in the text (as on a
+  // worksheet without a calculator); with them, the app computes the values it shows (p.nice).
+  // 45° is left out: there sine and cosine are equal, so mixing them up would go unnoticed.
+  const NICE = { 30: { sin: 0.5, cos: 0.87 }, 37: { sin: 0.6, cos: 0.8 }, 53: { sin: 0.8, cos: 0.6 }, 60: { sin: 0.87, cos: 0.5 } };
+  const sinOf = (p) => (p.nice ? NICE[p.alpha].sin : Math.sin(rad(p.alpha)));
+  const cosOf = (p) => (p.nice ? NICE[p.alpha].cos : Math.cos(rad(p.alpha)));
   const angleLabel = (p) => q(p.alpha, 'deg');
-  const trig = (fn, p) => `\\${fn}${tq(p.alpha, 'deg')}`;
+  // sin α or cos α in a calculation: sin 30°, or with nice angles its value (0.5)
+  const trig = (fn, p) => (p.nice ? FS.texNum(NICE[p.alpha][fn], 2) : `\\${fn}${tq(p.alpha, 'deg')}`);
+
+  // A result to work out (nums): its wrong values with the idea behind each (see generator.js).
+  const num$ = (key, what, sym, unit, value, calc, wrongs) => ({ key, what, sym, unit, value, calc, wrongs });
+  const WRONG = {
+    flatN: () => L('The normal force equals the weight only when nothing else pushes or pulls perpendicular to the surface.', 'Die Normalkraft ist nur dann gleich der Gewichtskraft, wenn sonst nichts senkrecht zur Unterlage drückt oder zieht.'),
+    swap: () => L('Sine and cosine swapped: the component next to the angle is the force times cos α, the one opposite it times sin α.', 'Sinus und Kosinus vertauscht: Die Komponente am Winkel ist die Kraft mal cos α, die gegenüber mal sin α.'),
+    whole: () => L('Only a component of the force acts in this direction, not the whole force.', 'In diese Richtung wirkt nur eine Komponente der Kraft, nicht die ganze Kraft.'),
+    noFric: () => L('Friction is missing: it acts against the motion.', 'Die Reibung fehlt: Sie wirkt gegen die Bewegung.'),
+    noSlope: () => L('The component of the weight down the slope is missing.', 'Die Hangabtriebskraft fehlt.'),
+    rope: () => L('The rope force is not the weight of the hanging box: that box accelerates, so the rope holds it with less than its weight.', 'Die Seilkraft ist nicht die Gewichtskraft der hängenden Kiste: Diese Kiste wird beschleunigt, also hält das Seil sie mit weniger als ihrer Gewichtskraft.'),
+    mass: () => L('Divide by the mass of the system whose forces you added: here both boxes together.', 'Teile durch die Masse des Systems, dessen Kräfte du addiert hast: hier beide Kisten zusammen.'),
+    net: () => L('That is the net force; the acceleration is the net force divided by the mass.', 'Das ist die resultierende Kraft; die Beschleunigung ist die resultierende Kraft geteilt durch die Masse.'),
+  };
 
   const step = (rule, text, show, hl) => ({ text: (rule ? `<p class="step-rule">${rule}</p>` : '') + text, show, hl: hl || show });
 
@@ -103,6 +120,16 @@
       L(`The box stands still, so the net force on it is zero: the upward forces balance the downward ones.`, `Die Kiste ruht, also ist die resultierende Kraft null: Die Kräfte nach oben heben die Kräfte nach unten auf.`),
       p.dir === 'up' ? m$(`${T('N')} + ${T('F')} = ${T('G')}`) : m$(`${T('N')} = ${T('G')} + ${T('F')}`),
     ],
+    nums(p, v) {
+      const up = p.dir === 'up', FG = p.m * G;
+      return [num$('N', L('The normal force of the floor:', 'Die Normalkraft des Bodens:'), T('N'), 'N', v.N,
+        `${T('m')}\\,g ${up ? '-' : '+'} ${T('F')} = ${tq(FG, 'N')} ${up ? '-' : '+'} ${tq(p.F, 'N')} = ${tq(v.N, 'N')}`, [
+          [up ? FG + p.F : FG - p.F, 'dir', up ? L('The rope pulls up: it carries part of the weight, so the floor pushes less than the weight, not more.', 'Das Seil zieht nach oben: Es trägt einen Teil der Gewichtskraft, darum drückt der Boden weniger als die Gewichtskraft, nicht mehr.')
+            : L('The hand pushes down: the floor has to hold the hand as well, so it pushes more than the weight, not less.', 'Die Hand drückt nach unten: Der Boden muss auch die Hand halten, darum drückt er mehr als die Gewichtskraft, nicht weniger.')],
+          [FG, 'flatN', WRONG.flatN()],
+          [p.F, 'other', up ? L('That is the force of the rope, not of the floor.', 'Das ist die Kraft des Seils, nicht die des Bodens.') : L('That is the force of the hand, not of the floor.', 'Das ist die Kraft der Hand, nicht die des Bodens.')],
+        ])];
+    },
     steps(p, v) {
       const up = p.dir === 'up';
       return [
@@ -125,14 +152,16 @@
   const restAngle = {
     id: 'rest-angle', difficulty: 2, trig: true, still: true,
     make(r, o = {}) {
-      const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6]), ref = pick(r, ['v', 'h']), alpha = o.pyth ? pick(r, PYTH) : pick(r, [20, 25, 30, 35, 40, 45, 50, 60]);
-      const F = pick(r, o.pyth ? PYTH_F : [4, 5, 6, 8, 10, 12, 14, 15, 16, 18, 20, 25, 30, 40]);
-      const up = F * (ref === 'v' ? Math.cos(rad(alpha)) : Math.sin(rad(alpha)));
-      if (up > 0.8 * m * G || F * Math.min(Math.sin(rad(alpha)), Math.cos(rad(alpha))) < 1.5) return null;
-      return o.pyth ? { m, F, alpha, ref, pyth: true } : { m, F, alpha, ref };
+      const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6]), ref = pick(r, ['v', 'h']), alpha = o.nice ? pick(r, [30, 37, 53, 60]) : pick(r, [20, 25, 30, 35, 40, 45, 50, 60]);
+      const F = pick(r, o.nice ? [5, 10, 15, 20, 25, 30, 40, 50] : [4, 5, 6, 8, 10, 12, 14, 15, 16, 18, 20, 25, 30, 40]);
+      const p = o.nice ? { m, F, alpha, ref, nice: true } : { m, F, alpha, ref };
+      const up = F * (ref === 'v' ? cosOf(p) : sinOf(p));
+      if (up > 0.8 * m * G || F * Math.min(sinOf(p), cosOf(p)) < 1.5 || (o.nice && F < 0.4 * m * G)) return null; // (practice: a pull large enough to draw its components)
+      if (o.nice && F * (ref === 'v' ? sinOf(p) : cosOf(p)) > m * G - up) return null; // static friction at most the normal force (μ ≤ 1)
+      return p;
     },
     solve(p) {
-      const a = rad(p.alpha), [up, side] = p.ref === 'v' ? [Math.cos(a), Math.sin(a)] : [Math.sin(a), Math.cos(a)];
+      const [up, side] = p.ref === 'v' ? [cosOf(p), sinOf(p)] : [sinOf(p), cosOf(p)];
       return { N: p.m * G - p.F * up, R: p.F * side };
     },
     fields: () => [field('N'), field('R', '', L('static friction force', 'Haftreibungskraft'))],
@@ -152,7 +181,7 @@
       else { b.sc.line(top[0], top[1], top[0] + 70, top[1], 'w dash'); b.sc.angle(top, 34, 0, p.alpha, angleLabel(p), 16); }
       b.sc.force({ id: 'F', kind: 's', at: top, dir, sym: ['F'], value: q(p.F, 'N'), task: 'value', lab: [8, -6] });
       // its components, drawn once identified (and in the solution)
-      const [cu, cs] = p.ref === 'v' ? [Math.cos(a), Math.sin(a)] : [Math.sin(a), Math.cos(a)];
+      const [cu, cs] = p.ref === 'v' ? [cosOf(p), sinOf(p)] : [sinOf(p), cosOf(p)];
       b.sc.force({ id: 'Fv', kind: 'comp', at: top, dir: [0, -1], sym: ['F', '↑'], value: q(p.F * cu, 'N'), lab: [-8, 2] });
       b.sc.force({ id: 'Fh', kind: 'comp', at: top, dir: [1, 0], sym: ['F', '→'], value: q(p.F * cs, 'N'), lab: [4, 14] });
       return sized(b.sc, { G: p.m * G, N: v.N, R: v.R, F: p.F, Fv: p.F * cu, Fh: p.F * cs });
@@ -163,6 +192,16 @@
       p.ref === 'v' ? L(`The angle is measured from the vertical: the vertical component is ${m$(`${T('F')}\\cos\\alpha`)}.`, `Der Winkel ist von der Senkrechten aus gemessen: Die senkrechte Komponente ist ${m$(`${T('F')}\\cos\\alpha`)}.`)
         : L(`The angle is measured from the horizontal: the vertical component is ${m$(`${T('F')}\\sin\\alpha`)}.`, `Der Winkel ist von der Waagrechten aus gemessen: Die senkrechte Komponente ist ${m$(`${T('F')}\\sin\\alpha`)}.`),
     ],
+    nums(p, v) {
+      const FG = p.m * G, [up, side] = p.ref === 'v' ? [cosOf(p), sinOf(p)] : [sinOf(p), cosOf(p)], fn = p.ref === 'v' ? '\\cos' : '\\sin';
+      return [num$('N', L('The normal force of the floor:', 'Die Normalkraft des Bodens:'), T('N'), 'N', v.N,
+        `${T('m')}\\,g - ${T('F')}${fn}\\alpha = ${tq(FG, 'N')} - ${tq(p.F * up, 'N')} = ${tq(v.N, 'N')}`, [
+          [FG - p.F * side, 'swap', WRONG.swap()],
+          [FG - p.F, 'whole', L('Only the vertical component of the pull carries part of the weight, not the whole pull.', 'Nur die senkrechte Komponente der Zugkraft trägt einen Teil der Gewichtskraft, nicht die ganze Zugkraft.')],
+          [FG, 'flatN', WRONG.flatN()],
+          [FG + p.F * up, 'dir', L('The rope pulls upwards: it carries part of the weight, so the floor pushes less than the weight, not more.', 'Das Seil zieht nach oben: Es trägt einen Teil der Gewichtskraft, darum drückt der Boden weniger als die Gewichtskraft, nicht mehr.')],
+        ])];
+    },
     steps(p, v) {
       const [up, sd] = p.ref === 'v' ? ['\\cos', '\\sin'] : ['\\sin', '\\cos'];
       const FG = p.m * G;
@@ -220,6 +259,26 @@
       L(`Friction: ${m$(`${T('R')} = ${T('mu')}\\,${T('N')}`)}, and here the normal force equals the weight.`, `Reibung: ${m$(`${T('R')} = ${T('mu')}\\,${T('N')}`)}, und hier ist die Normalkraft gleich der Gewichtskraft.`),
       L(`Only what is left of the pull after friction accelerates the box: ${m$(`${T('res')} = ${T('F')} - ${T('R')} = ${T('m')}\\,${T('a')}`)}.`, `Nur was nach Abzug der Reibung von der Zugkraft übrig bleibt, beschleunigt die Kiste: ${m$(`${T('res')} = ${T('F')} - ${T('R')} = ${T('m')}\\,${T('a')}`)}.`),
     ],
+    nums(p, v) {
+      const R = v.R, fric = L('Friction is μ times the normal force, μ m g: do not forget g.', 'Die Reibung ist μ mal die Normalkraft, μ m g: Vergiss g nicht.');
+      if (p.given === 'a') {
+        const ma = p.m * p.a;
+        return [num$('F', L('The pulling force:', 'Die Zugkraft:'), T('F'), 'N', v.F,
+          `${T('m')}\\,${T('a')} + ${T('mu')}\\,${T('m')}\\,g = ${tq(ma, 'N')} + ${tq(R, 'N')} = ${tq(v.F, 'N')}`, [
+            [ma, 'noFric', WRONG.noFric()],
+            [R, 'balance', L('The box accelerates: the pull has to overcome friction and provide the net force m a as well.', 'Die Kiste wird beschleunigt: Die Zugkraft muss die Reibung überwinden und zusätzlich die resultierende Kraft m a liefern.')],
+            [ma - R, 'dir', L('Friction acts against the pull: the pull has to be larger than m a, not smaller.', 'Die Reibung wirkt gegen die Zugkraft: Die Zugkraft muss grösser sein als m a, nicht kleiner.')],
+            [ma + p.mu * p.m, 'fric', fric],
+          ])];
+      }
+      return [num$('a', L('The acceleration:', 'Die Beschleunigung:'), T('a'), 'a', v.a,
+        `\\frac{${T('F')} - ${T('mu')}\\,${T('m')}\\,g}{${T('m')}} = \\frac{${tq(p.F, 'N')} - ${tq(R, 'N')}}{${tq(p.m, 'kg')}} = ${tq(v.a, 'a')}`, [
+          [p.F / p.m, 'noFric', WRONG.noFric()],
+          [(p.F + R) / p.m, 'dir', L('Friction acts against the pull: subtract it.', 'Die Reibung wirkt gegen die Zugkraft: Zieh sie ab.')],
+          [p.F - R, 'net', WRONG.net()],
+          [(p.F - p.mu * p.m) / p.m, 'fric', fric],
+        ])];
+    },
     steps(p, v) {
       const FG = p.m * G, all = ['G', 'N', 'R', 'F', 'a'];
       const s = [
@@ -463,9 +522,10 @@
   const tablePulley = {
     id: 'table-pulley', difficulty: 4,
     boxes: (p) => [L(`the box on the table (${kg(p.m1)})`, `die Kiste auf dem Tisch (${kg(p.m1)})`), L(`the hanging box (${kg(p.m2)})`, `die hängende Kiste (${kg(p.m2)})`)],
-    make(r) {
-      const m1 = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8]), m2 = pick(r, [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6]), mu = pick(r, [0.1, 0.2, 0.25, 0.3, 0.4, 0.5]);
+    make(r, o = {}) {
+      const m1 = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8]), m2 = pick(r, o.nice ? [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9] : [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6]), mu = pick(r, [0.1, 0.2, 0.25, 0.3, 0.4, 0.5]);
       if (Math.max(m1, m2) > 6 * Math.min(m1, m2)) return null; // see atwood
+      if (o.nice && m1 === m2) return null; // in practice: friction μ m₂ g would be right by chance
       return m2 * G > mu * m1 * G + 0.3 * (m1 + m2) ? { m1, m2, mu } : null;
     },
     solve(p) {
@@ -504,6 +564,24 @@
       L(`Along the rope: ${m$(`${T('res')} = ${T('m')}_2\\,g - ${T('R')} = (${T('m')}_1 + ${T('m')}_2)\\,${T('a')}`)}.`, `Entlang des Seils: ${m$(`${T('res')} = ${T('m')}_2\\,g - ${T('R')} = (${T('m')}_1 + ${T('m')}_2)\\,${T('a')}`)}.`),
       L(`The box on the table alone: ${m$(`${T('S')} - ${T('R')} = ${T('m')}_1\\,${T('a')}`)}.`, `Die Kiste auf dem Tisch allein: ${m$(`${T('S')} - ${T('R')} = ${T('m')}_1\\,${T('a')}`)}.`),
     ],
+    nums(p, v) {
+      const M = p.m1 + p.m2, W = p.m2 * G;
+      return [
+        num$('a', L('The acceleration:', 'Die Beschleunigung:'), T('a'), 'a', v.a,
+          `\\frac{${T('m')}_2\\,g - ${T('mu')}\\,${T('m')}_1\\,g}{${T('m')}_1 + ${T('m')}_2} = \\frac{${tq(W, 'N')} - ${tq(v.R, 'N')}}{${tq(M, 'kg')}} = ${tq(v.a, 'a')}`, [
+            [W / M, 'noFric', WRONG.noFric()],
+            [v.res / p.m2, 'mass', WRONG.mass()],
+            [(W + v.R) / M, 'dir', L('Friction acts against the motion: subtract it.', 'Die Reibung wirkt gegen die Bewegung: Zieh sie ab.')],
+            [v.res / p.m1, 'mass', WRONG.mass()],
+          ]),
+        num$('S', L('The rope force:', 'Die Seilkraft:'), T('S'), 'N', v.S,
+          `${T('m')}_1\\,${T('a')} + ${T('R')} = ${tq(p.m1 * v.a, 'N')} + ${tq(v.R, 'N')} = ${tq(v.S, 'N')}`, [
+            [W, 'rope', WRONG.rope()],
+            [p.m1 * v.a, 'noFric', L('Friction on the box on the table is missing: the rope has to overcome it as well.', 'Die Reibung auf die Kiste auf dem Tisch fehlt: Das Seil muss sie auch überwinden.')],
+            [p.m2 * (G + v.a), 'dir', L('The hanging box accelerates downwards: the rope holds it with less than its weight, not more.', 'Die hängende Kiste wird nach unten beschleunigt: Das Seil hält sie mit weniger als ihrer Gewichtskraft, nicht mit mehr.')],
+          ]),
+      ];
+    },
     steps(p, v) {
       const all = ['G1', 'N', 'R', 'S1', 'G2', 'S2', 'a1', 'a2'];
       return [
@@ -544,22 +622,22 @@
   function slopeBox(sl, p, o, s, m, i = '', ms = [m]) {
     const { sc, u, n } = sl, [bw, bh] = dims(m, ms);
     const base = [o[0] + s * u[0], o[1] + s * u[1]];
-    const at = sc.box(base, u, n, bw, bh, kg(m));
-    const c = at(bw / 2, bh / 2), a = rad(p.alpha);
+    const at = sc.box(base, u, n, bw, bh, kg(m), true);
+    const c = at(bw / 2, bh / 2);
     // the coefficient of friction inside the slope, clear of the box and its arrows
     const mu = [o[0] + 0.8 * (sl.top[0] - o[0]) + 28 * n[0] * -1, o[1] + 0.8 * (sl.top[1] - o[1]) + 28 * n[1] * -1];
     sc.text(mu[0], mu[1], `${svgSym('mu')} = ${num(p.mu, 2)}`, 'lbl small', 'end');
-    sc.force({ id: 'G', kind: 'g', at: c, dir: [0, 1], sym: ['G', i], lab: [-6, 8] });
+    sc.force({ id: 'G', kind: 'g', at: c, dir: [0, 1], sym: ['G', i], lab: [8, 10] }); // (its label right of the tip, clear of friction)
     sc.force({ id: 'Gp', kind: 'comp', at: c, dir: [-u[0], -u[1]], sym: ['G', i ? `${i}∥` : '∥'], lab: [-6, -8] });
     sc.force({ id: 'Gn', kind: 'comp', at: c, dir: [-n[0], -n[1]], sym: ['G', i ? `${i}⊥` : '⊥'], lab: [8, 6] });
     sc.force({ id: 'N', kind: 'n', at: at(bw / 2 + 6, 0), dir: n, sym: ['N'], lab: [-8, -4] });
     sc.force({ id: 'R', kind: 'r', at: at(0.3 * bw, 0), dir: [-u[0], -u[1]], sym: ['R'], lab: [-8, -6] });
-    return { at, bw, bh, c, mags: { G: m * G, Gp: m * G * Math.sin(a), Gn: m * G * Math.cos(a), N: m * G * Math.cos(a) } };
+    return { at, bw, bh, c, mags: { G: m * G, Gp: m * G * sinOf(p), Gn: m * G * cosOf(p), N: m * G * cosOf(p) } };
   }
-  // a slope: steeper than 50° is no slope to pull a box up; with o.pyth, a flag for the texts
+  // a slope: steeper than 50° is no slope to pull a box up; with o.nice, 30° or 37°
   const slopeMake = (r, o = {}) => ({
-    alpha: o.pyth ? pick(r, PYTH.filter((x) => x < 50)) : pick(r, [15, 20, 25, 30, 35, 40, 45]),
-    mu: pick(r, [0.1, 0.2, 0.3, 0.4, 0.5]), ...(o.pyth ? { pyth: true } : {}),
+    alpha: o.nice ? pick(r, [30, 37]) : pick(r, [15, 20, 25, 30, 35, 40, 45]),
+    mu: pick(r, o.nice ? [0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5] : [0.1, 0.2, 0.3, 0.4, 0.5]), ...(o.nice ? { nice: true } : {}),
   });
   const slopeComps = (p, i = '') => [
     { key: 'Gp', what: L(`The component of the weight${i ? ' of box 1' : ''} along the slope:`, `Die Komponente der Gewichtskraft${i ? ' von Kiste 1' : ''} entlang der Unterlage:`), sym: T('G', `${i}∥`), base: `${T('m')}${i ? `_${i}` : ''}\\,g`, baseVal: (i ? p.m1 : p.m) * G, fn: 'sin', fig: 'Gp' },
@@ -569,11 +647,11 @@
   const inclinePull = {
     id: 'incline-pull', difficulty: 4, trig: true,
     make(r, o = {}) {
-      return { ...slopeMake(r, o), m: pick(r, o.pyth ? PYTH_M : [1, 2, 3, 4, 5, 6, 8]), a: r() < 0.2 ? 0 : pick(r, [0.5, 1, 1.5, 2, 3]) };
+      return { ...slopeMake(r, o), m: pick(r, [1, 2, 3, 4, 5, 6, 8]), a: r() < 0.2 ? 0 : pick(r, [0.5, 1, 1.5, 2, 3]) };
     },
     solve(p) {
-      const a = rad(p.alpha), N = p.m * G * Math.cos(a), R = p.mu * N;
-      return { res: p.m * p.a, N, R, F: p.m * p.a + p.m * G * Math.sin(a) + R };
+      const N = p.m * G * cosOf(p), R = p.mu * N;
+      return { res: p.m * p.a, N, R, F: p.m * p.a + p.m * G * sinOf(p) + R };
     },
     fields: () => [field('res', '', L('net force on the box', 'resultierende Kraft auf die Kiste')), field('N'), field('R'), field('F')],
     comps: (p) => slopeComps(p),
@@ -593,16 +671,26 @@
       L(`Perpendicular to the slope, nothing moves: ${m$(`${T('N')} = ${T('m')}\\,g\\cos\\alpha`)}; friction ${m$(`${T('R')} = ${T('mu')}\\,${T('N')}`)}.`, `Senkrecht zur Unterlage bewegt sich nichts: ${m$(`${T('N')} = ${T('m')}\\,g\\cos\\alpha`)}; Reibung ${m$(`${T('R')} = ${T('mu')}\\,${T('N')}`)}.`),
       L(`Along the slope: ${m$(`${T('F')} - ${T('m')}\\,g\\sin\\alpha - ${T('R')} = ${T('m')}\\,${T('a')}`)}.`, `Entlang der Unterlage: ${m$(`${T('F')} - ${T('m')}\\,g\\sin\\alpha - ${T('R')} = ${T('m')}\\,${T('a')}`)}.`),
     ],
+    nums(p, v) {
+      const FG = p.m * G, ma = p.m * p.a, Gp = FG * sinOf(p), Gn = FG * cosOf(p);
+      return [num$('F', L('The pulling force:', 'Die Zugkraft:'), T('F'), 'N', v.F,
+        `${T('m')}\\,${T('a')} + ${T('m')}\\,g\\sin\\alpha + ${T('mu')}\\,${T('m')}\\,g\\cos\\alpha = ${tq(ma, 'N')} + ${tq(Gp, 'N')} + ${tq(v.R, 'N')} = ${tq(v.F, 'N')}`, [
+          [ma + v.R, 'noSlope', WRONG.noSlope()],
+          [ma + Gp, 'noFric', WRONG.noFric()],
+          [ma + Gn + p.mu * Gp, 'swap', WRONG.swap()],
+          [ma + Gp + p.mu * FG, 'flatN', L('On the slope, the normal force is m g cos α, not m g: friction is μ m g cos α.', 'Auf der schiefen Ebene ist die Normalkraft m g cos α, nicht m g: Die Reibung ist μ m g cos α.')],
+        ])];
+    },
     steps(p, v) {
-      const FG = p.m * G, a = rad(p.alpha), all = ['G', 'N', 'R', 'F', 'a'];
+      const FG = p.m * G, all = ['G', 'N', 'R', 'F', 'a'];
       return [
         step(L('Forces', 'Kräfte'),
           `<p>${L(`Weight ${m$(`${T('G')} = ${tq(FG, 'N')}`)} straight down, the normal force ${m$(T('N'))} perpendicular to the slope, friction ${m$(T('R'))} down the slope (against the motion) and the pull ${m$(T('F'))} up the slope.`, `Gewichtskraft ${m$(`${T('G')} = ${tq(FG, 'N')}`)} senkrecht nach unten, die Normalkraft ${m$(T('N'))} senkrecht zur Unterlage, die Reibung ${m$(T('R'))} hangabwärts (gegen die Bewegung) und die Zugkraft ${m$(T('F'))} hangaufwärts.`)}</p>`,
           ['G', 'N', 'R', 'F']),
         step(L('Components of the weight', 'Komponenten der Gewichtskraft'),
           `<p>${L('Split the weight into a part along the slope and a part perpendicular to it:', 'Zerlege die Gewichtskraft in einen Teil entlang und einen Teil senkrecht zur Unterlage:')}</p>` +
-          `$$${T('G', '∥')} = ${T('m')}\\,g\\sin\\alpha = ${tq(FG, 'N')}\\cdot ${trig('sin', p)} = ${tq(FG * Math.sin(a), 'N')}$$` +
-          `$$${T('G', '⊥')} = ${T('m')}\\,g\\cos\\alpha = ${tq(FG, 'N')}\\cdot ${trig('cos', p)} = ${tq(FG * Math.cos(a), 'N')}$$`,
+          `$$${T('G', '∥')} = ${T('m')}\\,g\\sin\\alpha = ${tq(FG, 'N')}\\cdot ${trig('sin', p)} = ${tq(FG * sinOf(p), 'N')}$$` +
+          `$$${T('G', '⊥')} = ${T('m')}\\,g\\cos\\alpha = ${tq(FG, 'N')}\\cdot ${trig('cos', p)} = ${tq(FG * cosOf(p), 'N')}$$`,
           ['G', 'Gp', 'Gn', 'N', 'R', 'F'], ['G', 'Gp', 'Gn']),
         step(L('Perpendicular to the slope', 'Senkrecht zur Unterlage'),
           `<p>${L('The box does not move into the slope or away from it, so the normal force balances the perpendicular component:', 'Die Kiste bewegt sich weder in die Unterlage hinein noch von ihr weg, also hält die Normalkraft der senkrechten Komponente das Gleichgewicht:')}</p>` +
@@ -616,7 +704,7 @@
           `<p>${p.a ? L('The net force accelerates the box up the slope:', 'Die resultierende Kraft beschleunigt die Kiste hangaufwärts:') : L('The box moves at constant speed, so the net force is zero:', 'Die Kiste bewegt sich mit konstanter Geschwindigkeit, also ist die resultierende Kraft null:')}` +
           ` $$${T('res')} = ${T('m')}\\,${T('a')} = ${res(v.res, 'N')}$$</p>` +
           `<p>${L('The pull has to overcome the component down the slope and friction, and provide the net force:', 'Die Zugkraft muss die Hangabtriebskraft und die Reibung überwinden und die resultierende Kraft liefern:')}</p>` +
-          `$$${T('F')} = ${T('m')}\\,${T('a')} + ${T('m')}\\,g\\sin\\alpha + ${T('R')} = ${tq(v.res, 'N')} + ${tq(FG * Math.sin(a), 'N')} + ${tq(v.R, 'N')} = ${res(v.F, 'N')}$$`,
+          `$$${T('F')} = ${T('m')}\\,${T('a')} + ${T('m')}\\,g\\sin\\alpha + ${T('R')} = ${tq(v.res, 'N')} + ${tq(FG * sinOf(p), 'N')} + ${tq(v.R, 'N')} = ${res(v.F, 'N')}$$`,
           ['Gp', 'Gn', 'N', 'R', 'F', 'a'], ['Gp', 'R', 'F']),
       ];
     },
@@ -626,13 +714,16 @@
     id: 'incline-pulley', difficulty: 5, trig: true,
     boxes: (p) => [L(`the box on the slope (${kg(p.m1)})`, `die Kiste auf dem Hang (${kg(p.m1)})`), L(`the hanging box (${kg(p.m2)})`, `die hängende Kiste (${kg(p.m2)})`)],
     make(r, o = {}) {
-      const sl = slopeMake(r, o), { alpha, mu } = sl, m1 = pick(r, o.pyth ? PYTH_M : [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 2, 3, 4, 5, 6, 8]);
-      const a = rad(alpha), drive = m2 * G - m1 * G * (Math.sin(a) + mu * Math.cos(a));
-      return drive > 0.3 * (m1 + m2) ? { ...sl, m1, m2 } : null;
+      // practice: 37° or 53° (a hanging box pulls a box up a steep slope as well)
+      const sl = { ...slopeMake(r, o), ...(o.nice ? { alpha: pick(r, [37, 53]) } : {}) };
+      const m1 = pick(r, o.nice ? [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6] : [1, 2, 3, 4, 5, 6]), m2 = pick(r, o.nice ? [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5, 6, 8]), p = { ...sl, m1, m2 };
+      const drive = m2 * G - m1 * G * (sinOf(p) + p.mu * cosOf(p));
+      if (o.nice && m2 > 2 * m1) return null; // practice: the weight on the slope large enough to draw its components
+      return drive > 0.3 * (m1 + m2) ? p : null;
     },
     solve(p) {
-      const a = rad(p.alpha), N = p.m1 * G * Math.cos(a), R = p.mu * N;
-      const net = p.m2 * G - p.m1 * G * Math.sin(a) - R, acc = net / (p.m1 + p.m2);
+      const N = p.m1 * G * cosOf(p), R = p.mu * N;
+      const net = p.m2 * G - p.m1 * G * sinOf(p) - R, acc = net / (p.m1 + p.m2);
       return { N, R, res: net, a: acc, S: p.m2 * (G - acc) };
     },
     comps: (p) => slopeComps(p, 1),
@@ -668,15 +759,33 @@
       L(`Along the rope, the weight of the hanging box drives both boxes; the component down the slope and friction act against it: ${m$(`${T('res')} = ${T('m')}_2\\,g - ${T('m')}_1\\,g\\sin\\alpha - ${T('R')}`)}.`, `Entlang des Seils treibt die Gewichtskraft der hängenden Kiste beide Kisten an; Hangabtriebskraft und Reibung wirken dagegen: ${m$(`${T('res')} = ${T('m')}_2\\,g - ${T('m')}_1\\,g\\sin\\alpha - ${T('R')}`)}.`),
       L(`The hanging box alone: ${m$(`${T('m')}_2\\,g - ${T('S')} = ${T('m')}_2\\,${T('a')}`)}.`, `Die hängende Kiste allein: ${m$(`${T('m')}_2\\,g - ${T('S')} = ${T('m')}_2\\,${T('a')}`)}.`),
     ],
+    nums(p, v) {
+      const M = p.m1 + p.m2, W = p.m2 * G, F1 = p.m1 * G, Gp = F1 * sinOf(p), Gn = F1 * cosOf(p);
+      return [
+        num$('a', L('The acceleration:', 'Die Beschleunigung:'), T('a'), 'a', v.a,
+          `\\frac{${T('m')}_2\\,g - ${T('m')}_1\\,g\\sin\\alpha - ${T('R')}}{${T('m')}_1 + ${T('m')}_2} = \\frac{${tq(W, 'N')} - ${tq(Gp, 'N')} - ${tq(v.R, 'N')}}{${tq(M, 'kg')}} = ${tq(v.a, 'a')}`, [
+            [(W - v.R) / M, 'noSlope', WRONG.noSlope()],
+            [(W - Gp) / M, 'noFric', WRONG.noFric()],
+            [(W - Gn - p.mu * Gp) / M, 'swap', WRONG.swap()],
+            [v.res / p.m2, 'mass', WRONG.mass()],
+          ]),
+        num$('S', L('The rope force:', 'Die Seilkraft:'), T('S'), 'N', v.S,
+          `${T('m')}_2\\,(g - ${T('a')}) = ${tq(p.m2, 'kg')}\\cdot${tq(G - v.a, 'a')} = ${tq(v.S, 'N')}`, [
+            [W, 'rope', WRONG.rope()],
+            [p.m2 * (G + v.a), 'dir', L('The hanging box accelerates downwards: the rope holds it with less than its weight, not more.', 'Die hängende Kiste wird nach unten beschleunigt: Das Seil hält sie mit weniger als ihrer Gewichtskraft, nicht mit mehr.')],
+            [p.m1 * v.a + Gp, 'noFric', L('Friction on the box on the slope is missing: the rope has to overcome it as well.', 'Die Reibung auf die Kiste auf dem Hang fehlt: Das Seil muss sie auch überwinden.')],
+          ]),
+      ];
+    },
     steps(p, v) {
-      const F1 = p.m1 * G, a = rad(p.alpha), base = ['G', 'N', 'R', 'S1', 'G2', 'S2'], comp = ['Gp', 'Gn', 'N', 'R', 'S1', 'G2', 'S2'], all = [...comp, 'a1', 'a2'];
+      const F1 = p.m1 * G, base = ['G', 'N', 'R', 'S1', 'G2', 'S2'], comp = ['Gp', 'Gn', 'N', 'R', 'S1', 'G2', 'S2'], all = [...comp, 'a1', 'a2'];
       return [
         step(L('Forces', 'Kräfte'),
           `<p>${L(`On the box on the slope: its weight, the normal force, friction down the slope and the rope force up the slope. On the hanging box: its weight and the rope force. The pulley turns the rope around: it pulls both boxes with the same force ${m$(T('S'))}.`, `Auf die Kiste auf der Unterlage: ihre Gewichtskraft, die Normalkraft, die Reibung hangabwärts und die Seilkraft hangaufwärts. Auf die hängende Kiste: ihre Gewichtskraft und die Seilkraft. Die Rolle lenkt das Seil um: Es zieht beide Kisten mit derselben Kraft ${m$(T('S'))}.`)}</p>`,
           base),
         step(L('Components of the weight', 'Komponenten der Gewichtskraft'),
           `<p>${L('Split the weight of box 1 into a part along the slope, which pulls it down the slope, and a part perpendicular to it, which presses it onto the slope:', 'Zerlege die Gewichtskraft von Kiste 1 in einen Teil entlang der Unterlage, der sie hangabwärts zieht, und einen Teil senkrecht dazu, der sie auf die Unterlage drückt:')}</p>` +
-          `$$${T('G', '1∥')} = ${T('m')}_1\\,g\\sin\\alpha = ${tq(F1 * Math.sin(a), 'N')}, \\qquad ${T('G', '1⊥')} = ${T('m')}_1\\,g\\cos\\alpha = ${tq(F1 * Math.cos(a), 'N')}$$`,
+          `$$${T('G', '1∥')} = ${T('m')}_1\\,g\\sin\\alpha = ${tq(F1, 'N')}\\cdot ${trig('sin', p)} = ${tq(F1 * sinOf(p), 'N')}, \\qquad ${T('G', '1⊥')} = ${T('m')}_1\\,g\\cos\\alpha = ${tq(F1, 'N')}\\cdot ${trig('cos', p)} = ${tq(F1 * cosOf(p), 'N')}$$`,
           ['G', ...comp], ['G', 'Gp', 'Gn']),
         step(L('Normal force and friction', 'Normalkraft und Reibung'),
           `<p>${L('Perpendicular to the slope, the forces balance:', 'Senkrecht zur Unterlage heben sich die Kräfte auf:')}</p>` +
@@ -684,7 +793,7 @@
           comp, ['Gn', 'N', 'R']),
         step(L('Both boxes together', 'Beide Kisten zusammen'),
           `<p>${L('Along the rope, the weight of the hanging box drives the motion; the component down the slope and friction act against it:', 'Entlang des Seils treibt die Gewichtskraft der hängenden Kiste die Bewegung an; Hangabtriebskraft und Reibung wirken dagegen:')}</p>` +
-          `$$${T('res')} = ${T('m')}_2\\,g - ${T('m')}_1\\,g\\sin\\alpha - ${T('R')} = ${tq(p.m2 * G, 'N')} - ${tq(F1 * Math.sin(a), 'N')} - ${tq(v.R, 'N')} = ${res(v.res, 'N')}$$` +
+          `$$${T('res')} = ${T('m')}_2\\,g - ${T('m')}_1\\,g\\sin\\alpha - ${T('R')} = ${tq(p.m2 * G, 'N')} - ${tq(F1 * sinOf(p), 'N')} - ${tq(v.R, 'N')} = ${res(v.res, 'N')}$$` +
           `$$${T('a')} = \\frac{${T('res')}}{${T('m')}_1 + ${T('m')}_2} = \\frac{${tq(v.res, 'N')}}{${tq(p.m1 + p.m2, 'kg')}} = ${res(v.a, 'a')}$$`,
           all, ['G2', 'Gp', 'R', 'a1', 'a2']),
         step(L('Rope force', 'Seilkraft'),
@@ -769,6 +878,22 @@
         : L('The spring is compressed: it pushes the box back towards its relaxed length, that is up.', 'Die Feder ist gestaucht: Sie drückt die Kiste zurück zu ihrer entspannten Länge, also nach oben.'),
       L(`The box is at rest: ${m$(`${T('Fs')} = ${T('m')}\\,g`)}, and ${m$(`${T('Fs')} = k\\,\\Delta x`)} with ${m$('\\Delta x')} in metres.`, `Die Kiste ruht: ${m$(`${T('Fs')} = ${T('m')}\\,g`)}, und ${m$(`${T('Fs')} = k\\,\\Delta x`)} mit ${m$('\\Delta x')} in Metern.`),
     ],
+    nums(p, v) {
+      const FG = p.m * G, dm = v.dx / 100;
+      const unit = L(`F / k gives Δx in metres: ${num(dm, 3)} m = ${num(v.dx)} cm.`, `F / k ergibt Δx in Metern: ${num(dm, 3)} m = ${num(v.dx)} cm.`);
+      const mass = L('The spring holds the weight m g, in newtons, not the mass.', 'Die Feder hält die Gewichtskraft m g, in Newton, nicht die Masse.');
+      const flip = L('The law of the spring is F = k Δx: divide the force by k (or the force by Δx), not the other way round.', 'Das Federgesetz lautet F = k Δx: Teile die Kraft durch k (bzw. die Kraft durch Δx), nicht umgekehrt.');
+      if (p.given === 'k') {
+        return [num$('dx', SPRING_WHAT.dx(p), '\\Delta x', 'cm', v.dx,
+          `\\frac{${T('m')}\\,g}{k} = \\frac{${tq(FG, 'N')}}{${tq(p.k, 'Nm')}} = ${FS.texNum(dm, 3)}\\,\\mathrm{m} = ${tq(v.dx, 'cm')}`, [
+            [dm, 'hooke', unit], [v.dx / G, 'hooke', mass], [p.k / FG, 'hooke', flip],
+          ])];
+      }
+      return [num$('k', SPRING_WHAT.k(), 'k', 'Nm', p.k,
+        `\\frac{${T('m')}\\,g}{\\Delta x} = \\frac{${tq(FG, 'N')}}{${FS.texNum(dm, 3)}\\,\\mathrm{m}} = ${tq(p.k, 'Nm')}`, [
+          [FG / v.dx, 'hooke', L(`Δx must be in metres: ${num(v.dx)} cm = ${num(dm, 3)} m.`, `Δx muss in Metern stehen: ${num(v.dx)} cm = ${num(dm, 3)} m.`)], [p.k / G, 'hooke', mass], [FG * dm, 'hooke', flip],
+        ])];
+    },
     steps(p, v) {
       const hang = p.state === 'hang', dm = v.dx / 100;
       return [
@@ -832,6 +957,15 @@
         : L('The compressed spring pushes the box back towards its relaxed length, away from the wall. Friction acts against the motion.', 'Die gestauchte Feder drückt die Kiste zurück zu ihrer entspannten Länge, von der Wand weg. Die Reibung wirkt gegen die Bewegung.'),
       L(`${m$(`${T('Fs')} = k\\,\\Delta x`)} with ${m$('\\Delta x')} in metres, ${m$(`${T('R')} = ${T('mu')}\\,${T('m')}\\,g`)}, and ${m$(`${T('Fs')} - ${T('R')} = ${T('m')}\\,${T('a')}`)}.`, `${m$(`${T('Fs')} = k\\,\\Delta x`)} mit ${m$('\\Delta x')} in Metern, ${m$(`${T('R')} = ${T('mu')}\\,${T('m')}\\,g`)} und ${m$(`${T('Fs')} - ${T('R')} = ${T('m')}\\,${T('a')}`)}.`),
     ],
+    nums(p, v) {
+      return [num$('a', L('The acceleration just after it starts to slide:', 'Die Beschleunigung gleich nachdem sie zu gleiten beginnt:'), T('a'), 'a', v.a,
+        `\\frac{k\\,\\Delta x - ${T('mu')}\\,${T('m')}\\,g}{${T('m')}} = \\frac{${tq(v.Fs, 'N')} - ${tq(v.R, 'N')}}{${tq(p.m, 'kg')}} = ${tq(v.a, 'a')}`, [
+          [v.Fs / p.m, 'noFric', WRONG.noFric()],
+          [(v.Fs + v.R) / p.m, 'dir', L('Friction acts against the motion: subtract it.', 'Die Reibung wirkt gegen die Bewegung: Zieh sie ab.')],
+          [v.Fs - v.R, 'net', WRONG.net()],
+          [(p.k * p.dx - v.R) / p.m, 'hooke', L(`Δx must be in metres: ${num(p.dx)} cm = ${num(p.dx / 100, 3)} m.`, `Δx muss in Metern stehen: ${num(p.dx)} cm = ${num(p.dx / 100, 3)} m.`)],
+        ])];
+    },
     steps(p, v) {
       const str = p.state === 'stretch', FG = p.m * G, base = ['G', 'N', 'R', 'Fs'], all = [...base, 'a'];
       return [
@@ -883,20 +1017,19 @@
     }[p.phase]),
     scene(p, v) {
       const sc = new Scene(320, 360, L('A falling skydiver', 'Eine fallende Fallschirmspringerin'));
-      const bw = 54, bh = 70, cx = 160, top = 130, D = p.phase === 'terminal' ? v.D : p.D, y = 34;
-      // air resistance acts on the top of her body, or on the canopy once it is open
-      let dAt = [cx + 8, top];
+      const bw = 78, bh = 66, cx = 160, top = 130, D = p.phase === 'terminal' ? v.D : p.D, y = 34;
+      // the forces act at her centre (with the parachute open, on her and the parachute as one
+      // body): the weight down, a little left of it, and air resistance up, a little right
       if (p.phase === 'chute') {
         // the canopy, with its lines to the shoulders
         const hw = 74;
-        dAt = [cx, y - 30];
         sc.see(cx - hw, y - 30); sc.see(cx + hw, y + 14);
         sc.add(`<path class="canopy" d="M${cx - hw} ${y + 14} Q${cx - hw} ${y - 30} ${cx} ${y - 30} Q${cx + hw} ${y - 30} ${cx + hw} ${y + 14} Q${cx} ${y} ${cx - hw} ${y + 14} Z"/>`);
         sc.line(cx - hw, y + 14, cx - bw / 2, top, 'w thin'); sc.line(cx + hw, y + 14, cx + bw / 2, top, 'w thin');
       }
       const at = sc.box([cx - bw / 2, top + bh], [1, 0], [0, -1], bw, bh, kg(p.m)), c = at(bw / 2, bh / 2);
       sc.force({ id: 'G', kind: 'g', at: [c[0] - 6, c[1]], dir: [0, 1], sym: ['G'], lab: [-8, 6] });
-      sc.force({ id: 'D', kind: 'd', at: dAt, dir: [0, -1], sym: ['D'], lab: [8, 4], ...(p.phase === 'terminal' ? {} : { value: q(p.D, 'N'), task: 'value' }) });
+      sc.force({ id: 'D', kind: 'd', at: [c[0] + 8, c[1]], dir: [0, -1], sym: ['D'], lab: [8, 4], ...(p.phase === 'terminal' ? {} : { value: q(p.D, 'N'), task: 'value' }) });
       sc.accel({ id: 'v', kind: 'v', at: [cx + bw / 2 + 24, c[1] - 23], dir: [0, 1], sym: ['v'], task: 'sym', lab: [8, 0] });
       if (p.phase !== 'terminal') sc.accel({ id: 'a', at: [cx - bw / 2 - 24, c[1] + (p.phase === 'early' ? -23 : 23)], dir: [0, p.phase === 'early' ? 1 : -1], sym: ['a'], task: 'sym', lab: [-8, 0] });
       return sized(sc, { G: p.m * G, D });
@@ -910,6 +1043,35 @@
           L(`Upwards positive: ${m$(`${T('D')} - ${T('m')}\\,g = ${T('m')}\\,${T('a')}`)}.`, `Nach oben positiv: ${m$(`${T('D')} - ${T('m')}\\,g = ${T('m')}\\,${T('a')}`)}.`)],
       }[p.phase],
     ],
+    nums(p, v) {
+      const FG = p.m * G;
+      if (p.phase === 'terminal') {
+        return [num$('D', L('The air resistance on her:', 'Der Luftwiderstand auf sie:'), T('D'), 'N', v.D, `${T('m')}\\,g = ${tq(p.m, 'kg')}\\cdot${tq(G, 'a')} = ${tq(v.D, 'N')}`, [
+          [p.m, 'other', L('Her weight is m g, in newtons: the mass times g.', 'Ihre Gewichtskraft ist m g, in Newton: die Masse mal g.')],
+          [0, 'noDrag', L('Air resistance does not vanish at a constant speed: it is there and balances her weight.', 'Der Luftwiderstand verschwindet bei konstanter Geschwindigkeit nicht: Er ist da und hält ihrer Gewichtskraft das Gleichgewicht.')],
+          [p.m * p.u, 'motion', L('There is no force m v: at a constant speed the forces balance, so the air resistance equals her weight.', 'Es gibt keine Kraft m v: Bei konstanter Geschwindigkeit heben sich die Kräfte auf, also ist der Luftwiderstand gleich ihrer Gewichtskraft.')],
+        ])];
+      }
+      const early = p.phase === 'early', net = early ? `${T('m')}\\,g - ${T('D')}` : `${T('D')} - ${T('m')}\\,g`;
+      const nets = early ? `${tq(FG, 'N')} - ${tq(p.D, 'N')}` : `${tq(p.D, 'N')} - ${tq(FG, 'N')}`;
+      const terminal = early ? L('Her speed still changes: the forces do not balance yet, so there is a net force.', 'Ihre Geschwindigkeit ändert sich noch: Die Kräfte heben sich noch nicht auf, also gibt es eine resultierende Kraft.')
+        : L('She slows down: the forces do not balance, so there is a net force.', 'Sie wird langsamer: Die Kräfte heben sich nicht auf, also gibt es eine resultierende Kraft.');
+      const dir = L('Weight and air resistance point in opposite directions: subtract them.', 'Gewichtskraft und Luftwiderstand zeigen in entgegengesetzte Richtungen: Zieh sie voneinander ab.');
+      return [
+        num$('res', L('The net force on her:', 'Die resultierende Kraft auf sie:'), T('res'), 'N', v.res, `${net} = ${nets} = ${tq(v.res, 'N')}`, [
+          [FG + p.D, 'dir', dir], [0, 'terminal', terminal],
+          early ? [p.D, 'other', L('The air resistance alone is not the net force: her weight acts too.', 'Der Luftwiderstand allein ist nicht die resultierende Kraft: Ihre Gewichtskraft wirkt auch.')]
+            : [FG, 'other', L('The weight alone is not the net force: the air resistance acts too.', 'Die Gewichtskraft allein ist nicht die resultierende Kraft: Der Luftwiderstand wirkt auch.')],
+        ]),
+        num$('a', early ? L('Her acceleration:', 'Ihre Beschleunigung:') : L('Her acceleration (upwards: she slows down):', 'Ihre Beschleunigung (nach oben: sie wird langsamer):'), T('a'), 'a', v.a,
+          `\\frac{${T('res')}}{${T('m')}} = \\frac{${tq(v.res, 'N')}}{${tq(p.m, 'kg')}} = ${tq(v.a, 'a')}`, [
+            [G, 'noDrag', L('She does not fall freely: the air resistance acts against her velocity.', 'Sie fällt nicht frei: Der Luftwiderstand wirkt gegen ihre Geschwindigkeit.')],
+            [0, 'terminal', terminal],
+            [p.D / p.m, 'other', L('Divide the net force by the mass, not the air resistance alone.', 'Teile die resultierende Kraft durch die Masse, nicht den Luftwiderstand allein.')],
+            [(FG + p.D) / p.m, 'dir', dir],
+          ]),
+      ];
+    },
     steps(p, v) {
       const FG = p.m * G, base = ['G', 'D'], all = ['G', 'D', 'v', 'a'];
       const forces = step(L('Forces on the skydiver', 'Kräfte auf die Fallschirmspringerin'),
@@ -969,7 +1131,9 @@
       const at = sc.box([x0, y0 - 2 * rw], [1, 0], [0, -1], bw, bh, kg(p.m)), c = at(bw / 2, bh / 2), top = at(bw / 2, bh);
       sc.force({ id: 'G', kind: 'g', at: [c[0] - 6, c[1]], dir: [0, 1], sym: ['G'], lab: [-8, 10] });
       sc.force({ id: 'N', kind: 'n', at: [c[0] + 6, y0], dir: [0, -1], sym: ['N'], lab: [8, 4] });
-      sc.force({ id: 'D', kind: 'd', at: at(0, bh / 2), dir: [-1, 0], sym: ['D'], value: q(p.D, 'N'), task: 'value', lab: [0, -12] });
+      // air resistance acts at the centre, like the weight (just below it, its label under the
+      // arrow, clear of the mass in the corner)
+      sc.force({ id: 'D', kind: 'd', at: [c[0], c[1] + 4], dir: [-1, 0], sym: ['D'], value: q(p.D, 'N'), task: 'value', lab: [-2, 16] });
       sc.accel({ id: 'v', kind: 'v', at: [top[0] - 23, top[1] - 16], dir: [1, 0], sym: ['v'], task: 'sym', lab: [0, -12] });
       sc.accel({ id: 'a', at: [top[0] + 23, top[1] - 48], dir: [-1, 0], sym: ['a'], task: 'sym', lab: [0, -12] });
       return sized(sc, { G: p.m * G, N: p.m * G, D: p.D });
@@ -979,6 +1143,14 @@
       L('The air resistance points against her velocity: backwards.', 'Der Luftwiderstand zeigt gegen ihre Geschwindigkeit: nach hinten.'),
       L(`Backwards positive: ${m$(`${T('D')} = ${T('m')}\\,${T('a')}`)}.`, `Nach hinten positiv: ${m$(`${T('D')} = ${T('m')}\\,${T('a')}`)}.`),
     ],
+    nums(p, v) {
+      return [num$('a', L('Her acceleration (backwards: she slows down):', 'Ihre Beschleunigung (nach hinten: sie wird langsamer):'), T('a'), 'a', v.a,
+        `\\frac{${T('D')}}{${T('m')}} = \\frac{${tq(p.D, 'N')}}{${tq(p.m, 'kg')}} = ${tq(v.a, 'a')}`, [
+          [p.D / (p.m * G), 'mass', L('Divide by her mass, in kilograms, not by her weight.', 'Teile durch ihre Masse, in Kilogramm, nicht durch ihre Gewichtskraft.')],
+          [0, 'motion', L('She does not keep her speed: nothing pushes her forwards, so the air resistance is the net force and slows her down.', 'Sie behält ihre Geschwindigkeit nicht: Nichts schiebt sie nach vorn, also ist der Luftwiderstand die resultierende Kraft und bremst sie ab.')],
+          [(p.m * G - p.D) / p.m, 'other', L('Her weight acts vertically, not along the road: it does not change her speed.', 'Ihre Gewichtskraft wirkt senkrecht, nicht entlang der Strasse: Sie ändert ihre Geschwindigkeit nicht.')],
+        ])];
+    },
     steps(p, v) {
       const FG = p.m * G, base = ['G', 'N', 'D', 'v'], all = [...base, 'a'];
       return [
@@ -1001,6 +1173,6 @@
 
   const SCENARIOS = [restUp, restAngle, pullFriction, pushPair, ropePair, atwood, tablePulley, inclinePull, inclinePulley, springHang, springFloor, dragFall, dragBike];
 
-  root.Scenarios = { SCENARIOS };
+  root.Scenarios = { SCENARIOS, NICE };
   if (typeof module !== 'undefined') module.exports = root.Scenarios;
 })(typeof window !== 'undefined' ? window : globalThis);

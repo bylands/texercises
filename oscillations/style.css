@@ -50,7 +50,7 @@ svg .pname { fill: var(--ink); font: italic 600 15px var(--serif); paint-order: 
 /* answers that are no numbers: a choice of words, equations (one below the other) or graphs */
 .field.choice { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 .field.choice .what { margin-right: 4px; }
-.field.choice.wide { flex-direction: column; align-items: stretch; }
+.field.choice.wide { display: grid; grid-template-columns: minmax(0, 1fr); } /* a column; as flex, Chrome left the grid of graphs too short and cut off its lower row */
 /* every answer part on its own row of the grid of fields (ui.css) */
 .fields > .field.choice { grid-column: 1 / -1; }
 .choices { flex-wrap: wrap; }

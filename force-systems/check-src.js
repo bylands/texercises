@@ -22,14 +22,14 @@
     { id: 'law', kinds: ['law-floor', 'law-pulley'], tutor: 3, topic: 3,
       name: () => L('Set up Newton’s second law along each axis, following the strategy: system, forces, axes, components, equations, then solve.',
         'Das Aktionsprinzip für jede Achse aufstellen, nach dem Vorgehen: System, Kräfte, Achsen, Komponenten, Gleichungen, dann auflösen.') },
-    { id: 'error', kinds: ['error'], tutor: 6, topic: 6,
-      name: () => L('Find the wrong step in a student’s free-body diagram and equations.', 'Den falschen Schritt in den Kräften und Gleichungen einer Schülerin finden.') },
-    { id: 'spring', kinds: ['spring-forces', 'spring-dir', 'spring-law'], tutor: 7, topic: 7,
+    { id: 'spring', kinds: ['spring-forces', 'spring-dir', 'spring-law'], tutor: 6, topic: 6,
       name: () => L('Draw the spring force where the spring is attached, back towards its relaxed length (a stretched spring pulls, a compressed one pushes), find it with F = k Δx and use it in Newton’s second law.',
         'Die Federkraft dort einzeichnen, wo die Feder befestigt ist, zurück zu ihrer entspannten Länge (eine gedehnte Feder zieht, eine gestauchte drückt), sie mit F = k Δx bestimmen und im Aktionsprinzip verwenden.') },
-    { id: 'drag', kinds: ['drag-forces', 'drag-dir', 'drag-law'], tutor: 8, topic: 8,
+    { id: 'drag', kinds: ['drag-forces', 'drag-dir', 'drag-law'], tutor: 7, topic: 7,
       name: () => L('Draw air resistance against the velocity (not the acceleration), knowing that it grows with speed, and use it in Newton’s second law: at terminal velocity it balances the weight.',
         'Den Luftwiderstand gegen die Geschwindigkeit (nicht gegen die Beschleunigung) einzeichnen, im Wissen, dass er mit der Geschwindigkeit wächst, und ihn im Aktionsprinzip verwenden: Bei der Endgeschwindigkeit hält er der Gewichtskraft das Gleichgewicht.') },
+    { id: 'error', kinds: ['error'], tutor: 8, topic: 8,
+      name: () => L('Find the wrong step in a student’s free-body diagram and equations.', 'Den falschen Schritt in den Kräften und Gleichungen einer Schülerin finden.') },
   ];
 
   // The idea behind each wrong-answer flag.
@@ -37,6 +37,8 @@
     flatN: 'normal', rope: 'rope', motion: 'motion', noFric: 'friction', swap: 'comp', whole: 'comp', noSlope: 'slope',
     internal: 'internal', mass: 'mass', pass: 'pass', balance: 'balance',
     stretch: 'stretch', hooke: 'hooke', accel: 'accel', terminal: 'terminal', noDrag: 'noDrag',
+    // the slips in a student's drawing (find the error)
+    noSpring: 'noSpring', springDir: 'stretch', dragDir: 'dragDir', dragRest: 'dragRest', dragSize: 'dragSize',
   };
   const concepts = () => ({
     normal: L('normal force taken equal to the weight', 'Normalkraft gleich Gewichtskraft gesetzt'),
@@ -54,6 +56,10 @@
     accel: L('air resistance drawn against the acceleration instead of the velocity', 'Luftwiderstand gegen die Beschleunigung statt gegen die Geschwindigkeit eingezeichnet'),
     terminal: L('air resistance taken equal to the weight although the speed changes', 'Luftwiderstand gleich Gewichtskraft gesetzt, obwohl sich die Geschwindigkeit ändert'),
     noDrag: L('air resistance forgotten', 'Luftwiderstand vergessen'),
+    noSpring: L('spring force forgotten', 'Federkraft vergessen'),
+    dragDir: L('air resistance drawn along the velocity', 'Luftwiderstand in Richtung der Geschwindigkeit eingezeichnet'),
+    dragRest: L('air resistance drawn on a body at rest', 'Luftwiderstand auf einen ruhenden Körper eingezeichnet'),
+    dragSize: L('air resistance larger or smaller than the weight, against what the motion shows', 'Luftwiderstand grösser oder kleiner als die Gewichtskraft, anders als es die Bewegung zeigt'),
   });
 
   const ONE = ['rest-up', 'rest-angle', 'pull-friction', 'incline-pull'], TWO = ['push-pair', 'rope-pair', 'atwood', 'table-pulley', 'incline-pulley'];
@@ -137,7 +143,7 @@
 
   // The wrong step in a student's attempt (practice's "find the error").
   function error(seed) {
-    const r = FS.rng(seed), ex = practiceOf(FS.pick(r, ['error-floor', 'error-pulley', 'error-slope']), seed);
+    const r = FS.rng(seed), ex = practiceOf(FS.pick(r, ['error-floor', 'error-pulley', 'error-slope', 'error-spring', 'error-drag']), seed);
     return { title: ex.title, text: ex.text, figure: ex.taskFigure(), ask: L('Which step is wrong?', 'Welcher Schritt ist falsch?'), options: choose(ex.eqs[0]),
       explain: () => `<div class="figs">${ex.solutionFigure()}</div><div class="steps">${ex.solution.join('')}</div>` };
   }

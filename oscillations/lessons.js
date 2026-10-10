@@ -9,7 +9,7 @@
   const P = { c: 1.3, A: 1, m: 1, D: 4, g: 2, gamma: 0.3, B: 1, C1: 1, C2: 0.6, phi: 0.5 };
   const EXAMPLES = [
     {
-      scenario: 'circle', p: { k: 3, kinds: ['proj', 'right', 'start', 'turn'] },
+      scenario: 'circle', p: { k: 2, kinds: ['late', 'right', 'proj', 'start'] },
       practice: [{ types: ['circle'] }],
       name: { en: 'The turning pointer', de: 'Der drehende Zeiger' },
       idea: { en: 'A simple harmonic motion is the shadow of a pointer turning evenly: y(t) = A·sin(ωt + φ₀). The length of the pointer is the amplitude, its angular velocity is ω, one turn is one period, and its angle at t = 0 is the phase φ₀.', de: 'Eine harmonische Schwingung ist der Schatten eines gleichmässig drehenden Zeigers: y(t) = A·sin(ωt + φ₀). Die Länge des Zeigers ist die Amplitude, seine Winkelgeschwindigkeit ist ω, eine Umdrehung ist eine Periode, und sein Winkel bei t = 0 ist die Phase φ₀.' },
