@@ -149,9 +149,16 @@
     ohms: { html: 'Ω·s', tex: '\\Omega\\,\\mathrm{s}', prefixes: [-6, -3, 0] },
   };
   const PREFIX = { '-15': ['f', '\\mathrm{f}'], '-12': ['p', '\\mathrm{p}'], 6: ['M', '\\mathrm{M}'], '-9': ['n', '\\mathrm{n}'], '-6': ['µ', '\\mu'], '-3': ['m', '\\mathrm{m}'], 0: ['', ''], 3: ['k', '\\mathrm{k}'] };
-  // A value with a unit and n significant digits: { html, tex }. Units: ohm, H, F, ohms (Ω·s), Hz, m
-  // and w (rad/s).
+  // A value with a unit and n significant digits: { html, tex }. Units: ohm, H, F, ohms (Ω·s), Hz, m,
+  // w (rad/s) and s2 (s², for ω⁻²).
   function q(x, unit, n = 3) {
+    // s² (the probe's ω⁻²): plain from 0.01 to 999, else with a power of ten
+    if (unit === 's2') {
+      let e = Math.floor(Math.log10(Math.abs(x))), m = Number((x / 10 ** e).toPrecision(n));
+      if (Math.abs(m) >= 10) { m /= 10; e++; }
+      if (e >= -2 && e <= 2) return { html: `${digits(x, n)} s²`, tex: `${digits(x, n).replace('−', '-')}\\,\\mathrm{s^2}` };
+      return { html: `${digits(m, n)}·10${sup(e)} s²`, tex: `${digits(m, n).replace('−', '-')}\\cdot 10^{${e}}\\,\\mathrm{s^2}` };
+    }
     if (unit === 'w') {
       if (Math.abs(x) < 1e4) return { html: `${digits(x)} rad/s`, tex: `${digits(x).replace('−', '-')}\\,\\mathrm{rad/s}` };
       const e = 3 * Math.floor(Math.log10(Math.abs(x) * (1 + 1e-12)) / 3), d = digits(x / 10 ** e);
@@ -306,6 +313,58 @@
     return s[`${c.conn} ${c.kind}`];
   }
 
+  // The worked example of a series RL or RC circuit (the tutor, lessons.js): the right triangle
+  // Z = √(R² + X²), both ends of the ω axis (from analysis()), one point read off the curve at w1
+  // that gives the reactance X and from it L or C, the corner, and the usual mistakes (R + X added
+  // like numbers; the ends swapped). Returns { steps: [{ title, text, ann, tri }], read: { w, z, X,
+  // value } } with tri (optional) the triangle to draw: { R, X, cap, labels: { R, X, Z } }.
+  function pairAnalysis(c, ax, w1) {
+    const an = analysis(c, ax), rl = c.kind === 'RL', R = c.R, Rt = T(R, 'ohm');
+    const Xof = (w) => (rl ? w * c.L : 1 / (w * c.C));
+    const X = Xof(w1), z = Z(c, w1), value = rl ? X / w1 : 1 / (w1 * X), wf = feature(c);
+    const Xt = rl ? '\\omega L' : '\\frac{1}{\\omega C}', Xh = rl ? 'ωL' : '1/(ωC)';
+    const el = rl ? L('coil', 'Spule') : L('capacitor', 'Kondensator');
+    const theEl = rl ? L('the coil', 'die Spule') : L('the capacitor', 'der Kondensator');
+    const given = rl ? `L = ${T(c.L, 'H')}` : `C = ${T(c.C, 'F')}`;
+    const tri = (labels) => ({ R, X, cap: !rl, labels });
+    const symbolic = tri({ R: 'R', X: `X = ${Xh}`, Z: 'Z' });
+    const numeric = tri({ R: `R = ${H(R, 'ohm')}`, X: `X = ${H(X, 'ohm')}`, Z: `Z = ${H(z, 'ohm')}` });
+    const readPt = pt(w1, z, `Z = ${H(z, 'ohm')}`);
+    const steps = [];
+    steps.push({ title: L('The circuit', 'Die Schaltung'), ann: [], tri: symbolic,
+      text: L(`The same current flows through the resistor and the ${el}. The voltage across the resistor is in phase with the current, the voltage across the ${el} is shifted by 90°: the two peak at different times. So the resistance $R$ and the reactance $X = ${Xt}$ do not simply add: they are the two shorter sides of a right triangle, and the impedance is its hypotenuse, $$Z = \\sqrt{R^2 + X^2} = \\sqrt{R^2 + \\left(${Xt}\\right)^2}$$ The curve is drawn for $R = ${Rt}$ and $${given}$.`,
+        `Durch den Widerstand und ${rl ? 'die Spule' : 'den Kondensator'} fliesst derselbe Strom. Die Spannung am Widerstand ist in Phase mit dem Strom, die Spannung ${rl ? 'an der Spule' : 'am Kondensator'} um 90° verschoben: Die beiden sind zu verschiedenen Zeiten am grössten. Der Widerstand $R$ und der Blindwiderstand $X = ${Xt}$ addieren sich darum nicht einfach: Sie sind die Katheten eines rechtwinkligen Dreiecks, und die Impedanz ist seine Hypotenuse, $$Z = \\sqrt{R^2 + X^2} = \\sqrt{R^2 + \\left(${Xt}\\right)^2}$$ Die Kurve ist für $R = ${Rt}$ und $${given}$ gezeichnet.`) });
+    // both ends, as in the practice solution, with which element dominates there
+    const domLo = rl ? L('Here the resistor dominates: $X \\ll R$.', 'Hier dominiert der Widerstand: $X \\ll R$.') : L('Here the capacitor dominates: $X \\gg R$.', 'Hier dominiert der Kondensator: $X \\gg R$.');
+    const domHi = rl ? L('Here the coil dominates: $X \\gg R$.', 'Hier dominiert die Spule: $X \\gg R$.') : L('Here the resistor dominates: $X \\ll R$.', 'Hier dominiert der Widerstand: $X \\ll R$.');
+    steps.push({ ...an.steps[0], text: `${an.steps[0].text} ${domLo}` });
+    steps.push({ ...an.steps[1], text: `${an.steps[1].text} ${domHi}` });
+    // one point off the curve
+    const sq = `X = \\sqrt{Z^2 - R^2} = \\sqrt{(${T(z, 'ohm')})^2 - (${Rt})^2} = ${T(X, 'ohm')}`;
+    const Rfrom = rl ? L('from the start of the curve', 'vom Anfang der Kurve') : L('from where the curve levels off', 'von dort, wo die Kurve flach wird');
+    let text = L(`Read one point: at $\\omega = ${T(w1, 'w')}$ the curve shows $Z = ${T(z, 'ohm')}$. With $R = ${Rt}$ ${Rfrom}, the triangle gives the reactance $$${sq}$$`,
+      `Lies einen Punkt ab: Bei $\\omega = ${T(w1, 'w')}$ zeigt die Kurve $Z = ${T(z, 'ohm')}$. Mit $R = ${Rt}$ ${Rfrom} liefert das Dreieck den Blindwiderstand $$${sq}$$`);
+    if (rl) {
+      text += L(`and from $X = \\omega L$: $$L = \\frac{X}{\\omega} = \\frac{${T(X, 'ohm')}}{${T(w1, 'w')}} = ${T(value, 'H')}$$ The same as the slope for large $\\omega$, but from a single point.`,
+        `und aus $X = \\omega L$: $$L = \\frac{X}{\\omega} = \\frac{${T(X, 'ohm')}}{${T(w1, 'w')}} = ${T(value, 'H')}$$ Dasselbe wie die Steigung für grosses $\\omega$, aber aus einem einzigen Punkt.`);
+    } else {
+      text += L(`and from $X = \\frac{1}{\\omega C}$: $$C = \\frac{1}{\\omega X} = \\frac{1}{${T(w1, 'w')} \\cdot ${T(X, 'ohm')}} = ${T(value, 'F')}$$ Squaring gives a straight line in $\\omega^{-2}$: $Z^2 = R^2 + \\frac{1}{C^2}\\,\\omega^{-2}$. Plotted against $\\omega^{-2}$ (here $\\omega^{-2} = ${T(1 / (w1 * w1), 's2')}$), $Z^2$ is a straight line with the intercept $R^2$ and the slope $1/C^2$; that is why the probe in practice also shows $\\omega^{-2}$.`,
+        `und aus $X = \\frac{1}{\\omega C}$: $$C = \\frac{1}{\\omega X} = \\frac{1}{${T(w1, 'w')} \\cdot ${T(X, 'ohm')}} = ${T(value, 'F')}$$ Quadriert ergibt das eine Gerade in $\\omega^{-2}$: $Z^2 = R^2 + \\frac{1}{C^2}\\,\\omega^{-2}$. Gegen $\\omega^{-2}$ aufgetragen (hier $\\omega^{-2} = ${T(1 / (w1 * w1), 's2')}$) ist $Z^2$ eine Gerade mit dem Achsenabschnitt $R^2$ und der Steigung $1/C^2$; darum zeigt die Sonde beim Üben auch $\\omega^{-2}$.`);
+    }
+    steps.push({ title: L('Reading a point off the curve', 'Einen Punkt ablesen'), ann: [hl(R, 'R'), vl(w1, ''), readPt], tri: numeric, text });
+    // the corner: X = R
+    steps.push(an.steps[2]);
+    // the mistakes
+    const sum = R + X;
+    steps.push({ title: L('Not R + X', 'Nicht R + X'), ann: [fn((w) => R + Xof(w), `R + ${Xh} ✗`), readPt, pt(w1, sum, `R + X = ${H(sum, 'ohm')}`)], tri: numeric,
+      text: L(`A frequent mistake is to add $R$ and $X$ like numbers. At $\\omega = ${T(w1, 'w')}$ that would give $R + X = ${T(R, 'ohm')} + ${T(X, 'ohm')} = ${T(sum, 'ohm')}$ (dashed curve), but the curve shows $Z = ${T(z, 'ohm')}$. Since the two voltages peak at different times, they add like the sides of a right triangle: $Z$ is less than $R + X$ and more than $R$ or $X$ alone. Don't swap the ends either: in a series ${rl ? 'RL' : 'RC'} circuit ${rl ? 'the resistor dominates for small $\\omega$ ($Z \\to R$) and the coil for large $\\omega$ ($Z \\approx \\omega L$, rising without bound)' : 'the capacitor dominates for small $\\omega$ ($Z \\approx \\frac{1}{\\omega C} \\to \\infty$) and the resistor for large $\\omega$ ($Z \\to R$)'}; in a series ${rl ? 'RC' : 'RL'} circuit it is the other way round.`,
+        `Ein häufiger Fehler ist, $R$ und $X$ wie Zahlen zu addieren. Bei $\\omega = ${T(w1, 'w')}$ gäbe das $R + X = ${T(R, 'ohm')} + ${T(X, 'ohm')} = ${T(sum, 'ohm')}$ (gestrichelte Kurve), aber die Kurve zeigt $Z = ${T(z, 'ohm')}$. Weil die beiden Spannungen zu verschiedenen Zeiten am grössten sind, addieren sie sich wie die Seiten eines rechtwinkligen Dreiecks: $Z$ ist kleiner als $R + X$ und grösser als $R$ oder $X$ allein. Vertausche auch die Enden nicht: In einer ${rl ? 'RL' : 'RC'}-Serieschaltung dominiert ${rl ? 'für kleines $\\omega$ der Widerstand ($Z \\to R$) und für grosses $\\omega$ die Spule ($Z \\approx \\omega L$, wächst über alle Grenzen)' : 'für kleines $\\omega$ der Kondensator ($Z \\approx \\frac{1}{\\omega C} \\to \\infty$) und für grosses $\\omega$ der Widerstand ($Z \\to R$)'}; in einer ${rl ? 'RC' : 'RL'}-Serieschaltung ist es umgekehrt.`) });
+    steps.push({ title: L('In short', 'Kurz'), ann: [...an.steps.flatMap((s) => s.ann), readPt], tri: symbolic,
+      text: L(`$Z = \\sqrt{R^2 + X^2}$ with $X = ${Xt}$. ${rl ? 'The curve starts at $R$ and approaches the straight line $\\omega L$' : 'The curve comes down from infinity like $\\frac{1}{\\omega C}$ and levels off at $R$'}; at the corner $\\omega = ${rl ? 'R/L' : '1/(RC)'} \\approx ${T(wf, 'w')}$ it is $\\sqrt{2}\\,R$. $R$ comes from the end where ${theEl} does not count; then any point $(\\omega, Z)$ gives $X = \\sqrt{Z^2 - R^2}$ and from it ${rl ? '$L = X/\\omega$' : '$C = 1/(\\omega X)$'}.`,
+        `$Z = \\sqrt{R^2 + X^2}$ mit $X = ${Xt}$. ${rl ? 'Die Kurve beginnt bei $R$ und nähert sich der Geraden $\\omega L$' : 'Die Kurve kommt wie $\\frac{1}{\\omega C}$ von unendlich herunter und nähert sich $R$'}; bei der Grenzfrequenz $\\omega = ${rl ? 'R/L' : '1/(RC)'} \\approx ${T(wf, 'w')}$ ist sie $\\sqrt{2}\\,R$. $R$ folgt aus dem Ende, an dem ${theEl} nicht zählt; dann liefert jeder Punkt $(\\omega, Z)$ den Blindwiderstand $X = \\sqrt{Z^2 - R^2}$ und daraus ${rl ? '$L = X/\\omega$' : '$C = 1/(\\omega X)$'}.`) });
+    return { steps, read: { w: w1, z, X, value } };
+  }
+
   // ---------------------------------------------------------------- answer options
   // Each unknown is chosen from OPTIONS values: the right one and wrong ones that follow from typical
   // mistakes, each with the explanation shown when it is picked. Wrong values have two significant
@@ -433,7 +492,7 @@
   }
 
   const api = {
-    rng, TOL, GAP, OPTIONS, LEVELS, DIFFICULTY, UNKNOWNS, Z, dZ, feature, quality, axesFor, usable, analysis, shape, mistakes, choices, exercise, generate,
+    rng, TOL, GAP, OPTIONS, LEVELS, DIFFICULTY, UNKNOWNS, Z, dZ, feature, quality, axesFor, usable, analysis, pairAnalysis, shape, mistakes, choices, exercise, generate,
     q, H, T, digits, sup, p3, niceUp,
   };
   root.Impedance = api;

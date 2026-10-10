@@ -194,11 +194,12 @@
     return out;
   }
 
-  // Readout of the probe at ω: { w, z, d, p } with p the log-log slope d ln Z / d ln ω.
+  // Readout of the probe at ω: { w, inv2, z, d, p } with inv2 = ω⁻² in s² (Z² of a series RC
+  // circuit is a straight line in it, Z² = R² + ω⁻²/C²) and p the log-log slope d ln Z / d ln ω.
   function readout(c, ax, mode, w) {
     w = Math.max(w, scales(ax, mode).wmin);
     const z = I.Z(c, w), d = I.dZ(c, w);
-    return { w, z, d, p: (w * d) / z };
+    return { w, inv2: 1 / (w * w), z, d, p: (w * d) / z };
   }
 
   // ω under the pointer at svg x px (null outside the plot area).
@@ -322,7 +323,26 @@
     return `<svg class="sketch" viewBox="0 0 ${SK.W} ${SK.H}" role="img" aria-label="${o.label || L('Impedance against angular frequency', 'Impedanz gegen Kreisfrequenz')}">${out}</svg>`;
   }
 
-  const api = { get W() { return W; }, get H() { return H; }, ML, MT, get PW() { return PW; }, get PH() { return PH; }, setNarrow, scales, graph, probeMark, readout, omegaAt, schematic, name, sketch };
+  // ---------------------------------------------------------------- triangle
+  // The right triangle of a series circuit: R across, the reactance X up (a coil) or down (o.cap, a
+  // capacitor), the impedance Z as the hypotenuse, in the colour of the curve; o.labels { R, X, Z }.
+  function triangle(o) {
+    const s = Math.min(150 / o.R, 100 / o.X), r = o.R * s, x = o.X * s, top = 22;
+    const x0 = Math.max(16, 7.6 * o.labels.Z.length - r / 2 + 22); // room for the label of Z on the left
+    const y0 = o.cap ? top : top + x, y1 = o.cap ? top + x : top, d = o.cap ? 1 : -1;
+    const h = x + 2 * top + 8, w = x0 + r + 18 + 8.2 * o.labels.X.length;
+    // the label of Z beside the middle of the hypotenuse, on the outside
+    const len = Math.hypot(r, x), nx = -x / len, ny = (r / len) * d;
+    const mx = x0 + r / 2 + nx * 12, my = (y0 + y1) / 2 + ny * 12;
+    return `<svg class="triangle" viewBox="0 0 ${f1(w)} ${f1(h)}" width="${f1(w)}" height="${f1(h)}" role="img" aria-label="${L('Right triangle', 'Rechtwinkliges Dreieck')}: ${o.labels.R}, ${o.labels.X}, ${o.labels.Z}">` +
+      `<path class="w" d="M${x0},${f1(y0)} H${f1(x0 + r)} V${f1(y1)}"/><path class="curve" d="M${x0},${f1(y0)} L${f1(x0 + r)},${f1(y1)}"/>` +
+      `<path class="w thin" d="M${f1(x0 + r - 10)},${f1(y0)} V${f1(y0 + d * 10)} H${f1(x0 + r)}"/>` +
+      label(x0 + r / 2, o.cap ? y0 - 8 : y0 + 18, o.labels.R, 'middle') +
+      label(x0 + r + 8, (y0 + y1) / 2 + 5, o.labels.X, 'start') +
+      label(mx, my + (o.cap ? 10 : 0), o.labels.Z, 'end') + '</svg>';
+  }
+
+  const api = { get W() { return W; }, get H() { return H; }, ML, MT, get PW() { return PW; }, get PH() { return PH; }, setNarrow, scales, graph, probeMark, readout, omegaAt, schematic, name, sketch, triangle };
   root.Plot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
