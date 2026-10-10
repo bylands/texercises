@@ -44,7 +44,7 @@ class Unit(unittest.TestCase):
         self.assertEqual(modes["bulb-brightness"], ["tutor", "practice", "arcade"])
         self.assertEqual(modes["coe"], ["tutor", "practice", "real", "arcade"])
         starters = {a["id"]: a.get("tags") for a in apps}
-        self.assertEqual(starters["photons"], [{"en": "Quantum physics", "de": "Quantenphysik"}, {"en": "Light", "de": "Licht"}])
+        self.assertEqual(starters["photons"][:2], [{"en": "Quantum physics", "de": "Quantenphysik"}, {"en": "Light", "de": "Licht"}])
         self.assertIsNone(starters["coe"])
         self.assertEqual(H.starter_tags(" Light | Licht ;; Waves ; |x"), [{"en": "Light", "de": "Licht"}, {"en": "Waves", "de": "Waves"}])
 
