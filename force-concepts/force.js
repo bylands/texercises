@@ -49,9 +49,87 @@
           slowing: 'Ein Fallschirmspringer hat eben den Fallschirm geöffnet und wird langsamer, fällt aber noch.',
         }[ph]),
       },
+      motorboat: {
+        vert: false, dirs: [1], name: 'motorboat', k: 1.7, N: noun('n', 'Motorboot'),
+        title: T('On the lake', 'Auf dem See'),
+        X: { sym: FL('drive'), html: F('drive'), what: T('the driving force (the water pushes the propeller forward)', 'die Antriebskraft (das Wasser schiebt den Propeller vorwärts)'), dat: 'der Antriebskraft' },
+        Y: { sym: FL('res'), html: F('res'), what: T('the water resistance', 'der Wasserwiderstand'), dat: 'dem Wasserwiderstand' },
+        cancel: T('the weight and the buoyancy of the water are vertical and cancel', 'Gewichtskraft und Auftrieb im Wasser sind vertikal und heben sich auf'),
+        text: (ph) => T(`A motorboat crosses a calm lake in a straight line. ${{ speeding: 'It is speeding up.', constant: 'It moves at constant speed.', slowing: 'It is slowing down, with its engine still running a little.' }[ph]}`,
+          `Ein Motorboot fährt geradeaus über einen ruhigen See. ${{ speeding: 'Es wird schneller.', constant: 'Es fährt mit konstanter Geschwindigkeit.', slowing: 'Es wird langsamer, wobei der Motor noch etwas läuft.' }[ph]}`),
+        draw: (bx, yF) => ({
+          g: D.rect(0, yF - 2, 380, 24, 'ice', 0) + D.line(0, yF - 2, 380, yF - 2, 'gline') +
+            `<polygon class="obj" points="${bx - 36},${yF - 14} ${bx + 58},${yF - 14} ${bx + 42},${yF + 6} ${bx - 30},${yF + 6}"/>` + D.rect(bx - 16, yF - 30, 30, 16, 'obj', 3) + D.rect(bx - 10, yF - 26, 18, 8, 'win', 2),
+          cx: bx + 12, cy: yF - 5,
+        }),
+      },
+      plane: {
+        vert: false, dirs: [1], name: 'plane', k: 1.8, N: noun('n', 'Flugzeug'),
+        title: T('Level flight', 'Im Horizontalflug'),
+        X: { sym: FL('drive'), html: F('drive'), what: T('the thrust of the engines', 'die Schubkraft der Triebwerke'), dat: 'der Schubkraft der Triebwerke' },
+        Y: { sym: FL('D'), html: F('D'), what: T('the air resistance (drag)', 'der Luftwiderstand'), dat: 'dem Luftwiderstand' },
+        cancel: T('the weight and the lift are vertical and cancel', 'Gewichtskraft und Auftrieb sind vertikal und heben sich auf'),
+        text: (ph) => T(`A plane flies level, in a straight line. ${{ speeding: 'It is speeding up.', constant: 'It flies at constant speed.', slowing: 'It is slowing down, with its engines throttled back.' }[ph]} The lift on its wings balances its weight.`,
+          `Ein Flugzeug fliegt geradeaus auf gleicher Höhe. ${{ speeding: 'Es wird schneller.', constant: 'Es fliegt mit konstanter Geschwindigkeit.', slowing: 'Es wird langsamer, die Triebwerke sind gedrosselt.' }[ph]} Der Auftrieb an den Flügeln hält der Gewichtskraft das Gleichgewicht.`),
+        draw: (bx, yF) => ({ g: D.plane(bx + 6, yF - 34, 1.5), cx: bx + 8, cy: yF - 42 }),
+      },
+      cyclist: {
+        vert: false, dirs: [1], name: 'cyclist', k: 1.5, N: noun('m', 'Velofahrer'),
+        title: T('By bike', 'Mit dem Velo'),
+        X: { sym: FL('drive'), html: F('drive'), what: T('the driving force (the road pushes the rear wheel forward)', 'die Antriebskraft (die Strasse schiebt das Hinterrad vorwärts)'), dat: 'der Antriebskraft' },
+        Y: { sym: FL('res'), html: F('res'), what: T('the resistance (air resistance and rolling resistance)', 'der Fahrwiderstand (Luft- und Rollwiderstand)'), dat: 'dem Fahrwiderstand (Luft- und Rollwiderstand)' },
+        text: (ph) => T(`A cyclist rides along a straight, level road (take the cyclist and the bike together). ${{ speeding: 'The cyclist is speeding up.', constant: 'The cyclist rides at constant speed.', slowing: 'The cyclist is slowing down, while still pedalling gently.' }[ph]}`,
+          `Ein Velofahrer fährt auf einer geraden, ebenen Strasse (Velofahrer und Velo zusammen betrachtet). ${{ speeding: 'Er wird schneller.', constant: 'Er fährt mit konstanter Geschwindigkeit.', slowing: 'Er wird langsamer, tritt aber noch leicht in die Pedale.' }[ph]}`),
+        draw: (bx, yF) => {
+          const r0 = 15, A = [bx - 12, yF - r0], Bw = [bx + 42, yF - r0], S = [bx + 6, yF - 40], C = [bx + 12, yF - r0], H = [bx + 36, yF - 44];
+          const L = (p, q, c = 'body') => D.line(p[0], p[1], q[0], q[1], c);
+          let g = `<circle class="thin" cx="${A[0]}" cy="${A[1]}" r="${r0}"/><circle class="thin" cx="${Bw[0]}" cy="${Bw[1]}" r="${r0}"/>`;
+          g += L(A, S, 'ln') + L(S, C, 'ln') + L(C, A, 'ln') + L(S, H, 'ln') + L(H, Bw, 'ln') + L(C, [bx + 34, yF - 32], 'ln');
+          const sh = [bx + 18, yF - 64];
+          g += L(S, sh) + L(sh, [H[0], H[1] - 2]) + L(S, [C[0] + 4, C[1] - 6]) + D.ball(sh[0] + 5, sh[1] - 10, 7, 'skin');
+          return { g, cx: bx + 14, cy: yF - 30 };
+        },
+      },
+      trolley: {
+        vert: false, dirs: [1], name: 'shopping trolley', low: true, N: noun('m', 'Einkaufswagen'),
+        title: T('At the supermarket', 'Im Supermarkt'),
+        X: { sym: FL('push'), html: F('push'), what: T('the push of the shopper', 'die Druckkraft der Person'), dat: 'der Druckkraft der Person' },
+        Y: { sym: FL('res'), html: F('res'), what: T('the rolling resistance of the wheels', 'der Rollwiderstand der Räder'), dat: 'dem Rollwiderstand der Räder' },
+        text: (ph) => T(`A shopper pushes a loaded shopping trolley along a level aisle. ${{ speeding: 'The trolley gets faster and faster.', constant: 'The trolley rolls at constant speed.', slowing: 'The trolley is getting slower, but still rolling forward.' }[ph]}`,
+          `Eine Person schiebt einen vollen Einkaufswagen durch einen ebenen Gang. ${{ speeding: 'Der Einkaufswagen wird immer schneller.', constant: 'Der Einkaufswagen rollt mit konstanter Geschwindigkeit.', slowing: 'Der Einkaufswagen wird langsamer, rollt aber noch vorwärts.' }[ph]}`),
+        draw: (bx, yF) => ({
+          g: D.person(bx - 30, yF, 70, 1, 'push') + D.line(bx - 6, yF - 52, bx + 4, yF - 48, 'ln') +
+            `<polygon class="obj" points="${bx + 2},${yF - 48} ${bx + 56},${yF - 48} ${bx + 50},${yF - 20} ${bx + 8},${yF - 20}"/>` +
+            D.line(bx + 8, yF - 20, bx + 10, yF - 8, 'ln') + D.line(bx + 50, yF - 20, bx + 48, yF - 8, 'ln') + D.line(bx + 10, yF - 8, bx + 48, yF - 8, 'ln') +
+            D.ball(bx + 12, yF - 4, 4, 'wheel') + D.ball(bx + 46, yF - 4, 4, 'wheel'),
+          cx: bx + 29, cy: yF - 34, fy: yF - 3,
+        }),
+      },
+      train: {
+        vert: false, dirs: [1], name: 'train', k: 1.8, N: noun('m', 'Zug'),
+        title: T('On the rails', 'Auf den Schienen'),
+        X: { sym: FL('drive'), html: F('drive'), what: T('the driving force (the rails push the driven wheels forward)', 'die Antriebskraft (die Schienen schieben die angetriebenen Räder vorwärts)'), dat: 'der Antriebskraft' },
+        Y: { sym: FL('res'), html: F('res'), what: T('the resistance (air resistance and rolling resistance)', 'der Fahrwiderstand (Luft- und Rollwiderstand)'), dat: 'dem Fahrwiderstand (Luft- und Rollwiderstand)' },
+        cancel: T('the weight and the push of the rails are vertical and cancel', 'Gewichtskraft und Normalkraft der Schienen sind vertikal und heben sich auf'),
+        text: (ph) => T(`A train runs along a straight, level track. ${{ speeding: 'It is speeding up after leaving a station.', constant: 'It runs at constant speed.', slowing: 'It is slowing down, with the motors still pulling a little.' }[ph]}`,
+          `Ein Zug fährt auf einer geraden, ebenen Strecke. ${{ speeding: 'Er wird schneller, nachdem er einen Bahnhof verlassen hat.', constant: 'Er fährt mit konstanter Geschwindigkeit.', slowing: 'Er wird langsamer, wobei die Motoren noch etwas ziehen.' }[ph]}`),
+        draw: (bx, yF) => ({
+          g: D.rect(bx - 48, yF - 44, 100, 34, 'obj', 5) + [0, 1, 2].map((k) => D.rect(bx - 38 + 28 * k, yF - 38, 20, 12, 'win', 2)).join('') +
+            [bx - 36, bx - 22, bx + 26, bx + 40].map((x) => D.ball(x, yF - 6, 6, 'wheel')).join(''),
+          cx: bx + 2, cy: yF - 22,
+        }),
+      },
+      crane: {
+        vert: true, dirs: [1, -1], name: 'load', N: noun('f', 'Last'),
+        title: T('On the building site', 'Auf der Baustelle'),
+        X: { sym: FL('T'), html: F('T'), what: T('the pull of the crane cable', 'die Seilkraft des Kranseils'), dat: 'der Seilkraft des Kranseils' },
+        Y: { sym: FL('G'), html: F('G'), what: T('the weight of the load', 'die Gewichtskraft der Last'), dat: 'der Gewichtskraft der Last' },
+        text: (ph, d) => T(`A building crane moves a load (a pallet of bricks) on its cable, straight ${d > 0 ? 'up' : 'down'}. ${{ speeding: 'The load is speeding up.', constant: 'The load moves at constant speed.', slowing: 'The load is slowing down before it stops.' }[ph]} Air resistance is negligible.`,
+          `Ein Baukran bewegt eine Last (eine Palette mit Ziegelsteinen) an seinem Seil senkrecht ${d > 0 ? 'nach oben' : 'nach unten'}. ${{ speeding: 'Die Last wird schneller.', constant: 'Die Last bewegt sich mit konstanter Geschwindigkeit.', slowing: 'Die Last bremst vor einem Halt ab.' }[ph]} Der Luftwiderstand ist vernachlässigbar.`),
+      },
     };
   }
-  const OBJECT_KEYS = ['crate', 'car', 'elevator', 'skydiver'];
+  const OBJECT_KEYS = ['crate', 'car', 'elevator', 'skydiver', 'motorboat', 'plane', 'cyclist', 'trolley', 'train', 'crane'];
   const PHASES = ['speeding', 'constant', 'slowing'];
   const PH_SIGN = { speeding: 1, constant: 0, slowing: -1 };
 
@@ -80,16 +158,17 @@
       let g = '';
       if (!ob.vert) {
         const yF = 150, x0 = 40, end = x0 + marks[4] * 1.6;
-        g += D.ground(0, 380, yF);
         g += D.line(x0, 36, end, 36, 'guide') + marks.map((m) => D.line(x0 + m * 1.6, 30, x0 + m * 1.6, 42, 'ln')).join('') + D.words((x0 + end) / 2, 22, marksWord);
         g += D.arrow(end + 14, 36, end + 54, 36, 'm', '', { head: 8 });
         const bx = end - 26;
-        if (key === 'crate') g += D.person(bx - 27, yF, 70, 1, 'push') + D.crate(bx, yF - 46, 52, 46);
-        else g += D.car(bx - 30, yF, 96);
-        const cx = key === 'crate' ? bx + 26 : bx + 18, cy = key === 'crate' ? yF - 23 : yF - 26;
+        const dr = ob.draw ? ob.draw(bx, yF) : key === 'crate' ? { g: D.person(bx - 27, yF, 70, 1, 'push') + D.crate(bx, yF - 46, 52, 46), cx: bx + 26, cy: yF - 23, fy: yF - 3 }
+          : { g: D.car(bx - 30, yF, 96), cx: bx + 18, cy: yF - 26 };
+        if (key !== 'motorboat' && key !== 'plane') g += D.ground(0, 380, yF);
+        g += dr.g;
+        const { cx, cy } = dr, fy = dr.fy || cy, k = ob.k || 1, lx = LX * k, ly = LYf * k; // longer arrows for long bodies
         if (o.forces) {
-          g += D.arrow(cx, cy, cx + LX, cy, 'f', X.sym, { at: [cx + LX + 6, cy - 8], anchor: 'start' });
-          g += key === 'crate' ? D.arrow(cx, yF - 3, cx - LYf, yF - 3, 'f', Y.sym, { at: [cx - LYf - 4, yF - 10], anchor: 'end' }) : D.arrow(cx, cy, cx - LYf, cy, 'f', Y.sym, { at: [cx - LYf - 6, cy - 8], anchor: 'end' });
+          g += D.arrow(cx, cy, cx + lx, cy, 'f', X.sym, { at: [cx + lx + 6, cy - 8], anchor: 'start' });
+          g += fy !== cy ? D.arrow(cx, fy, cx - ly, fy, 'f', Y.sym, { at: [cx - ly - 4, ob.low ? fy + 20 : fy - 7], anchor: 'end' }) : D.arrow(cx, cy, cx - ly, cy, 'f', Y.sym, { at: [cx - ly - 6, cy - 8], anchor: 'end' });
           g += D.dot(cx, cy, 3, 'pt');
         }
         if (o.net) g += acc ? D.arrow(cx - 16 * (acc < 0), yF + 26, cx + 32 * acc - 16 * (acc < 0), yF + 26, 'net', FL('net'), { at: [cx + 40, yF + 30], anchor: 'start' }) : D.text(cx, yF + 32, `${FL('net')} = 0`, 'lbl net');
@@ -103,9 +182,10 @@
       g += D.arrow(xm + 22, yEnd - sgn * 10, xm + 22, yEnd + sgn * 30, 'm', '', { head: 8 });
       const cx = 190, cy = yEnd;
       if (key === 'elevator') g += D.ceiling(140, 240, 14) + D.line(150, 14, 150, H, 'shaft') + D.line(230, 14, 230, H, 'shaft') + D.elevator(164, cy - 26, 52, 52, 14);
+      else if (key === 'crane') g += D.rect(96, 4, 200, 10, 'solid', 1) + D.rect(180, 14, 20, 8, 'obj', 1) + D.line(cx, 22, cx, cy - 22, 'cable') + D.line(cx, cy - 22, cx - 22, cy - 20, 'thin') + D.line(cx, cy - 22, cx + 22, cy - 20, 'thin') + D.crate(cx - 26, cy - 20, 52, 40);
       else g += D.skydiver(cx, cy, phase === 'slowing');
       if (o.forces) {
-        const ay = key === 'elevator' ? cy : cy - 2;
+        const ay = key === 'skydiver' ? cy - 2 : cy;
         g += D.arrow(cx, ay, cx, ay - LX, 'f', X.sym, { at: [cx + 10, ay - LX + 6], anchor: 'start' });
         g += D.arrow(cx, ay, cx, ay + LYf, 'f', Y.sym, { at: [cx + 10, ay + LYf], anchor: 'start' });
         g += D.dot(cx, ay, 3, 'pt');
@@ -167,8 +247,8 @@
     const gapWord = T({ speeding: 'grow', constant: 'stay the same', slowing: 'shrink' }[phase], { speeding: 'wachsen', constant: 'bleiben gleich', slowing: 'schrumpfen' }[phase]);
     const extra = key === 'skydiver' && phase === 'slowing'
       ? T(': the open parachute gives a drag larger than the weight, until the skydiver is slow enough', ': Der offene Fallschirm erzeugt einen Luftwiderstand, der grösser ist als die Gewichtskraft, bis der Fallschirmspringer langsam genug ist')
-      : key === 'elevator' && phase === 'slowing' && d > 0
-        ? T(': the cable pulls less than the weight, although the cabin is still moving up', ': Das Seil zieht weniger stark, als die Gewichtskraft beträgt, obwohl die Kabine noch nach oben fährt')
+      : (key === 'elevator' || key === 'crane') && phase === 'slowing' && d > 0
+        ? T(`: the cable pulls less than the weight, although the ${key === 'crane' ? 'load' : 'cabin'} is still moving up`, `: Das Seil zieht weniger stark, als die Gewichtskraft beträgt, obwohl ${key === 'crane' ? 'die Last sich noch nach oben bewegt' : 'die Kabine noch nach oben fährt'}`)
         : '';
     const steps = [
       { title: T('How does it move?', 'Wie bewegt es sich?'), figure: figure(),
@@ -178,12 +258,12 @@
         text: T(`Second law, ${Fnet} = <i>m·a</i>: the net force points the way the acceleration points — ${acc ? (acc > 0 ? fwd : back) : 'here it is zero'}. Which way the ${name} moves does not matter${phase !== 'speeding' ? `: moving ${motion} does not need a net force ${motion}` : ''}.`,
           `Zweites Newtonsches Gesetz, ${Fnet} = <i>m·a</i>: Die resultierende Kraft zeigt in die Richtung der Beschleunigung — ${acc ? (acc > 0 ? fwd : back) : 'hier ist sie null'}. In welche Richtung sich ${N.nom} bewegt, spielt keine Rolle${phase !== 'speeding' ? `: Um sich ${motion} zu bewegen, braucht es keine resultierende Kraft ${motion}` : ''}.`) },
       { title: T('Compare the forces', 'Kräfte vergleichen'), figure: figure({ forces: true, net: true }),
-        text: T(`${ob.vert ? 'Only' : 'Along the motion, only'} ${X.html} (${fwd}) and ${Y.html} (${back}) act${ob.vert ? '' : '; the weight and the push of the ground are vertical and cancel'}. So ${acc ? `${X.html} ${acc > 0 ? '>' : '<'} ${Y.html}` : `${X.html} = ${Y.html}`}${extra}.`,
-          `${ob.vert ? 'Es wirken nur' : 'In Bewegungsrichtung wirken nur'} ${X.html} (${fwd}) und ${Y.html} (${back})${ob.vert ? '' : '; Gewichtskraft und Normalkraft des Bodens sind vertikal und heben sich auf'}. Also ${acc ? `${X.html} ${acc > 0 ? '>' : '<'} ${Y.html}` : `${X.html} = ${Y.html}`}${extra}.`) },
+        text: T(`${ob.vert ? 'Only' : 'Along the motion, only'} ${X.html} (${fwd}) and ${Y.html} (${back}) act${ob.vert ? '' : `; ${ob.cancel || 'the weight and the push of the ground are vertical and cancel'}`}. So ${acc ? `${X.html} ${acc > 0 ? '>' : '<'} ${Y.html}` : `${X.html} = ${Y.html}`}${extra}.`,
+          `${ob.vert ? 'Es wirken nur' : 'In Bewegungsrichtung wirken nur'} ${X.html} (${fwd}) und ${Y.html} (${back})${ob.vert ? '' : `; ${ob.cancel || 'Gewichtskraft und Normalkraft des Bodens sind vertikal und heben sich auf'}`}. Also ${acc ? `${X.html} ${acc > 0 ? '>' : '<'} ${Y.html}` : `${X.html} = ${Y.html}`}${extra}.`) },
     ];
 
     return {
-      title: T({ crate: 'Pushing a crate', car: 'On the road', elevator: 'In the elevator shaft', skydiver: 'Skydiving' }[key],
+      title: ob.title || T({ crate: 'Pushing a crate', car: 'On the road', elevator: 'In the elevator shaft', skydiver: 'Skydiving' }[key],
         { crate: 'Eine Kiste schieben', car: 'Auf der Strasse', elevator: 'Im Liftschacht', skydiver: 'Fallschirmsprung' }[key]),
       situation: `<p>${ob.text(phase, d)}</p>`,
       figure: figure(),
@@ -203,9 +283,16 @@
   }
 
   // ================================================================ thruster: constant sideways force
+  // A probe (its engine) or an astronaut (her jet pack), drifting east in space, pushed north or
+  // south for a while.
   function thruster(r, p) {
+    const who = p.obj || r.pick(['probe', 'astronaut']);
     const s = p.side || r.pick([1, -1]);
-    const b = p.bend || r.pick([60, 90, 110]);
+    const b = p.bend || r.pick([60, 75, 90, 110]);
+    const probeObj = who === 'probe';
+    const name = probeObj ? 'probe' : 'astronaut', eng = probeObj ? 'engine' : 'jet pack';
+    const N = probeObj ? noun('f', 'Sonde') : noun('f', 'Astronautin'), E = probeObj ? noun('n', 'Triebwerk') : noun('m', 'Düsenrucksack');
+    const it = probeObj ? 'it' : 'she', its = probeObj ? 'its' : 'her', him = probeObj ? 'it' : 'her';
     const side = s > 0 ? 'north' : 'south', vS = `<i>v</i><sub>${s > 0 ? 'N' : 'S'}</sub>`;
     const dSide = s > 0 ? 'Norden' : 'Süden', dAdj = s > 0 ? 'nördlich' : 'südlich';
     const toSide = T(`toward the ${side}`, `nach ${dSide}`);
@@ -215,15 +302,28 @@
     const Q = at(1), tq = [W, -2 * s * b], lq = Math.hypot(...tq), tu = [tq[0] / lq, tq[1] / lq];
     const turn = deg(Math.atan2(2 * b, W));
 
+    // the body seen from above, heading east; thrust: the direction of the force (flame opposite)
+    function body(x, y, thrust, size) {
+      if (probeObj) return D.probe(x, y, [1, 0], thrust, size);
+      const k = size;
+      let g = '';
+      if (thrust) g += `<polygon class="flame" points="${D.n(x - 5 * k)},${D.n(y - thrust[1] * 9 * k)} ${D.n(x)},${D.n(y - thrust[1] * 24 * k)} ${D.n(x + 5 * k)},${D.n(y - thrust[1] * 9 * k)}"/>`;
+      g += D.rect(x - 16 * k, y - 8 * k, 7 * k, 16 * k, 'solid', 2) + `<ellipse class="obj" cx="${D.n(x - 2 * k)}" cy="${D.n(y)}" rx="${D.n(9 * k)}" ry="${D.n(10 * k)}"/>`;
+      g += D.ball(x + 10 * k, y, 6.5 * k) + `<circle class="win" cx="${D.n(x + 12 * k)}" cy="${D.n(y)}" r="${D.n(3.2 * k)}"/>`;
+      return g;
+    }
+    const label = probeObj ? T(`Top view: a probe drifting east, pushed ${side} from P on`, `Ansicht von oben: eine Sonde treibt nach Osten und wird ab P nach ${dSide} geschoben`)
+      : T(`Top view: an astronaut drifting east, pushed ${side} by her jet pack from P on`, `Ansicht von oben: eine Astronautin treibt nach Osten und wird ab P von ihrem Düsenrucksack nach ${dSide} geschoben`);
+
     function figure(o = {}) {
       let g = D.rect(0, 0, 380, 200, 'space', 6) + D.arrow(352, 46, 352, 18, 'ax', 'N', { head: 7, at: [352, 58] });
       g += D.line(4, Py, P[0], Py, 'trace');
-      [16, 38].forEach((x) => { g += D.ghost(D.probe(x, Py, [1, 0], null, 0.6)); });
+      [16, 38].forEach((x) => { g += D.ghost(body(x, Py, null, 0.6)); });
       if (o.path) {
         g += D.poly(Array.from({ length: 31 }, (z, j) => at(j / 30)), 'trace strong');
         [0.25, 0.5, 0.75].forEach((u) => {
           const [x, y] = at(u);
-          g += D.ghost(D.probe(x, y, [1, 0], [0, -s], 0.6));
+          g += D.ghost(body(x, y, [0, -s], 0.6));
           if (o.forces) g += D.arrow(x, y, x, y - s * 30, 'f', u === 0.5 ? 'F' : '', { at: [x + 8, y - s * 24 + 4], anchor: 'start' });
         });
       }
@@ -231,21 +331,21 @@
       g += D.dot(Q[0], Q[1], 3.5, 'pt') + D.text(Q[0] + 6, Q[1] + s * 16 + 4, 'Q', 'lbl', 'start');
       if (o.after) {
         g += D.line(Q[0], Q[1], Q[0] + 110 * tu[0], Q[1] + 110 * tu[1], 'trace strong');
-        g += D.probe(Q[0] + 60 * tu[0], Q[1] + 60 * tu[1], [1, 0], null, 0.6);
+        g += body(Q[0] + 60 * tu[0], Q[1] + 60 * tu[1], null, 0.6);
       }
       if (o.vel) [0, 0.5, 1].forEach((u) => {
         const [x, y] = at(u);
         g += D.arrow(x, y, x + 40, y, 'v', u === 0 ? T('v_E', 'v_O') : '', { cls: 'alt' }) + (u ? D.arrow(x, y, x, y - s * 40 * u * (2 * b / W), 'v', u === 1 ? (s > 0 ? 'v_N' : 'v_S') : '', { cls: 'alt', at: [x - 6, y - s * 14], anchor: 'end' }) : '') +
           D.arrow(x, y, x + 40, y - s * 40 * u * (2 * b / W), 'v', '', { cls: 'strong' });
       });
-      g += D.probe(P[0], Py, [1, 0], o.path ? null : [0, -s], 0.75) + D.text(P[0] - 2, Py + s * 22 + 4, 'P', 'lbl', 'middle');
+      g += body(P[0], Py, o.path ? null : [0, -s], 0.75) + D.text(P[0] - 2, Py + s * 22 + 4, 'P', 'lbl', 'middle');
       if (!o.path && !o.vel) g += D.arrow(P[0], Py, P[0], Py - s * 44, 'f', 'F', { at: [P[0] + 8, Py - s * 36], anchor: 'start' }) + D.arrow(P[0] + 20, Py, P[0] + 70, Py, 'v', 'v');
-      return D.svg(380, 200, g, T(`Top view: a probe drifting east, pushed ${side} from P on`, `Ansicht von oben: eine Sonde treibt nach Osten und wird ab P nach ${dSide} geschoben`));
+      return D.svg(380, 200, g, label);
     }
 
     const pic = (d) => {
       const y = s > 0 ? 96 : 14;
-      return D.svg(150, 110, D.line(2, y, 16, y, 'trace') + D.path(d(16, y), 'opt-path') + D.probe(16, y, [1, 0], null, 0.42), T('path', 'Bahn'));
+      return D.svg(150, 110, D.line(2, y, 16, y, 'trace') + D.path(d(16, y), 'opt-path') + body(16, y, null, 0.42), T('path', 'Bahn'));
     };
     const bb = 70 * Math.min(1, b / 90);
     const PATH = {
@@ -254,70 +354,74 @@
       corner: (x, y) => `M${x} ${y} V${y - s * 76}`,
       arc: (x, y) => `M${x} ${y} A60 60 0 0 ${s > 0 ? 0 : 1} ${x + 60} ${y - s * 60}`,
     };
+    const The = cap(T(`the ${name}`, N.nom)), Eng = cap(T(`the ${eng}`, E.nom));
     const split = T(`Split the motion: east–west no force acts, so the velocity east stays the same; ${side}ward the constant force gives a constant acceleration`,
       `Zerlege die Bewegung: In Ost-West-Richtung wirkt keine Kraft, also bleibt die Geschwindigkeit nach Osten gleich; nach ${dSide} bewirkt die konstante Kraft eine konstante Beschleunigung`);
     const questions = [
-      q(r, 'path', T(`Which path does the probe follow from P until the engine is switched off?`, 'Welche Bahn beschreibt die Sonde von P an, bis das Triebwerk abgeschaltet wird?'), [
+      q(r, 'path', T(`Which path does the ${name} follow from P until the ${eng} is switched off?`, `Welche Bahn beschreibt ${N.nom} von P an, bis ${E.nom} abgeschaltet wird?`), [
         o(pic(PATH.ok), 'ok', T(`Right: ${split}. Together: a curve that bends more and more toward the ${side} — a parabola, like the path of a ball thrown horizontally.`,
           `Richtig: ${split}. Zusammen: eine Kurve, die sich immer stärker nach ${dSide} krümmt — eine Parabel, wie die Bahn eines horizontal geworfenen Balls.`),
           T(`a curve bending more and more to the ${side} (a parabola)`, `eine Kurve, die sich immer stärker nach ${dSide} krümmt (eine Parabel)`)),
-        o(pic(PATH.straight), 'other', T(`A straight slanted line needs a constant velocity. But the velocity toward the ${side} keeps growing while the engine runs, so the path keeps getting steeper.`,
-          `Eine schräge Gerade braucht eine konstante Geschwindigkeit. Die Geschwindigkeit nach ${dSide} wächst aber, solange das Triebwerk läuft, also wird die Bahn immer steiler.`),
+        o(pic(PATH.straight), 'other', T(`A straight slanted line needs a constant velocity. But the velocity toward the ${side} keeps growing while the ${eng} runs, so the path keeps getting steeper.`,
+          `Eine schräge Gerade braucht eine konstante Geschwindigkeit. Die Geschwindigkeit nach ${dSide} wächst aber, solange ${E.nom} läuft, also wird die Bahn immer steiler.`),
           T('a straight slanted line', 'eine schräge Gerade')),
-        o(pic(PATH.corner), 'last-force', T(`The probe does not lose its velocity east when the engine starts: no force acts east–west. The engine only adds a growing velocity toward the ${side}.`,
-          `Die Sonde verliert ihre Geschwindigkeit nach Osten nicht, wenn das Triebwerk startet: In Ost-West-Richtung wirkt keine Kraft. Das Triebwerk fügt nur eine wachsende Geschwindigkeit nach ${dSide} hinzu.`),
+        o(pic(PATH.corner), 'last-force', T(`${The} does not lose ${its} velocity east when the ${eng} starts: no force acts east–west. The ${eng} only adds a growing velocity toward the ${side}.`,
+          `${cap(N.nom)} verliert ihre Geschwindigkeit nach Osten nicht, wenn ${E.nom} startet: In Ost-West-Richtung wirkt keine Kraft. ${cap(E.nom)} fügt nur eine wachsende Geschwindigkeit nach ${dSide} hinzu.`),
           T(`straight ${side}`, `geradeaus nach ${dSide}`)),
-        o(pic(PATH.arc), 'other', T(`A circle needs a force that always points to its centre, so it turns with the probe. Here the force keeps pointing ${side}: the probe keeps its velocity east, and the path is a parabola, not a circle.`,
-          `Ein Kreis braucht eine Kraft, die immer zum Zentrum zeigt, sich also mit der Sonde dreht. Hier zeigt die Kraft immer nach ${dSide}: Die Sonde behält ihre Geschwindigkeit nach Osten, und die Bahn ist eine Parabel, kein Kreis.`),
+        o(pic(PATH.arc), 'other', T(`A circle needs a force that always points to its centre, so it turns with the ${name}. Here the force keeps pointing ${side}: the ${name} keeps ${its} velocity east, and the path is a parabola, not a circle.`,
+          `Ein Kreis braucht eine Kraft, die immer zum Zentrum zeigt, sich also mit ${N.dat} dreht. Hier zeigt die Kraft immer nach ${dSide}: ${cap(N.nom)} behält ihre Geschwindigkeit nach Osten, und die Bahn ist eine Parabel, kein Kreis.`),
           T('a quarter circle', 'ein Viertelkreis')),
       ], true),
-      q(r, 'speed', T('How does the speed of the probe change while the engine runs?', 'Wie ändert sich der Betrag der Geschwindigkeit der Sonde, während das Triebwerk läuft?'), [
+      q(r, 'speed', T(`How does the speed of the ${name} change while the ${eng} runs?`, `Wie ändert sich der Betrag der Geschwindigkeit ${probeObj ? 'der Sonde' : 'der Astronautin'}, während ${E.nom} läuft?`), [
         o(T('It increases all the time.', 'Er nimmt die ganze Zeit zu.'), 'ok', T(`Right: the velocity east stays the same and the velocity toward the ${side} keeps growing, so the speed √(${vE}² + ${vS}²) increases.`,
           `Richtig: Die Geschwindigkeit nach Osten bleibt gleich, und die Geschwindigkeit nach ${dSide} wächst, also nimmt der Betrag √(${vE}² + ${vS}²) zu.`)),
         o(T('It stays the same: the force only changes the direction.', 'Er bleibt gleich: Die Kraft ändert nur die Richtung.'), 'other',
           T(`That is only so if the force is always at right angles to the velocity. Here the force keeps pointing ${side}, and the velocity toward the ${side} grows while the velocity east stays: the speed increases.`,
             `Das gilt nur, wenn die Kraft immer senkrecht zur Geschwindigkeit steht. Hier zeigt die Kraft immer nach ${dSide}, und die Geschwindigkeit nach ${dSide} wächst, während die nach Osten bleibt: Der Betrag nimmt zu.`)),
-        o(T('It increases at first, then stays the same while the engine still runs.', 'Er nimmt zuerst zu und bleibt dann gleich, während das Triebwerk noch läuft.'), 'active-force',
+        o(T(`It increases at first, then stays the same while the ${eng} still runs.`, `Er nimmt zuerst zu und bleibt dann gleich, während ${E.nom} noch läuft.`), 'active-force',
           T(`As long as the force acts, the velocity keeps changing at the same rate: <i>a</i> = <i>F</i>/<i>m</i>. A constant force does not lead to a constant speed.`,
             `Solange die Kraft wirkt, ändert sich die Geschwindigkeit gleich schnell weiter: <i>a</i> = <i>F</i>/<i>m</i>. Eine konstante Kraft führt nicht zu einer konstanten Geschwindigkeit.`)),
-        o(T('It decreases, because the probe is pushed off course.', 'Er nimmt ab, weil die Sonde vom Kurs abgedrängt wird.'), 'other',
+        o(T(`It decreases, because the ${name} is pushed off course.`, `Er nimmt ab, weil ${N.nom} vom Kurs abgedrängt wird.`), 'other',
           T(`The velocity east is not reduced: no force acts east–west. The velocity toward the ${side} only grows.`, `Die Geschwindigkeit nach Osten wird nicht kleiner: In Ost-West-Richtung wirkt keine Kraft. Die Geschwindigkeit nach ${dSide} wächst nur.`)),
       ]),
-      q(r, 'after', T('How does the probe move after the engine has been switched off?', 'Wie bewegt sich die Sonde, nachdem das Triebwerk abgeschaltet wurde?'), [
-        o(T('In a straight line, in the direction it had at that moment, at constant speed.', 'Geradlinig, in der Richtung, die sie in diesem Moment hatte, mit konstanter Geschwindigkeit.'), 'ok',
-          T('Right: with no force, the probe keeps its velocity (first law).', 'Richtig: Ohne Kraft behält die Sonde ihre Geschwindigkeit (erstes Newtonsches Gesetz).')),
-        o(T(`It keeps curving toward the ${side}, more and more gently.`, `Sie krümmt sich weiter nach ${dSide}, immer schwächer.`), 'impetus',
+      q(r, 'after', T(`How does the ${name} move after the ${eng} has been switched off?`, `Wie bewegt sich ${N.nom}, nachdem ${E.nom} abgeschaltet wurde?`), [
+        o(T(`In a straight line, in the direction ${it} had at that moment, at constant speed.`, 'Geradlinig, in der Richtung, die sie in diesem Moment hatte, mit konstanter Geschwindigkeit.'), 'ok',
+          T(`Right: with no force, the ${name} keeps ${its} velocity (first law).`, `Richtig: Ohne Kraft behält ${N.nom} ihre Geschwindigkeit (erstes Newtonsches Gesetz).`)),
+        o(T(`${cap(it)} keeps curving toward the ${side}, more and more gently.`, `Sie krümmt sich weiter nach ${dSide}, immer schwächer.`), 'impetus',
           T(`Without a force the path is not bent any more: there is no stored push that slowly wears off.`, 'Ohne Kraft wird die Bahn nicht mehr gekrümmt: Es gibt keinen gespeicherten Schub, der langsam nachlässt.')),
-        o(T('It turns back to its original direction, east.', 'Sie dreht zurück in ihre ursprüngliche Richtung, nach Osten.'), 'other',
-          T(`Nothing pushes it back. It keeps the velocity it had when the engine stopped, including the velocity toward the ${side}.`, `Nichts drückt sie zurück. Sie behält die Geschwindigkeit, die sie beim Abschalten hatte, auch die Geschwindigkeit nach ${dSide}.`)),
-        o(T('It gets slower and slower and finally stops.', 'Sie wird immer langsamer und bleibt schliesslich stehen.'), 'active-force',
-          T(`In space nothing slows the probe down. Without a force it keeps its velocity.`, 'Im Weltraum bremst nichts die Sonde. Ohne Kraft behält sie ihre Geschwindigkeit.')),
+        o(T(`${cap(it)} turns back to ${its} original direction, east.`, 'Sie dreht zurück in ihre ursprüngliche Richtung, nach Osten.'), 'other',
+          T(`Nothing pushes ${him} back. ${cap(it)} keeps the velocity ${it} had when the ${eng} stopped, including the velocity toward the ${side}.`, `Nichts drückt sie zurück. Sie behält die Geschwindigkeit, die sie beim Abschalten hatte, auch die Geschwindigkeit nach ${dSide}.`)),
+        o(T(`${cap(it)} gets slower and slower and finally stops.`, 'Sie wird immer langsamer und bleibt schliesslich stehen.'), 'active-force',
+          T(`In space nothing slows the ${name} down. Without a force ${it} keeps ${its} velocity.`, `Im Weltraum bremst nichts ${N.acc}. Ohne Kraft behält sie ihre Geschwindigkeit.`)),
       ]),
     ];
 
     const steps = [
       { title: T('Before P', 'Vor P'), figure: figure(),
-        text: T(`Far from any planet and with the engine off, no force acts: the probe moves in a straight line at constant speed, east (first law).`,
-          'Weit weg von jedem Planeten und mit abgeschaltetem Triebwerk wirkt keine Kraft: Die Sonde bewegt sich geradlinig mit konstanter Geschwindigkeit nach Osten (erstes Newtonsches Gesetz).') },
+        text: T(`Far from any planet and with the ${eng} off, no force acts: the ${name} moves in a straight line at constant speed, east (first law).`,
+          `Weit weg von jedem Planeten und mit abgeschaltetem ${E.word} wirkt keine Kraft: ${cap(N.nom)} bewegt sich geradlinig mit konstanter Geschwindigkeit nach Osten (erstes Newtonsches Gesetz).`) },
       { title: T('From P on: split the motion', 'Ab P: Bewegung zerlegen'), figure: figure({ path: true, forces: true }),
-        text: T(`The engine pushes with a constant force toward the ${side}. East–west no force acts: the velocity east stays the same. Toward the ${side} the force gives a constant acceleration: the velocity toward the ${side} grows steadily from zero, and the distance grows like <i>t</i>². Together: a parabola, like a ball thrown horizontally — only “falling” to the ${side}.`,
-          `Das Triebwerk schiebt mit einer konstanten Kraft nach ${dSide}. In Ost-West-Richtung wirkt keine Kraft: Die Geschwindigkeit nach Osten bleibt gleich. Nach ${dSide} bewirkt die Kraft eine konstante Beschleunigung: Die Geschwindigkeit nach ${dSide} wächst gleichmässig von null an, und die Strecke wächst wie <i>t</i>². Zusammen: eine Parabel, wie bei einem horizontal geworfenen Ball — nur „fällt“ die Sonde nach ${dSide}.`) },
+        text: T(`${Eng} pushes with a constant force toward the ${side}. East–west no force acts: the velocity east stays the same. Toward the ${side} the force gives a constant acceleration: the velocity toward the ${side} grows steadily from zero, and the distance grows like <i>t</i>². Together: a parabola, like a ball thrown horizontally — only “falling” to the ${side}.`,
+          `${cap(E.nom)} schiebt mit einer konstanten Kraft nach ${dSide}. In Ost-West-Richtung wirkt keine Kraft: Die Geschwindigkeit nach Osten bleibt gleich. Nach ${dSide} bewirkt die Kraft eine konstante Beschleunigung: Die Geschwindigkeit nach ${dSide} wächst gleichmässig von null an, und die Strecke wächst wie <i>t</i>². Zusammen: eine Parabel, wie bei einem horizontal geworfenen Ball — nur „fällt“ ${N.nom} nach ${dSide}.`) },
       { title: T('Speed', 'Betrag der Geschwindigkeit'), figure: figure({ path: true, vel: true }),
-        text: T(`The velocity arrows: the part east stays, the part toward the ${side} grows. So the speed √(${vE}² + ${vS}²) increases all the time the engine runs.`,
-          `Die Geschwindigkeitspfeile: Der Anteil nach Osten bleibt, der Anteil nach ${dSide} wächst. Also nimmt der Betrag √(${vE}² + ${vS}²) zu, solange das Triebwerk läuft.`) },
-      { title: T('After the engine stops', 'Nach dem Abschalten'), figure: figure({ path: true, after: true }),
-        text: T(`At Q the engine stops. No force acts any more, so the probe moves in a straight line at constant speed, in the direction it had at Q — here about ${turn}° ${side} of east.`,
-          `In Q stoppt das Triebwerk. Es wirkt keine Kraft mehr, also bewegt sich die Sonde geradlinig mit konstanter Geschwindigkeit weiter, in der Richtung, die sie in Q hatte — hier etwa ${turn}° ${dAdj} von Osten.`) },
+        text: T(`The velocity arrows: the part east stays, the part toward the ${side} grows. So the speed √(${vE}² + ${vS}²) increases all the time the ${eng} runs.`,
+          `Die Geschwindigkeitspfeile: Der Anteil nach Osten bleibt, der Anteil nach ${dSide} wächst. Also nimmt der Betrag √(${vE}² + ${vS}²) zu, solange ${E.nom} läuft.`) },
+      { title: T(`After the ${eng} stops`, 'Nach dem Abschalten'), figure: figure({ path: true, after: true }),
+        text: T(`At Q the ${eng} stops. No force acts any more, so the ${name} moves in a straight line at constant speed, in the direction ${it} had at Q — here about ${turn}° ${side} of east.`,
+          `In Q stoppt ${E.nom}. Es wirkt keine Kraft mehr, also bewegt sich ${N.nom} geradlinig mit konstanter Geschwindigkeit weiter, in der Richtung, die sie in Q hatte — hier etwa ${turn}° ${dAdj} von Osten.`) },
     ];
 
     return {
       title: T('Thrust to the side', 'Schub zur Seite'),
-      situation: T(`<p>A space probe far from any planet drifts east with its engine off. At P its engine is switched on and pushes it with a constant force toward the ${side} (the probe is held so that the force always points ${side}). A little later, at Q, the engine is switched off again. The picture shows the probe from above.</p>`,
-        `<p>Eine Raumsonde treibt weit weg von jedem Planeten mit abgeschaltetem Triebwerk nach Osten. In P wird ihr Triebwerk eingeschaltet und schiebt sie mit einer konstanten Kraft nach ${dSide} (die Sonde wird so ausgerichtet, dass die Kraft immer nach ${dSide} zeigt). Etwas später, in Q, wird das Triebwerk wieder abgeschaltet. Das Bild zeigt die Sonde von oben.</p>`),
+      situation: probeObj
+        ? T(`<p>A space probe far from any planet drifts east with its engine off. At P its engine is switched on and pushes it with a constant force toward the ${side} (the probe is held so that the force always points ${side}). A little later, at Q, the engine is switched off again. The picture shows the probe from above.</p>`,
+          `<p>Eine Raumsonde treibt weit weg von jedem Planeten mit abgeschaltetem Triebwerk nach Osten. In P wird ihr Triebwerk eingeschaltet und schiebt sie mit einer konstanten Kraft nach ${dSide} (die Sonde wird so ausgerichtet, dass die Kraft immer nach ${dSide} zeigt). Etwas später, in Q, wird das Triebwerk wieder abgeschaltet. Das Bild zeigt die Sonde von oben.</p>`)
+        : T(`<p>An astronaut in her spacesuit, far from any planet, drifts east with her jet pack off. At P she switches on the side jets of her jet pack, which push her with a constant force toward the ${side} (she keeps facing east, so the force always points ${side}). A little later, at Q, she switches the jet pack off again. The picture shows her from above.</p>`,
+          `<p>Eine Astronautin im Raumanzug treibt weit weg von jedem Planeten mit abgeschaltetem Düsenrucksack nach Osten. In P schaltet sie die seitlichen Düsen ihres Düsenrucksacks ein; sie schieben sie mit einer konstanten Kraft nach ${dSide} (sie blickt weiter nach Osten, sodass die Kraft immer nach ${dSide} zeigt). Etwas später, in Q, schaltet sie den Düsenrucksack wieder ab. Das Bild zeigt sie von oben.</p>`),
       figure: figure(),
       questions,
       hints: [
-        T(`Which forces act on the probe before P, between P and Q, and after Q? Which way do they point?`, 'Welche Kräfte wirken vor P, zwischen P und Q und nach Q auf die Sonde? Wohin zeigen sie?'),
+        T(`Which forces act on the ${name} before P, between P and Q, and after Q? Which way do they point?`, `Welche Kräfte wirken vor P, zwischen P und Q und nach Q auf ${N.acc}? Wohin zeigen sie?`),
         T(`Plan: split the motion into east–west and north–south. Use the first law where no force acts and the second law where the constant force acts.`,
           'Plan: Zerlege die Bewegung in Ost-West und Nord-Süd. Wende das erste Newtonsche Gesetz an, wo keine Kraft wirkt, und das zweite, wo die konstante Kraft wirkt.'),
         T(`First law: no force → constant velocity. Second law: constant force → constant acceleration; the velocity in the direction of the force grows steadily, the distance like <i>t</i>².`,
@@ -498,12 +602,126 @@
           o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
         ],
       },
+      station: {
+        obj: 'space station', N: noun('f', 'Raumstation'), sym: 'G', title: T('The space station', 'Die Raumstation'), bg: 'space',
+        text: T('The International Space Station orbits the Earth about 400 km up, at constant speed on a circular orbit.', 'Die Internationale Raumstation umkreist die Erde in etwa 400 km Höhe mit konstanter Geschwindigkeit auf einer Kreisbahn.'),
+        label: T('The space station on its orbit round the Earth', 'Die Raumstation auf ihrer Bahn um die Erde'),
+        force: T('the gravitational pull of the Earth on the station', 'die Gravitationskraft der Erde auf die Station'),
+        others: T('Up there the air is so thin that its drag is negligible; no other force of any size acts.', 'Dort oben ist die Luft so dünn, dass ihr Widerstand vernachlässigbar ist; keine andere nennenswerte Kraft wirkt.'),
+        without: T('Without the pull of the Earth, the station would fly off along the tangent.', 'Ohne die Anziehung der Erde würde die Station entlang der Tangente davonfliegen.'),
+        options: (why) => [
+          o(T('The gravitational pull of the Earth.', 'Die Gravitationskraft der Erde.'), 'ok', why.ok),
+          o(T('None: up there everything is weightless, so gravity does not act.', 'Keine: Dort oben ist alles schwerelos, also wirkt keine Schwerkraft.'), 'other', T('At 400 km the pull of the Earth is still about 90 % as strong as on the ground. The astronauts float because the station and everything in it fall round the Earth together, not because gravity is gone.', 'In 400 km Höhe ist die Anziehung der Erde noch etwa 90 % so stark wie am Boden. Die Astronauten schweben, weil die Station und alles darin gemeinsam um die Erde fallen, nicht weil die Schwerkraft fehlt.')),
+          o(T('The thrust of its engines, which keeps it moving.', 'Der Schub ihrer Triebwerke, der sie in Bewegung hält.'), 'active-force', T('Moving on needs no force: the station keeps its speed by itself. A force along the orbit would make it faster; its engines only fire now and then, to make up for the slight drag.', 'Weiterbewegen braucht keine Kraft: Die Station behält ihr Tempo von selbst. Eine Kraft entlang der Bahn würde sie schneller machen; ihre Triebwerke zünden nur ab und zu, um den geringen Luftwiderstand auszugleichen.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+      earth: {
+        obj: 'Earth', N: noun('f', 'Erde'), sym: 'G', title: T('Round the Sun', 'Um die Sonne'), bg: 'space',
+        text: T('The Earth goes round the Sun at (nearly) constant speed on a (nearly) circular orbit.', 'Die Erde umläuft die Sonne mit (fast) konstanter Geschwindigkeit auf einer (fast) kreisförmigen Bahn.'),
+        label: T('The Earth on its orbit round the Sun', 'Die Erde auf ihrer Bahn um die Sonne'),
+        force: T('the gravitational pull of the Sun on the Earth', 'die Gravitationskraft der Sonne auf die Erde'),
+        others: T('The pulls of the Moon and the other planets are far smaller and do not point to the Sun; they hardly change the orbit.', 'Die Anziehung durch den Mond und die anderen Planeten ist viel kleiner und zeigt nicht zur Sonne; sie ändert die Bahn kaum.'),
+        without: T('Without the pull of the Sun, the Earth would fly off along the tangent.', 'Ohne die Anziehung der Sonne würde die Erde entlang der Tangente davonfliegen.'),
+        options: (why) => [
+          o(T('The gravitational pull of the Sun.', 'Die Gravitationskraft der Sonne.'), 'ok', why.ok),
+          o(T('The pull of the Moon.', 'Die Anziehung des Mondes.'), 'other', T('The Moon goes round the Earth, so its pull points in a different direction every few days, and it is about 180 times weaker than the pull of the Sun. The force towards the centre of the orbit comes from the Sun.', 'Der Mond umkreist die Erde, also zeigt seine Anziehung alle paar Tage in eine andere Richtung, und sie ist etwa 180-mal schwächer als die Anziehung der Sonne. Die Kraft zum Zentrum der Bahn kommt von der Sonne.')),
+          o(T('A force along its orbit that keeps it moving.', 'Eine Kraft entlang der Bahn, die sie in Bewegung hält.'), 'active-force', T('Moving on needs no force: in empty space the Earth keeps its speed by itself. A force along the orbit would make it faster.', 'Weiterbewegen braucht keine Kraft: Im leeren Weltraum behält die Erde ihr Tempo von selbst. Eine Kraft entlang der Bahn würde sie schneller machen.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+      cyclist: {
+        obj: 'cyclist', its: 'her', N: noun('f', 'Velofahrerin'), sym: 'f', title: T('Riding in a circle', 'Mit dem Velo im Kreis'),
+        text: T('A cyclist rides in a circle on a flat, empty car park, at constant speed.', 'Eine Velofahrerin fährt auf einem flachen, leeren Parkplatz mit konstanter Geschwindigkeit im Kreis.'),
+        label: T('Top view: a cyclist riding in a circle', 'Ansicht von oben: eine Velofahrerin fährt im Kreis'),
+        force: T('the friction of the ground on the tyres', 'die Reibungskraft des Bodens auf die Reifen'),
+        others: T('Her weight and the normal force of the ground are vertical and cancel; pedalling only makes up for the air resistance, along the motion.', 'Gewichtskraft und Normalkraft des Bodens sind vertikal und heben sich auf; das Treten gleicht in Bewegungsrichtung nur den Luftwiderstand aus.'),
+        without: T('On a patch of ice, without that friction, she would slide straight on along the tangent.', 'Auf einer Eisfläche, ohne diese Reibung, würde sie geradeaus entlang der Tangente weiterrutschen.'),
+        options: (why) => [
+          o(T('The friction of the ground on the tyres.', 'Die Reibungskraft des Bodens auf die Reifen.'), 'ok', why.ok),
+          o(T('Her leaning into the curve.', 'Ihr Neigen in die Kurve.'), 'other', T('Leaning is not a force. She leans so as not to tip over; what pulls her round is the sideways friction of the ground on the tyres.', 'Das Neigen ist keine Kraft. Sie neigt sich, damit sie nicht umkippt; was sie in die Kurve zwingt, ist die seitliche Reibungskraft des Bodens auf die Reifen.')),
+          o(T('The push of her pedalling.', 'Der Antrieb durch ihr Treten.'), 'active-force', T('Pedalling drives her along the motion, not to the centre: at constant speed it only makes up for the air resistance.', 'Das Treten treibt sie in Bewegungsrichtung an, nicht zum Zentrum: Bei konstanter Geschwindigkeit gleicht es nur den Luftwiderstand aus.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+      runner: {
+        obj: 'runner', its: 'her', N: noun('f', 'Läuferin'), sym: 'f', title: T('Jogging in a circle', 'Im Kreis joggen'),
+        text: T('A runner jogs in a circle on a flat lawn, at constant speed.', 'Eine Läuferin joggt auf einer flachen Wiese mit konstanter Geschwindigkeit im Kreis.'),
+        label: T('Top view: a runner jogging in a circle', 'Ansicht von oben: eine Läuferin joggt im Kreis'),
+        force: T('the friction of the ground on her shoes', 'die Reibungskraft des Bodens auf ihre Schuhe'),
+        others: T('Her weight and the normal force of the ground are vertical and cancel (on average over each stride); along the motion, her push off the ground only makes up for the air resistance.', 'Gewichtskraft und Normalkraft des Bodens sind vertikal und heben sich auf (im Mittel über jeden Schritt); in Bewegungsrichtung gleicht ihr Abstossen nur den Luftwiderstand aus.'),
+        without: T('On smooth ice, without that friction, she could not turn: she would slide straight on along the tangent.', 'Auf glattem Eis, ohne diese Reibung, könnte sie nicht abbiegen: Sie würde geradeaus entlang der Tangente weiterrutschen.'),
+        options: (why) => [
+          o(T('The friction of the ground on her shoes.', 'Die Reibungskraft des Bodens auf ihre Schuhe.'), 'ok', why.ok),
+          o(T('The forward push of her legs.', 'Der Schub ihrer Beine nach vorn.'), 'active-force', T('Moving on needs no extra force; at constant speed the push along the motion only makes up for the air resistance. The force to the centre is the sideways friction on her shoes.', 'Weiterbewegen braucht keine zusätzliche Kraft; bei konstanter Geschwindigkeit gleicht der Schub in Bewegungsrichtung nur den Luftwiderstand aus. Die Kraft zum Zentrum ist die seitliche Reibung auf ihre Schuhe.')),
+          o(T('Her weight.', 'Ihre Gewichtskraft.'), 'other', T('The weight points down, not to the centre; the normal force of the ground balances it.', 'Die Gewichtskraft zeigt nach unten, nicht zum Zentrum; die Normalkraft des Bodens hält ihr das Gleichgewicht.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+      train: {
+        obj: 'train', N: noun('m', 'Zug'), sym: 'N', title: T('On a curved track', 'Im Gleisbogen'),
+        text: T('A train runs round a flat, circular curve of track at constant speed.', 'Ein Zug fährt mit konstanter Geschwindigkeit durch einen flachen, kreisförmigen Gleisbogen.'),
+        label: T('Top view: a train on a circular track', 'Ansicht von oben: ein Zug auf einem kreisförmigen Gleis'),
+        force: T('the sideways push of the outer rail on the wheel flanges', 'die seitliche Normalkraft der äusseren Schiene auf die Spurkränze'),
+        others: T('Its weight and the upward push of the rails are vertical and cancel; the driving force only makes up for the resistance, along the motion.', 'Gewichtskraft und Normalkraft der Schienen nach oben sind vertikal und heben sich auf; die Antriebskraft gleicht in Bewegungsrichtung nur den Fahrwiderstand aus.'),
+        without: T('Without the rails, the train would roll straight on along the tangent: it would derail.', 'Ohne die Schienen würde der Zug geradeaus entlang der Tangente weiterrollen: Er würde entgleisen.'),
+        options: (why) => [
+          o(T('The sideways push of the outer rail.', 'Die seitliche Kraft der äusseren Schiene.'), 'ok', why.ok),
+          o(T('The driving force of the locomotive.', 'Die Antriebskraft der Lokomotive.'), 'active-force', T('The driving force points along the track, not to the centre: at constant speed it only makes up for the resistance.', 'Die Antriebskraft zeigt entlang des Gleises, nicht zum Zentrum: Bei konstanter Geschwindigkeit gleicht sie nur den Fahrwiderstand aus.')),
+          o(T('Its weight.', 'Seine Gewichtskraft.'), 'other', T('The weight points down, not to the centre; the upward push of the rails balances it.', 'Die Gewichtskraft zeigt nach unten, nicht zum Zentrum; die Normalkraft der Schienen nach oben hält ihr das Gleichgewicht.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+      leaf: {
+        obj: 'lettuce leaf', N: noun('n', 'Salatblatt'), sym: 'N', title: T('In the salad spinner', 'In der Salatschleuder'),
+        text: T('A lettuce leaf lies against the wall of the basket of a salad spinner and goes round with it at constant speed.', 'Ein Salatblatt liegt an der Wand des Korbs einer Salatschleuder an und dreht sich mit konstanter Geschwindigkeit mit.'),
+        label: T('Top view: a lettuce leaf against the wall of a turning salad spinner', 'Ansicht von oben: ein Salatblatt an der Wand einer drehenden Salatschleuder'),
+        force: T('the push of the basket wall on the leaf', 'die Normalkraft der Korbwand auf das Blatt'),
+        others: T('Its weight is balanced by vertical forces of the basket (friction on the wall, or the floor of the basket); they do not point to the centre.', 'Seine Gewichtskraft wird von vertikalen Kräften des Korbs ausgeglichen (Reibung an der Wand oder der Boden des Korbs); sie zeigen nicht zum Zentrum.'),
+        without: T('Where the wall has holes, nothing pushes the water drops round, and they fly off along the tangent.', 'Wo die Wand Löcher hat, drückt nichts die Wassertropfen auf die Kreisbahn, und sie fliegen entlang der Tangente davon.'),
+        options: (why) => [
+          o(T('The push of the basket wall.', 'Die Normalkraft der Korbwand.'), 'ok', why.ok),
+          o(T('Its weight.', 'Seine Gewichtskraft.'), 'other', T('The weight points down, not to the centre; it is balanced by vertical forces of the basket.', 'Die Gewichtskraft zeigt nach unten, nicht zum Zentrum; vertikale Kräfte des Korbs gleichen sie aus.')),
+          o(T('The push of the air that turns with the basket.', 'Der Druck der Luft, die sich mit dem Korb dreht.'), 'other', T('The air turns along with the leaf, so it hardly pushes on it, and it could not push it towards the centre. The wall does that.', 'Die Luft dreht sich mit dem Blatt mit, drückt also kaum darauf, und sie könnte es nicht zum Zentrum drücken. Das macht die Wand.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+      marble: {
+        obj: 'marble', N: noun('f', 'Murmel'), sym: 'N', title: T('In the cake tin', 'In der Kuchenform'),
+        text: T('A marble rolls round and round along the inside wall of a round cake tin lying on a table, at constant speed.', 'Eine Murmel rollt in einer runden Kuchenform, die auf dem Tisch liegt, der Innenwand entlang im Kreis, mit konstanter Geschwindigkeit.'),
+        label: T('Top view: a marble rolling along the wall of a round cake tin', 'Ansicht von oben: eine Murmel rollt der Wand einer runden Kuchenform entlang'),
+        force: T('the push of the wall of the tin', 'die Normalkraft der Wand der Form'),
+        others: T('Its weight and the push of the bottom of the tin are vertical and cancel; friction is negligible.', 'Gewichtskraft und Normalkraft des Bodens der Form sind vertikal und heben sich auf; die Reibung ist vernachlässigbar.'),
+        without: T('Where the wall ended, the marble would roll straight on along the tangent.', 'Wo die Wand aufhört, würde die Murmel geradeaus entlang der Tangente weiterrollen.'),
+        options: (why) => [
+          o(T('The push of the wall of the tin.', 'Die Normalkraft der Wand der Form.'), 'ok', why.ok),
+          o(T('The push it was given at the start.', 'Der Stoss, den sie am Anfang bekommen hat.'), 'impetus', T('The push is over: it is not stored in the marble. The marble keeps its speed by itself, and the wall bends its path.', 'Der Stoss ist vorbei: Er ist nicht in der Murmel gespeichert. Die Murmel behält ihr Tempo von selbst, und die Wand krümmt ihre Bahn.')),
+          o(T('The push of the bottom of the tin.', 'Die Normalkraft des Bodens der Form.'), 'other', T('The bottom pushes up and balances the weight; it cannot push the marble sideways.', 'Der Boden drückt nach oben und hält der Gewichtskraft das Gleichgewicht; er kann die Murmel nicht seitlich drücken.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
+      plane: {
+        obj: 'model plane', N: noun('n', 'Modellflugzeug'), sym: 'T', title: T('On a control line', 'An der Steuerleine'),
+        text: T('A model plane on a control line flies round its pilot in a horizontal circle, at constant speed.', 'Ein Modellflugzeug an einer Steuerleine fliegt mit konstanter Geschwindigkeit auf einem horizontalen Kreis um seinen Piloten.'),
+        label: T('Top view: a model plane on a control line flying round its pilot', 'Ansicht von oben: ein Modellflugzeug an einer Steuerleine fliegt um seinen Piloten'),
+        force: T('the pull of the control line', 'die Seilkraft der Steuerleine'),
+        others: T('The lift on its wings balances its weight; the thrust of its propeller only makes up for the air resistance, along the motion.', 'Der Auftrieb an den Flügeln hält der Gewichtskraft das Gleichgewicht; der Schub des Propellers gleicht in Bewegungsrichtung nur den Luftwiderstand aus.'),
+        without: T('If the line broke, the plane would fly straight on along the tangent.', 'Risse die Leine, würde das Flugzeug geradeaus entlang der Tangente weiterfliegen.'),
+        options: (why) => [
+          o(T('The pull of the control line.', 'Die Seilkraft der Steuerleine.'), 'ok', why.ok),
+          o(T('The thrust of its propeller.', 'Der Schub seines Propellers.'), 'active-force', T('The thrust points along the motion, not to the centre: at constant speed it only makes up for the air resistance.', 'Der Schub zeigt in Bewegungsrichtung, nicht zum Zentrum: Bei konstanter Geschwindigkeit gleicht er nur den Luftwiderstand aus.')),
+          o(T('The lift on its wings.', 'Der Auftrieb an seinen Flügeln.'), 'other', T('The lift points up and balances the weight; it does not point to the centre.', 'Der Auftrieb zeigt nach oben und hält der Gewichtskraft das Gleichgewicht; er zeigt nicht zum Zentrum.')),
+          o(T('A centrifugal force.', 'Eine Zentrifugalkraft.'), 'centrifugal', why.out),
+        ],
+      },
     };
   }
 
+  const CENTRE_SCENES = ['car', 'moon', 'stone', 'electron', 'station', 'earth', 'cyclist', 'runner', 'train', 'leaf', 'marble', 'plane'];
   function centre(r, p) {
-    const key = p.scene || r.pick(['car', 'moon', 'stone', 'electron']), sc = scenes()[key], N = sc.N;
+    const key = p.scene || r.pick(CENTRE_SCENES), sc = scenes()[key], N = sc.N;
     const The = cap(T(`the ${sc.obj}`, N.nom)), acc = T(`the ${sc.obj}`, N.acc);
+    const its = sc.its || 'its', sein = N.g === 'f' ? 'ihr' : 'sein', seine = N.g === 'f' ? 'ihre' : 'seine';
     const s = r.pick([1, -1]); // 1: clockwise in the picture
     const phi = (r.pick([0, 45, 90, 135, 180, 225, 270, 315]) * Math.PI) / 180;
     const C = [170, 130], R = 88;
@@ -513,15 +731,29 @@
 
     // ---------------------------------------------------------- figure (top view)
     function body(x, y, a) {
-      if (key === 'car') return `<g transform="rotate(${D.n((a * 180) / Math.PI + 90)} ${D.n(x)} ${D.n(y)})">${D.rect(x - 9, y - 15, 18, 30, 'obj', 4)}${D.rect(x - 7, y - 6 * s - 4, 14, 8, 'win', 2)}</g>`;
+      if (key === 'car') return `<g transform="rotate(${D.n((a * 180) / Math.PI)} ${D.n(x)} ${D.n(y)})">${D.rect(x - 9, y - 15, 18, 30, 'obj', 4)}${D.rect(x - 7, y + 6 * s - 4, 14, 8, 'win', 2)}</g>`;
       if (key === 'moon') return D.ball(x, y, 10);
       if (key === 'electron') return `<circle class="mag-s" cx="${D.n(x)}" cy="${D.n(y)}" r="7"/>` + D.text(x, y + 4, '−', 'lbl small');
-      return D.ball(x, y, 8);
+      const turned = (g) => `<g transform="rotate(${D.n((a * 180) / Math.PI)} ${D.n(x)} ${D.n(y)})">${g}</g>`; // local +y·s: forward
+      if (key === 'station') return turned(D.rect(x - 16, y - 3, 32, 6, 'solid', 1) + D.rect(x - 4, y - 6, 8, 12, 'obj', 1));
+      if (key === 'earth') return `<circle class="obj earth" cx="${D.n(x)}" cy="${D.n(y)}" r="9"/>`;
+      if (key === 'cyclist') return turned(D.rect(x - 2.5, y - 15, 5, 30, 'obj', 2) + D.rect(x - 8, y + 10 * s - 1.5, 16, 3, 'solid', 1) + D.ball(x, y - 2 * s, 5, 'skin'));
+      if (key === 'runner') return turned(`<ellipse class="obj" cx="${D.n(x)}" cy="${D.n(y)}" rx="10" ry="5"/>` + D.ball(x, y, 4.5, 'skin'));
+      if (key === 'train') return turned(D.rect(x - 8, y - 26, 16, 52, 'obj', 3) + D.rect(x - 5, y + 22 * s - 3, 10, 6, 'win', 2));
+      if (key === 'leaf') return turned(`<ellipse class="obj" cx="${D.n(x)}" cy="${D.n(y)}" rx="4" ry="11"/>`);
+      if (key === 'plane') return turned(D.rect(x - 2.5, y - 12, 5, 24, 'obj', 2) + D.rect(x - 15, y + 3 * s - 3, 30, 6, 'obj', 2) + D.rect(x - 6, y - 9 * s - 2, 12, 4, 'obj', 1));
+      return D.ball(x, y, key === 'marble' ? 7 : 8);
     }
     function figure(o = {}) {
-      let g = D.rect(0, 0, 340, 260, key === 'stone' ? 'ice' : key === 'car' ? 'table-top' : 'space', 6);
-      if (key === 'car') g += `<circle class="channel" cx="${C[0]}" cy="${C[1]}" r="${R}"/>` + D.dot(C[0], C[1], 3, 'pt') + D.words(C[0], C[1] + 18, T('centre', 'Zentrum'));
-      else g += `<circle class="trace" cx="${C[0]}" cy="${C[1]}" r="${R}" fill="none"/>`;
+      let g = D.rect(0, 0, 340, 260, key === 'stone' ? 'ice' : ['moon', 'electron', 'station', 'earth'].includes(key) ? 'space' : 'table-top', 6);
+      const centreWord = D.dot(C[0], C[1], 3, 'pt') + D.words(C[0], C[1] + 18, T('centre', 'Zentrum'));
+      if (key === 'car' || key === 'marble') g += `<circle class="channel${key === 'marble' ? ' thin-ch' : ''}" cx="${C[0]}" cy="${C[1]}" r="${key === 'marble' ? R + 11 : R}"/>` + centreWord;
+      else if (key === 'train') g += [R - 6, R + 6].map((rr) => `<circle class="thin" cx="${C[0]}" cy="${C[1]}" r="${rr}"/>`).join('') + centreWord;
+      else if (key === 'leaf') g += `<circle class="channel thin-ch" cx="${C[0]}" cy="${C[1]}" r="${R + 9}"/>` + D.dot(C[0], C[1], 4, 'pin') + D.words(C[0], C[1] + 18, T('centre', 'Zentrum'));
+      else g += `<circle class="trace" cx="${C[0]}" cy="${C[1]}" r="${R}" fill="none"/>` + (key === 'cyclist' || key === 'runner' ? centreWord : '');
+      if (key === 'station') g += `<circle class="obj earth" cx="${C[0]}" cy="${C[1]}" r="30"/>` + D.words(C[0], C[1] + 4, T('Earth', 'Erde'));
+      if (key === 'earth') g += `<circle class="lit" cx="${C[0]}" cy="${C[1]}" r="24"/>` + D.words(C[0], C[1] + 42, T('Sun', 'Sonne'));
+      if (key === 'plane') g += D.ball(C[0], C[1], 6, 'skin') + D.line(C[0], C[1], P[0], P[1], 'cable') + D.words(C[0], C[1] + 22, T('pilot', 'Pilot'));
       if (key === 'moon') g += `<circle class="obj earth" cx="${C[0]}" cy="${C[1]}" r="26"/>` + D.words(C[0], C[1] + 44, T('Earth', 'Erde'));
       if (key === 'electron') g += `<circle class="mag-n" cx="${C[0]}" cy="${C[1]}" r="10"/>` + D.text(C[0], C[1] + 4, '+', 'lbl small');
       if (key === 'stone') g += D.dot(C[0], C[1], 3.5, 'pin') + D.line(C[0], C[1], P[0], P[1], 'cable');
@@ -539,7 +771,7 @@
     }
 
     // ---------------------------------------------------------- questions
-    const turns = T(`${The} keeps its speed, but its direction of motion changes all the time.`, `${The} behält sein Tempo, aber die Bewegungsrichtung ändert sich ständig.`);
+    const turns = T(`${The} keeps ${its} speed, but ${its} direction of motion changes all the time.`, `${The} behält ${sein} Tempo, aber die Bewegungsrichtung ändert sich ständig.`);
     const inward = T('The velocity changes towards the inside of the curve, so the acceleration — and with it the net force — points to the centre.', 'Die Geschwindigkeit ändert sich zur Innenseite der Kurve hin, also zeigt die Beschleunigung — und damit die resultierende Kraft — zum Zentrum.');
     const noOut = T(`No force pushes ${acc} outward: there is no “centrifugal force”. ${sc.without}`, `Keine Kraft drückt ${N.acc} nach aussen: Es gibt keine „Zentrifugalkraft“. ${sc.without}`);
     const why = {
@@ -549,9 +781,9 @@
     const questions = [
       q(r, 'net', T(`Which way does the net force on ${acc} point at P?`, `Wohin zeigt die resultierende Kraft auf ${N.acc} im Punkt P?`), [
         o(T('Towards the centre of the circle.', 'Zum Zentrum des Kreises.'), 'ok', T(`Right: ${turns} ${inward}`, `Richtig: ${turns} ${inward}`)),
-        o(T('Forward, along its velocity.', 'Nach vorn, in Richtung der Geschwindigkeit.'), 'active-force', T(`Moving on needs no force. A net force forward would make ${acc} faster, but its speed stays the same. ${inward}`, `Weiterbewegen braucht keine Kraft. Eine resultierende Kraft nach vorn würde ${N.acc} schneller machen, aber das Tempo bleibt gleich. ${inward}`)),
+        o(T(`Forward, along ${its} velocity.`, 'Nach vorn, in Richtung der Geschwindigkeit.'), 'active-force', T(`Moving on needs no force. A net force forward would make ${acc} faster, but ${its} speed stays the same. ${inward}`, `Weiterbewegen braucht keine Kraft. Eine resultierende Kraft nach vorn würde ${N.acc} schneller machen, aber das Tempo bleibt gleich. ${inward}`)),
         o(T('Outward, away from the centre.', 'Nach aussen, weg vom Zentrum.'), 'centrifugal', T(`${noOut} ${inward}`, `${noOut} ${inward}`)),
-        o(T('There is none, since its speed is constant.', 'Es gibt keine, weil das Tempo konstant ist.'), 'constant-speed', T(`${turns} So its velocity changes, and that takes a net force. ${inward}`, `${turns} Die Geschwindigkeit ändert sich also, und dazu braucht es eine resultierende Kraft. ${inward}`)),
+        o(T(`There is none, since ${its} speed is constant.`, 'Es gibt keine, weil das Tempo konstant ist.'), 'constant-speed', T(`${turns} So ${its} velocity changes, and that takes a net force. ${inward}`, `${turns} Die Geschwindigkeit ändert sich also, und dazu braucht es eine resultierende Kraft. ${inward}`)),
       ]),
       q(r, 'source', T(`Which force provides this net force towards the centre?`, `Welche Kraft liefert diese resultierende Kraft zum Zentrum?`), sc.options(why)),
     ];
@@ -571,7 +803,7 @@
       figure: figure(),
       questions,
       hints: [
-        T(`${The} moves at constant speed. Does its velocity change?`, `${The} bewegt sich mit konstantem Tempo. Ändert sich seine Geschwindigkeit?`),
+        T(`${The} moves at constant speed. Does ${its} velocity change?`, `${The} bewegt sich mit konstantem Tempo. Ändert sich ${seine} Geschwindigkeit?`),
         T('Plan: the change of velocity gives the direction of the acceleration, the second law the direction of the net force; then look for the force that points that way.', 'Plan: Die Änderung der Geschwindigkeit ergibt die Richtung der Beschleunigung, das zweite Gesetz die Richtung der resultierenden Kraft; suche dann die Kraft, die in diese Richtung zeigt.'),
         T(`Second law: ${F('net')} = <i>m·a</i>. On a circle at constant speed, the acceleration points to the centre.`, `Zweites Gesetz: ${F('net')} = <i>m·a</i>. Auf einer Kreisbahn mit konstantem Tempo zeigt die Beschleunigung zum Zentrum.`),
         T(`Here: which body pulls or pushes ${acc} towards the centre? ${sc.others}`, `Hier: Welcher Körper zieht oder drückt ${N.acc} zum Zentrum? ${sc.others}`),

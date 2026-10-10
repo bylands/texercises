@@ -110,9 +110,9 @@ for (const c of Object.keys(FC.MIS)) if (!codes.has(c)) fail(`misconception ${c}
 // ---------------------------------------------------------------- physics
 const r = () => FC.rng(7);
 // balance: X (forward/up) against Y; the right relation follows the acceleration.
-for (const obj of ['crate', 'car', 'elevator', 'skydiver']) {
+for (const obj of ['crate', 'car', 'elevator', 'skydiver', 'motorboat', 'plane', 'cyclist', 'trolley', 'train', 'crane']) {
   for (const phase of ['speeding', 'constant', 'slowing']) {
-    for (const dir of obj === 'elevator' ? [1, -1] : obj === 'skydiver' ? [-1] : [1]) {
+    for (const dir of obj === 'elevator' || obj === 'crane' ? [1, -1] : obj === 'skydiver' ? [-1] : [1]) {
       const ex = FC.GENS.balance(r(), { obj, phase, dir });
       checkExercise(ex, `balance ${obj} ${phase} ${dir}`);
       const acc = dir * { speeding: 1, constant: 0, slowing: -1 }[phase];
@@ -168,11 +168,12 @@ for (const vu of [[4, 3], [3, 4], [8, 6], [12, 5], [5, 12]]) {
   }
 }
 // centre: the net force points to the centre, and the force that provides it is named.
-for (const scene of ['car', 'moon', 'stone', 'electron']) {
+for (const scene of ['car', 'moon', 'stone', 'electron', 'station', 'earth', 'cyclist', 'runner', 'train', 'leaf', 'marble', 'plane']) {
   const ex = FC.GENS.centre(r(), { scene });
   checkExercise(ex, `centre ${scene}`);
   if (!right(ex, 'net').startsWith('Towards the centre')) fail(`centre ${scene}: net force`);
-  const want = { car: 'friction', moon: 'gravitational pull', stone: 'string', electron: 'electric' }[scene];
+  const want = { car: 'friction', moon: 'gravitational pull', stone: 'string', electron: 'electric', station: 'gravitational pull of the Earth', earth: 'gravitational pull of the Sun',
+    cyclist: 'friction', runner: 'friction', train: 'outer rail', leaf: 'basket wall', marble: 'wall of the tin', plane: 'control line' }[scene];
   if (!right(ex, 'source').includes(want)) fail(`centre ${scene}: source “${right(ex, 'source')}”`);
 }
 // throw: only the weight, acceleration g downward, at every phase.
@@ -182,6 +183,52 @@ for (const kind of ['vertical', 'oblique']) for (const phase of ['rising', 'top'
   if (!right(ex, 'forces').startsWith('Only its weight')) fail(`throw ${kind} ${phase}: forces`);
   if (!right(ex, 'acc').startsWith('Straight down, with size g')) fail(`throw ${kind} ${phase}: acceleration`);
 }
+
+// The widened scenarios: every case, in both languages, gives a valid exercise with the right
+// answer where the physics fixes it; no raw $ or _ in the visible text.
+const visible = (ex) => [ex.title, ex.situation, ...ex.hints, ...ex.steps.flatMap((s) => [s.title, s.text]),
+  ...ex.questions.flatMap((q) => [q.prompt, ...[...(q.options || []), ...(q.reasons || [])].flatMap((o) => [o.text, o.why])])].map((x) => strip(String(x).replace(/<svg[\s\S]*?<\/svg>/g, ''))).join(' ');
+for (const lang of FC.LANGS) {
+  FC.setLang(lang);
+  const cases = [
+    ...['probe', 'glider', 'astronaut', 'cart'].flatMap((obj) => ['rest', 'drift', 'brake'].map((start) => ['engine', { obj, start }])),
+    ...['probe', 'astronaut'].flatMap((obj) => [1, -1].flatMap((side) => [60, 75, 90, 110].map((bend) => ['thruster', { obj, side, bend }]))),
+    ...['ball', 'car', 'glider', 'skater'].flatMap((obj) => ['rising', 'top', 'falling'].map((phase) => ['ramp', { obj, phase }])),
+    ...['channel', 'string', 'car', 'skater', 'drop', 'hammer'].flatMap((variant) => [1, -1].map((sense) => ['circle', { variant, sense }])),
+    ...['bob', 'girl', 'trapeze'].flatMap((who) => ['start', 'down', 'bottom', 'mid', 'top'].map((pos) => ['pendulum-cut', { who, pos }])),
+  ];
+  for (const [gen, params] of cases) {
+    for (const seed of [1, 2, 3]) {
+      const at = `${lang} ${gen} ${JSON.stringify(params)} ${seed}`;
+      const ex = FC.GENS[gen](FC.rng(seed), { ...params });
+      checkExercise(ex, at);
+      if (/[$_]/.test(visible(ex))) fail(`${at}: raw $ or _ in the text`);
+      if (lang !== 'en') continue;
+      if (gen === 'engine' && !right(ex, 'graph').startsWith(params.start === 'brake' ? 'falls steadily' : 'rises steadily')) fail(`${at}: speed graph`);
+      if (gen === 'engine' && !right(ex, 'after').startsWith('Nothing')) fail(`${at}: after t2`);
+      if (gen === 'thruster' && !right(ex, 'path').startsWith('a curve bending')) fail(`${at}: path`);
+      if (gen === 'circle' && (right(ex, 'path') !== 'straight on along the tangent' || right(ex, 'force') !== 'None.')) fail(`${at}: tangent`);
+      if (gen === 'ramp' && strip(ex.questions[0].options.find((o) => o.ok).text) !== 'Down the ramp.') fail(`${at}: net force`);
+      if (gen === 'pendulum-cut') {
+        const want = ['start', 'top'].includes(params.pos) ? 'straight down' : 'on a parabola';
+        if (!strip(ex.questions[0].options.find((o) => o.ok).text).startsWith(want)) fail(`${at}: path`);
+      }
+    }
+  }
+}
+FC.setLang('en');
+
+// The practice stages that were widened give at least ten different exercises (by their text,
+// not counting the pictures), in both languages.
+for (const lang of FC.LANGS) {
+  FC.setLang(lang);
+  for (const type of ['inertia/engine', 'inertia/balance', 'force/thruster', 'force/ramp', 'force/centre', 'inertia/circle', 'gravity/pendulum-cut']) {
+    const seen = new Set();
+    for (let seed = 1; seed <= 300; seed++) seen.add(visible(FC.generateGen(type, seed)));
+    if (seen.size < 10) fail(`${lang} ${type}: only ${seen.size} different exercises`);
+  }
+}
+FC.setLang('en');
 
 // What must not change between the languages, and all the text of a question.
 const sig = (q) => ({ choice: () => q.options.map((o) => o.code), two: () => [q.options.map((o) => o.code), q.reasons.map((o) => o.code)],
