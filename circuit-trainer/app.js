@@ -3,7 +3,7 @@
 
   const { generate, tutorial, fval, ftex } = window.Generator;
   const { esc, fitText } = window.Circuit;
-  const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
@@ -11,7 +11,7 @@
   const UI = {
     en: {
       title: 'Resistor Circuit Trainer', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
-      tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise', real: 'Problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
+      tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
       tutorNote: 'Use the arrow keys ← → to step through. In the diagram, the parts combined in a step are <span class="k-strong">highlighted</span>, the group they belong to is <span class="k-light">shaded</span>, the value just found is <span class="k-new">marked</span> and the values used are <b>bold</b>.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
@@ -27,7 +27,7 @@
     },
     de: {
       title: 'Widerstandsschaltungen', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
-      tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
+      tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Im Schaltbild sind die Teile, die in einem Schritt zusammengefasst werden, <span class="k-strong">hervorgehoben</span>, ihre Gruppe ist <span class="k-light">schattiert</span>, der eben gefundene Wert ist <span class="k-new">markiert</span>, und die verwendeten Werte sind <b>fett</b>.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
@@ -46,7 +46,7 @@
 
   // An exercise is { id, difficulty, title, text, fields: [{key, sym, unit, value}], tol, figure(sol),
   // hints: [html], solution: [html], results: html }.
-  let ex = null, st = null, tutor = null, arcade = null, topics = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -139,7 +139,7 @@
   // one if possible.
   function fresh() { open(topics.next(ex)); }
   // the same exercise again (e.g. in the other language); links of earlier versions name a level
-  const again = (e) => (e.real != null ? window.CircuitProblems.realOf(e.real, e.seed) : null) || topics.parse(e.id) || generate(e.id.split('-')[0], Number(e.id.split('-')[1]));
+  const again = (e) => topics.parse(e.id) || generate(e.id.split('-')[0], Number(e.id.split('-')[1]));
 
   // The topics of practice: those of the tutor's examples, with their stages (lessons.js).
   const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
@@ -180,7 +180,7 @@
     rb.title = canReveal() ? '' : ui().unlocks(MAX_TRIES);
     $('#reveal-note').hidden = canReveal() || st.revealed;
     // once everything is right, Check becomes New exercise, like the button at the top
-    $('#check').textContent = st.solved ? (isReal() ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
   }
@@ -212,7 +212,7 @@
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (isReal()) problems.next(); else fresh(); return; } // the button reads New exercise
+    if (st.solved) { fresh(); return; } // the button reads New exercise
     const r = feedback();
     st.checked = true;
     if (r === null) { showStatus('fill'); return; }
@@ -227,7 +227,6 @@
       }
       st.solved = true;
       Practice.markSolved(PRACTICE, ex.id);
-      if (isReal()) problems.solved(ex);
       finish();
       st.advance = topics.solved(st, ex);
       showStatus('ok');
@@ -265,20 +264,40 @@
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // ---------------------------------------------------------------- arcade
-  // Each question asks for one unknown of a circuit whose currents and voltages are multiples of
-  // 0.5 (no fractions to work with). Wrong options: the whole battery voltage or current for one
-  // part, the value of its partner in a divider (the ratio turned round), or simple slips.
+  // ---------------------------------------------------------------- check
+  // The learning objectives (check.js), each with the practice types it is asked about, its worked
+  // example and its practice topic (lessons.js). Each question asks for one unknown of a circuit
+  // whose currents and voltages are multiples of 0.5 (no fractions to work with): a voltage or a
+  // current, or for working backwards, a resistance. Wrong options: the whole battery voltage or
+  // current for one part, the value of its partner in a divider (the ratio turned round), or
+  // simple slips.
+  const OBJECTIVES = [
+    { id: 'divide', kinds: ['series:easy', 'parallel:easy'], tutor: 0, topic: 0,
+      name: () => L('Split the voltage in series in the ratio of the resistances, and the current in parallel in the inverse ratio.',
+        'Die Spannung in Serie im Verhältnis der Widerstände aufteilen und den Strom parallel im umgekehrten Verhältnis.') },
+    { id: 'combine', kinds: ['mixed:medium', 'nested:medium'], tutor: 2, topic: 2,
+      name: () => L('Reduce groups of resistors to one equivalent resistance and work out every current and voltage step by step.',
+        'Gruppen von Widerständen durch einen Ersatzwiderstand ersetzen und alle Ströme und Spannungen Schritt für Schritt bestimmen.') },
+    { id: 'backwards', kinds: ['backwards:easy', 'backwards:medium'], tutor: 3, topic: 3,
+      name: () => L('Find an unknown resistance from measured currents and voltages.',
+        'Einen unbekannten Widerstand aus gemessenen Strömen und Spannungen bestimmen.') },
+  ];
   const half = (f) => Number.isFinite(fval(f)) && Math.abs(2 * fval(f) - Math.round(2 * fval(f))) < 1e-9;
-  function arcadeQuestion(kind, seed) {
-    const d = Number(kind.slice(1)), lv = d <= 2 ? 'easy' : d === 3 ? 'medium' : 'hard';
+  // A circuit of a practice type and the unknown asked for: a resistance when working backwards,
+  // else a voltage or a current.
+  function checkCircuit(type, seed) {
+    const back = type.startsWith('backwards');
     let e = null, f = null;
     for (let k = 0; k < 400; k++) {
-      const c = generate(lv, seed + k);
-      const ok = c.difficulty === d && c.circuit.nodes.every((n) => half(n.V) && half(n.I));
-      const nice = c.fields.filter((x) => x.key[0] !== 'R' || Number.isInteger(x.value));
+      const c = ofType(type, seed + 7919 * k);
+      const ok = c.circuit.nodes.every((n) => half(n.V) && half(n.I));
+      const nice = c.fields.filter((x) => (back ? x.key[0] === 'R' && Number.isInteger(x.value) : x.key[0] !== 'R'));
       if ((ok && nice.length) || k === 399) { e = c; f = (nice.length ? nice : c.fields)[seed % (nice.length || c.fields.length)]; break; }
     }
+    return { e, f };
+  }
+  function checkQuestion(type, seed) {
+    const { e, f } = checkCircuit(type, seed);
     const c = e.circuit, node = c.nodes[Number(f.key.slice(1))], q = f.key[0];
     const options = [{ value: f.value, correct: true }];
     // options: positive multiples of 0.5, clearly different from each other
@@ -310,26 +329,18 @@
       ask: L(`Find $${f.sym}$.`, `Wie gross ist $${f.sym}$?`),
       options: options.map((o) => ({ html: `$${num(o.value)}\\,${unitTex}$`, correct: !!o.correct, flag: o.flag, why: o.why })),
       explain: () => `<div class="figs">${e.figure(true)}</div><div class="steps">${e.solution.map((p) => `<p>${p}</p>`).join('')}</div>`,
+      key: `${e.id}|${f.key}`,
     };
   }
-  const arcadeSource = {
+  const checkSource = {
     id: 'rc',
-    kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })),
-    question: arcadeQuestion,
+    objectives: OBJECTIVES,
+    question: checkQuestion,
     concept: { whole: 'whole', ratio: 'ratio' },
     concepts: () => ({
-      whole: L('the whole voltage or current for one part', 'die ganze Spannung oder der ganze Strom für einen Teil'),
+      whole: L('giving one part the whole battery voltage or current', 'einem Teil die ganze Batteriespannung oder den ganzen Strom geben'),
       ratio: L('a divider the wrong way round', 'ein Teiler falsch herum'),
     }),
-    intro: () => ({
-      tag: L('Find currents, voltages and resistances: as many as you can in <b>5 minutes</b>, four answers each.',
-        'Bestimme Ströme, Spannungen und Widerstände: so viele wie möglich in <b>5 Minuten</b>, je vier Antworten.'),
-      rule: L('Questions get harder as you go. Choose one of four answers, or press 1–4. The values are multiples of 0.5, made for mental arithmetic (V = kΩ · mA).',
-        'Die Fragen werden nach und nach schwieriger. Wähle eine von vier Antworten oder drücke 1–4. Die Werte sind Vielfache von 0.5, gemacht fürs Kopfrechnen (V = kΩ · mA).'),
-      example: L('giving one part the whole battery voltage', 'einem Teil die ganze Batteriespannung zu geben'),
-    }),
-    // a mixed circuit with all its currents and voltages, and Ohm's law
-    hero: () => `<div class="figs">${generate('medium', 35).figure(true)}</div><p class="ar-law">$${L('V', 'U')} = R\\,I$</p>`,
   };
 
   // ---------------------------------------------------------------- language
@@ -340,7 +351,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    if (topics) { topics.relabel(); problems.menu(); }
+    if (topics) topics.relabel();
   }
 
   // The same exercise in the other language, with the answers, hints and solution kept.
@@ -361,54 +372,39 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
   // ---------------------------------------------------------------- modes
-  // Practice: random exercises; tutor: worked examples; arcade: a timed game (arcade.js). Hints
-  // and solution belong to practice. Leaving the arcade ends a running game.
+  // Practice: random exercises; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('rc-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); }); // practice and problems share the card
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
   function practise() {
     setMode('practice');
-    if (ex && !isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
   }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
-  }
-
-  // Problems from everyday life (realproblems.js, shared problems.js), chosen in a menu.
-  let problems = null;
-  const isReal = () => !!problems && problems.is(ex);
-  function realMode() {
-    setMode('real');
-    if (isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
 
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     let m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
-      return true;
-    }
-    const re = problems.parse(h);
-    if (re) {
-      setMode('real');
-      if (!ex || ex.id !== h) open(re);
-      problems.menu();
       return true;
     }
     const te = topics.parse(h);
@@ -429,7 +425,7 @@
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     applyStatic();
     Lang.wire(switchLang);
     topics = window.Topics.create({
@@ -439,11 +435,6 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.CircuitProblems.PROBLEMS, make: window.CircuitProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
-    problems.menu();
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
     $('#hint').addEventListener('click', hint);
@@ -457,15 +448,19 @@
     });
     // circuit diagrams fit their labels to the rendered text (fitText)
     const typeset = (el) => { el.querySelectorAll('.fig svg').forEach((svg) => fitText(svg)); math(el); };
-    arcade = Arcade.create(arcadeSource, { math: typeset, markScrollable, stored, store });
+    checker = Check.create(checkSource, {
+      math: typeset, markScrollable, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('rc-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
