@@ -6,8 +6,10 @@
 // - every exercise has four different curves, exactly one of which fits all the answers; for each
 //   feature, a wrong curve shares it where some circuit of the pool does (so no single feature is
 //   enough; the circuits of two elements only come with each other, and no other circuit has the
-//   minimum or maximum R of RLC in series or in parallel),
-// - every question has exactly one right option, and every text is complete in both languages,
+//   minimum or maximum R of RLC in series or in parallel); one element comes with the other two
+//   (and a circuit of two elements), and only circuit → curve,
+// - every question has exactly one right option, and every text is complete in both languages; one
+//   element also asks for its shift, and every option of it explains itself,
 // - sketches and schematics of every circuit render in both axis modes,
 // - the worked examples of the tutor rule out one option per question.
 'use strict';
@@ -50,20 +52,25 @@ for (const lang of ['en', 'de']) {
   Lang.set(lang, true);
   for (const id of M.IDS) {
     for (let seed = 1; seed <= 600; seed++) {
-      const inverse = seed > 300, ex = M.generate(id, seed, inverse), tag = `${lang} ${inverse ? 'inv' : 'match'} ${id}-${seed}`;
+      const inverse = seed > 300, one = M.single(id);
+      if (inverse && one) continue;
+      const ex = M.generate(id, seed, inverse), tag = `${lang} ${inverse ? 'inv' : 'match'} ${id}-${seed}`;
       n++;
       if (new Set(ex.cands).size !== 4 || ex.cands[ex.right] !== id) fail(`${tag}: curves ${ex.cands}`);
       const all = M.phases(id), fitting = ex.cands.filter((x, k) => M.fits(ex, k, all));
       if (fitting.length !== 1) fail(`${tag}: ${fitting.length} curves fit`);
-      const pool = M.IDS.filter((x) => x !== id && (M.NETS[id].level > 1 || M.NETS[x].level === 1));
-      for (const k of all) {
+      const pool = M.IDS.filter((x) => x !== id && (M.NETS[id].level > 1 ? M.NETS[x].level > 0 : M.NETS[x].level === 1));
+      if (one && M.IDS.filter((x) => x !== id && M.single(x)).some((x) => !ex.cands.includes(x))) fail(`${tag}: not all elements`);
+      if (one && !ex.cands.some((x, j) => j !== ex.right && all.some((k) => M.features(x)[k] === M.features(id)[k]))) fail(`${tag}: no wrong curve shares a feature`);
+      for (const k of one ? [] : all) {
         const shares = (x) => M.features(x)[k] === M.features(id)[k];
         if (pool.some(shares) && !ex.cands.some((x, j) => j !== ex.right && shares(x))) fail(`${tag}: no wrong curve shares ${k}`);
       }
       const items = M.items(ex);
-      if (items.length !== all.length) fail(`${tag}: ${items.length} questions`);
+      if (items.length !== all.length + (one ? 1 : 0)) fail(`${tag}: ${items.length} questions`);
       for (const it of items) {
         if (it.options.filter((o) => o.right).length !== 1) fail(`${tag}: question ${it.key} has not one right option`);
+        if (it.key === 'phase' && it.options.some((o) => !o.right && !o.why)) fail(`${tag}: a shift without why`);
         if (bad(it.what + it.value + it.options.map((o) => o.html + o.why).join(''))) fail(`${tag}: text of question ${it.key}`);
       }
       const sol = M.solution(ex);
@@ -85,13 +92,14 @@ for (const id of M.IDS) {
   }
 }
 
-// the worked examples: four options, one ruled out by each question, one left
+// the worked examples: four options, at least one ruled out by each question, one left
 for (const ex of EXAMPLES.filter((x) => x.match)) {
   const m = ex.match, e = { ...m, right: m.cands.indexOf(m.net) }, ks = M.phases(m.net);
   ks.forEach((k, i) => {
     const before = m.cands.filter((x, j) => M.fits(e, j, ks.slice(0, i))).length, after = m.cands.filter((x, j) => M.fits(e, j, ks.slice(0, i + 1))).length;
-    if (before - after !== 1) fail(`worked example ${ex.name.en}: question ${k} rules out ${before - after} options`);
+    if (before - after < 1) fail(`worked example ${ex.name.en}: question ${k} rules out ${before - after} options`);
   });
+  if (m.cands.filter((x, j) => M.fits(e, j, ks)).length !== 1) fail(`worked example ${ex.name.en}: not one option left`);
 }
 
 if (failures) { console.error(`\n${failures} failures`); process.exit(1); }

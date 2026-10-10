@@ -4,8 +4,8 @@
 // the forms of energy in the table, table[i][j] whether state i has energy of form j, value the
 // wanted quantity (numbers) and answer its formula (formal); traps [{ value, f, tex, why, flag }]
 // are answers under typical wrong ideas. generateFor(scenario, seed) gives a formal exercise of a
-// given situation (for the arcade), quiz(exercise, seed) four formulas to choose from, and
-// tutorial(lesson) the tutor's frames [{ text, figure }].
+// given situation (for practice, and the questions of concepts.js), and tutorial(lesson) the
+// tutor's frames [{ text, figure }].
 (function (root) {
   'use strict';
 
@@ -140,20 +140,10 @@
     return { ...exercise(scn, make(scn, r), formal), id: `${level}${formal ? '' : '-num'}-${seed}`, level, seed };
   }
 
-  // A formal exercise of the given situation (for the arcade and the tests).
+  // A formal exercise of the given situation (for practice, concepts.js and the tests).
   function generateFor(scenario, seed, formal = true) {
     const scn = byId(scenario);
     return { ...exercise(scn, make(scn, rng(seed)), formal), seed };
-  }
-
-  // Four formulas to choose from: the answer and three wrong ones, those of different wrong ideas
-  // first.
-  function quiz(ex, seed) {
-    const r = rng(seed), shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-    const pool = shuffle([...ex.traps]), picked = [];
-    for (const t of pool) if (picked.length < 3 && !picked.some((u) => u.flag === t.flag)) picked.push(t);
-    for (const t of pool) if (picked.length < 3 && !picked.includes(t)) picked.push(t);
-    return shuffle([{ tex: ex.answer, correct: true }, ...picked.map((t) => ({ tex: t.tex, flag: t.flag, why: t.why }))]);
   }
 
   // Judges a typed formula: { cls, msg, key } with key one of ok, empty, syntax, unknown, wanted,
@@ -201,8 +191,10 @@
     return { cls: 'bad', key: 'wrong' };
   }
 
-  // The tutor: the situation, then the steps of the solution with the energy bars.
+  // The tutor: the situation, then the steps of the solution with the energy bars, then the
+  // lesson's own frames (more(ex), optional). A lesson without a scenario has only its own frames.
   function tutorial(lesson) {
+    if (!lesson.scenario) return { frames: lesson.frames(), ex: null };
     const ex = exercise(byId(lesson.scenario), lesson.p, lesson.formal);
     const first = {
       text: `<p class="step-rule">${L('The situation', 'Die Situation')}</p>${ex.text}<p>${L('Wanted', 'Gesucht')}: ${ex.want.what} $${T(ex.want.key)}$.</p>`,
@@ -222,9 +214,10 @@
       text: (s.rule ? `<p class="step-rule">${s.rule}</p>` : '') + s.text,
       figure: ex.figure({ bars: s.bars, hl: new Set(s.hl) }),
     }));
-    return { frames: watch ? [first, watch, ...frames] : [first, ...frames], ex };
+    const more = lesson.more ? lesson.more(ex) : [];
+    return { frames: [first, ...(watch ? [watch] : []), ...frames, ...more], ex };
   }
 
-  root.Energy = { LEVELS, SCENARIOS, WHY, CIRCLED, generate, generateFor, quiz, judgeFormula, judgeEnergy, judgeNumber, tutorial };
+  root.Energy = { LEVELS, SCENARIOS, WHY, CIRCLED, generate, generateFor, judgeFormula, judgeEnergy, judgeNumber, tutorial };
   if (typeof module !== 'undefined') module.exports = root.Energy;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,24 +1,20 @@
 // The situations of the worksheet “Übungen Kräftesysteme”: one box at rest or pulled across the
 // floor, two boxes pushed or joined by a rope, pulleys and slopes. A scenario has an id, a
-// difficulty from 1 to 5 (for practice levels and the arcade), trig if its results need sine or
-// cosine, and:
-//   make(r, o)         random parameters (null if they do not fit); with o.nice, angles are
-//                      the 3-4-5 angle (stated as sin α and cos α); with o.pyth, angles of right
-//                      triangles with whole sides (3-4-5, 5-12-13, …), given in degrees: the
-//                      student identifies each component and the app gives its value (comps)
-//                      the 3-4-5 angle, so that no calculator is needed
-//   solve(p, o)        the wanted quantities; o switches on a typical wrong idea (see WHY in
-//                      generator.js) or g = 9.81 m/s², so that wrong answers can be recognised
-//   traps              the wrong ideas worth checking
+// difficulty from 1 to 5, trig if its results need sine or cosine, and:
+//   make(r, o)         random parameters (null if they do not fit); with o.pyth, angles of right
+//                      triangles with whole sides (3-4-5, 5-12-13, …): the student identifies each
+//                      component and the app gives its value (comps)
+//   solve(p)           the wanted quantities (for the tutor's worked solutions)
 //   fields(p)          the wanted quantities, in order: { key, sym: [symbol, index], unit, what }
 //   text(p), scene(p)  the situation, in words and as a drawing (see draw.js)
 //   hints(p, v), steps(p, v)  hints and the worked solution: steps { text, show, hl } that say
 //                      which forces of the drawing to show and highlight
 //   comps(p)           the components the student identifies first (see identify.js): { key, what,
 //                      sym, base, baseVal, fn }, with the angle p.alpha
+//   still              the box stands still (its friction, if any, is static friction)
 //   boxes(p)           (two boxes) the names of box 1 and box 2, for the table of forces;
 //                      forceOn { id: box } where a force without index 2 acts on box 2 (index 1)
-// Values come out exact; the texts round them.
+// Values come out exact; the texts round them. The equations to set up are in equations.js.
 (function (root) {
   'use strict';
 
@@ -44,10 +40,6 @@
   const field = (key, idx = '', what) => ({ key: key + idx, sym: [key === 'a' ? 'a' : key, idx], unit: key === 'a' ? 'a' : 'N', what: what || WHAT[key]() });
   const m$ = (s) => `$${s}$`;
 
-  // The 3-4-5 angle (sin α = 0.6, cos α = 0.8): with it, components need no calculator. Exercises
-  // that use it state sin α and cos α instead of the angle.
-  const A345 = (Math.asin(0.6) * 180) / Math.PI;
-  const is345 = (p) => !p.pyth && Math.abs(p.alpha - A345) < 1e-9;
   // Angles of right triangles with whole sides: with a force that is a multiple of the hypotenuse,
   // both components are whole numbers (e.g. 26 N at 22.6°: 10 N and 24 N).
   const TRIANGLES = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
@@ -56,9 +48,8 @@
   // and 2.9 kg (m g)
   const PYTH_F = [5, 10, 13, 15, 17, 20, 25, 26, 29, 30, 34, 39, 40, 50, 51, 52, 58];
   const PYTH_M = [1, 1.3, 1.5, 1.7, 2, 2.5, 2.6, 2.9, 3, 3.4, 3.9, 4, 5, 5.1, 5.2, 5.8, 6];
-  const angleLabel = (p) => (is345(p) ? '<tspan font-style="italic">α</tspan>' : q(p.alpha, 'deg'));
-  const trig = (fn, p) => (is345(p) ? FS.texNum(fn === 'sin' ? 0.6 : 0.8) : `\\${fn}${tq(p.alpha, 'deg')}`);
-  const sinCos = () => L('sin α = 0.6 and cos α = 0.8', 'sin α = 0.6 und cos α = 0.8');
+  const angleLabel = (p) => q(p.alpha, 'deg');
+  const trig = (fn, p) => `\\${fn}${tq(p.alpha, 'deg')}`;
 
   const step = (rule, text, show, hl) => ({ text: (rule ? `<p class="step-rule">${rule}</p>` : '') + text, show, hl: hl || show });
 
@@ -82,20 +73,15 @@
   const sized = (sc, mags) => { sc.forces.forEach((s) => { if (mags[s.id] != null) s.mag = mags[s.id]; }); return sc; };
 
   const restUp = {
-    id: 'rest-up', difficulty: 1,
+    id: 'rest-up', difficulty: 1, still: true,
     make(r) {
       const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8]), dir = pick(r, ['up', 'down']);
       const list = [2, 3, 4, 5, 6, 8, 10, 12, 15, 18, 20, 25, 30, 40, 50].filter((F) => F >= 0.1 * m * G && F <= (dir === 'up' ? 0.85 : 1.2) * m * G);
       return list.length ? { m, dir, F: pick(r, list) } : null;
     },
-    solve(p, o = {}) {
-      const g = o.g || G, FG = p.m * g, up = (p.dir === 'up') !== !!o.dirF;
-      return { G: FG, N: o.flatN ? FG : up ? FG - p.F : FG + p.F };
-    },
-    traps: ['g', 'flatN', 'dirF'],
-    why: {
-      flatN: () => L('The floor does not carry the whole weight here: the rope or hand also pushes or pulls on the box.', 'Der Boden trägt hier nicht die ganze Gewichtskraft: Auch das Seil oder die Hand übt eine Kraft auf die Kiste aus.'),
-      dirF: () => L('Check the direction of the force: does it relieve the floor or press the box harder onto it?', 'Achte auf die Richtung der Kraft: Entlastet sie den Boden, oder drückt sie die Kiste stärker auf ihn?'),
+    solve(p) {
+      const FG = p.m * G;
+      return { G: FG, N: p.dir === 'up' ? FG - p.F : FG + p.F };
     },
     fields: () => [field('G'), field('N')],
     title: (p) => (p.dir === 'up' ? L('Lifted, but not enough', 'Angehoben, aber zu wenig') : L('Pressed onto the floor', 'Auf den Boden gedrückt')),
@@ -137,24 +123,17 @@
   };
 
   const restAngle = {
-    id: 'rest-angle', difficulty: 2, trig: true,
+    id: 'rest-angle', difficulty: 2, trig: true, still: true,
     make(r, o = {}) {
-      const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6]), ref = pick(r, ['v', 'h']), alpha = o.nice ? A345 : o.pyth ? pick(r, PYTH) : pick(r, [20, 25, 30, 35, 40, 45, 50, 60]);
-      const F = pick(r, o.nice ? [5, 10, 15, 20, 25, 30, 40] : o.pyth ? PYTH_F : [4, 5, 6, 8, 10, 12, 14, 15, 16, 18, 20, 25, 30, 40]);
+      const m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6]), ref = pick(r, ['v', 'h']), alpha = o.pyth ? pick(r, PYTH) : pick(r, [20, 25, 30, 35, 40, 45, 50, 60]);
+      const F = pick(r, o.pyth ? PYTH_F : [4, 5, 6, 8, 10, 12, 14, 15, 16, 18, 20, 25, 30, 40]);
       const up = F * (ref === 'v' ? Math.cos(rad(alpha)) : Math.sin(rad(alpha)));
       if (up > 0.8 * m * G || F * Math.min(Math.sin(rad(alpha)), Math.cos(rad(alpha))) < 1.5) return null;
       return o.pyth ? { m, F, alpha, ref, pyth: true } : { m, F, alpha, ref };
     },
-    solve(p, o = {}) {
-      const g = o.g || G, a = rad(p.alpha);
-      let [up, side] = p.ref === 'v' ? [Math.cos(a), Math.sin(a)] : [Math.sin(a), Math.cos(a)];
-      if (o.swap) [up, side] = [side, up];
-      return { N: o.flatN ? p.m * g : o.whole ? p.m * g - p.F : p.m * g - p.F * up, R: o.whole ? p.F : p.F * side };
-    },
-    traps: ['g', 'swap', 'flatN', 'whole'],
-    why: {
-      flatN: () => L('The pull is partly upwards: it carries part of the weight, so the floor pushes less.', 'Die Zugkraft zeigt teilweise nach oben: Sie trägt einen Teil der Gewichtskraft, darum drückt der Boden weniger.'),
-      whole: () => L('Only a component of the pull acts in this direction: split it into a vertical and a horizontal part.', 'In diese Richtung wirkt nur eine Komponente der Zugkraft: Zerlege sie in einen senkrechten und einen waagrechten Teil.'),
+    solve(p) {
+      const a = rad(p.alpha), [up, side] = p.ref === 'v' ? [Math.cos(a), Math.sin(a)] : [Math.sin(a), Math.cos(a)];
+      return { N: p.m * G - p.F * up, R: p.F * side };
     },
     fields: () => [field('N'), field('R', '', L('static friction force', 'Haftreibungskraft'))],
     comps: (p) => [
@@ -162,8 +141,8 @@
       { key: 'side', what: L('The horizontal component of the pull:', 'Die waagrechte Komponente der Zugkraft:'), sym: 'F_\\rightarrow', base: T('F'), baseVal: p.F, fn: p.ref === 'v' ? 'sin' : 'cos', fig: 'Fh' },
     ],
     title: () => L('Pulled at an angle', 'Schräg gezogen'),
-    text: (p) => L(`A box with a mass of ${kg(p.m)} stands still on the floor, although a rope pulls on it with a force of ${q(p.F, 'N')}, at an angle ${is345(p) ? 'α' : `of ${q(p.alpha, 'deg')}`} to the ${p.ref === 'v' ? 'vertical' : 'horizontal'}${is345(p) ? `, where ${sinCos()}` : ''}.`,
-      `Eine Kiste mit der Masse ${kg(p.m)} steht still auf dem Boden, obwohl ein Seil mit einer Kraft von ${q(p.F, 'N')} unter einem Winkel ${is345(p) ? 'α' : `von ${q(p.alpha, 'deg')}`} zur ${p.ref === 'v' ? 'Senkrechten' : 'Waagrechten'} an ihr zieht${is345(p) ? `, wobei ${sinCos()}` : ''}.`),
+    text: (p) => L(`A box with a mass of ${kg(p.m)} stands still on the floor, although a rope pulls on it with a force of ${q(p.F, 'N')}, at an angle of ${q(p.alpha, 'deg')} to the ${p.ref === 'v' ? 'vertical' : 'horizontal'}.`,
+      `Eine Kiste mit der Masse ${kg(p.m)} steht still auf dem Boden, obwohl ein Seil mit einer Kraft von ${q(p.F, 'N')} unter einem Winkel von ${q(p.alpha, 'deg')} zur ${p.ref === 'v' ? 'Senkrechten' : 'Waagrechten'} an ihr zieht.`),
     scene(p, v) {
       const b = floorBox(p.m, null), a = rad(p.alpha);
       b.weight(); b.normal(); b.friction();
@@ -218,13 +197,11 @@
       if (hi < lo) return null;
       return { m, mu, given: 'F', F: lo + Math.floor(r() * (hi - lo + 1)) };
     },
-    solve(p, o = {}) {
-      const g = o.g || G, R = o.noFric ? 0 : p.mu * p.m * g;
-      if (p.given === 'a') return { res: p.m * p.a, R: p.mu * p.m * g, F: p.m * p.a + R };
-      return { R: p.mu * p.m * g, res: p.F - R, a: (p.F - R) / p.m };
+    solve(p) {
+      const R = p.mu * p.m * G;
+      if (p.given === 'a') return { res: p.m * p.a, R, F: p.m * p.a + R };
+      return { R, res: p.F - R, a: (p.F - R) / p.m };
     },
-    traps: ['g', 'noFric'],
-    why: { noFric: () => L('Friction is missing: the pull has to overcome friction as well, only the rest accelerates the box.', 'Die Reibung fehlt: Die Zugkraft muss auch die Reibung überwinden, nur der Rest beschleunigt die Kiste.') },
     fields: (p) => (p.given === 'a' ? [field('res', '', L('net force on the box', 'resultierende Kraft auf die Kiste')), field('R'), field('F')] : [field('R'), field('res', '', L('net force on the box', 'resultierende Kraft auf die Kiste')), field('a')]),
     title: () => L('Pulled across the floor', 'Über den Boden gezogen'),
     text: (p) => L(`A box with a mass of ${kg(p.m)} is pulled horizontally across the floor${p.given === 'a' ? `, with an acceleration of ${q(p.a, 'a')}` : ` with a force of ${q(p.F, 'N')}`}. The coefficient of kinetic friction between box and floor is ${num(p.mu, 2)}.`,
@@ -294,7 +271,7 @@
 
   const pushPair = {
     id: 'push-pair', difficulty: 3,
-    boxes: (p) => [L(`left box (${kg(p.m1)})`, `linke Kiste (${kg(p.m1)})`), L(`right box (${kg(p.m2)})`, `rechte Kiste (${kg(p.m2)})`)],
+    boxes: (p) => [L(`the left box (${kg(p.m1)})`, `die linke Kiste (${kg(p.m1)})`), L(`the right box (${kg(p.m2)})`, `die rechte Kiste (${kg(p.m2)})`)],
     make(r) {
       const m1 = pick(r, [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 1.5, 2, 3, 4]);
       const mu = r() < 0.5 ? 0 : pick(r, [0.1, 0.2, 0.3]);
@@ -302,19 +279,11 @@
       const F = Math.round(fr + (m1 + m2) * pick(r, [0.5, 1, 1.5, 2, 3, 4]));
       return F > fr + 0.3 * (m1 + m2) ? { m1, m2, mu, F } : null;
     },
-    solve(p, o = {}) {
-      const g = o.g || G, M = p.m1 + p.m2, mu = o.noFric ? 0 : p.mu;
-      const R = mu * M * g, net = p.F - R, a = net / (o.oneMass ? p.m1 : M);
-      const K = o.pass ? p.F : p.m2 * a + mu * p.m2 * g;
-      const v = { res: net, a, K };
-      if (p.mu) v.R = p.mu * M * g;
+    solve(p) {
+      const M = p.m1 + p.m2, net = p.F - p.mu * M * G, a = net / M;
+      const v = { res: net, a, K: p.m2 * a + p.mu * p.m2 * G };
+      if (p.mu) v.R = p.mu * M * G;
       return v;
-    },
-    traps: ['g', 'noFric', 'oneMass', 'pass'],
-    why: {
-      oneMass: () => L('The push accelerates both boxes: divide by the total mass.', 'Die Kraft beschleunigt beide Kisten: Teile durch die gesamte Masse.'),
-      pass: () => L('The left box passes on only part of the push: the rest accelerates the left box itself.', 'Die linke Kiste gibt nur einen Teil der Kraft weiter: Der Rest beschleunigt die linke Kiste selbst.'),
-      noFric: () => L('Friction acts on both boxes and is missing here.', 'Auf beide Kisten wirkt Reibung, und die fehlt hier.'),
     },
     fields: (p) => [...(p.mu ? [field('R', '', L('total friction force', 'gesamte Reibungskraft'))] : []), field('res'), field('a'), field('K', '', L('force of the left box on the right box', 'Kraft der linken auf die rechte Kiste'))],
     title: () => L('Pushing two boxes', 'Zwei Kisten schieben'),
@@ -365,7 +334,7 @@
 
   const ropePair = {
     id: 'rope-pair', difficulty: 3,
-    boxes: (p) => [L(`left box (${kg(p.m1)})`, `linke Kiste (${kg(p.m1)})`), L(`right box (${kg(p.m2)})`, `rechte Kiste (${kg(p.m2)})`)],
+    boxes: (p) => [L(`the left box (${kg(p.m1)})`, `die linke Kiste (${kg(p.m1)})`), L(`the right box (${kg(p.m2)})`, `die rechte Kiste (${kg(p.m2)})`)],
     forceOn: { F: 1 }, // the pull acts on the right box
     make(r) {
       const m1 = pick(r, [2, 3, 4, 5, 6]), m2 = pick(r, [1, 2, 3, 4]);
@@ -374,19 +343,11 @@
       const F = Math.round(fr + (m1 + m2) * pick(r, [0.5, 1, 1.5, 2, 3]));
       return F > fr + 0.3 * (m1 + m2) ? { m1, m2, mu1, mu2, F } : null;
     },
-    solve(p, o = {}) {
-      const g = o.g || G, f = o.noFric ? 0 : 1;
-      const R1 = p.mu1 * p.m1 * g, R2 = p.mu2 * p.m2 * g, net = p.F - f * (R1 + R2);
-      const a = net / (o.oneMass ? p.m2 : p.m1 + p.m2);
-      const v = { R1, res: net, a, S: o.pass ? p.F : p.m1 * a + f * R1 };
+    solve(p) {
+      const R1 = p.mu1 * p.m1 * G, R2 = p.mu2 * p.m2 * G, net = p.F - R1 - R2, a = net / (p.m1 + p.m2);
+      const v = { R1, res: net, a, S: p.m1 * a + R1 };
       if (p.mu2) v.R2 = R2;
       return v;
-    },
-    traps: ['g', 'noFric', 'oneMass', 'pass'],
-    why: {
-      oneMass: () => L('The pull accelerates both boxes: divide by the total mass.', 'Die Zugkraft beschleunigt beide Kisten: Teile durch die gesamte Masse.'),
-      pass: () => L('The rope only has to accelerate the left box and overcome its friction; it does not pass on the whole pull.', 'Das Seil muss nur die linke Kiste beschleunigen und ihre Reibung überwinden; es gibt nicht die ganze Zugkraft weiter.'),
-      noFric: () => L('Friction is missing: it acts against the motion and has to be overcome as well.', 'Die Reibung fehlt: Sie wirkt gegen die Bewegung und muss ebenfalls überwunden werden.'),
     },
     fields: (p) => [field('R', 1, L('friction on the left box', 'Reibung auf die linke Kiste')), ...(p.mu2 ? [field('R', 2, L('friction on the right box', 'Reibung auf die rechte Kiste'))] : []), field('res'), field('a'), field('S')],
     title: () => L('Two boxes on a rope', 'Zwei Kisten am Seil'),
@@ -437,22 +398,15 @@
   // ---------------------------------------------------------------- pulleys
   const atwood = {
     id: 'atwood', difficulty: 3,
-    boxes: (p) => [L(`left box (${kg(p.m1)})`, `linke Kiste (${kg(p.m1)})`), L(`right box (${kg(p.m2)})`, `rechte Kiste (${kg(p.m2)})`)],
+    boxes: (p) => [L(`the left box (${kg(p.m1)})`, `die linke Kiste (${kg(p.m1)})`), L(`the right box (${kg(p.m2)})`, `die rechte Kiste (${kg(p.m2)})`)],
     make(r) {
       const ms = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 12], m1 = pick(r, ms), m2 = pick(r, ms);
       // at most 6 times heavier, so that both boxes fit the drawing (sizes follow the masses)
       return m1 === m2 || Math.max(m1, m2) > 6 * Math.min(m1, m2) ? null : { m1, m2 };
     },
-    solve(p, o = {}) {
-      const g = o.g || G, hv = Math.max(p.m1, p.m2), lt = Math.min(p.m1, p.m2);
-      const net = (hv - lt) * g, a = net / (o.oneMass ? hv : p.m1 + p.m2);
-      return { res: net, a, S: o.hangW ? hv * g : o.hangW2 ? lt * g : lt * (g + a) };
-    },
-    traps: ['g', 'oneMass', 'hangW', 'hangW2'],
-    why: {
-      oneMass: () => L('The difference of the weights accelerates both boxes: divide by the total mass.', 'Die Differenz der Gewichtskräfte beschleunigt beide Kisten: Teile durch die gesamte Masse.'),
-      hangW: () => L('The boxes accelerate, so the rope force is not equal to the weight of either box.', 'Die Kisten werden beschleunigt, darum ist die Seilkraft nicht gleich der Gewichtskraft einer der Kisten.'),
-      hangW2: () => L('The boxes accelerate, so the rope force is not equal to the weight of either box.', 'Die Kisten werden beschleunigt, darum ist die Seilkraft nicht gleich der Gewichtskraft einer der Kisten.'),
+    solve(p) {
+      const hv = Math.max(p.m1, p.m2), lt = Math.min(p.m1, p.m2), net = (hv - lt) * G, a = net / (p.m1 + p.m2);
+      return { res: net, a, S: lt * (G + a) };
     },
     fields: () => [field('res'), field('a'), field('S')],
     title: () => L('Two boxes over a pulley', 'Zwei Kisten über eine Rolle'),
@@ -508,22 +462,15 @@
 
   const tablePulley = {
     id: 'table-pulley', difficulty: 4,
-    boxes: (p) => [L(`box on the table (${kg(p.m1)})`, `Kiste auf dem Tisch (${kg(p.m1)})`), L(`hanging box (${kg(p.m2)})`, `hängende Kiste (${kg(p.m2)})`)],
+    boxes: (p) => [L(`the box on the table (${kg(p.m1)})`, `die Kiste auf dem Tisch (${kg(p.m1)})`), L(`the hanging box (${kg(p.m2)})`, `die hängende Kiste (${kg(p.m2)})`)],
     make(r) {
       const m1 = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8]), m2 = pick(r, [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6]), mu = pick(r, [0.1, 0.2, 0.25, 0.3, 0.4, 0.5]);
       if (Math.max(m1, m2) > 6 * Math.min(m1, m2)) return null; // see atwood
       return m2 * G > mu * m1 * G + 0.3 * (m1 + m2) ? { m1, m2, mu } : null;
     },
-    solve(p, o = {}) {
-      const g = o.g || G, R = o.noFric ? 0 : p.mu * p.m1 * g, net = p.m2 * g - R;
-      const a = net / (o.oneMass ? p.m2 : p.m1 + p.m2);
-      return { R: p.mu * p.m1 * g, res: net, a, S: o.hangW ? p.m2 * g : p.m1 * a + R };
-    },
-    traps: ['g', 'noFric', 'oneMass', 'hangW'],
-    why: {
-      oneMass: () => L('The weight of the hanging box accelerates both boxes: divide by the total mass.', 'Die Gewichtskraft der hängenden Kiste beschleunigt beide Kisten: Teile durch die gesamte Masse.'),
-      hangW: () => L('The hanging box accelerates downwards, so the rope holds it with less than its weight.', 'Die hängende Kiste wird nach unten beschleunigt, darum hält das Seil sie mit weniger als ihrer Gewichtskraft.'),
-      noFric: () => L('Friction on the table is missing.', 'Die Reibung auf dem Tisch fehlt.'),
+    solve(p) {
+      const R = p.mu * p.m1 * G, net = p.m2 * G - R, a = net / (p.m1 + p.m2);
+      return { R, res: net, a, S: p.m1 * a + R };
     },
     fields: () => [field('R', '', L('friction on the box on the table', 'Reibung auf die Kiste auf dem Tisch')), field('res'), field('a'), field('S')],
     title: () => L('Pulled off the table', 'Vom Tisch gezogen'),
@@ -611,8 +558,8 @@
   }
   // a slope: steeper than 50° is no slope to pull a box up; with o.pyth, a flag for the texts
   const slopeMake = (r, o = {}) => ({
-    alpha: o.nice ? A345 : o.pyth ? pick(r, PYTH.filter((x) => x < 50)) : pick(r, [15, 20, 25, 30, 35, 40, 45]),
-    mu: pick(r, o.nice ? [0.1, 0.2, 0.25, 0.5] : [0.1, 0.2, 0.3, 0.4, 0.5]), ...(o.pyth ? { pyth: true } : {}),
+    alpha: o.pyth ? pick(r, PYTH.filter((x) => x < 50)) : pick(r, [15, 20, 25, 30, 35, 40, 45]),
+    mu: pick(r, [0.1, 0.2, 0.3, 0.4, 0.5]), ...(o.pyth ? { pyth: true } : {}),
   });
   const slopeComps = (p, i = '') => [
     { key: 'Gp', what: L(`The component of the weight${i ? ' of box 1' : ''} along the slope:`, `Die Komponente der Gewichtskraft${i ? ' von Kiste 1' : ''} entlang der Unterlage:`), sym: T('G', `${i}∥`), base: `${T('m')}${i ? `_${i}` : ''}\\,g`, baseVal: (i ? p.m1 : p.m) * G, fn: 'sin', fig: 'Gp' },
@@ -624,24 +571,15 @@
     make(r, o = {}) {
       return { ...slopeMake(r, o), m: pick(r, o.pyth ? PYTH_M : [1, 2, 3, 4, 5, 6, 8]), a: r() < 0.2 ? 0 : pick(r, [0.5, 1, 1.5, 2, 3]) };
     },
-    solve(p, o = {}) {
-      const g = o.g || G, a = rad(p.alpha);
-      let [sn, cs] = [Math.sin(a), Math.cos(a)];
-      if (o.swap) [sn, cs] = [cs, sn];
-      const N = o.flatN ? p.m * g : p.m * g * cs, R = p.mu * N;
-      return { res: p.m * p.a, N, R, F: p.m * p.a + (o.noSlope ? 0 : p.m * g * sn) + (o.noFric ? 0 : R) };
-    },
-    traps: ['g', 'swap', 'flatN', 'noSlope', 'noFric'],
-    why: {
-      flatN: () => L('On a slope, the normal force only balances the component of the weight perpendicular to the slope.', 'Auf einer schiefen Ebene hält die Normalkraft nur der Komponente der Gewichtskraft senkrecht zur Unterlage das Gleichgewicht.'),
-      noSlope: () => L('The component of the weight down the slope is missing: the pull has to overcome it as well.', 'Die Hangabtriebskraft fehlt: Die Zugkraft muss sie ebenfalls überwinden.'),
-      noFric: () => L('Friction is missing: it acts down the slope, against the motion.', 'Die Reibung fehlt: Sie wirkt hangabwärts, gegen die Bewegung.'),
+    solve(p) {
+      const a = rad(p.alpha), N = p.m * G * Math.cos(a), R = p.mu * N;
+      return { res: p.m * p.a, N, R, F: p.m * p.a + p.m * G * Math.sin(a) + R };
     },
     fields: () => [field('res', '', L('net force on the box', 'resultierende Kraft auf die Kiste')), field('N'), field('R'), field('F')],
     comps: (p) => slopeComps(p),
     title: () => L('Pulled up a slope', 'Den Hang hinauf gezogen'),
-    text: (p) => L(`A box with a mass of ${kg(p.m)} is pulled up a slope ${is345(p) ? `with ${sinCos()}` : `of ${q(p.alpha, 'deg')}`} by a rope parallel to the slope${p.a ? `, with an acceleration of ${q(p.a, 'a')}` : ', at constant speed'}. The coefficient of kinetic friction is ${num(p.mu, 2)}.`,
-      `Eine Kiste mit der Masse ${kg(p.m)} wird von einem Seil parallel zur Unterlage ${p.a ? `mit einer Beschleunigung von ${q(p.a, 'a')} ` : 'mit konstanter Geschwindigkeit '}einen Hang ${is345(p) ? `mit ${sinCos()}` : `mit ${q(p.alpha, 'deg')} Neigung`} hinaufgezogen. Die Gleitreibungszahl beträgt ${num(p.mu, 2)}.`),
+    text: (p) => L(`A box with a mass of ${kg(p.m)} is pulled up a slope of ${q(p.alpha, 'deg')} by a rope parallel to the slope${p.a ? `, with an acceleration of ${q(p.a, 'a')}` : ', at constant speed'}. The coefficient of kinetic friction is ${num(p.mu, 2)}.`,
+      `Eine Kiste mit der Masse ${kg(p.m)} wird von einem Seil parallel zur Unterlage ${p.a ? `mit einer Beschleunigung von ${q(p.a, 'a')} ` : 'mit konstanter Geschwindigkeit '}einen Hang mit ${q(p.alpha, 'deg')} Neigung hinaufgezogen. Die Gleitreibungszahl beträgt ${num(p.mu, 2)}.`),
     scene(p, v) {
       const a = rad(p.alpha), len = Math.min(440, 250 / Math.sin(a)), o = [50, 290];
       const w = Math.ceil(o[0] + len * Math.cos(a) + 70), sl = slope(p, w, 320, len, o, L('A box on a slope', 'Eine Kiste auf einer schiefen Ebene'));
@@ -686,34 +624,22 @@
 
   const inclinePulley = {
     id: 'incline-pulley', difficulty: 5, trig: true,
-    boxes: (p) => [L(`box on the slope (${kg(p.m1)})`, `Kiste auf dem Hang (${kg(p.m1)})`), L(`hanging box (${kg(p.m2)})`, `hängende Kiste (${kg(p.m2)})`)],
+    boxes: (p) => [L(`the box on the slope (${kg(p.m1)})`, `die Kiste auf dem Hang (${kg(p.m1)})`), L(`the hanging box (${kg(p.m2)})`, `die hängende Kiste (${kg(p.m2)})`)],
     make(r, o = {}) {
       const sl = slopeMake(r, o), { alpha, mu } = sl, m1 = pick(r, o.pyth ? PYTH_M : [1, 2, 3, 4, 5, 6]), m2 = pick(r, [1, 2, 3, 4, 5, 6, 8]);
       const a = rad(alpha), drive = m2 * G - m1 * G * (Math.sin(a) + mu * Math.cos(a));
       return drive > 0.3 * (m1 + m2) ? { ...sl, m1, m2 } : null;
     },
-    solve(p, o = {}) {
-      const g = o.g || G, a = rad(p.alpha);
-      let [sn, cs] = [Math.sin(a), Math.cos(a)];
-      if (o.swap) [sn, cs] = [cs, sn];
-      const N = o.flatN ? p.m1 * g : p.m1 * g * cs, R = p.mu * N;
-      const net = p.m2 * g - (o.noSlope ? 0 : p.m1 * g * sn) - (o.noFric ? 0 : R);
-      const acc = net / (o.oneMass ? p.m2 : p.m1 + p.m2);
-      return { N, R, res: net, a: acc, S: o.hangW ? p.m2 * g : p.m2 * (g - acc) };
-    },
-    traps: ['g', 'swap', 'flatN', 'noSlope', 'noFric', 'oneMass', 'hangW'],
-    why: {
-      flatN: () => L('On a slope, the normal force only balances the component of the weight perpendicular to the slope.', 'Auf einer schiefen Ebene hält die Normalkraft nur der Komponente der Gewichtskraft senkrecht zur Unterlage das Gleichgewicht.'),
-      noSlope: () => L('The component of the weight of the box on the slope, down the slope, is missing.', 'Die Hangabtriebskraft der Kiste auf der Unterlage fehlt.'),
-      noFric: () => L('Friction on the slope is missing.', 'Die Reibung auf der Unterlage fehlt.'),
-      oneMass: () => L('The net force accelerates both boxes: divide by the total mass.', 'Die resultierende Kraft beschleunigt beide Kisten: Teile durch die gesamte Masse.'),
-      hangW: () => L('The hanging box accelerates downwards, so the rope holds it with less than its weight.', 'Die hängende Kiste wird nach unten beschleunigt, darum hält das Seil sie mit weniger als ihrer Gewichtskraft.'),
+    solve(p) {
+      const a = rad(p.alpha), N = p.m1 * G * Math.cos(a), R = p.mu * N;
+      const net = p.m2 * G - p.m1 * G * Math.sin(a) - R, acc = net / (p.m1 + p.m2);
+      return { N, R, res: net, a: acc, S: p.m2 * (G - acc) };
     },
     comps: (p) => slopeComps(p, 1),
     fields: () => [field('N', '', L('normal force on the box on the slope', 'Normalkraft auf die Kiste auf der Unterlage')), field('R', '', L('friction on the box on the slope', 'Reibung auf die Kiste auf der Unterlage')), field('res'), field('a'), field('S')],
     title: () => L('Pulled up by a hanging box', 'Von einer hängenden Kiste hinaufgezogen'),
-    text: (p) => L(`A box with a mass of ${kg(p.m1)} lies on a slope ${is345(p) ? `with ${sinCos()}` : `of ${q(p.alpha, 'deg')}`}. A rope parallel to the slope runs from it over a pulley at the top to a hanging box with a mass of ${kg(p.m2)}, which goes down and pulls the first box up the slope. The coefficient of kinetic friction on the slope is ${num(p.mu, 2)}.`,
-      `Eine Kiste mit der Masse ${kg(p.m1)} liegt auf einer schiefen Ebene ${is345(p) ? `mit ${sinCos()}` : `mit ${q(p.alpha, 'deg')} Neigung`}. Ein Seil parallel zur Unterlage führt von ihr über eine Rolle oben am Hang zu einer hängenden Kiste mit der Masse ${kg(p.m2)}, die sinkt und die erste Kiste den Hang hinaufzieht. Die Gleitreibungszahl auf der Unterlage beträgt ${num(p.mu, 2)}.`),
+    text: (p) => L(`A box with a mass of ${kg(p.m1)} lies on a slope of ${q(p.alpha, 'deg')}. A rope parallel to the slope runs from it over a pulley at the top to a hanging box with a mass of ${kg(p.m2)}, which goes down and pulls the first box up the slope. The coefficient of kinetic friction on the slope is ${num(p.mu, 2)}.`,
+      `Eine Kiste mit der Masse ${kg(p.m1)} liegt auf einer schiefen Ebene mit ${q(p.alpha, 'deg')} Neigung. Ein Seil parallel zur Unterlage führt von ihr über eine Rolle oben am Hang zu einer hängenden Kiste mit der Masse ${kg(p.m2)}, die sinkt und die erste Kiste den Hang hinaufzieht. Die Gleitreibungszahl auf der Unterlage beträgt ${num(p.mu, 2)}.`),
     scene(p, v) {
       const a = rad(p.alpha), len = Math.min(380, 230 / Math.sin(a)), o = [40, 300], r = 16;
       const sl0 = { w: Math.ceil(o[0] + len * Math.cos(a) + 120) };

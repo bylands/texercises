@@ -4,8 +4,9 @@
 // does for ω → 0 and for ω → ∞, and at ω₀ = 1/√(LC) if the circuit has both a coil and a
 // capacitor. Each right answer rules out the curves that do not fit, until one is left.
 //
-// Ten circuits (NETS): R with L or C, in series or in parallel; RLC and LC, in series or in
-// parallel; R in series with the pair L ∥ C; R in parallel with the pair L + C. Their features
+// Thirteen circuits (NETS): a resistor, a coil or a capacitor alone; R with L or C, in series or
+// in parallel; RLC and LC, in series or in parallel; R in series with the pair L ∥ C; R in parallel
+// with the pair L + C. Their features
 // { lo, hi, res } all differ. They follow from the rules the student uses, worked out on the
 // circuit as a tree of series (s) and parallel (p) connections: for ω → 0 the coil is a wire and
 // the capacitor a gap, for ω → ∞ the other way round; at ω₀ coil and capacitor in series act
@@ -14,20 +15,22 @@
 //
 // The wrong curves come from circuits that share features with the right one, so that no single
 // feature is enough: for each feature, one of them has it too (where the pool allows).
-//   NETS[id]               { kind, conn, tree, level } (level 1: two elements, 2: RLC and LC, 3: R
-//                          with a pair L ∥ C or L + C)
+//   NETS[id]               { kind, conn, tree, level } (level 0: one element, 1: two elements, 2: RLC
+//                          and LC, 3: R with a pair L ∥ C or L + C)
 //   features(id)           { lo: '0' | 'R' | 'inf', hi: …, res: 'none' | 'minR' | 'maxR' | 'zero' | 'inf' }
 //   circuit(id, q)         the circuit with R = 1 Ω, L = q H, C = 1/q F: ω₀ = 1 rad/s for all
 //   generate(id, seed, inverse)  { match: true, inverse, net, q, cands: [id] (four), right
 //                          (index), difficulty, p }; inverse: the curve is given and the circuits
 //                          are the options (curve → circuit), its questions what the curve tells
 //                          about the circuit
-//   items(ex)              the reasoning questions for identify.js (keys lo, hi and res)
+//   items(ex)              the reasoning questions for identify.js (keys lo, hi and res; for one
+//                          element also phase: how the current is shifted against the voltage)
+//   phaseItem(id)          that question for element id (R, L or C)
 //   fits(ex, k, state)     whether candidate k agrees with the answers given so far
 //   mismatch(ex, k)        why candidate k is not the curve (its first feature that differs)
 //   reason(id, phase)      the reasoning for phase lo, hi or res (HTML)
 //   hints(ex), solution(ex)  for practice; dual(id), swapLC(id): the circuit with series and
-//                          parallel or coil and capacitor swapped (the arcade's misconceptions)
+//                          parallel or coil and capacitor swapped (the check's misconceptions)
 (function (root) {
   'use strict';
 
@@ -37,6 +40,9 @@
 
   const s = (...parts) => ({ op: 's', parts }), p = (...parts) => ({ op: 'p', parts });
   const NETS = {
+    R: { kind: 'R', conn: 'series', tree: 'R', level: 0 },
+    L: { kind: 'L', conn: 'series', tree: 'L', level: 0 },
+    C: { kind: 'C', conn: 'series', tree: 'C', level: 0 },
     'RL-series': { kind: 'RL', conn: 'series', tree: s('R', 'L'), level: 1 },
     'RC-series': { kind: 'RC', conn: 'series', tree: s('R', 'C'), level: 1 },
     'RL-parallel': { kind: 'RL', conn: 'parallel', tree: p('R', 'L'), level: 1 },
@@ -49,10 +55,12 @@
     'RLC-parallel-series': { kind: 'RLC', conn: 'parallel-series', tree: p('R', s('L', 'C')), level: 3 },
   };
   const IDS = Object.keys(NETS);
-  const DIFFICULTY = { 1: 2, 2: 3, 3: 4 };
+  const DIFFICULTY = { 0: 1, 1: 2, 2: 3, 3: 4 };
   const DUAL = { series: 'parallel', parallel: 'series', 'series-parallel': 'parallel-series', 'parallel-series': 'series-parallel' };
-  const dual = (id) => `${NETS[id].kind}-${DUAL[NETS[id].conn]}`;
-  const swapLC = (id) => ({ RL: 'RC', RC: 'RL' }[NETS[id].kind] ? `${{ RL: 'RC', RC: 'RL' }[NETS[id].kind]}-${NETS[id].conn}` : null);
+  const single = (id) => NETS[id].level === 0;
+  const dual = (id) => (single(id) ? null : `${NETS[id].kind}-${DUAL[NETS[id].conn]}`);
+  const SWAP = { RL: 'RC', RC: 'RL', L: 'C', C: 'L' };
+  const swapLC = (id) => (!SWAP[NETS[id].kind] ? null : single(id) ? SWAP[id] : `${SWAP[NETS[id].kind]}-${NETS[id].conn}`);
 
   // ---------------------------------------------------------------- the features
   // What a part is at the end of the ω axis: R, a wire (short) or a gap (open).
@@ -148,8 +156,51 @@
     return first ? `${first} ${then}` : then;
   }
 
+  // One element alone: its impedance, and what it does at an end of the ω axis.
+  const ZOF = { R: '<i>Z</i> = <i>R</i>', L: '<i>Z</i> = <i>ωL</i>', C: '<i>Z</i> = 1/(<i>ωC</i>)' };
+  function alone(id, phase) {
+    if (id === 'R') return L(`A resistor has ${ZOF.R} at every <i>ω</i>: the curve is a horizontal line at <i>R</i>.`, `Ein Widerstand hat ${ZOF.R} bei jedem <i>ω</i>: Die Kurve ist eine waagrechte Linie bei <i>R</i>.`);
+    const lo = phase === 'lo';
+    if (id === 'L') {
+      return lo ? L(`${ZOF.L} → 0: for small <i>ω</i> the coil acts like a wire.`, `${ZOF.L} → 0: Für kleines <i>ω</i> wirkt die Spule wie ein Draht.`)
+        : L(`${ZOF.L} → ∞: for large <i>ω</i> the coil acts like a gap. <i>Z</i> grows in proportion to <i>ω</i>, a straight line through the origin.`, `${ZOF.L} → ∞: Für grosses <i>ω</i> wirkt die Spule wie ein Unterbruch. <i>Z</i> wächst proportional zu <i>ω</i>, eine Gerade durch den Ursprung.`);
+    }
+    return lo ? L(`${ZOF.C} → ∞: for small <i>ω</i> the capacitor acts like a gap; it blocks a direct current.`, `${ZOF.C} → ∞: Für kleines <i>ω</i> wirkt der Kondensator wie ein Unterbruch; er sperrt einen Gleichstrom.`)
+      : L(`${ZOF.C} → 0: for large <i>ω</i> the capacitor acts like a wire. <i>Z</i> is inversely proportional to <i>ω</i>, a hyperbola.`, `${ZOF.C} → 0: Für grosses <i>ω</i> wirkt der Kondensator wie ein Draht. <i>Z</i> ist umgekehrt proportional zu <i>ω</i>, eine Hyperbel.`);
+  }
+
+  // How the current is shifted against the voltage in element id: the options and the reasoning.
+  const SHIFT = {
+    same: () => L('In phase', 'In Phase'),
+    lag: () => L('The current lags 90° behind the voltage', 'Der Strom hinkt der Spannung um 90° nach'),
+    lead: () => L('The current leads the voltage by 90°', 'Der Strom eilt der Spannung um 90° voraus'),
+    omega: () => L('It depends on <i>ω</i>', 'Das hängt von <i>ω</i> ab'),
+  };
+  const SHIFT_OF = { R: 'same', L: 'lag', C: 'lead' };
+  function shiftWhy(id) {
+    return {
+      R: L('In a resistor <i>u</i> = <i>R</i>·<i>i</i> at every moment: current and voltage peak together. They are in phase, at every <i>ω</i>.',
+        'In einem Widerstand gilt in jedem Moment <i>u</i> = <i>R</i>·<i>i</i>: Strom und Spannung erreichen ihr Maximum gleichzeitig. Sie sind in Phase, bei jedem <i>ω</i>.'),
+      L: L('In a coil the voltage is <i>u</i> = <i>L</i>·d<i>i</i>/d<i>t</i>: it peaks where the current changes fastest, a quarter period before the current peaks. The current lags 90° behind the voltage, at every <i>ω</i>.',
+        'An einer Spule ist die Spannung <i>u</i> = <i>L</i>·d<i>i</i>/d<i>t</i>: Sie ist am grössten, wo sich der Strom am schnellsten ändert, eine Viertelperiode vor dem Maximum des Stroms. Der Strom hinkt der Spannung um 90° nach, bei jedem <i>ω</i>.'),
+      C: L('In a capacitor the current is <i>i</i> = <i>C</i>·d<i>u</i>/d<i>t</i>: it peaks where the voltage changes fastest, a quarter period before the voltage peaks. The current leads the voltage by 90°, at every <i>ω</i>.',
+        'Bei einem Kondensator ist der Strom <i>i</i> = <i>C</i>·d<i>u</i>/d<i>t</i>: Er ist am grössten, wo sich die Spannung am schnellsten ändert, eine Viertelperiode vor dem Maximum der Spannung. Der Strom eilt der Spannung um 90° voraus, bei jedem <i>ω</i>.'),
+    }[id];
+  }
+  function phaseItem(id, n = 3) {
+    return {
+      key: 'phase',
+      what: L(`${n} · How is the current shifted against the voltage?`, `${n} · Wie ist der Strom gegenüber der Spannung verschoben?`),
+      options: ['same', 'lag', 'lead', 'omega'].map((v) => ({ html: SHIFT[v](), right: SHIFT_OF[id] === v, flag: v === 'omega' ? 'omega' : (v === 'lag' && id === 'C') || (v === 'lead' && id === 'L') ? 'swap' : 'other',
+        why: v === 'omega' ? L('Only the size of <i>Z</i> depends on <i>ω</i>; the shift of one element alone does not.', 'Nur die Grösse von <i>Z</i> hängt von <i>ω</i> ab, die Verschiebung bei einem Bauteil allein nicht.')
+          : { R: L('Think of <i>u</i> = <i>R</i>·<i>i</i> at each moment.', 'Denke an <i>u</i> = <i>R</i>·<i>i</i> in jedem Moment.'), L: L('Think of <i>u</i> = <i>L</i>·d<i>i</i>/d<i>t</i>: when is the voltage largest?', 'Denke an <i>u</i> = <i>L</i>·d<i>i</i>/d<i>t</i>: Wann ist die Spannung am grössten?'), C: L('Think of <i>i</i> = <i>C</i>·d<i>u</i>/d<i>t</i>: when is the current largest?', 'Denke an <i>i</i> = <i>C</i>·d<i>u</i>/d<i>t</i>: Wann ist der Strom am grössten?') }[id] })),
+      value: shiftWhy(id),
+    };
+  }
+
   // The reasoning for phase lo, hi or res (HTML).
   function reason(id, phase) {
+    if (single(id)) return alone(id, phase);
     if (phase === 'res') {
       if (!resonant(id)) return L('Without both a coil and a capacitor there is no resonance: <i>Z</i> changes steadily, without a minimum or maximum.', 'Ohne Spule und Kondensator zusammen gibt es keine Resonanz: <i>Z</i> ändert sich stetig, ohne Minimum oder Maximum.');
       return `${RES_FACT()} ${whole(id, 'res')}`;
@@ -168,9 +219,11 @@
     const q = r.pick([0.7, 0.8, 1, 1.2, 1.4]);
     // two elements: the other circuits of two elements; else any other circuit, the ones sharing
     // most features first, and for each feature one that shares it
-    const pool = shuffle(IDS.filter((x) => x !== id && (n.level === 1 ? NETS[x].level === 1 : true)))
+    const pool = shuffle(IDS.filter((x) => x !== id && (n.level <= 1 ? NETS[x].level === n.level || NETS[x].level === 1 : NETS[x].level > 0)))
       .sort((a, b) => shared(id, b).length - shared(id, a).length);
     const picked = [];
+    // one element: the other two elements, and a circuit of two that shares a feature
+    if (n.level === 0) picked.push(...IDS.filter((x) => x !== id && single(x)), pool.find((x) => NETS[x].level === 1 && shared(id, x).length));
     for (const k of phases(id)) {
       if (picked.some((x) => shared(id, x).includes(k))) continue;
       const x = pool.find((y) => !picked.includes(y) && shared(id, y).includes(k));
@@ -190,10 +243,12 @@
     const end = (k) => ({
       key: k,
       what: k === 'lo' ? L('1 · What does <i>Z</i> do for <i>ω</i> → 0?', '1 · Was macht <i>Z</i> für <i>ω</i> → 0?') : L('2 · What does <i>Z</i> do for <i>ω</i> → ∞?', '2 · Was macht <i>Z</i> für <i>ω</i> → ∞?'),
-      options: ['0', 'R', 'inf'].map((v) => ({ html: Zis[v], right: f[k] === v, why: v === 'R' && noR ? L('There is no resistor in this circuit.', 'In dieser Schaltung gibt es keinen Widerstand.') : facts(id, k) })),
+      options: ['0', 'R', 'inf'].map((v) => ({ html: Zis[v], right: f[k] === v, why: v === 'R' && noR ? L('There is no resistor in this circuit.', 'In dieser Schaltung gibt es keinen Widerstand.')
+        : single(id) ? L(`Here ${ZOF[id]}. What does that do for <i>ω</i> → ${k === 'lo' ? '0' : '∞'}?`, `Hier ist ${ZOF[id]}. Was macht das für <i>ω</i> → ${k === 'lo' ? '0' : '∞'}?`) : facts(id, k) })),
       value: reason(id, k),
     });
     const out = [end('lo'), end('hi')];
+    if (single(id)) out.push(phaseItem(id));
     if (resonant(id)) {
       out.push({
         key: 'res',
@@ -285,6 +340,15 @@
 
   function hints(ex) {
     const id = ex.net, f = features(id);
+    if (single(id)) {
+      return [
+        L('Resistor: <i>Z</i> = <i>R</i> at every <i>ω</i>. Coil: <i>Z</i> = <i>ωL</i>, small for small <i>ω</i> (a wire) and large for large <i>ω</i> (a gap). Capacitor: <i>Z</i> = 1/(<i>ωC</i>), large for small <i>ω</i> (a gap) and small for large <i>ω</i> (a wire).',
+          'Widerstand: <i>Z</i> = <i>R</i> bei jedem <i>ω</i>. Spule: <i>Z</i> = <i>ωL</i>, klein für kleines <i>ω</i> (ein Draht) und gross für grosses <i>ω</i> (ein Unterbruch). Kondensator: <i>Z</i> = 1/(<i>ωC</i>), gross für kleines <i>ω</i> (ein Unterbruch) und klein für grosses <i>ω</i> (ein Draht).'),
+        L('The shift: <i>u</i> = <i>R</i>·<i>i</i> in a resistor, <i>u</i> = <i>L</i>·d<i>i</i>/d<i>t</i> in a coil, <i>i</i> = <i>C</i>·d<i>u</i>/d<i>t</i> in a capacitor. Where the one changes fastest, the other one peaks.',
+          'Die Verschiebung: <i>u</i> = <i>R</i>·<i>i</i> beim Widerstand, <i>u</i> = <i>L</i>·d<i>i</i>/d<i>t</i> bei der Spule, <i>i</i> = <i>C</i>·d<i>u</i>/d<i>t</i> beim Kondensator. Wo sich das eine am schnellsten ändert, ist das andere am grössten.'),
+        `${L('For this element:', 'Für dieses Bauteil:')}<ul><li>${L('For <i>ω</i> → 0', 'Für <i>ω</i> → 0')}: ${Zis[f.lo]}</li><li>${L('For <i>ω</i> → ∞', 'Für <i>ω</i> → ∞')}: ${Zis[f.hi]}</li><li>${SHIFT[SHIFT_OF[id]]()}</li></ul>`,
+      ];
+    }
     const out = [
       L('Coil: its reactance <i>ωL</i> is small for small <i>ω</i> (a wire) and large for large <i>ω</i> (a gap). Capacitor: its reactance 1/(<i>ωC</i>) is large for small <i>ω</i> (a gap) and small for large <i>ω</i> (a wire).',
         'Spule: Ihr Blindwiderstand <i>ωL</i> ist für kleines <i>ω</i> klein (ein Draht) und für grosses <i>ω</i> gross (ein Unterbruch). Kondensator: Sein Blindwiderstand 1/(<i>ωC</i>) ist für kleines <i>ω</i> gross (ein Unterbruch) und für grosses <i>ω</i> klein (ein Draht).'),
@@ -318,14 +382,16 @@
   function solution(ex) {
     const id = ex.net;
     const title = { lo: L('Small ω', 'Kleines ω'), hi: L('Large ω', 'Grosses ω'), res: L('At the resonance frequency', 'Bei der Resonanzfrequenz') };
+    const steps = phases(id).map((k) => ({ title: title[k], text: ex.inverse ? inverseText(k, features(id)[k]).value : reason(id, k) }));
+    if (single(id)) steps.push({ title: L('The shift', 'Die Verschiebung'), text: shiftWhy(id) });
     return {
-      steps: phases(id).map((k) => ({ title: title[k], text: ex.inverse ? inverseText(k, features(id)[k]).value : reason(id, k) })),
+      steps,
       verdict: ex.inverse ? L(`Only circuit ${letter(ex.right)} fits all of this.`, `Nur Schaltung ${letter(ex.right)} passt zu all dem.`) : L(`Only curve ${letter(ex.right)} does all of this.`, `Nur Kurve ${letter(ex.right)} tut all das.`),
       others: ex.cands.map((x, k) => k).filter((k) => k !== ex.right).map((k) => mismatch(ex, k)),
     };
   }
 
-  const api = { inverseText, and, NETS, IDS, DIFFICULTY, features, circuit, generate, items, fits, mismatch, reason, hints, solution, marks, phases, dual, swapLC, letter, resonant };
+  const api = { inverseText, and, NETS, IDS, single, phaseItem, shiftWhy, DIFFICULTY, features, circuit, generate, items, fits, mismatch, reason, hints, solution, marks, phases, dual, swapLC, letter, resonant };
   root.Match = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

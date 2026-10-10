@@ -2,15 +2,15 @@
   'use strict';
 
   const I = window.Impedance, P = window.Plot, M = window.Match, Identify = window.Identify;
-  const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Impedance Curves', mode: 'Mode', difficulty: 'Difficulty', example: 'Example', real: 'Problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
-      tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
+      title: 'Impedance Curves', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
+      tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
       tutorNote: 'Use the arrow keys ← → to step through. In the graph, dashed lines are asymptotes and helper lines, the tangent is drawn in <span class="k-tan">orange</span>.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
@@ -31,8 +31,8 @@
       matchPrompt: 'Which of the four curves shows the impedance <i>Z</i> of this circuit against the angular frequency <i>ω</i>? Answer the questions: each right answer rules out the curves that do not fit, until one is left.',
     },
     de: {
-      title: 'Impedanzkurven', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
-      tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
+      title: 'Impedanzkurven', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
+      tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Im Graphen sind gestrichelte Linien Asymptoten und Hilfslinien, die Tangente ist <span class="k-tan">orange</span>.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
@@ -55,7 +55,7 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, st = null, probe = null, tutor = null, arcade = null, topics = null;
+  let ex = null, st = null, probe = null, tutor = null, checker = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -79,7 +79,7 @@
   }
   const markScrollable = () => {};
 
-  const axesMode = () => 'lin'; // the exercises have linear axes; a problem has its own (modeOf)
+  const axesMode = () => 'lin'; // the exercises have linear axes
   const figure = (c, ax, ann, mode = axesMode()) => `<div class="fig">${P.schematic(c)}</div><div class="fig gwrap">${P.graph(c, ax, mode, { ann })}</div>`;
   const and = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} ${L('and', 'und')} ${xs[xs.length - 1]}`);
   const list = (items) => `<ul>${items.map((x) => `<li>${x}</li>`).join('')}</ul>`;
@@ -164,11 +164,10 @@
   const solutionSteps = (e) => `<p>${e.an.intro}</p>` + e.an.steps.map((s) => `<h4>${s.title}</h4><p>${s.text}</p>`).join('');
 
   // ---------------------------------------------------------------- exercise lifecycle
-  const newSeed = () => 1 + Math.floor(Math.random() * 999999);
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
-  // (imp2: the topics were regrouped, so practice starts afresh rather than in the wrong topic)
-  const PRACTICE = 'imp2', typeOf = (e) => (e.real != null ? `real-${e.problem}` : e.match ? `${e.direct ? 'pick' : ''}${e.inverse ? 'inv' : 'match'}-${e.net}` : `${e.c.kind}-${e.c.conn}`);
+  // (imp3: the topics were regrouped, so practice starts afresh rather than in the wrong topic)
+  const PRACTICE = 'imp3', typeOf = (e) => (e.match ? `${e.direct ? 'pick' : ''}${e.inverse ? 'inv' : 'match'}-${e.net}` : `${e.c.kind}-${e.c.conn}`);
   const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
 
   function open(exercise) {
@@ -184,14 +183,13 @@
 
   // the hints, and for a matching exercise its questions, in the current language
   function prepare(e) {
-    if (e.real != null) return; // a problem (realproblems.js) brings its hints
     if (e.match) { e.items = e.direct ? [] : M.items(e); e.hints = M.hints(e); } else e.hints = hints();
   }
 
   // A new exercise of the topic chosen (topics.js), of another kind than the current one if possible.
   function fresh() { open(topics.next(ex)); }
   // the same exercise again (e.g. in the other language); links of earlier versions name a level
-  const again = (e) => (e.real != null ? problems.parse(e.id) : topics.parse(e.id) || I.generate(e.id.split('-')[0], Number(e.id.split('-')[1])));
+  const again = (e) => topics.parse(e.id) || I.generate(e.id.split('-')[0], Number(e.id.split('-')[1]));
   // an exercise of a kind of circuit: 'RL-series' and so on
   const ofType = (type, seed) => {
     // matching: match-, inv- (curve → circuit), and pickmatch-, pickinv- (directly, no questions)
@@ -219,14 +217,11 @@
     // a matching exercise has its curves instead of the graph with the probe
     for (const el of ['#graph', '#readout']) $(el).hidden = !!ex.match;
     if (ex.match) { $('#graph').innerHTML = ''; $('#pins').hidden = true; drawMatch(); return; }
-    $('#graph').innerHTML = P.graph(ex.c, ex.ax, modeOf(ex), { extra: ex.extra });
+    $('#graph').innerHTML = P.graph(ex.c, ex.ax, axesMode(), { extra: ex.extra });
     probe.draw();
   }
-  // the axes of the graph: a problem's own, else linear
-  const modeOf = (e) => (e.real != null ? e.ax.mode : axesMode());
 
   function render() {
-    if (ex.real != null) { renderReal(); return; }
     if (ex.match) {
       $('#graph').innerHTML = ''; // the probe would redraw on the graph of the exercise before
       probe.reset();
@@ -246,26 +241,15 @@
     $('#fields').innerHTML = fieldsHtml(ex.fields);
     finishRender();
   }
-  // The answers: a row of options per field; a problem's fields have a symbol and say what they are.
+  // The answers: a row of options per field.
   const fieldsHtml = (fields) => fields.map((f) => `
-      <div class="field" data-key="${f.key}">${f.what ? `<span class="what">${f.what}</span>` : ''}
-        <span class="sym" id="sym-${f.key}">${f.sym || `<i>${f.key}</i>`}&nbsp;=</span>
+      <div class="field" data-key="${f.key}">
+        <span class="sym" id="sym-${f.key}"><i>${f.key}</i>&nbsp;=</span>
         <div class="opts" role="radiogroup" aria-labelledby="sym-${f.key}">${f.options.map((o, i) => `
           <label><input type="radio" name="opt-${f.key}" value="${i}"><span>${o.label}</span></label>`).join('')}
         </div>
         <span class="fb" aria-live="polite"></span>
       </div>`).join('');
-  // A problem: its story and picture, the measured curve with the probe, and its questions.
-  function renderReal() {
-    $('#title').innerHTML = `${ex.title} ${starsOf(ex.difficulty)}`;
-    $('#prompt').innerHTML = ex.text;
-    $('#schematic').className = 'fig';
-    $('#schematic').innerHTML = ex.pic().replace(/^<div class="fig">|<\/div>$/g, '');
-    probe.reset();
-    drawGraph();
-    $('#fields').innerHTML = fieldsHtml(ex.fields);
-    finishRender();
-  }
   function finishRender() {
     $('#hint-list').innerHTML = '';
     $('#hints').hidden = true;
@@ -287,7 +271,7 @@
     rb.title = canReveal() ? '' : ui().unlocks(MAX_TRIES);
     $('#reveal-note').hidden = canReveal() || st.revealed;
     // once everything is right, Check becomes New exercise, like the button at the top
-    $('#check').textContent = st.solved ? (ex.real != null ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     $('#check').hidden = !!ex.match && !ex.direct && !st.solved; // a matching exercise with questions is solved by them
@@ -320,7 +304,7 @@
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (ex.real != null) problems.next(); else fresh(); return; } // the button reads New exercise (Next problem)
+    if (st.solved) { fresh(); return; } // the button reads New exercise
     if (ex.match && !ex.direct) return; // solved by its questions (see init), no Check
     if (ex.match) {
       const sel = $('input[name="cand"]:checked');
@@ -353,7 +337,6 @@
     Practice.markSolved(PRACTICE, ex.id);
     finish();
     st.advance = topics.solved(st, ex);
-    if (ex.real != null) problems.solved(ex);
     showStatus('ok');
   }
 
@@ -371,13 +354,12 @@
   }
 
   function drawSolution() {
-    if (ex.real != null) { $('#sol-figure').innerHTML = `<div class="fig gwrap">${P.graph(ex.c, ex.ax, ex.ax.mode, { ann: ex.ann, extra: ex.extra })}</div>`; return; }
     $('#sol-figure').innerHTML = ex.match ? matchFigure(ex, M.phases(ex.net), { marks: true }) : figure(ex.c, ex.ax, ex.an.steps.flatMap((s) => s.ann));
   }
   function showSolution() {
     drawSolution();
-    $('#sol-steps').innerHTML = ex.real != null ? ex.steps.map((x) => `<h4>${x.title}</h4><p>${x.text}</p>`).join('') : ex.match ? matchSolution(ex) : solutionSteps(ex);
-    $('#sol-short').innerHTML = ex.real != null ? ex.results : !ex.match ? results() : ex.inverse ? L(`The circuit is ${M.letter(ex.right)}.`, `Die Schaltung ist ${M.letter(ex.right)}.`) : L(`The curve is ${M.letter(ex.right)}.`, `Die Kurve ist ${M.letter(ex.right)}.`);
+    $('#sol-steps').innerHTML = ex.match ? matchSolution(ex) : solutionSteps(ex);
+    $('#sol-short').innerHTML = !ex.match ? results() : ex.inverse ? L(`The circuit is ${M.letter(ex.right)}.`, `Die Schaltung ist ${M.letter(ex.right)}.`) : L(`The curve is ${M.letter(ex.right)}.`, `Die Kurve ist ${M.letter(ex.right)}.`);
     $('#solution').hidden = false;
     math($('#solution'));
   }
@@ -423,89 +405,185 @@
       frames: () => [
         { text: `<div class="step-rule">${L('The question', 'Die Frage')}</div><p>${inv
           ? L('Which of the four circuits has this impedance curve? Instead of guessing, read the curve at both ends and at its minimum or maximum, and ask what each tells you about the circuit; each answer rules out circuits that do not fit.', 'Welche der vier Schaltungen hat diese Impedanzkurve? Statt zu raten, liest du die Kurve an beiden Enden und bei ihrem Minimum oder Maximum ab und fragst, was das über die Schaltung verrät; jede Antwort schliesst Schaltungen aus, die nicht passen.')
-          : L('Which of the four curves shows the impedance of this circuit? Instead of guessing, ask three questions about the curve; each one rules out curves that do not fit.', 'Welche der vier Kurven zeigt die Impedanz dieser Schaltung? Statt zu raten, stellst du drei Fragen an die Kurve; jede schliesst Kurven aus, die nicht passen.')}</p>`,
+          : L(`Which of the four curves shows the impedance of this circuit? Instead of guessing, ask ${ks.length === 3 ? 'three' : 'two'} questions about the curve; each one rules out curves that do not fit.`, `Welche der vier Kurven zeigt die Impedanz dieser Schaltung? Statt zu raten, stellst du ${ks.length === 3 ? 'drei' : 'zwei'} Fragen an die Kurve; jede schliesst Kurven aus, die nicht passen.`)}</p>`,
           get figure() { return matchFigure(e, []); } },
         ...ks.map((k, i) => ({ text: `<div class="step-rule">${title[k]}</div><p>${inv ? M.inverseText(k, M.features(e.net)[k]).value : M.reason(e.net, k)}</p><p>${out(ruled(k))}</p>`,
           get figure() { return matchFigure(e, ks.slice(0, i + 1)); } })),
-        { text: `<div class="step-rule">${L('The curve', 'Die Kurve')}</div><p>${M.solution(e).verdict} ${inv ? L('Backwards, the same rules:', 'Rückwärts gelten dieselben Regeln:') : ''} ${L('The rules in short: for ω → 0 a coil is a wire and a capacitor a gap, for ω → ∞ the other way round; at ω₀ coil and capacitor in series act like a wire, in parallel like a gap. A gap in series blocks (Z → ∞), a wire in parallel short-circuits (Z → 0).', 'Die Regeln kurz: Für ω → 0 ist eine Spule ein Draht und ein Kondensator ein Unterbruch, für ω → ∞ umgekehrt; bei ω₀ wirken Spule und Kondensator in Serie wie ein Draht, parallel wie ein Unterbruch. Ein Unterbruch in Serie sperrt (Z → ∞), ein Draht parallel schliesst kurz (Z → 0).')}</p>`,
+        { text: `<div class="step-rule">${L('The curve', 'Die Kurve')}</div><p>${M.solution(e).verdict} ${inv ? L('Backwards, the same rules:', 'Rückwärts gelten dieselben Regeln:') : ''} ${L(`The rules in short: for ω → 0 a coil is a wire and a capacitor a gap, for ω → ∞ the other way round${ks.length === 3 ? '; at ω₀ coil and capacitor in series act like a wire, in parallel like a gap' : ''}. A gap in series blocks (Z → ∞), a wire in parallel short-circuits (Z → 0).`, `Die Regeln kurz: Für ω → 0 ist eine Spule ein Draht und ein Kondensator ein Unterbruch, für ω → ∞ umgekehrt${ks.length === 3 ? '; bei ω₀ wirken Spule und Kondensator in Serie wie ein Draht, parallel wie ein Unterbruch' : ''}. Ein Unterbruch in Serie sperrt (Z → ∞), ein Draht parallel schliesst kurz (Z → 0).`)}</p>`,
           get figure() { return matchFigure(e, ks, { marks: true }); } },
       ],
     };
   }
-  const lessons = () => window.Lessons.EXAMPLES.map((d) => ({ ...(d.match ? matchLesson(d) : lesson(d)), also: topics.also(d.topic) }));
+  // The three elements alone: one frame each, with its curve and what it does at both ends and its
+  // shift, then the rules in short (the start of every other example).
+  function elementsLesson(d) {
+    const ids = ['R', 'L', 'C'], name = (id) => circuitName(M.circuit(id, 1));
+    const sk = (id, marks) => `<div class="fig">${P.schematic(M.circuit(id, 1))}${P.sketch(M.circuit(id, 1), 'lin', { w0: 1, zref: 1, R: id === 'R' ? 1 : null, noW0: true, label: name(id), marks: marks && id !== 'R' ? M.marks(id) : null })}</div>`;
+    const ends = (id) => (id === 'R' ? M.reason(id, 'lo') : `${M.reason(id, 'lo')} ${M.reason(id, 'hi')}`);
+    const warn = {
+      R: '',
+      L: L('A coil does not block a direct current: it is a wire for it. It only hinders a current that changes, the more the faster it changes.', 'Eine Spule sperrt keinen Gleichstrom: Für ihn ist sie ein Draht. Sie behindert nur einen Strom, der sich ändert, umso mehr, je schneller.'),
+      C: L('No charge passes through the capacitor; the current of an alternating voltage charges and discharges it. The faster that goes, the more current flows: <i>Z</i> falls with <i>ω</i>.', 'Durch den Kondensator fliesst keine Ladung hindurch; der Strom einer Wechselspannung lädt und entlädt ihn. Je schneller das geht, desto mehr Strom fliesst: <i>Z</i> fällt mit <i>ω</i>.'),
+    };
+    return {
+      name: d.name[Lang.get()], idea: d.idea[Lang.get()],
+      frames: () => [
+        { text: `<div class="step-rule">${L('The question', 'Die Frage')}</div><p>${L('The impedance <i>Z</i> = <i>Û</i>/<i>Î</i> says how much voltage an element needs per ampere of alternating current. For each element: how does <i>Z</i> change with the angular frequency <i>ω</i>, what does it do for <i>ω</i> → 0 and for <i>ω</i> → ∞, and how is the current shifted against the voltage?',
+          'Die Impedanz <i>Z</i> = <i>Û</i>/<i>Î</i> sagt, wie viel Spannung ein Bauteil pro Ampere Wechselstrom braucht. Für jedes Bauteil: Wie ändert sich <i>Z</i> mit der Kreisfrequenz <i>ω</i>, was tut es für <i>ω</i> → 0 und für <i>ω</i> → ∞, und wie ist der Strom gegenüber der Spannung verschoben?')}</p>`,
+          get figure() { return ids.map((id) => sk(id, false)).join(''); } },
+        ...ids.map((id) => ({
+          text: `<div class="step-rule">${name(id)}</div><p>${ends(id)}</p><p>${M.shiftWhy(id)}</p>${warn[id] ? `<p>${warn[id]}</p>` : ''}`,
+          get figure() { return sk(id, true); },
+        })),
+        { text: `<div class="step-rule">${L('In short', 'Kurz')}</div><p>${L('Coil: <i>Z</i> = <i>ωL</i>, a wire for <i>ω</i> → 0 and a gap for <i>ω</i> → ∞; the current lags 90° behind. Capacitor: <i>Z</i> = 1/(<i>ωC</i>), a gap for <i>ω</i> → 0 and a wire for <i>ω</i> → ∞; the current leads by 90°. Resistor: <i>Z</i> = <i>R</i>, in phase. Only <i>Z</i> depends on <i>ω</i>, not the shift. Don\'t swap coil and capacitor: the coil blocks high frequencies, the capacitor low ones.',
+          'Spule: <i>Z</i> = <i>ωL</i>, ein Draht für <i>ω</i> → 0 und ein Unterbruch für <i>ω</i> → ∞; der Strom hinkt um 90° nach. Kondensator: <i>Z</i> = 1/(<i>ωC</i>), ein Unterbruch für <i>ω</i> → 0 und ein Draht für <i>ω</i> → ∞; der Strom eilt um 90° voraus. Widerstand: <i>Z</i> = <i>R</i>, in Phase. Nur <i>Z</i> hängt von <i>ω</i> ab, nicht die Verschiebung. Spule und Kondensator nicht verwechseln: Die Spule sperrt hohe Frequenzen, der Kondensator tiefe.')}</p>`,
+          get figure() { return ids.map((id) => sk(id, true)).join(''); } },
+      ],
+    };
+  }
+  const lessons = () => window.Lessons.EXAMPLES.map((d) => ({ ...(d.elements ? elementsLesson(d) : d.match ? matchLesson(d) : lesson(d)), also: topics.also(d.topic) }));
 
-  // ---------------------------------------------------------------- arcade
-  // No calculations: a question reads R off the graph, with the four options of the practice
-  // exercise (L and C would need the slope of a tangent or a formula), or matches a circuit and a
-  // curve. The graph (linear axes, no probe) marks where R is read, without a label: the point at
-  // ω = 0, the level for large ω, or the minimum or maximum.
-  const KINDS = Object.keys(I.DIFFICULTY);
+  // ---------------------------------------------------------------- check
+  // The learning objectives (check.js), each with its kinds of question, its worked example and its
+  // practice topic (lessons.js). No calculations: the questions ask for a curve (or a circuit), for
+  // what Z does at the ends of the ω axis or at ω₀, for the shift of an element, or for R read off
+  // the minimum or maximum of an RLC curve (the four options of the practice exercise).
+  //   el      one element: which curve (match.js, circuit → curve)
+  //   phase   one element: how the current is shifted against the voltage
+  //   ends    two elements: what Z does for ω → 0 and for ω → ∞
+  //   m1, i1  two elements: circuit → curve, curve → circuit
+  //   res     RLC, LC, or R with an LC pair: what Z does at ω₀
+  //   m2      RLC and LC: circuit → curve
+  //   rlcR    R read off the minimum (series) or maximum (parallel) of an RLC curve
+  const OBJECTIVES = [
+    { id: 'elements', kinds: ['el', 'phase'], tutor: 0, topic: 0,
+      name: () => L('Sketch the impedance of a resistor, a coil and a capacitor against the angular frequency, and state how the current is shifted against the voltage in each.',
+        'Die Impedanz eines Widerstands, einer Spule und eines Kondensators gegen die Kreisfrequenz skizzieren und angeben, wie der Strom jeweils gegenüber der Spannung verschoben ist.') },
+    { id: 'limits', kinds: ['ends', 'm1', 'i1'], tutor: 1, topic: 1,
+      name: () => L('Use the reactances ωL and 1/(ωC) to predict what a circuit does for small and for large frequencies: block, short-circuit, or leave only R.',
+        'Mit den Blindwiderständen ωL und 1/(ωC) vorhersagen, was eine Schaltung bei kleinen und bei grossen Frequenzen tut: sperren, kurzschliessen oder nur R übrig lassen.') },
+    { id: 'resonance', kinds: ['res', 'm2', 'rlcR'], tutor: 2, topic: 2,
+      name: () => L('Identify the resonance as the minimum of the impedance of a series RLC circuit and the maximum of a parallel one.',
+        'Die Resonanz als Minimum der Impedanz einer RLC-Serieschaltung und als Maximum einer Parallelschaltung erkennen.') },
+  ];
+  const nets = (lvl) => M.IDS.filter((id) => M.NETS[id].level === lvl);
+  const pickOf = (xs, seed) => xs[seed % xs.length];
+  // A wrong curve or circuit: with series and parallel swapped, or coil and capacitor.
+  const flagOf = (net, id) => (id === M.dual(net) ? 'dual' : id === M.swapLC(net) ? 'swap' : 'other');
+  const matchExplain = (e) => () => {
+    const sol = M.solution(e);
+    return `<div class="figs">${matchFigure(e, M.phases(e.net), { marks: true, mode: 'lin' })}</div><div class="steps">${sol.steps.map((x) => `<h4>${x.title}</h4><p>${x.text}</p>`).join('')}` +
+      `<p>${e.inverse ? L(`The circuit is option ${e.right + 1}.`, `Die Schaltung ist Antwort ${e.right + 1}.`) : L(`The curve is option ${e.right + 1}.`, `Die Kurve ist Antwort ${e.right + 1}.`)}</p></div>`;
+  };
+  // Circuit → curve, or (inv) curve → circuit, for the circuits of a level (match.js): the four
+  // curves or circuits are the options.
+  function matchQuestion(lvl, inv, seed) {
+    const e = M.generate(pickOf(nets(lvl), seed), seed, inv), num = (k) => k + 1, one = lvl === 0;
+    return {
+      title: inv ? ui().whichCircuit : circuitName(M.circuit(e.net, e.q)),
+      text: `<p>${inv ? L('The curve shows <i>Z</i> against <i>ω</i>; the four options are circuits.', 'Die Kurve zeigt <i>Z</i> gegen <i>ω</i>; die vier Antworten sind Schaltungen.') : L('The four options are sketches of <i>Z</i> against <i>ω</i>.', 'Die vier Antworten sind Skizzen von <i>Z</i> gegen <i>ω</i>.')}</p>`,
+      figure: given(e, { mode: 'lin' }),
+      ask: inv ? L('Which circuit has this curve?', 'Welche Schaltung hat diese Kurve?') : one ? L('Which curve shows the impedance of this element?', 'Welche Kurve zeigt die Impedanz dieses Bauteils?') : L('Which curve belongs to this circuit?', 'Welche Kurve gehört zu dieser Schaltung?'),
+      options: e.cands.map((id, k) => ({
+        html: inv ? P.schematic(M.circuit(id, e.q)) : sketchOf(e, id, { mode: 'lin' }, ui().curve(k + 1), null),
+        correct: k === e.right, flag: flagOf(e.net, id), why: k === e.right ? '' : M.mismatch(e, k, num),
+      })),
+      key: `${e.net}|${inv ? 'inv' : ''}|${e.cands.join(',')}`,
+      explain: matchExplain(e),
+    };
+  }
+  // The shift of one element: the question of practice (match.js), without its number.
+  function phaseQuestion(seed) {
+    const id = pickOf(['R', 'L', 'C'], seed), it = M.phaseItem(id), c = M.circuit(id, 1);
+    return {
+      title: circuitName(c),
+      text: `<p>${L('An alternating voltage drives a current through this element.', 'Eine Wechselspannung treibt einen Strom durch dieses Bauteil.')}</p>`,
+      figure: `<div class="fig">${P.schematic(c)}</div>`,
+      ask: L('How is the current shifted against the voltage?', 'Wie ist der Strom gegenüber der Spannung verschoben?'),
+      options: it.options.map((o) => ({ html: o.html, correct: o.right, flag: o.flag, why: o.right ? '' : o.why })),
+      key: `phase|${id}`,
+      explain: () => `<div class="steps"><p>${it.value}</p></div>`,
+    };
+  }
+  // What Z does at both ends of the ω axis, for a circuit of two elements. The wrong pairs: those of
+  // the circuit with coil and capacitor swapped (the ends turned round) and with series and parallel
+  // swapped, then others.
+  const ZTO = { 0: '<i>Z</i> → 0', R: '<i>Z</i> → <i>R</i>', inf: '<i>Z</i> → ∞' };
+  function endsQuestion(seed) {
+    const id = pickOf(nets(1), seed), f = M.features(id), c = M.circuit(id, 1), key = (x) => `${x.lo}|${x.hi}`;
+    const options = [{ v: f, correct: true }];
+    const add = (v, flag) => { if (options.length < 4 && options.every((o) => key(o.v) !== key(v))) options.push({ v, flag }); };
+    add(M.features(M.swapLC(id)), 'swap');
+    add({ lo: f.hi, hi: f.lo }, 'swap');
+    add(M.features(M.dual(id)), 'dual');
+    for (const lo of ['R', '0', 'inf']) for (const hi of ['R', 'inf', '0']) add({ lo, hi }, 'other');
+    options.sort((a, b) => key(a.v).localeCompare(key(b.v)));
+    const why = (v) => (v.lo !== f.lo ? `${L('Not for <i>ω</i> → 0:', 'Nicht für <i>ω</i> → 0:')} ${M.reason(id, 'lo')}` : `${L('Not for <i>ω</i> → ∞:', 'Nicht für <i>ω</i> → ∞:')} ${M.reason(id, 'hi')}`);
+    return {
+      title: circuitName(c),
+      text: `<p>${L('Think of the reactances <i>ωL</i> and 1/(<i>ωC</i>) at both ends of the <i>ω</i> axis.', 'Denke an die Blindwiderstände <i>ωL</i> und 1/(<i>ωC</i>) an beiden Enden der <i>ω</i>-Achse.')}</p>`,
+      figure: `<div class="fig">${P.schematic(c)}</div>`,
+      ask: L('What does the impedance do for <i>ω</i> → 0, and for <i>ω</i> → ∞?', 'Was macht die Impedanz für <i>ω</i> → 0 und für <i>ω</i> → ∞?'),
+      options: options.map((o) => ({ html: `${L('<i>ω</i> → 0', '<i>ω</i> → 0')}: ${ZTO[o.v.lo]}; ${L('<i>ω</i> → ∞', '<i>ω</i> → ∞')}: ${ZTO[o.v.hi]}`, correct: !!o.correct, flag: o.flag, why: o.correct ? '' : why(o.v) })),
+      key: `ends|${id}`,
+      explain: () => `<div class="figs"><div class="fig">${P.schematic(c)}</div><div class="fig">${P.sketch(c, 'lin', { w0: 1, zref: 1, R: 1, noW0: true, marks: M.marks(id) })}</div></div><div class="steps"><h4>${L('Small ω', 'Kleines ω')}</h4><p>${M.reason(id, 'lo')}</p><h4>${L('Large ω', 'Grosses ω')}</h4><p>${M.reason(id, 'hi')}</p></div>`,
+    };
+  }
+  // What Z does at ω₀ (the question of practice, match.js), for RLC, LC or R with an LC pair. A
+  // minimum taken for a maximum (or 0 for ∞) is series and parallel swapped.
+  const RES_DUAL = { minR: 'maxR', maxR: 'minR', zero: 'inf', inf: 'zero' };
+  function resQuestion(seed) {
+    const id = pickOf([...nets(2), ...nets(3)], seed), f = M.features(id), c = M.circuit(id, 1);
+    const it = M.items({ net: id, inverse: false }).find((x) => x.key === 'res'), vals = ['minR', 'maxR', 'zero', 'inf'];
+    return {
+      title: circuitName(c),
+      text: `<p>${L('At the resonance frequency <i>ω</i>₀ = 1/√(<i>LC</i>) the reactances of coil and capacitor are equal.', 'Bei der Resonanzfrequenz <i>ω</i>₀ = 1/√(<i>LC</i>) sind die Blindwiderstände von Spule und Kondensator gleich gross.')}</p>`,
+      figure: `<div class="fig">${P.schematic(c)}</div>`,
+      ask: L('What does the impedance do at <i>ω</i>₀?', 'Was macht die Impedanz bei <i>ω</i>₀?'),
+      options: it.options.map((o, k) => ({ html: o.html, correct: o.right, flag: vals[k] === RES_DUAL[f.res] ? 'dual' : 'other', why: o.right ? '' : o.why })),
+      key: `res|${id}`,
+      explain: () => `<div class="figs"><div class="fig">${P.schematic(c)}</div><div class="fig">${P.sketch(c, 'lin', { w0: 1, zref: 1, R: M.NETS[id].kind.includes('R') ? 1 : null, marks: M.marks(id) })}</div></div><div class="steps"><p>${it.value}</p></div>`,
+    };
+  }
+  // R read off the curve of an RLC circuit, where it is marked (the minimum or the maximum, without
+  // a label), with the four options of the practice exercise.
   function annForR(an) {
     const has = (s, f) => s.ann.some(f);
     const s = an.steps.find((x) => has(x, (a) => (a.t === 'pt' || a.t === 'h') && /R/.test(a.label || '') && !/√2/.test(a.label || '')));
     return s ? s.ann.filter((a) => a.t === 'pt' || a.t === 'h').map((a) => ({ ...a, label: '' })) : [];
   }
-  // Matching questions (kinds m2 to m4, of difficulty 2 to 4: two elements, RLC and LC, R with an
-  // LC pair): the four curves are the options; a wrong one with series and parallel swapped, or
-  // coil and capacitor, is a misconception.
-  // Backwards (kinds i3 to i5: the curve is given, the options are circuits) one level harder.
-  function matchQuestion(kind, seed) {
-    const inv = kind[0] === 'i', level = Number(kind.slice(1)) - (inv ? 2 : 1), nets = M.IDS.filter((id) => M.NETS[id].level === level);
-    const e = M.generate(nets[seed % nets.length], seed, inv), num = (k) => k + 1;
-    return {
-      title: inv ? ui().whichCircuit : circuitName(M.circuit(e.net, e.q)),
-      text: `<p>${inv ? L('The curve shows <i>Z</i> against <i>ω</i>; the four options are circuits.', 'Die Kurve zeigt <i>Z</i> gegen <i>ω</i>; die vier Antworten sind Schaltungen.') : L('The four options are sketches of <i>Z</i> against <i>ω</i>.', 'Die vier Antworten sind Skizzen von <i>Z</i> gegen <i>ω</i>.')}</p>`,
-      figure: given(e, { mode: 'lin' }),
-      ask: inv ? L('Which circuit has this curve?', 'Welche Schaltung hat diese Kurve?') : L('Which curve belongs to this circuit?', 'Welche Kurve gehört zu dieser Schaltung?'),
-      options: e.cands.map((id, k) => ({
-        html: inv ? P.schematic(M.circuit(id, e.q)) : sketchOf(e, id, { mode: 'lin' }, ui().curve(k + 1), null),
-        correct: k === e.right, flag: id === M.dual(e.net) ? 'dual' : id === M.swapLC(e.net) ? 'swap' : 'other', why: k === e.right ? '' : M.mismatch(e, k, num),
-      })),
-      key: `${e.net}|${e.cands.join(',')}`,
-      explain: () => {
-        const sol = M.solution(e);
-        return `<div class="figs">${matchFigure(e, M.phases(e.net), { marks: true, mode: 'lin' })}</div><div class="steps">${sol.steps.map((x) => `<h4>${x.title}</h4><p>${x.text}</p>`).join('')}` +
-          `<p>${inv ? L(`The circuit is option ${e.right + 1}.`, `Die Schaltung ist Antwort ${e.right + 1}.`) : L(`The curve is option ${e.right + 1}.`, `Die Kurve ist Antwort ${e.right + 1}.`)}</p></div>`;
-      },
-    };
-  }
-  function arcadeQuestion(kind, seed) {
-    if (kind[0] === 'm' || kind[0] === 'i') return matchQuestion(kind, seed);
-    const d = Number(kind.slice(1)), kinds = KINDS.filter((k) => I.DIFFICULTY[k] === d);
-    const e = I.generate(kinds[seed % kinds.length], seed);
-    const f = e.fields.find((x) => x.key === 'R');
+  function rlcRQuestion(seed) {
+    const e = I.generate(pickOf(['series RLC', 'parallel RLC'], seed), seed), f = e.fields.find((x) => x.key === 'R');
     return {
       title: circuitName(e.c),
-      text: `<p>${L('The graph shows the impedance <i>Z</i> against the angular frequency <i>ω</i>.', 'Der Graph zeigt die Impedanz <i>Z</i> gegen die Kreisfrequenz <i>ω</i>.')}</p>`,
+      text: `<p>${L('The graph shows the impedance <i>Z</i> against the angular frequency <i>ω</i>; the point marked is the resonance.', 'Der Graph zeigt die Impedanz <i>Z</i> gegen die Kreisfrequenz <i>ω</i>; der markierte Punkt ist die Resonanz.')}</p>`,
       figure: figure(e.c, e.ax, annForR(e.an), 'lin'),
       ask: L('Read off the resistance <i>R</i>.', 'Lies den Widerstand <i>R</i> ab.'),
       options: f.options.map((o) => ({ html: o.label, correct: !!o.ok, flag: o.tag, why: o.why })),
+      key: `rlcR|${e.id}`,
       explain: () => `<div class="figs">${figure(e.c, e.ax, e.an.steps.flatMap((s) => s.ann), 'lin')}</div><div class="steps">${solutionSteps(e)}<p class="short">${results(e)}</p></div>`,
     };
   }
-  const arcadeSource = {
+  function checkQuestion(kind, seed) {
+    if (kind === 'el') return matchQuestion(0, false, seed);
+    if (kind === 'phase') return phaseQuestion(seed);
+    if (kind === 'ends') return endsQuestion(seed);
+    if (kind === 'm1' || kind === 'm2') return matchQuestion(Number(kind[1]), false, seed);
+    if (kind === 'i1') return matchQuestion(1, true, seed);
+    if (kind === 'res') return resQuestion(seed);
+    return rlcRQuestion(seed);
+  }
+  const checkSource = {
     id: 'imp',
-    kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })).concat([2, 3, 4].map((d) => ({ id: `m${d}`, difficulty: d })), [3, 4, 5].map((d) => ({ id: `i${d}`, difficulty: d }))),
-    question: arcadeQuestion,
-    concept: { corner: 'corner', sqrt2: 'corner', side: 'corner', reactance: 'resonance', dual: 'serpar', swap: 'coilcap' },
+    objectives: OBJECTIVES,
+    question: checkQuestion,
+    concept: { swap: 'coilcap', dual: 'serpar', omega: 'omega', reactance: 'resonance' },
     concepts: () => ({
-      corner: L('Z at the corner taken for R', 'Z bei der Grenzfrequenz für R gehalten'),
-      resonance: L('the reactance at resonance taken for R', 'der Blindwiderstand bei Resonanz für R gehalten'),
-      serpar: L('series and parallel swapped', 'Serie und parallel vertauscht'),
       coilcap: L('coil and capacitor swapped', 'Spule und Kondensator vertauscht'),
+      serpar: L('series and parallel swapped', 'Serie und parallel vertauscht'),
+      omega: L('the shift of one element taken to depend on ω', 'die Verschiebung eines Bauteils für abhängig von ω gehalten'),
+      resonance: L('the reactance at resonance taken for R', 'der Blindwiderstand bei Resonanz für R gehalten'),
     }),
-    intro: () => ({
-      tag: L('Read <i>R</i> off impedance curves, and match circuits and curves: as many as you can in <b>5 minutes</b>.', 'Lies <i>R</i> an Impedanzkurven ab und ordne Schaltungen und Kurven einander zu: so viele wie möglich in <b>5 Minuten</b>.'),
-      rule: L('Questions get harder as you go. Read <i>R</i> off the graph where it is marked, pick the curve that belongs to a circuit, or the circuit that belongs to a curve; choose one of four answers, or press 1–4.',
-        'Die Fragen werden nach und nach schwieriger. Lies <i>R</i> dort am Graphen ab, wo es markiert ist, wähle die Kurve, die zu einer Schaltung gehört, oder die Schaltung, die zu einer Kurve gehört; wähle eine von vier Antworten oder drücke 1–4.'),
-      example: L('series and parallel swapped', 'Serie und parallel vertauscht'),
-    }),
-    // the series RLC example with all its helper lines, and its impedance
-    hero: () => {
-      const c = window.Lessons.EXAMPLES.find((e) => e.circuit && e.circuit.kind === 'RLC' && e.circuit.conn === 'series').circuit, ax = I.axesFor(c), an = I.analysis(c, ax);
-      return `<div class="figs"><div class="fig gwrap">${P.graph(c, ax, 'lin', { ann: an.steps.flatMap((s) => s.ann) })}</div></div>` +
-        '<p class="ar-law">$Z = \\sqrt{R^2 + \\left(\\omega L - \\frac{1}{\\omega C}\\right)^2}$</p>';
-    },
   };
 
   // ---------------------------------------------------------------- language
@@ -513,7 +591,6 @@
     document.title = ui().title;
     Lang.apply(ui());
     if (topics) topics.relabel();
-    if (problems) problems.menu();
   }
 
   // The same exercise in the other language, with the choices, feedback, hints and solution kept.
@@ -538,49 +615,35 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
   // ---------------------------------------------------------------- modes
-  // Practice: random exercises; tutor: worked examples; arcade: a timed game (arcade.js). Hints
-  // and solution belong to practice. Leaving the arcade ends a running game.
+  // Practice: random exercises; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('imp-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); }); // practice and problems share the card
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
   function practise() {
     setMode('practice');
-    if (ex && ex.real == null) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
   }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
-  }
-
-  // Problems (realproblems.js, shared problems.js), chosen in a menu.
-  let problems = null;
-  function realMode() {
-    setMode('real');
-    if (problems.is(ex)) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
 
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
-    const re = problems.parse(h);
-    if (re) {
-      setMode('real');
-      if (!ex || ex.id !== h) open(re);
-      problems.menu();
-      return true;
-    }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     let m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
@@ -605,11 +668,11 @@
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     applyStatic();
     Lang.wire(switchLang);
 
-    probe = window.createProbe($('#graph'), () => ({ c: ex.c, ax: ex.ax, mode: modeOf(ex) }), $('#readout'), $('#pins'));
+    probe = window.createProbe($('#graph'), () => ({ c: ex.c, ax: ex.ax, mode: axesMode() }), $('#readout'), $('#pins'));
     topics = window.Topics.create({
       app: PRACTICE,
       topics: window.Lessons.TOPICS.map((t) => ({
@@ -623,10 +686,6 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.ImpProblems.PROBLEMS, make: window.ImpProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
     // A new choice clears the feedback on the old one.
@@ -638,12 +697,13 @@
       row.querySelector('.fb').textContent = '';
     });
     // the questions of a matching exercise: a right answer fades the options that do not fit; once
-    // one option is left, the exercise is solved (counted as the attempt that solves it), and the
-    // questions not needed any more are shown answered, with their reasoning. A wrong answer counts
-    // as an attempt.
+    // one option is left (and for one element, its shift is answered too), the exercise is solved
+    // (counted as the attempt that solves it), and the questions not needed any more are shown
+    // answered, with their reasoning. A wrong answer counts as an attempt.
+    const shiftDone = () => ex.items.every((it) => it.key !== 'phase' || Identify.right(it, st.ident));
     Identify.attach($('#fields'), () => (ex && ex.match ? ex.items : []), () => st.ident, (right) => {
       if (!right) st.tries++;
-      else if (!st.solved && ex.cands.filter((x, k) => M.fits(ex, k, answeredOf())).length === 1) {
+      else if (!st.solved && shiftDone() && ex.cands.filter((x, k) => M.fits(ex, k, answeredOf())).length === 1) {
         ex.items.forEach((it) => { st.ident[it.key] = it.options.findIndex((o) => o.right); });
         st.tries++;
         solved();
@@ -662,15 +722,20 @@
       const t = window.Lessons.EXAMPLES[i].topic, k = window.Lessons.TOPICS[t].stages.findIndex((st) => st.example === i);
       topics.go(t, k >= 0 ? k : null); setMode('practice'); fresh();
     } });
-    arcade = Arcade.create(arcadeSource, { math, markScrollable, stored, store });
+    checker = Check.create(checkSource, {
+      math, markScrollable, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (t) => { topics.go(t); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('imp-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    // (the arcade of earlier versions is now the check, and its problems are gone)
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

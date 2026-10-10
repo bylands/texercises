@@ -7,6 +7,7 @@
   --q-y: #c62828;
   --band: #fdf0c4;
   --motion: #1f5fd6;
+  --osc-i: #2e7d32;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -16,6 +17,7 @@
     --q-y: #ff7b72;
     --band: #3a3320;
     --motion: #74a7ff;
+    --osc-i: #7ccf80;
   }
 }
 
@@ -60,10 +62,25 @@ svg .pname { fill: var(--ink); font: italic 600 15px var(--serif); paint-order: 
 .choices.pics svg.ygraph { max-width: none; }
 @media (max-width: 560px) { .choices.pics { grid-template-columns: minmax(0, 1fr); } }
 
-
-/* arcade: manim's colours */
-#arcade { --q-y: #fc6255; --grid: #1c1c1c; --grid-major: #333; --band: #222; --motion: #58c4dd; }
-#arcade .ar-opt .val svg.ygraph { max-width: 100%; }
+/* the drawings (figures.js, on the shared figure kit): the pointer and its body, the LC circuit */
+svg.tb .osc-ptr { stroke: var(--q-y); stroke-width: 2.4; stroke-linecap: round; }
+svg.tb .osc-dot { fill: var(--q-y); stroke: var(--card); stroke-width: 1.5; }
+svg.tb .osc-body { fill: var(--q-y); stroke: var(--ink); stroke-width: 1; }
+svg.tb .osc-angle { fill: none; stroke: var(--ink); stroke-width: 1; }
+svg.tb .osc-turn path { fill: none; stroke: var(--motion); stroke-width: 1.6; }
+svg.tb .osc-turn polygon { fill: var(--motion); }
+svg.tb .osc-turn text { fill: var(--motion); font: 15px var(--serif); }
+svg.tb .osc-vec line { stroke: var(--vc); stroke-width: 2.2; }
+svg.tb .osc-vec polygon { fill: var(--vc); }
+svg.tb .osc-vec text { fill: var(--vc); font: 15px var(--serif); paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+svg.tb .osc-vec.osc-small line { stroke-width: 1.6; }
+svg.tb .osc-e { --vc: var(--q-y); }
+svg.tb .osc-i { --vc: var(--osc-i); }
+svg.tb .osc-plate { fill: none; stroke: var(--ink); stroke-width: 3; }
+svg.tb .osc-charge { fill: var(--q-y); font: 600 16px system-ui, sans-serif; }
+svg.tb .osc-fieldline { fill: none; stroke: var(--motion); stroke-width: 1.3; stroke-dasharray: 5 4; }
+/* the voltage (solid) and the current (dashed) of an LC circuit */
+svg .curve.icurve { stroke-dasharray: 7 5; }
 
 /* a result in the text of a step (in formulas, KaTeX marks it: see ui.css) */
 span.result { background: var(--ok-bg); border-radius: 3px; padding: 0.05em 0.25em; }

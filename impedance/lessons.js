@@ -1,95 +1,90 @@
-// The tutor's worked examples and the topics of practice (topics.js). First which curve belongs to a
-// circuit (match.js), with steps from two elements to R with an LC pair; then the series and the
-// parallel circuits, each with a step and a worked example per kind (RL, RC, RLC), with round
-// values (R in Ω, L in H, C in F). An example's topic is its index in TOPICS. The steps of the
-// worked examples come from analysis() in generator.js, as for the practice solutions.
+// The tutor's worked examples and the topics of practice (topics.js), in the order of the learning
+// objectives: first the impedance and the shift of a resistor, a coil and a capacitor alone; then
+// what a circuit does for small and for large ω, from the reactances ωL and 1/(ωC) (which curve
+// belongs to a circuit, and which circuit to a curve, match.js); then the resonance, the minimum of
+// Z in series and its maximum in parallel; last, R, L and C read off the curve of an RLC circuit,
+// with round values (R in Ω, L in H, C in F). An example's topic is its index in TOPICS. The steps
+// of those worked examples come from analysis() in generator.js, as for the practice solutions.
 (function (root) {
   'use strict';
 
   const EXAMPLES = [
     {
-      // which curve belongs to a circuit (match.js): the worked example has fixed curves to choose from
-      topic: 0,
-      name: { en: 'Circuit → curve', de: 'Schaltung → Kurve' },
-      idea: { en: 'Which curve belongs to a circuit? Reason before you choose: what Z does for small and for large ω, and at the resonance frequency. Each answer rules out curves.', de: 'Welche Kurve gehört zu einer Schaltung? Überlege, bevor du wählst: was Z für kleines und für grosses ω tut, und bei der Resonanzfrequenz. Jede Antwort schliesst Kurven aus.' },
+      // the three elements alone (app.js, elementsLesson)
+      topic: 0, elements: true,
+      name: { en: 'Resistor, coil, capacitor', de: 'Widerstand, Spule, Kondensator' },
+      idea: { en: 'Each element alone: how its impedance changes with ω, and how the current is shifted against the voltage. Everything else follows from these three.', de: 'Jedes Bauteil allein: wie sich seine Impedanz mit ω ändert und wie der Strom gegenüber der Spannung verschoben ist. Alles Weitere folgt aus diesen dreien.' },
+    },
+    {
+      // two elements: only the ends of the ω axis
+      topic: 1,
+      name: { en: 'Small and large ω', de: 'Kleines und grosses ω' },
+      idea: { en: 'Which curve belongs to a circuit? Look at both ends of the ω axis: for ω → 0 a coil is a wire and a capacitor a gap, for ω → ∞ the other way round. Each answer rules out curves.', de: 'Welche Kurve gehört zu einer Schaltung? Schau an beide Enden der ω-Achse: Für ω → 0 ist eine Spule ein Draht und ein Kondensator ein Unterbruch, für ω → ∞ umgekehrt. Jede Antwort schliesst Kurven aus.' },
+      match: { net: 'RC-parallel', q: 1, cands: ['RL-parallel', 'RC-series', 'RC-parallel', 'RL-series'] },
+    },
+    {
+      // the resonance: both ends, then ω₀
+      topic: 2,
+      name: { en: 'Resonance', de: 'Resonanz' },
+      idea: { en: 'At the resonance frequency ω₀ = 1/√(LC) the reactances of coil and capacitor are equal: in series the pair acts like a wire, so Z has its minimum R; in parallel like a gap, so Z has its maximum R.', de: 'Bei der Resonanzfrequenz ω₀ = 1/√(LC) sind die Blindwiderstände von Spule und Kondensator gleich: In Serie wirkt das Paar wie ein Draht, Z hat also sein Minimum R; parallel wie ein Unterbruch, Z hat also sein Maximum R.' },
       match: { net: 'RLC-series', q: 1, cands: ['LC-series', 'RL-series', 'RLC-series', 'RC-series'] },
     },
     {
       // backwards: which circuit has this curve; each question rules out one circuit
-      topic: 0,
+      topic: 2,
       name: { en: 'Curve → circuit', de: 'Kurve → Schaltung' },
       idea: { en: 'Which circuit has this curve? Read the curve at both ends and at its minimum or maximum, and ask what can block the whole current there, or short-circuit everything.', de: 'Welche Schaltung hat diese Kurve? Lies die Kurve an beiden Enden und bei ihrem Minimum oder Maximum ab und frage, was dort den ganzen Strom sperren oder alles kurzschliessen kann.' },
       match: { net: 'RLC-parallel-series', q: 1, inverse: true, cands: ['LC-series', 'RL-series', 'RLC-series-parallel', 'RLC-parallel-series'] },
     },
     {
-      topic: 1,
-      name: { en: 'Series RL', de: 'RL in Serie' },
-      idea: { en: 'The impedance starts at R and grows with ω. R is read at ω = 0, L from the slope of the graph for large ω.', de: 'Die Impedanz beginnt bei R und wächst mit ω. R liest man bei ω = 0 ab, L aus der Steigung des Graphen für grosses ω.' },
-      circuit: { kind: 'RL', conn: 'series', R: 100, L: 0.1, C: null },
-    },
-    {
-      topic: 1,
-      name: { en: 'Series RC', de: 'RC in Serie' },
-      idea: { en: 'The impedance comes down from infinity and levels off at R. C follows from the corner frequency, where Z = √2·R.', de: 'Die Impedanz kommt von unendlich herunter und nähert sich R. C folgt aus der Grenzfrequenz, bei der Z = √2·R ist.' },
-      circuit: { kind: 'RC', conn: 'series', R: 100, L: null, C: 1e-5 },
-    },
-    {
-      topic: 1,
-      name: { en: 'Series RLC', de: 'RLC in Serie' },
+      topic: 3,
+      name: { en: 'Values: series RLC', de: 'Werte: RLC in Serie' },
       idea: { en: 'At resonance the reactances of coil and capacitor cancel: the minimum of Z is R. L is the slope for large ω, and C follows from ω₀ = 1/√(LC).', de: 'Bei der Resonanz heben sich die Blindwiderstände von Spule und Kondensator auf: Das Minimum von Z ist R. L ist die Steigung für grosses ω, und C folgt aus ω₀ = 1/√(LC).' },
       circuit: { kind: 'RLC', conn: 'series', R: 50, L: 0.05, C: 2e-5 },
     },
     {
-      topic: 2,
-      name: { en: 'Parallel RL', de: 'RL parallel' },
-      idea: { en: 'The impedance starts at 0 and levels off at R. L is the slope of the tangent at the origin.', de: 'Die Impedanz beginnt bei 0 und nähert sich R. L ist die Steigung der Tangente im Ursprung.' },
-      circuit: { kind: 'RL', conn: 'parallel', R: 200, L: 0.05, C: null },
-    },
-    {
-      topic: 2,
-      name: { en: 'Parallel RC', de: 'RC parallel' },
-      idea: { en: 'The impedance starts at R and falls towards 0. C follows from the corner frequency, where Z = R/√2.', de: 'Die Impedanz beginnt bei R und fällt gegen 0. C folgt aus der Grenzfrequenz, bei der Z = R/√2 ist.' },
-      circuit: { kind: 'RC', conn: 'parallel', R: 500, L: null, C: 1e-6 },
-    },
-    {
-      topic: 2,
-      name: { en: 'Parallel RLC', de: 'RLC parallel' },
+      topic: 3,
+      name: { en: 'Values: parallel RLC', de: 'Werte: RLC parallel' },
       idea: { en: 'At resonance only the resistor counts: the maximum of Z is R. L is the slope at the origin, and C follows from ω₀ = 1/√(LC).', de: 'Bei der Resonanz zählt nur der Widerstand: Das Maximum von Z ist R. L ist die Steigung im Ursprung, und C folgt aus ω₀ = 1/√(LC).' },
       circuit: { kind: 'RLC', conn: 'parallel', R: 300, L: 0.1, C: 1e-5 },
     },
   ];
 
-  // the circuits of the matching exercises (match.js)
-  const NETS = ['RL-series', 'RC-series', 'RL-parallel', 'RC-parallel', 'RLC-series', 'RLC-parallel', 'LC-series', 'LC-parallel', 'RLC-series-parallel', 'RLC-parallel-series'];
-    // The topics of practice (topics.js), each with the worked example it starts from; a step with
+  // the circuits of the matching exercises (match.js): two elements, and those with a resonance
+  const TWO = ['RL-series', 'RC-series', 'RL-parallel', 'RC-parallel'];
+  const RES = ['RLC-series', 'RLC-parallel', 'LC-series', 'LC-parallel', 'RLC-series-parallel', 'RLC-parallel-series'];
+  // The topics of practice (topics.js), each with the worked example it starts from; a step with
   // an example of its own links to that one.
   const TOPICS = [
     {
-      name: { en: 'Circuits and curves', de: 'Schaltungen und Kurven' }, example: 0,
+      name: { en: 'Resistor, coil, capacitor', de: 'Widerstand, Spule, Kondensator' }, example: 0,
       stages: [
-        { name: { en: 'Two elements', de: 'Zwei Bauteile' }, types: ['match-RL-series', 'match-RC-series', 'match-RL-parallel', 'match-RC-parallel'] },
-        { name: { en: 'RLC and LC', de: 'RLC und LC' }, types: ['match-RLC-series', 'match-RLC-parallel', 'match-LC-series', 'match-LC-parallel'] },
-        { name: { en: 'R with an LC pair', de: 'R mit LC-Paar' }, types: ['match-RLC-series-parallel', 'match-RLC-parallel-series'] },
-        { name: { en: 'Curve → circuit', de: 'Kurve → Schaltung' }, types: NETS.map((id) => `inv-${id}`), example: 1 },
+        { name: { en: 'Curve and shift', de: 'Kurve und Verschiebung' }, types: ['match-R', 'match-L', 'match-C'] },
+      ],
+    },
+    {
+      name: { en: 'Small and large ω', de: 'Kleines und grosses ω' }, example: 1,
+      stages: [
+        { name: { en: 'Circuit → curve', de: 'Schaltung → Kurve' }, types: TWO.map((id) => `match-${id}`) },
+        { name: { en: 'Curve → circuit', de: 'Kurve → Schaltung' }, types: TWO.map((id) => `inv-${id}`), example: 3 },
         // directly, without the questions
-        { name: { en: 'Circuit → curve, directly', de: 'Schaltung → Kurve, direkt' }, types: NETS.map((id) => `pickmatch-${id}`), example: 0 },
-        { name: { en: 'Curve → circuit, directly', de: 'Kurve → Schaltung, direkt' }, types: NETS.map((id) => `pickinv-${id}`), example: 1 },
+        { name: { en: 'Directly', de: 'Direkt' }, types: TWO.flatMap((id) => [`pickmatch-${id}`, `pickinv-${id}`]) },
       ],
     },
     {
-      name: { en: 'Series circuits', de: 'Serieschaltungen' }, example: 2,
+      name: { en: 'Resonance', de: 'Resonanz' }, example: 2,
       stages: [
-        { name: { en: 'RL', de: 'RL' }, types: ['RL-series'], example: 2 },
-        { name: { en: 'RC', de: 'RC' }, types: ['RC-series'], example: 3 },
-        { name: { en: 'RLC', de: 'RLC' }, types: ['RLC-series'], example: 4 },
+        { name: { en: 'RLC and LC', de: 'RLC und LC' }, types: RES.slice(0, 4).map((id) => `match-${id}`) },
+        { name: { en: 'R with an LC pair', de: 'R mit LC-Paar' }, types: RES.slice(4).map((id) => `match-${id}`) },
+        { name: { en: 'Curve → circuit', de: 'Kurve → Schaltung' }, types: RES.map((id) => `inv-${id}`), example: 3 },
+        { name: { en: 'Directly', de: 'Direkt' }, types: RES.flatMap((id) => [`pickmatch-${id}`, `pickinv-${id}`]) },
       ],
     },
     {
-      name: { en: 'Parallel circuits', de: 'Parallelschaltungen' }, example: 5,
+      // reading the values off a graph with the probe: one step, all six circuits
+      name: { en: 'Values from the curve', de: 'Werte aus der Kurve' }, example: 4,
       stages: [
-        { name: { en: 'RL', de: 'RL' }, types: ['RL-parallel'], example: 5 },
-        { name: { en: 'RC', de: 'RC' }, types: ['RC-parallel'], example: 6 },
-        { name: { en: 'RLC', de: 'RLC' }, types: ['RLC-parallel'], example: 7 },
+        { name: { en: 'R, L and C', de: 'R, L und C' }, types: ['RL-series', 'RC-series', 'RLC-series', 'RL-parallel', 'RC-parallel', 'RLC-parallel'] },
       ],
     },
   ];

@@ -385,7 +385,7 @@
       </div>
     </a>
 
-    <a class="app" href="/impedance/" data-modes="tutor practice real arcade">
+    <a class="app" href="/impedance/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="Impedance curve of a series RLC circuit with its minimum R at the resonance frequency">
         <path class="guide" d="M30 105 H222 M110 105 V125"/>
         <path class="axis" d="M30 132 V14 M25 20 L30 14 L35 20 M24 125 H226 M220 120 L226 125 L220 130"/>
@@ -397,7 +397,7 @@
       </svg>
       <div class="text">
         <h2>Impedance Curves</h2>
-        <p>Read R, L and C off the impedance curve of RL, RC and RLC circuits, and match circuits to their curves.</p>
+        <p>Sketch the impedance of R, L and C against frequency, predict from ωL and 1/(ωC) what a circuit does at low and high frequencies, and spot resonance as the minimum (series) or maximum (parallel) of Z.</p>
       </div>
     </a>
 
@@ -485,7 +485,7 @@
       </div>
     </a>
 
-    <a class="app" href="/coe/" data-modes="tutor practice real arcade">
+    <a class="app" href="/coe/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A ball dropped from a height and halfway down, with bars of its potential and kinetic energy">
         <path class="axis" d="M14 112 H100 M124 112 H210"/>
         <path class="guide" d="M30 112 V40 M136 112 V76"/>
@@ -502,7 +502,7 @@
       </svg>
       <div class="text">
         <h2>Energy Conservation</h2>
-        <p>Falls, throws, pendulums and springs: from energy in each state to speeds and heights, with numbers or formulas.</p>
+        <p>Energy bookkeeping: the forms of energy in each state as bar charts, the energy balance solved with symbols, springs, friction, and why the turning point of a bungee jump is not its equilibrium.</p>
       </div>
     </a>
 
@@ -541,7 +541,7 @@
       </div>
     </a>
 
-    <a class="app" href="/force-systems/" data-modes="tutor practice real arcade">
+    <a class="app" href="/force-systems/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A box pulled up a slope; its weight points down, the pulling force up the slope">
         <path class="axis" d="M20 128 H220 M30 128 L210 48 V128"/>
         <polygon class="res" points="84.8,103.6 125,85.7 111.2,54.6 71,72.5"/>
@@ -553,8 +553,8 @@
         <text class="label" x="106" y="116">F<tspan dy="3">G</tspan></text>
       </svg>
       <div class="text">
-        <h2>Force Systems</h2>
-        <p>Boxes, ropes, pulleys and slopes: find forces and accelerations with Newton’s second law.</p>
+        <h2>Free-Body Diagrams</h2>
+        <p>Draw every force on a chosen system, resolve the weight on a slope, choose the system that makes a rope force external, and set up Newton’s second law along each axis.</p>
       </div>
     </a>
 
@@ -625,7 +625,7 @@
       </div>
     </a>
 
-    <a class="app" href="/oscillations/" data-modes="tutor practice real arcade">
+    <a class="app" href="/oscillations/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A harmonic oscillation: the displacement against time, a sine curve, with its period marked">
         <path class="axis" d="M20 75 H226 M26 132 V18"/>
         <path class="curve" d="M26 75 C40 30, 58 30, 72 75 S104 120, 118 75 S150 30, 164 75 S196 120, 210 75"/>
@@ -637,7 +637,7 @@
       </svg>
       <div class="text">
         <h2>Oscillations</h2>
-        <p>Harmonic or not: equations of motion, their periods and graphs, and the speed and acceleration of an oscillating body.</p>
+        <p>Simple harmonic motion as the shadow of a turning pointer: harmonic or not, equations and graphs, where v and a are largest, and the LC circuit as the same equation.</p>
       </div>
     </a>
 
@@ -805,17 +805,17 @@
       const DE = {
         'bulb-brightness': ['Helligkeit von Lampen', 'Sage voraus, welche Lampen in Serien- und Parallelschaltungen heller leuchten.', 'Stromkreis mit einer Batterie, einer Lampe in Serie und zwei Lampen parallel'],
         'circuit-trainer': ['Widerstandsschaltungen', 'Bestimme Ersatzwiderstände, Ströme und Spannungen Schritt für Schritt.', 'Stromkreis mit einer Batterie, einem Widerstand in Serie und zwei Widerständen parallel'],
-        impedance: ['Impedanzkurven', 'Lies R, L und C aus der Impedanzkurve von RL-, RC- und RLC-Schaltungen ab und ordne Schaltungen ihren Kurven zu.', 'Impedanzkurve einer RLC-Serienschaltung mit ihrem Minimum R bei der Resonanzfrequenz'],
+        impedance: ['Impedanzkurven', 'Die Impedanz von R, L und C gegen die Frequenz skizzieren, mit ωL und 1/(ωC) vorhersagen, was eine Schaltung bei tiefen und hohen Frequenzen tut, und die Resonanz als Minimum (Serie) bzw. Maximum (parallel) von Z erkennen.', 'Impedanzkurve einer RLC-Serienschaltung mit ihrem Minimum R bei der Resonanzfrequenz'],
         coulomb: ['Coulombkraft', 'Punktladungen: das Coulombgesetz, Faktoren und resultierende Kräfte als Vektoren, von Ladungen auf einer Geraden bis zu Rangfolgen und Punkten ohne Kraft.', 'Drei Punktladungen: die Kräfte zweier negativer Ladungen auf eine positive, im rechten Winkel, und ihre Summe'],
-        coe: ['Energieerhaltung', 'Fallen, Würfe, Pendel und Federn: von der Energie in jedem Zustand zu Geschwindigkeiten und Höhen, mit Zahlen oder Formeln.', 'Ein Ball, aus einer Höhe fallen gelassen und auf halbem Weg, mit Balken seiner Lage- und kinetischen Energie'],
+        coe: ['Energieerhaltung', 'Energie-Buchhaltung: die Energieformen in jedem Zustand als Balkendiagramme, die Energiebilanz mit Symbolen gelöst, Federn, Reibung, und warum der Umkehrpunkt eines Bungee-Sprungs nicht die Gleichgewichtslage ist.', 'Ein Ball, aus einer Höhe fallen gelassen und auf halbem Weg, mit Balken seiner Lage- und kinetischen Energie'],
         'force-concepts': ['Kraft und Bewegung', 'Trägheit, resultierende Kraft und Beschleunigung, Kräftegleichgewicht in Bewegung und die Kraft zum Zentrum auf der Kreisbahn: Erkenne die Fehlvorstellungen hinter verlockenden Antworten.', 'Ein schräg geworfener Ball: Im höchsten Punkt wirkt nur seine Gewichtskraft, während seine Geschwindigkeit nach vorne zeigt'],
         interaction: ['Wechselwirkung', 'Das dritte Newtonsche Gesetz: gleich grosse, entgegengesetzte Kräfte auf verschiedene Körper, die Gegenkraft finden, und warum Gewichtskraft und Normalkraft kein Paar sind.', 'Die Erde und ein Apfel ziehen sich mit gleich grossen, entgegengesetzten Kräften an'],
-        'force-systems': ['Kräftesysteme', 'Kisten, Seile, Rollen und schiefe Ebenen: Bestimme Kräfte und Beschleunigungen mit dem Aktionsprinzip.', 'Eine Kiste wird einen Hang hinaufgezogen: Ihre Gewichtskraft zeigt nach unten, die Zugkraft hangaufwärts'],
+        'force-systems': ['Kräftediagramme', 'Jede Kraft auf ein gewähltes System einzeichnen, die Gewichtskraft auf der schiefen Ebene zerlegen, das System so wählen, dass die Seilkraft äussere Kraft wird, und das Aktionsprinzip für jede Achse aufstellen.', 'Eine Kiste wird einen Hang hinaufgezogen: Ihre Gewichtskraft zeigt nach unten, die Zugkraft hangaufwärts'],
         'induction-match': ['Elektromagnetische Induktion', 'Vom Flussdiagramm zur induzierten Spannung und zurück, eine Schleife, die durch ein Feld fährt, die Lenzsche Regel: Es zählt die Steigung, nicht der Wert.', 'Ein Flussdiagramm, das steigt, gleich bleibt und fällt, und die induzierte Spannung: negativ, null, dann positiv'],
         'rl-switch': ['Schaltvorgänge mit Spulen', 'Unmittelbar nach dem Umlegen eines Schalters in einem Stromkreis mit Spulen: Der Spulenstrom kann nicht springen.', 'Stromkreis mit einer Batterie, einem Schalter, einem Widerstand und einer Spule'],
         torque: ['Drehmoment und Gleichgewicht', 'Hebelarme und Drehmomente mit Drehsinn, die Gewichtskraft im Schwerpunkt und beide Gleichgewichtsbedingungen, auch mit der Kraft in der Drehachse.', 'Ein Balken im Gleichgewicht auf einer Stütze: links eine leichte Last weit aussen, rechts eine schwere Last nahe an der Stütze'],
         'centre-of-mass': ['Schwerpunkt und Kippen', 'Schwerpunkte von Drahtfiguren, stabiles, labiles und indifferentes Gleichgewicht, und wann ein geneigter Körper umkippt.', 'Ein auf die Kante gekippter Block: Die Senkrechte durch seinen Schwerpunkt trifft den Boden noch innerhalb der Kante'],
-        oscillations: ['Schwingungen', 'Harmonisch oder nicht: Bewegungsgleichungen, ihre Perioden und Graphen, und Geschwindigkeit und Beschleunigung eines schwingenden Körpers.', 'Eine harmonische Schwingung: die Auslenkung gegen die Zeit, eine Sinuskurve, mit ihrer Periode markiert'],
+        oscillations: ['Schwingungen', 'Die harmonische Schwingung als Schatten eines drehenden Zeigers: harmonisch oder nicht, Gleichungen und Graphen, wo v und a am grössten sind, und der Schwingkreis als dieselbe Gleichung.', 'Eine harmonische Schwingung: die Auslenkung gegen die Zeit, eine Sinuskurve, mit ihrer Periode markiert'],
         'wave-propagation': ['Wellenausbreitung', 'Wellenbuckel auf einem Seil: wie sie laufen, wie sich ein Ort bewegt, wie sie sich überlagern und wie sie an einem festen oder losen Ende reflektiert werden.', 'Ein Wellenbuckel auf einem Seil läuft auf ein festes Ende an einer Wand zu'],
         'electric-field': ['Elektrisches Feld', 'Feldlinien und ihre Regeln, Kräfte auf Ladungen, Felder, die sich addieren, Dipole und Ladungen, die durch einen Kondensator fliegen.', 'Feldlinien, die von einer positiven zu einer negativen Ladung laufen'],
         'electric-potential': ['Elektrisches Potential', 'Potential und Spannung, Äquipotentiallinien, das Potential von Punktladungen, beschleunigte Teilchen und das Elektronvolt.', 'Äquipotentialkreise um eine Ladung, nach aussen weiter auseinander'],

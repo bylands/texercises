@@ -89,7 +89,7 @@
       const xs = this.xs && this.xs.length === n && this.xs.every((x, i) => i === 0 || x - this.xs[i - 1] >= gw + 40) ? this.xs : null;
       states.forEach((s, i) => {
         const cx = xs ? xs[i] : cx0 + i * step, x0 = cx - gw / 2, shown = !opts.only || opts.only.has(i), hl = opts.hl && opts.hl.has(i);
-        if (hl) this.rect(x0 - 12, y0 - H - 12, gw + 24, H + 46, 'bars-hl');
+        if (hl) this.rect(x0 - 12, y0 - H - 12, gw + 24, H + 56, 'bars-hl');
         // the total energy, the same in every state
         this.line(x0 - 6, y0 - H, x0 + gw + 6, y0 - H, 'w total');
         forms.forEach((k, j) => {
@@ -98,7 +98,7 @@
           this.text(x + cw / 2, y0 + 15, EC.esvg(k), 'lbl tiny');
         });
         this.line(x0 - 6, y0, x0 + gw + 6, y0, 'w axis');
-        this.text(cx, y0 + 34, EC.CIRCLED[i], `lbl state${hl ? ' hl' : ''}`);
+        this.text(cx, y0 + 44, EC.CIRCLED[i], `lbl state${hl ? ' hl' : ''}`);
       });
       return this;
     }

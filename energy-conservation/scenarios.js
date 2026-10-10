@@ -2,7 +2,7 @@
 // thrown up, part of the way down, a spring launcher, a pendulum, a track, a throw from a tower,
 // a ball shot up by a spring, the speed as a fraction of the final speed, a block on a hanging
 // spring, and a ball dropped onto a spring. A scenario has an id, a difficulty from 1 to 5 (for
-// practice levels and the arcade), spring if a spring stores energy, and:
+// practice levels and the stars of an exercise), spring if a spring stores energy, and:
 //   make(r)            random parameters p, with p.V the values of all symbols (g included)
 //   vars(p)            the given quantities, for a formula answer (symbol keys, see core.js)
 //   want(p)            the wanted quantity { key, unit, what }
@@ -21,6 +21,8 @@
 //   steps(p, formal)   the worked solution after the energies of the states: [{ rule, text,
 //                      bars, hl }], bars and hl the states whose energy bars to show and highlight
 //   hint(p, formal)    the last hint: the equation to solve
+//   slips(p)           (optional) heights measured from the wrong level: [{ i, k, tex, why() }],
+//                      a wrong energy of state i (form k), for "find the error" (concepts.js)
 (function (root) {
   'use strict';
 
@@ -72,6 +74,12 @@
   const given = (key, formal, x, u, expr) => (formal ? (expr ? lab(key, expr) : S(key)) : lab(key, q(x, u)));
   const wanted = (key) => lab(key, '?');
   const hl = (view, i) => !!(view.hl && view.hl.has(i));
+  // a height measured from the wrong level: the distance fallen h − h' instead of the height h'
+  const fallen = (i, h, hp) => [{ i, k: 'pot', tex: pot(`(${h} - ${hp})`),
+    why: () => L(`The potential energy counts the height above the zero level, $${hp}$, not the distance fallen, $${h} - ${hp}$.`, `Die Lageenergie zählt die Höhe über dem Nullniveau, $${hp}$, nicht die Fallstrecke $${h} - ${hp}$.`) }];
+  // the starting height counted from the wrong level: down to where the spring starts, not to the lowest point
+  const above = (i, h, full) => [{ i, k: 'pot', tex: pot(h),
+    why: () => L(`The zero level is the lowest point: the start is $${full}$ above it, not only $${h}$.`, `Das Nullniveau ist der tiefste Punkt: Der Start liegt $${full}$ darüber, nicht nur $${h}$.`) }];
   // a vertical dimension from the zero level y0 up to y with a dotted line over to the body at bx
   function height(fig, x, y0, y, label, bx) {
     fig.dim(x, y0, y, label);
@@ -191,6 +199,7 @@
     energies: () => [{ pot: pot('h') }, { pot: pot("h'"), kin: kin("v'") }],
     efun: () => [{ pot: Pot((V) => V.h) }, { pot: Pot((V) => V.hp), kin: Kin((V) => V.vp) }],
     esyms: () => ['m', 'g', 'h', 'hp', 'vp'],
+    slips: () => fallen(1, 'h', "h'"),
     rel: (p) => (V) => ({ ...V, hp: fval(p.fr) * V.h }),
     zero: () => L('the ground', 'der Boden'),
     title: () => L('Part of the way down', 'Ein Teil des Wegs'),
@@ -627,6 +636,7 @@
     energies: () => [{ pot: pot('h') }, { pot: pot("h'"), kin: kin("v'") }, { kin: kin('v_0') }],
     efun: () => [{ pot: Pot((V) => V.h) }, { pot: Pot((V) => V.hp), kin: Kin((V) => V.vp) }, { kin: Kin((V) => V.v0) }],
     esyms: () => ['m', 'g', 'h', 'hp', 'vp', 'v0'],
+    slips: () => fallen(1, 'h', "h'"),
     rel: (p) => (V) => ({ ...V, vp: fval(p.fr) * V.v0 }),
     zero: () => L('the ground', 'der Boden'),
     title: () => L('A fraction of the final speed', 'Ein Bruchteil der Endgeschwindigkeit'),
@@ -705,6 +715,8 @@
       return p.ask === 'v' ? all : [all[0], all[2]];
     },
     esyms: (p) => (p.ask === 'v' ? ['m', 'g', 's', 'k', 'vp'] : ['m', 'g', 's', 'k']),
+    slips: (p) => (p.ask === 'v' ? [{ i: 1, k: 'pot', tex: pot(`${coef(p.fr)}s`),
+      why: () => L(`The block has dropped by $${coef(p.fr)}s$; its height above the zero level, the lowest point, is the rest, $${coef(sub(ONE, p.fr))}s$.`, `Der Klotz ist um $${coef(p.fr)}s$ gesunken; seine Höhe über dem Nullniveau, dem tiefsten Punkt, ist der Rest, $${coef(sub(ONE, p.fr))}s$.`) }] : []),
     zero: () => L('the lowest point of the block', 'der tiefste Punkt des Klotzes'),
     title: () => L('A block on a spring', 'Ein Klotz an der Feder'),
     text(p, formal) {
@@ -788,6 +800,7 @@
     energies: () => [{ pot: pot('(h + s)') }, { pot: pot('s'), kin: kin('v') }, { el: el('s') }],
     efun: () => [{ pot: Pot((V) => V.h + V.s) }, { pot: Pot((V) => V.s), kin: Kin((V) => V.v) }, { el: El((V) => V.s) }],
     esyms: () => ['m', 'g', 'h', 's', 'v', 'k'],
+    slips: () => above(0, 'h', 'h + s'),
     zero: () => L('the lowest point of the ball', 'der tiefste Punkt des Balls'),
     title: () => L('Dropped onto a spring', 'Auf eine Feder fallen gelassen'),
     text: (p, formal) => (formal
@@ -1018,6 +1031,7 @@
     energies: () => [{ pot: pot('(\\ell + s)') }, { pot: pot('s'), kin: kin('v') }, { el: el('s') }],
     efun: () => [{ pot: Pot((V) => V.l + V.s) }, { pot: Pot((V) => V.s), kin: Kin((V) => V.v) }, { el: El((V) => V.s) }],
     esyms: () => ['m', 'g', 'l', 's', 'v', 'k'],
+    slips: () => above(0, '\\ell', '\\ell + s'),
     zero: () => L('the lowest point of the jump', 'der tiefste Punkt des Sprungs'),
     title: () => L('Bungee jump', 'Bungee-Sprung'),
     text: (p, formal) => (formal
@@ -1088,6 +1102,7 @@
     energies: () => [{ pot: pot("(h' + 2\\,s)") }, { el: el('(2\\,s)') }],
     efun: () => [{ pot: Pot((V) => V.hp + 2 * V.s) }, { el: El((V) => 2 * V.s) }],
     esyms: () => ['m', 'g', 'hp', 's', 'k'],
+    slips: () => above(0, "h'", "h' + 2s"),
     zero: () => L('the lowest point of the ball in the second drop', 'der tiefste Punkt des Balls beim zweiten Versuch'),
     title: () => L('Twice the compression', 'Doppelte Stauchung'),
     text: (p, formal) => (formal
@@ -1180,6 +1195,7 @@
     energies: () => [{ pot: pot('h') }, { pot: pot("h'"), kin: kin("v'") }],
     efun: () => [{ pot: Pot((V) => V.h) }, { pot: Pot((V) => V.hp), kin: Kin((V) => V.vp) }],
     esyms: () => ['m', 'g', 'h', 'hp', 'vp'],
+    slips: () => fallen(1, 'h', "h'"),
     zero: () => L('the ground', 'der Boden'),
     title: () => L('Kinetic and potential energy', 'Kinetische und potentielle Energie'),
     text(p, formal) {

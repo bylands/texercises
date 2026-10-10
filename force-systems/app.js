@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const FS = window.FS, Lang = window.Lang, Arcade = window.Arcade, { generate, tutorial, practiceOf } = window.Forces;
+  const FS = window.FS, Lang = window.Lang, Check = window.Check, { practiceOf, tutorial } = window.Forces;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
@@ -12,39 +12,41 @@
   };
   const UI = {
     en: {
-      title: 'Force Systems', mode: 'Mode', difficulty: 'Difficulty', calc: 'Calculator', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise', real: 'Real problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
+      title: 'Free-Body Diagrams', mode: 'Mode', difficulty: 'Difficulty', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
       tutorNote: `Use the arrow keys ← → to step through. The forces a step is about are highlighted. Colours: ${LEGEND.en}.`,
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
-      fill: 'Fill in all fields, then check again.',
-      forcesHead: '1 · Forces on each box', compsHead: '2 · Components', compsNote: 'Choose the right expression for each component; its value is then given.', idFirst: 'First choose the right expression for each component.', resultsHead: (n) => `${n} · Results`, forcesNote: (n) => (n > 1 ? 'Tick every force that acts on each box. Each force you tick appears in the drawing.' : 'Tick every force that acts on the box. Each force you tick appears in the drawing.'), box: 'Box',
+      forcesHead: '1 · Forces on each box', compsHead: (n) => `${n} · Components`, compsNote: 'Choose the right expression for each component; its value is then given.',
+      eqsHead: (n) => `${n} · Equations`, eqsNote: 'Choose the right equation for each system and axis. The worked solution then solves them.',
+      idFirst: 'First choose the right expression or equation for each part.',
+      forcesNote: (n) => (n > 1 ? 'Tick every force that acts on each box. Each force you tick appears in the drawing.' : 'Tick every force that acts on the box. Each force you tick appears in the drawing.'),
       tableOk: '✓ The forces are right.', tableBad: (n) => `✗ ${n === 1 ? 'One entry is' : `${n} entries are`} not right yet.`,
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
-      number: 'Enter a number', correct: 'Correct', sign: 'Give the size of the force (a positive number)', close: 'Close: check your rounding', wrong: 'Not correct',
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
     de: {
-      title: 'Kräftesysteme', mode: 'Modus', difficulty: 'Schwierigkeit', calc: 'Taschenrechner', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
+      title: 'Kräftediagramme', mode: 'Modus', difficulty: 'Schwierigkeit', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
       tutorNote: `Mit den Pfeiltasten ← → blätterst du weiter. Die Kräfte, um die es in einem Schritt geht, sind hervorgehoben. Farben: ${LEGEND.de}.`,
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
-      fill: 'Fülle alle Felder aus und prüfe dann nochmals.',
-      forcesHead: '1 · Kräfte auf jede Kiste', compsHead: '2 · Komponenten', compsNote: 'Wähle für jede Komponente den richtigen Ausdruck; ihr Wert wird dann angegeben.', idFirst: 'Wähle zuerst für jede Komponente den richtigen Ausdruck.', resultsHead: (n) => `${n} · Resultate`, forcesNote: (n) => (n > 1 ? 'Kreuze jede Kraft an, die auf die jeweilige Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.' : 'Kreuze jede Kraft an, die auf die Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.'), box: 'Kiste',
+      forcesHead: '1 · Kräfte auf jede Kiste', compsHead: (n) => `${n} · Komponenten`, compsNote: 'Wähle für jede Komponente den richtigen Ausdruck; ihr Wert wird dann angegeben.',
+      eqsHead: (n) => `${n} · Gleichungen`, eqsNote: 'Wähle für jedes System und jede Achse die richtige Gleichung. Die ausführliche Lösung löst sie dann auf.',
+      idFirst: 'Wähle zuerst für jeden Teil den richtigen Ausdruck bzw. die richtige Gleichung.',
+      forcesNote: (n) => (n > 1 ? 'Kreuze jede Kraft an, die auf die jeweilige Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.' : 'Kreuze jede Kraft an, die auf die Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.'),
       tableOk: '✓ Die Kräfte stimmen.', tableBad: (n) => `✗ ${n === 1 ? 'Ein Feld stimmt' : `${n} Felder stimmen`} noch nicht.`,
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
-      number: 'Gib eine Zahl ein', correct: 'Richtig', sign: 'Gib den Betrag der Kraft an (eine positive Zahl)', close: 'Knapp daneben: Prüfe deine Rundung', wrong: 'Nicht richtig',
       tutorBtns: { example: (i, n) => `Beispiel ${i} von ${n}`, back: '← Zurück', prevEx: '← Vorheriges Beispiel', next: 'Weiter →', nextEx: 'Nächstes Beispiel →', done: 'Selbst üben →' },
     },
   };
   const ui = () => UI[FS.getLang()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -76,28 +78,7 @@
     });
   }
 
-  // ---------------------------------------------------------------- input and feedback
-  function parse(s) {
-    s = s.trim().replace(/,/g, '.').replace(/[−–—‒]/g, '-').replace(/[^\d.)]+$/, '').trim();
-    const m = s.match(/^([-+]?\d*\.?\d+(?:e[-+]?\d+)?)(?:\s*\/\s*(\d*\.?\d+))?$/i);
-    if (!m) return NaN;
-    return m[2] ? Number(m[1]) / Number(m[2]) : Number(m[1]);
-  }
-
-  // Right within 2 % or when rounded to one decimal place; otherwise the answer under a typical wrong idea, a sign or a rounding error.
-  function judge(x, f) {
-    if (Number.isNaN(x)) return { cls: 'bad', msg: ui().number };
-    const e = f.value, near = (y, z, tol) => Math.abs(y - z) <= tol * Math.max(Math.abs(z), 0.05);
-    if (near(x, e, 0.02) || Math.abs(x - e) <= 0.05 + 1e-9) return { cls: 'ok', msg: ui().correct };
-    for (const t of f.traps) if (near(x, t.value, 0.015)) return { cls: 'bad', msg: t.why };
-    if (e !== 0 && near(-x, e, 0.02)) return { cls: 'warn', msg: ui().sign };
-    if (e !== 0 && near(x, e, 0.06)) return { cls: 'warn', msg: ui().close };
-    return { cls: 'bad', msg: ui().wrong };
-  }
-
   // ---------------------------------------------------------------- exercise lifecycle
-  const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
   const PRACTICE = 'fs', typeOf = (e) => e.scenario;
   const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
@@ -110,29 +91,19 @@
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
     topics.shown(ex);
-    $(`#in-${ex.fields[0].key}`).focus({ preventScroll: true });
   }
 
   // A new exercise of the topic and stage chosen (topics.js), of another type than the current
   // one if possible.
   function fresh() { open(topics.next(ex)); }
-  // the same exercise again (e.g. in the other language); links of earlier versions name a level
-  const again = (e) => (e.real != null ? window.RealProblems.realOf(e.real, e.seed) : topics.parse(e.id) || generate(e.level, e.seed, e.calc));
+  // the same exercise again (e.g. in the other language)
+  const again = (e) => topics.parse(e.id);
 
   // The topics of practice: those of the tutor's examples, with their stages (lessons.js).
   const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
     name: () => e.name[FS.getLang()],
     stages: e.practice.map((s) => ({ name: s.en ? () => s[FS.getLang()] : null, types: s.types })),
   }));
-
-  // The answer fields; their inputs have the ids `${prefix}-${key}`.
-  const fieldsHtml = (exercise, prefix) => exercise.fields.map((f) => `
-      <div class="field" data-key="${f.key}">
-        <label for="${prefix}-${f.key}" class="sym"><span class="what">${f.what}</span> $${FS.tex(...f.sym)}$&nbsp;=</label>
-        <input id="${prefix}-${f.key}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" spellcheck="false">
-        <span class="unit">${FS.UNITS[f.unit]}</span>
-        <span class="fb" aria-live="polite"></span>
-      </div>`).join('');
 
   // The table of forces: a row per kind of force, a column per box (at most two, so that it fits
   // a phone), a box to tick per cell.
@@ -155,7 +126,7 @@
 
   function render() {
     $('#title').textContent = ex.title;
-    // the difficulty, as in the arcade: ★★★☆☆
+    // the difficulty: ★★★☆☆
     const stars = document.createElement('span');
     stars.className = 'stars';
     stars.textContent = '★'.repeat(ex.difficulty) + '☆'.repeat(5 - ex.difficulty);
@@ -164,15 +135,14 @@
     stars.setAttribute('role', 'img');
     $('#title').append(' ', stars);
     $('#prompt').innerHTML = ex.text;
-    $('#figure').innerHTML = ex.taskFigure(new Set());
-    $('#forces-part').hidden = !ex.forces; // real problems: no table of forces
+    $('#figure').innerHTML = ex.forces ? ex.taskFigure(new Set()) : ex.taskFigure();
+    $('#forces-part').hidden = !ex.forces; // find the error: no table of forces
     if (ex.forces) {
       $('#forces-note').textContent = ui().forcesNote(ex.forces.boxes.length);
       $('#ftable').innerHTML = forcesHtml();
       $('#ftable-fb').textContent = '';
       $('#ftable-fb').className = 'table-fb';
     }
-    $('#fields').innerHTML = fieldsHtml(ex, 'in');
     showComps();
     $('#hint-list').innerHTML = '';
     $('#hints').hidden = true;
@@ -183,16 +153,27 @@
     updateButtons();
   }
 
-  // The components to identify first (angled forces, see identify.js): the app gives their values.
-  const identItems = () => ex.comps.map((c) => Identify.trig({ ...c, alpha: ex.p.alpha, num: (x) => FS.num(x), unit: '\\mathrm{N}' }));
+  // The components to identify (angled forces, see identify.js), with values the app gives, and
+  // the equations to choose (equations.js). Find the error is a choice only: a right choice solves it.
+  const compItems = () => ex.comps.map((c) => Identify.trig({ ...c, alpha: ex.p.alpha, num: (x) => FS.num(x), unit: '\\mathrm{N}' }));
+  const eqItems = () => ex.eqs;
+  const choiceOnly = () => !ex.forces;
+  const allIdentified = () => Identify.ok(compItems(), st.ident) && Identify.ok(eqItems(), st.ident);
   // the forces of the components identified so far (drawn in), all once the solution is shown
-  const identified = () => ex.comps.filter((c) => (st && st.revealed) || (st && Identify.right(identItems().find((it) => it.key === c.key), st.ident))).map((c) => c.fig);
+  const identified = () => ex.comps.filter((c) => (st && st.revealed) || (st && Identify.right(compItems().find((it) => it.key === c.key), st.ident))).map((c) => c.fig);
   function showComps() {
+    const state = st ? st.ident || {} : {}, done = st && st.revealed;
+    const n = ex.forces ? 2 : 1, m = n + (ex.comps.length ? 1 : 0); // numbered after the table of forces
     $('#comps-part').hidden = !ex.comps.length;
-    const parts = (ex.forces ? 1 : 0) + (ex.comps.length ? 1 : 0) + 1; // numbered only when there are several
-    $('#results-head').textContent = parts > 1 ? ui().resultsHead(parts) : ui().results;
-    $('#comps').innerHTML = Identify.html(identItems(), st ? st.ident || {} : {}, st && st.revealed);
+    $('#comps-head').textContent = ui().compsHead(n);
+    $('#comps').innerHTML = Identify.html(compItems(), state, done);
+    $('#eqs-part').hidden = !ex.eqs.length;
+    $('#eqs-part').classList.toggle('only', choiceOnly());
+    $('#eqs-head').textContent = ui().eqsHead(m);
+    $('#eqs-note').textContent = ui().eqsNote;
+    $('#eqs').innerHTML = Identify.html(eqItems(), state, done);
     math($('#comps'));
+    math($('#eqs'));
   }
 
   // solved now, or solved before (its solution can be looked at again)
@@ -200,9 +181,10 @@
 
   function updateButtons() {
     // once everything is right, Check becomes New exercise, like the button at the top
-    $('#check').textContent = st.solved ? (isReal() ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
+    $('#check').hidden = choiceOnly() && !st.solved; // a choice only is solved by choosing
     const left = ex.hints.length - st.hints;
     const hb = $('#hint');
     hb.disabled = left === 0 || st.revealed;
@@ -213,48 +195,36 @@
     $('#reveal-note').hidden = canReveal() || st.revealed;
   }
 
-  // Marks every field; true if all are right, null if some are empty.
+  // Marks the table of forces; true if it is right (or there is none).
   function feedback() {
-    let allOk = true, anyEmpty = false, wrongCells = 0;
-    if (ex.forces) document.querySelectorAll('#ftable input').forEach((box) => {
+    if (!ex.forces) return true;
+    let wrongCells = 0;
+    document.querySelectorAll('#ftable input').forEach((box) => {
       const right = box.checked === ex.forces.table[box.dataset.i][box.dataset.j];
       box.closest('td').className = right ? 'ok' : 'bad';
       if (!right) wrongCells++;
     });
-    if (ex.forces) {
-      $('#ftable-fb').className = `table-fb ${wrongCells ? 'bad' : 'ok'}`;
-      $('#ftable-fb').textContent = wrongCells ? ui().tableBad(wrongCells) : ui().tableOk;
-    }
-    if (wrongCells) allOk = false;
-    ex.fields.forEach((f) => {
-      const row = $('#fields').querySelector(`.field[data-key="${f.key}"]`);
-      const raw = row.querySelector('input').value;
-      if (!raw.trim()) { anyEmpty = true; allOk = false; row.className = 'field'; row.querySelector('.fb').textContent = ''; return; }
-      const r = judge(parse(raw), f);
-      row.className = `field ${r.cls}`;
-      row.querySelector('.fb').textContent = r.msg;
-      if (r.cls !== 'ok') allOk = false;
-    });
-    return allOk ? true : anyEmpty ? null : false;
+    $('#ftable-fb').className = `table-fb ${wrongCells ? 'bad' : 'ok'}`;
+    $('#ftable-fb').textContent = wrongCells ? ui().tableBad(wrongCells) : ui().tableOk;
+    return !wrongCells;
   }
 
-  // The status line: null (none), 'fill', 'ok' or 'bad'.
+  // The status line: null (none), 'ident', 'ok' or 'bad'.
   function showStatus(kind) {
     const el = $('#status');
     st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
-    el.textContent = !kind ? '' : kind === 'fill' ? ui().fill : kind === 'ident' ? ui().idFirst
+    el.textContent = !kind ? '' : kind === 'ident' ? ui().idFirst
       : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (st.tries < MAX_TRIES && !canReveal() ? ui().tryAgain : ui().canReveal);
   }
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (isReal()) problems.next(); else fresh(); return; } // the button reads New exercise (Next problem)
-    if (!Identify.ok(identItems(), st.ident)) { showStatus('ident'); return; }
+    if (st.solved) { fresh(); return; } // the button reads New exercise
+    if (!allIdentified()) { showStatus('ident'); return; }
     const r = feedback();
     st.checked = true;
-    if (r === null) { showStatus('fill'); return; }
     st.tries++;
     if (r) {
       if (!st.solved && !st.revealed) {
@@ -266,7 +236,6 @@
       }
       st.solved = true;
       Practice.markSolved(PRACTICE, ex.id);
-      problems.solved(ex);
       finish();
       st.advance = topics.solved(st, ex);
       showStatus('ok');
@@ -313,7 +282,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    if (topics) { topics.relabel(); problems.menu(); }
+    if (topics) topics.relabel();
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
@@ -321,12 +290,12 @@
     applyStatic();
     showScore();
     if (ex) {
-      const values = ex.fields.map((f) => $(`#in-${f.key}`).value), ticks = [...document.querySelectorAll('#ftable input')].map((b) => b.checked);
+      const ticks = [...document.querySelectorAll('#ftable input')].map((b) => b.checked);
       const keep = { ...st };
       ex = again(ex);
       render();
       st = keep;
-      ex.fields.forEach((f, k) => { $(`#in-${f.key}`).value = values[k]; });
+      showComps();
       document.querySelectorAll('#ftable input').forEach((b, k) => { b.checked = ticks[k]; });
       drawTicked();
       if (st.checked) feedback();
@@ -337,55 +306,39 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
   // ---------------------------------------------------------------- modes
-  // Practice: random exercises; tutor: worked examples; arcade: a timed game (arcade.js). Hints
-  // and solution belong to practice. Leaving the arcade ends a running game.
+  // Practice: random exercises; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js, check-src.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('fs-mode', m);
-    // practice and the real problems share the exercise card; each has its own controls
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); });
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
   function practise() {
     setMode('practice');
-    if (ex && !isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
-  }
-
-  // Real problems: stories from everyday life (realproblems.js, shared problems.js).
-  let problems = null;
-  const isReal = () => problems && problems.is(ex);
-  function realMode() {
-    setMode('real');
-    if (isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
   }
 
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
-    let m = h.match(/^tutor-(\d+)$/);
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
+    const m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
-      return true;
-    }
-    const re = problems.parse(h);
-    if (re) {
-      setMode('real');
-      if (!ex || ex.id !== h) open(re);
-      problems.menu();
       return true;
     }
     const te = topics.parse(h);
@@ -394,19 +347,15 @@
       if (!ex || ex.id !== h) open(te);
       return true;
     }
-    m = h.match(/^(easy|medium|hard|mixed)(-nocalc)?-(\d+)$/);
-    if (m) {
-      setMode('practice');
-      if (!ex || ex.id !== h) open(generate(m[1], Number(m[3]), !m[2]));
-      return true;
-    }
+    // links of earlier versions (a level, a real problem): practice
+    if (/^(easy|medium|hard|mixed|real)/.test(h)) { practise(); return true; }
     return false;
   }
 
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     applyStatic();
     topics = window.Topics.create({
       app: PRACTICE, topics: topicList(),
@@ -415,16 +364,14 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.RealProblems.PROBLEMS, make: window.RealProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
-    problems.menu();
-    Identify.attach($('#comps'), identItems, () => st.ident, (right) => {
-      math($('#comps'));
-      if (right) drawTicked(); // the component appears in the drawing
+    const picked = (el, items) => (right) => {
+      math(el);
+      if (right) drawTicked(); // a component appears in the drawing
       else { st.tries++; updateButtons(); } // a wrong choice counts as an attempt
-    });
+      if (right && choiceOnly() && !st.solved && allIdentified()) check({ preventDefault() {} }); // a choice only: solved
+    };
+    Identify.attach($('#comps'), compItems, () => st.ident, picked($('#comps')));
+    Identify.attach($('#eqs'), eqItems, () => st.ident, picked($('#eqs')));
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
@@ -439,15 +386,19 @@
       practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
       t: () => ui().tutorBtns,
     });
-    arcade = Arcade.create(window.ArcadeSource, { math, markScrollable, stored, store });
+    checker = Check.create(window.CheckSource, {
+      math, markScrollable, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('fs-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

@@ -22,7 +22,8 @@
 
 #prompt p { margin: 6px 0; }
 .card h3 { margin-top: 18px; }
-#answers > h3:first-child { margin-top: 4px; }
+#etable-part > h3:first-child, #etable-part[hidden] + #eformula + #answer-head { margin-top: 4px; }
+#answer-head p { margin: 0; }
 
 /* drawings, in the manner of the worksheet: fine outlines, tinted bodies, hatched surfaces, dashed
    heights, labels with a halo of the background so that lines never cut them */
@@ -100,9 +101,30 @@ svg .ghost { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray
   .fields .preview, .fields .type-help { grid-column: 1 / -1; }
 }
 
-/* arcade: manim's colours */
-#arcade {
-  --e-pot: #58c4dd; --e-kin: #fc6255; --e-el: #83c167; --vel: #ffff00;
-  --box: rgba(88, 196, 221, 0.1); --tower: #141414;
-}
-#arcade .ar-opt .val { font-size: 1.15rem; }
+/* an energy table with formulas (find the error, the solutions of questions) */
+.etable.etex td { padding: 6px 14px; }
+.etable.etex td.mark { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+
+/* a question with options in practice: one to choose, bar charts or formulas */
+.choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 8px 0 4px; }
+.choice { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; }
+.choice input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.choice .letter { flex: none; display: grid; place-items: center; width: 1.6em; height: 1.6em; border: 1px solid var(--line); border-radius: 50%; font-size: 0.85rem; color: var(--muted); }
+.choice .val { flex: 1; min-width: 0; display: flex; justify-content: center; overflow-x: auto; }
+.choice .val .fig { margin: 0; }
+.choice:hover { border-color: var(--accent); }
+.choice:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.choice:has(input:checked) .letter { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.choice:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.choice.ok, .choice.ok:has(input:checked) { border-color: var(--ok); box-shadow: 0 0 0 1px var(--ok); }
+.choice.ok:has(input:checked) .letter { background: var(--ok); border-color: var(--ok); }
+.choice.bad, .choice.bad:has(input:checked) { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad); }
+.choice.bad:has(input:checked) .letter { background: var(--bad); border-color: var(--bad); }
+.fields.choice-fields { display: block; }
+.choice-fb { min-height: 1.4em; margin: 6px 0 0; }
+.choice-fb.ok { color: var(--ok); }
+.choice-fb.bad { color: var(--bad); }
+@media (max-width: 640px) { .choices { grid-template-columns: minmax(0, 1fr); } }
+
+/* the method, step by step */
+ol.method li { margin: 4px 0; }
