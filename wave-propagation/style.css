@@ -91,11 +91,5 @@ svg .wrongcol { fill: var(--bad); opacity: 0.18; }
 .field.ok .fb { color: var(--ok); }
 #draw-area .linklike { display: block; margin: 4px auto 0; }
 
-/* the pictures of the problems */
-svg.tb .wv-rope { fill: none; stroke: var(--wv); stroke-width: 2.6; stroke-linejoin: round; }
-svg.tb .wv-arrow { fill: none; stroke: var(--ink); stroke-width: 2; }
-svg.tb .wv-arrowhead { fill: var(--ink); }
-
-/* arcade: manim's colours */
-#arcade { --wv: #58c4dd; --wv-in: #83c167; --wv-ref: #f0ac5f; --grid: #1c1c1c; --grid-major: #333; }
-#arcade .ar-opt .val svg.wave { width: 100%; max-width: 300px; }
+/* check: the diagrams as options fill their buttons */
+.ck-opt .val svg.wave { width: 100%; max-width: 300px; }

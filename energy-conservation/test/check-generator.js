@@ -7,11 +7,14 @@
 //   at least three of them (for the arcade's four options),
 // - that texts, hints, solutions and drawings contain no undefined values.
 // It also checks the formula parser, typed answers (among them the worksheet's: A √(2/3 g h),
-// B 5/9 h, C √(1/2 g s)), and the arcade's multiple-choice questions.
+// B 5/9 h, C √(1/2 g s)), the tutor's examples, and the questions of the check and of practice
+// (concepts.js): every objective's kinds give four options, one of them right, each wrong one
+// explained.
 'use strict';
 
-['../lang.js', '../core.js', '../expr.js', '../draw.js', '../scenarios.js', '../generator.js', '../motion.js', '../lessons.js'].forEach((f) => require(f));
-const { EC, Expr, Energy, Lessons, Motion } = globalThis;
+['../lang.js', '../core.js', '../expr.js', '../draw.js', '../scenarios.js', '../generator.js', '../motion.js', '../lessons.js', '../concepts.js'].forEach((f) => require(f));
+const { EC, Expr, Energy, Lessons, Motion, EnergyConcepts: Concepts } = globalThis;
+const Check = require('../check.js');
 const g = EC.G;
 
 let failures = 0, checked = 0;
@@ -150,8 +153,12 @@ if (Expr.vars(Expr.parse("h'").tree)[0] !== 'hp') fail("h' is not read as h′")
 
 // typed answers to the tutor's examples: the worksheet's results, and wrong ideas
 EC.setLang('en');
-// a tutor example by its situation
-const lesson = (id) => Energy.tutorial(Lessons.EXAMPLES.find((e) => e.scenario === id)).ex;
+// a tutor example by its situation; the worksheet's B and the tower, no longer examples, as they were
+const FORMER = {
+  tower: { scenario: 'tower', formal: false, p: { dir: 'up', V: { g, h: 10, v0: 5, v: Math.sqrt(25 + 2 * g * 10) } } },
+  'speed-fraction': { scenario: 'speed-fraction', formal: true, p: { fr: [2, 3], V: { g, h: 4.5, v0: Math.sqrt(2 * g * 4.5), vp: (2 / 3) * Math.sqrt(2 * g * 4.5), hp: 2.5 } } },
+};
+const lesson = (id) => Energy.tutorial(Lessons.EXAMPLES.find((e) => e.scenario === id) || FORMER[id]).ex;
 const TYPED = [
   ['part-drop', 'sqrt(2/3*g*h)', 'ok'], ['part-drop', '√(2gh)', 'trap'], ['part-drop', 'sqrt(4/3 g h)', 'trap'], ['part-drop', '2/3gh', 'trap'], ['part-drop', 'sqrt(2 g h\')', 'unknown'], ['part-drop', "v'", 'wanted'], ['part-drop', 'sqrt(2gh*m/m)', 'unknown'],
   ['speed-fraction', '5/9 h', 'ok'], ['speed-fraction', '5h/9', 'ok'], ['speed-fraction', '1/3 h', 'trap'], ['speed-fraction', '4/9*h', 'trap'], ['speed-fraction', 'h', 'wrong'],
@@ -186,7 +193,9 @@ for (const lang of EC.LANGS) {
   EC.setLang(lang);
   Lessons.EXAMPLES.forEach((e, k) => {
     const { frames, ex } = Energy.tutorial(e);
-    checkExercise(ex, `${lang} lesson ${k + 1}`);
+    if (ex) checkExercise(ex, `${lang} lesson ${k + 1}`);
+    if (!ex && !frames.length) fail(`lesson ${k + 1}: no frames`);
+    if (ex && !ex.formal) fail(`lesson ${k + 1}: with numbers`);
     frames.forEach((f, j) => { checkText(`lesson ${k + 1}`, `frame ${j + 1} text`, f.text); checkText(`lesson ${k + 1}`, `frame ${j + 1} figure`, f.figure); });
   });
 }
@@ -220,24 +229,55 @@ for (const lang of EC.LANGS) {
 }
 log(`${anims} animations checked`);
 
-// ---------------------------------------------------------------- the arcade
-let quizzes = 0;
+// ---------------------------------------------------------------- the check and the choice exercises
+// Every objective has kinds; every kind gives four options, exactly one right, all different, the
+// wrong ones explained and their wrong ideas known; no undefined values; and its practice stage.
+const C = Concepts.CHECK, kinds = new Set(C.objectives.flatMap((o) => o.kinds));
+const stageTypes = new Set(Lessons.EXAMPLES.flatMap((e) => e.practice.flatMap((st) => st.types)));
+C.objectives.forEach((o) => {
+  if (!o.kinds.length) fail(`objective ${o.id}: no kinds`);
+  if (!(o.tutor >= 0 && o.tutor < Lessons.EXAMPLES.length)) fail(`objective ${o.id}: tutor ${o.tutor}`);
+  if (!(o.topic >= 0 && o.topic < Lessons.EXAMPLES.length)) fail(`objective ${o.id}: topic ${o.topic}`);
+  o.kinds.forEach((k) => { if (!Concepts.KINDS.includes(k)) fail(`objective ${o.id}: unknown kind ${k}`); });
+});
+for (const k of Concepts.KINDS) if (!stageTypes.has(k)) fail(`kind ${k} is in no practice stage`);
+for (const t of stageTypes) if (!Concepts.KINDS.includes(t) && !Energy.SCENARIOS.some((s) => s.id === t)) fail(`practice type ${t} unknown`);
+const names = Object.keys(C.concepts());
+Object.values(C.concept).forEach((c) => { if (!names.includes(c)) fail(`concept ${c} has no name`); });
+let questions = 0;
+const flags = {};
 for (const lang of EC.LANGS) {
   EC.setLang(lang);
-  for (const scn of Energy.SCENARIOS) {
-    for (let seed = 1; seed <= 100; seed++) {
-      const ex = Energy.generateFor(scn.id, seed), id = `${lang} arcade ${scn.id}-${seed}`;
-      checkExercise(ex, id);
-      const opts = Energy.quiz(ex, seed);
-      quizzes++;
-      if (opts.length !== 4) fail(`${id}: ${opts.length} options`);
-      if (opts.filter((o) => o.correct).length !== 1) fail(`${id}: not exactly one right option`);
-      if (new Set(opts.map((o) => o.tex)).size !== 4) fail(`${id}: options repeat: ${opts.map((o) => o.tex).join(' | ')}`);
-      opts.forEach((o) => checkText(id, 'option', o.tex));
+  C.objectives.forEach((o) => checkText(`objective ${o.id}`, 'name', o.name()));
+  for (const kind of Concepts.KINDS) {
+    for (let seed = 1; seed <= 150; seed++) {
+      const id = `${lang} ${kind}-${seed}`, q = C.question(kind, seed);
+      questions++;
+      if (q.options.length !== 4) fail(`${id}: ${q.options.length} options`);
+      if (q.options.filter((x) => x.correct).length !== 1) fail(`${id}: not exactly one right option`);
+      if (new Set(q.options.map((x) => x.html)).size !== q.options.length) fail(`${id}: options repeat`);
+      for (const x of q.options.filter((y) => !y.correct)) {
+        if (!x.why) fail(`${id}: a wrong option without explanation`);
+        flags[x.flag] = (flags[x.flag] || 0) + 1;
+        checkText(id, 'why', x.why || '');
+      }
+      ['title', 'text', 'figure', 'ask'].forEach((w) => checkText(id, w, q[w]));
+      q.options.forEach((x) => checkText(id, 'option', x.html));
+      checkText(id, 'explanation', q.explain());
+      const e = Concepts.exercise(kind, seed);
+      if (!e.hints.length) fail(`${id}: no hints`);
+      e.hints.forEach((h) => checkText(id, 'hint', h));
+      if (e.key !== Concepts.exercise(kind, seed).key) fail(`${id}: not the same exercise again`);
     }
   }
 }
-log(`${quizzes} arcade questions checked`);
+// the misconceptions the check reports come up as wrong options
+for (const f of Object.keys(C.concept)) if (!flags[f]) fail(`wrong idea ${f} never offered`);
+// a check: the planned questions, all objectives
+const planned = Check.plan(C.objectives, Math.random);
+if (planned.length !== Check.perObjective(C.objectives.length) * C.objectives.length) fail(`check of ${planned.length} questions`);
+C.objectives.forEach((o, i) => { if (!planned.some((x) => x.objective === i)) fail(`objective ${o.id} not asked`); });
+log(`${questions} questions of ${kinds.size} kinds checked, wrong ideas: ${JSON.stringify(flags)}`);
 
 log(`${checked} exercises checked, ${Object.keys(seen).length} situations: ${JSON.stringify(seen)}`);
 log(failures ? `${failures} failures` : 'all checks passed');

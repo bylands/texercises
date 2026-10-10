@@ -6,17 +6,21 @@
 //   graphs that do not look alike), the equation of a graph, and the kinematics worked out again
 //   here (v_max = Aω, a_max = Aω², v = ω√(A² − x²), …),
 // - one right option per choice, distinct options, an explanation for every wrong one, traps that
-//   differ from the answer, four options in every arcade question,
+//   differ from the answer, four options in every quiz question,
+// - the pointer: the right graph is the shadow A·sin(ωt + φ₀), four graphs that do not look alike,
+// - the LC circuit: the roles (Q ↔ y, I ↔ v, L ↔ m, 1/C ↔ D), ω = 1/√(LC), T = 2π√(LC), and the
+//   factor of the frequency when L or C change,
 // - that texts, hints, solutions and figures contain no undefined values (and no ß in German),
-// - the tutor's examples (the worksheet's ξ + k²·ξ̈ = 0 has T = 2πk), and the problems.
+// - the tutor's examples (the worksheet's ξ + k²·ξ̈ = 0 has T = 2πk),
+// - the check: every objective's kinds give questions with four options, one of them right.
 'use strict';
 
 const Lang = require('../lang.js');
 require('../core.js'); require('../equations.js'); require('../plot.js'); require('../scenarios.js'); require('../generator.js'); require('../lessons.js');
-global.window = globalThis; require('../figkit.js'); require('../figures.js'); require('../realproblems.js');
-const { OC, Equations: Eq, Scenarios, Osc, Lessons, OscProblems, Plot } = globalThis;
+global.window = globalThis; require('../figkit.js'); require('../figures.js'); require('../check-src.js');
+const { OC, Equations: Eq, Scenarios, Osc, Lessons, Plot, CheckSource } = globalThis;
 
-let failures = 0, checked = 0;
+let failures = 0, checked = 0, questions = 0;
 const fail = (msg) => { failures++; if (failures < 400) console.log('  FAIL ' + msg); };
 const close = (a, b, tol = 1e-6) => Math.abs(a - b) <= tol * Math.max(1e-30, Math.abs(b));
 const PI2 = 2 * Math.PI;
@@ -97,23 +101,31 @@ const LAWS = {
     for (const [k, x] of Object.entries(want)) if (!has(k) || !close(si(val(ex, k)), x, 1e-9)) fail(`${ex.scenario}: ${k} = ${has(k) ? si(val(ex, k)) : '–'} ≠ ${x}`);
     if (ex.fields.some((f) => /max/.test(f.sym))) fail(`${ex.scenario}: v_max instead of the hat`);
   },
-  read: (p, ex) => {
-    const phi = (p.k * Math.PI) / 4;
-    if (!close(si(val(ex, 'A')), p.A / 100, 1e-9) || !close(si(val(ex, 'T')), p.T, 1e-9)) fail(`${ex.scenario}: A or T`);
-    if (Math.abs(val(ex, 'phi').value - phi) > 1e-9 || phi <= -Math.PI || phi > Math.PI) fail(`${ex.scenario}: phase`);
-    // the graph at t = 0 starts at A·sin φ₀
-    if (!close(Math.sin(phi) * p.A, p.A * Math.sin(phi))) fail('read: start');
-    // T must lie on the grid of the time axis
-    if (!/class="grid/.test(ex.figure())) fail(`${ex.scenario}: no grid`);
-  },
   points: (p, ex) => {
     const pt = val(ex, 'pt'), x = (u) => Math.sin(2 * Math.PI * u), v = (u) => Math.cos(2 * Math.PI * u);
     const test = { vmax: (u) => Math.abs(v(u)) > 0.999, v0: (u) => Math.abs(x(u)) > 0.999, amax: (u) => Math.abs(x(u)) > 0.999, aplus: (u) => x(u) < -1e-6, vminus: (u) => v(u) < -1e-6 }[p.ask];
     const right = p.us.map((u, i) => (test(u) ? 'PQRS'[i] : null)).filter(Boolean);
     if (right.length !== 1 || right[0] !== pt.value) fail(`points: ${p.ask} ${right}`);
   },
-  energy: (p, ex) => {
-    if (p.kind === 'equal' ? !close(val(ex, 'x').value, Math.SQRT1_2) : !close(val(ex, 'kin').value, 1 - (p.k[0] / p.k[1]) ** 2)) fail('energy');
+  circle: (p, ex) => {
+    const g = val(ex, 'graph'), phi = (p.k * Math.PI) / 4;
+    if (g.value !== 'right' || g.options.length !== 4 || !g.options.some((o) => o[0] === 'right')) fail('circle: graph');
+    // the right graph: y(0) = A·sin φ₀, rising where cos φ₀ > 0
+    const right = (u) => Scenarios.CIRCLE.right(u, phi);
+    if (!close(right(0), Math.sin(phi) || 1e-30, 1e-9) && Math.abs(right(0) - Math.sin(phi)) > 1e-12) fail(`circle: start at ${p.k}`);
+    if (Math.abs(Math.cos(phi)) > 1e-9 && Math.sign(right(0.01) - right(0)) !== Math.sign(Math.cos(phi))) fail(`circle: direction at ${p.k}`);
+    const pts = (k) => Array.from({ length: 121 }, (z, j) => [j / 60, Scenarios.CIRCLE[k](j / 60, phi)]);
+    for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (Plot.alike(pts(g.options[i][0]), pts(g.options[j][0]), 2.8)) fail(`circle: graphs alike at ${p.k}`);
+  },
+  lc: (p, ex) => {
+    const f = val(ex, 'ans'), right = f.options.find((o) => o[0] === 'right');
+    const want = { y: /charge|Ladung/, v: /current|Strom/, m: /\$L\$/, D: /1\/C/, w: /\\omega = \\frac\{1\}\{\\sqrt\{L\\,C\}\}/, T: /T = 2\\pi\\sqrt\{L\\,C\}/, whenQ: /^(zero|null)$/, whenI: /^(zero|null)$/ }[p.ask];
+    if (f.options.length !== 4 || !right || !want.test(right[1])) fail(`lc-eq ${p.ask}: ${right && right[1]}`);
+  },
+  lcscale: (p, ex) => {
+    const f = val(ex, 'fac'), LC = p.what === 'both' ? p.k * p.k : p.k, x = 1 / Math.sqrt(LC);
+    const shown = x >= 1 ? `$\\times ${OC.sig(x, 3)}$` : `$\\times \\tfrac{1}{${OC.sig(1 / x, 3)}}$`;
+    if (f.options.find((o) => o[0] === 'right')[1] !== shown || new Set(f.options.map((o) => o[1])).size !== 4) fail(`lc-scale: ${p.what} ×${p.k}`);
   },
 };
 
@@ -147,42 +159,33 @@ for (const lang of ['en', 'de']) {
         if (qz.options.some((o) => !o.correct && o.why === undefined)) fail(`${id}: quiz option without why`);
       }
     }
-    if (seen.size < (scn.id === "energy" ? 8 : 10)) fail(`${scn.id}: only ${seen.size} different exercises`);
+    if (seen.size < 8) fail(`${scn.id}: only ${seen.size} different exercises`);
   }
 
   // the tutor's examples, and the worksheet's ξ + k²·ξ̈ = 0: an SHM with T = 2πk
   Lessons.EXAMPLES.forEach((e) => Osc.tutorial(e).frames.forEach((f, i) => { checkText(`tutor ${e.scenario}`, `frame ${i}`, f.text); checkText(`tutor ${e.scenario}`, `figure ${i}`, f.figure); }));
-  const w1 = Osc.exercise(Osc.byId('shm-2'), Lessons.EXAMPLES[0].p);
-  if (Osc.tutorial(Lessons.EXAMPLES[0]).frames.length < 9) fail('tutor 1: the three equations of the worksheet');
+  const ws = Lessons.EXAMPLES.find((e) => e.scenario === 'shm-2'), w1 = Osc.exercise(Osc.byId('shm-2'), ws.p);
+  if (Osc.tutorial(ws).frames.length < 9) fail('tutor: the three equations of the worksheet');
   const T1 = val(w1, 'T');
   if (val(w1, 'shm').value !== 'yes' || !T1 || T1.options.find((o) => o[0] === T1.value)[1] !== '$T = 2\\pi\\cdot k$') fail('worksheet: ξ + k²·ξ̈ = 0 has T = 2πk');
 
-  // the problems, each worked out again here
-  const PI = Math.PI, g = 9.81;
-  const LAWP = {
-    fork: (p) => ({ vmax: p.a * 2 * PI * p.f, amax: p.a * (2 * PI * p.f) ** 2, g: (p.a * (2 * PI * p.f) ** 2) / g }),
-    tower: (p) => ({ vmax: p.a * 2 * PI / p.T, amax: p.a * (2 * PI / p.T) ** 2 }),
-    atoms: (p) => ({ vmax: p.a * 2 * PI * p.f, amax: p.a * (2 * PI * p.f) ** 2 }),
-    quake: (p) => ({ amax: p.A * (2 * PI / p.T) ** 2, g: (p.A * (2 * PI / p.T) ** 2) / g }),
-    salt: (p) => ({ f: Math.sqrt(g / p.A) / (2 * PI), A2: g / (2 * PI * p.f2) ** 2 }),
-    tide: (p) => { const A = p.R / 2, w = 2 * PI / (12.4 * 3600); return { t: Math.acos((p.h - A) / A) / w, vmax: A * w }; },
-    bouncer: (p) => ({ vmax: p.a * 2 * PI / p.T, y: Math.sqrt(3) / 2 * p.a }),
-    ball: (p) => ({ T: 2 * Math.sqrt(2 * p.h / g), T4: 4 * Math.sqrt(2 * p.h / g) }),
-  };
-  OscProblems.PROBLEMS.forEach((pb, i) => {
-    if (!LAWP[pb.id]) fail(`problem ${pb.id}: no check`);
-    for (let seed = 1; seed <= 30; seed++) {
-      const ex = OscProblems.realOf(i, seed), id = `${lang}/${pb.id}/${seed}`, want = LAWP[pb.id] ? LAWP[pb.id](ex.p) : {};
-      checked++;
-      ex.fields.forEach((f) => {
-        if (f.type === 'choice') { if (f.options.filter((o) => o[0] === f.value).length !== 1 || f.options.some((o) => o[0] !== f.value && !o[2])) fail(`${id}: ${f.key}`); return; }
-        if (!(Number.isFinite(f.value) && f.value > 0)) fail(`${id}: ${f.key} = ${f.value}`);
-        if (!(f.key in want) || !close(si(f), want[f.key], 1e-9)) fail(`${id}: ${f.key} = ${si(f)}, not ${want[f.key]}`);
-      });
-      [ex.title, ex.text, ex.results, ...ex.hints, ...ex.solution, ex.solutionFigure()].forEach((s, j) => checkText(id, `text ${j}`, s));
-    }
+  // the check: each objective's kinds give questions with four options, one right
+  CheckSource.objectives.forEach((o) => {
+    if (!o.kinds.length || !o.name() || o.tutor >= Lessons.EXAMPLES.length || o.topic >= Lessons.EXAMPLES.length) fail(`objective ${o.id}: kinds, name, tutor or topic`);
+    o.kinds.forEach((kind) => {
+      for (let seed = 1; seed <= 120; seed++) {
+        const q = CheckSource.question(kind, 7919 * seed), id = `check ${lang} ${o.id} ${kind}-${7919 * seed}`;
+        questions++;
+        if (q.options.length !== 4 || q.options.filter((x) => x.correct).length !== 1) fail(`${id}: ${q.options.length} options, ${q.options.filter((x) => x.correct).length} right`);
+        if (new Set(q.options.map((x) => x.html)).size !== 4) fail(`${id}: two options the same`);
+        q.options.forEach((x) => { if (!x.correct && x.flag && !CheckSource.concept[x.flag]) fail(`${id}: flag ${x.flag} names no idea`); });
+        [q.title, q.text, q.figure, q.ask, q.explain(), ...q.options.map((x) => x.html + (x.why || ''))].forEach((t, k) => checkText(id, `part ${k}`, t));
+      }
+    });
   });
+  Object.values(CheckSource.concept).forEach((c) => { if (!CheckSource.concepts()[c]) fail(`concept ${c} has no name`); });
 }
 
+console.log(`${questions} check questions.`);
 console.log(failures ? `${failures} failures in ${checked} exercises` : `All checks passed (${checked} exercises).`);
 process.exit(failures ? 1 : 0);

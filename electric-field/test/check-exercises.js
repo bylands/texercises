@@ -1,20 +1,20 @@
-// Verifies Electric Field: run with `node electric-field/test/check-exercises.js`. It checks
+// Verifies Field Lines and Equipotentials: run with `node electric-field/test/check-exercises.js`.
+// It checks
 // - the physics, independently: the field of a point charge points away from a positive charge
 //   and falls with 1/r²; field lines run from + to − (or to the edge); equipotentials are
-//   perpendicular to the field; around a conducting cylinder there is no field inside and the field
-//   meets the surface at right angles; where an exercise says the field is zero, it is;
-//   the net field of an exercise's charges points as its right answer says; a dipole turns as said,
+//   perpendicular to the field; the field of a plate capacitor runs from plate to plate between
+//   them and is weak outside; a dipole turns as said; its torque q·E·d·sin φ changes by the factor said,
 // - for every type, in both languages and many seeds: each question has a right option (exactly one
-//   unless several may fit), a reason for each wrong one, distinct options; statements are mixed,
-// - every problem, and no text or drawing contains undefined, NaN and the like.
+//   unless several may fit), a reason for each wrong one, distinct options; statements are mixed;
+//   the questions the check asks have four options,
+// - "find the error": the wrong feature is the one drawn: lines that cross only where the sketch
+//   says so, equipotentials along the field lines only where it says so,
+// - no text or drawing contains undefined, NaN and the like.
 'use strict';
 
 const Lang = require('../lang.js');
 const C = require('../charges.js');
-const E = require('../elec.js');
 const X = require('../exercises.js');
-const R = require('../realproblems.js');
-const F = require('../figures.js');
 
 let failures = 0;
 const fail = (msg) => { failures++; if (failures < 30) console.error('  FAIL ' + msg); };
@@ -34,26 +34,30 @@ for (const ln of C.lines(opp, box)) {
   const a = ln[0], b = ln[ln.length - 1], fromPlus = Math.hypot(a[0] + 1, a[1]) < 0.2, toMinus = Math.hypot(b[0] - 1, b[1]) < 0.25, out = Math.abs(b[0]) > 2.9 || Math.abs(b[1]) > 2.1 || Math.abs(a[0]) > 2.9 || Math.abs(a[1]) > 2.1;
   if (!((fromPlus && (toMinus || out)) || (toMinus && out))) { fail('a field line does not run from + to −'); break; }
 }
-for (const [p, q] of C.contours(opp, box, [-0.6, -0.2, 0.2, 0.6]).slice(0, 400)) {
-  const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], f = C.field(opp, ...m), t = [q[0] - p[0], q[1] - p[1]];
-  const cos = (f[0] * t[0] + f[1] * t[1]) / (Math.hypot(...f) * Math.hypot(...t) || 1);
-  if (Math.hypot(...t) > 1e-4 && Math.abs(cos) > 0.15) { fail('an equipotential is not perpendicular to the field'); break; }
+// the cosine of the angle between the field and a segment, at its middle
+const cosTo = (c, [p, q]) => {
+  const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], f = C.field(c, ...m), t = [q[0] - p[0], q[1] - p[1]];
+  return Math.hypot(...t) < 1e-4 ? 0 : (f[0] * t[0] + f[1] * t[1]) / (Math.hypot(...f) * Math.hypot(...t) || 1);
+};
+for (const key of ['point', 'dipole', 'like']) {
+  const { c, lv } = X.EQ[key];
+  if (C.contours(c, box, lv, { n: 70 }).slice(0, 400).some((s) => Math.abs(cosTo(c, s)) > 0.15)) fail(`an equipotential of ${key} is not perpendicular to the field`);
 }
 {
-  const cyl = { kind: 'cylinder', a: 0.8, E0: 1 };
-  if (Math.hypot(...C.field(cyl, 0.3, 0.2)) > 1e-12) fail('a field inside the conductor');
-  for (let th = 0; th < 2 * Math.PI; th += 0.3) {
-    const x = 0.8001 * Math.cos(th), y = 0.8001 * Math.sin(th), f = C.field(cyl, x, y), tang = -f[0] * Math.sin(th) + f[1] * Math.cos(th);
-    if (Math.abs(tang) > 1e-3 * Math.max(1, Math.hypot(...f))) { fail('the field is not perpendicular to the conductor'); break; }
-  }
+  // the capacitor as drawn: between the plates, the lines along the field, the equipotentials across it
+  const cap = X.CAP(1), inner = (ln) => ln.filter(([x, y]) => Math.abs(x) < 1.65 && Math.abs(y) < 0.7);
+  const pieces = (lns) => lns.flatMap((ln) => { const d = ln.length === 2 ? Array.from({ length: 9 }, (z, k) => [ln[0][0] + ((ln[1][0] - ln[0][0]) * k) / 8, ln[0][1] + ((ln[1][1] - ln[0][1]) * k) / 8]) : ln, p = inner(d); return p.slice(1).map((q, i) => [p[i], q]); });
+  if (pieces(X.capLines(cap)).some((s) => cosTo(cap, s) < 0.95)) fail('a field line of the capacitor drawing is not along the field');
+  if (pieces(X.capEqui(cap)).some((s) => Math.abs(cosTo(cap, s)) > 0.1)) fail('an equipotential of the capacitor drawing is not across the field');
+}
+{
+  // between the plates straight from + to −, and much stronger than at the same distance outside
+  const cap = X.CAP(1), inside = [[0, 0], [0.6, 0.4], [-1, -0.3], [1.2, 0]].map(([x, y]) => C.field(cap, x, y)), out = Math.hypot(...C.field(cap, 0, 2));
+  if (inside.some(([ex, ey]) => !(ey < 0 && Math.abs(ex) < 0.1 * -ey))) fail('the field of a capacitor does not point from plate to plate');
+  if (out > -inside[0][1] / 3) fail('the field outside a capacitor is not weak');
 }
 
 // ---------------------------------------------------------------- the exercises
-// signed number options: as many positive as negative ones (the sign must not give the answer away)
-function checkSigns(tag, q) {
-  const labs = q.options.map((o) => String(o.label || '')), pos = labs.filter((x) => /^\+\d/.test(x)).length, neg = labs.filter((x) => /^[−-]\d/.test(x)).length;
-  if (pos + neg >= 3 && pos !== neg) fail(`${tag} ${q.key}: ${pos} positive and ${neg} negative options`);
-}
 function checkQuestions(tag, e) {
   for (const q of e.questions) {
     if (q.type === 'multi') {
@@ -61,7 +65,6 @@ function checkQuestions(tag, e) {
       if (q.statements.some((s) => !s.why)) fail(`${tag}: a statement without a reason`);
       continue;
     }
-    checkSigns(tag, q);
     const n = q.options.filter((o) => o.ok).length;
     if (n < 1 || (!q.multi && n !== 1)) fail(`${tag} ${q.key}: ${n} right options`);
     if (q.options.some((o) => !o.ok && !o.why)) fail(`${tag} ${q.key}: a wrong option without a reason`);
@@ -69,7 +72,10 @@ function checkQuestions(tag, e) {
     if (new Set(labels).size !== labels.length) fail(`${tag} ${q.key}: two options alike`);
   }
 }
-const rightLabel = (e, key) => { const q = e.questions.find((x) => x.key === key); return (q.options.find((o) => o.ok).label || q.options.find((o) => o.ok).html); };
+// the questions of the check (app.js): every question of these types, of the wire and the capacitor only the diagram
+const CHECK = { 'lines-pick': null, 'lines-wire': 'd', 'lines-cap': 'd', 'lines-read': null, 'dipole-uniform': null, 'dipole-torque': null, 'equi-pick': null, 'lines-equi': null, error: null };
+const rightOf = (e, key) => { const q = e.questions.find((x) => x.key === key), o = q.options.find((x) => x.ok); return o.label || o.html; };
+const rad = (a) => (a * Math.PI) / 180;
 for (const lang of ['en', 'de']) {
   Lang.set(lang, true);
   for (const type of X.TYPES) {
@@ -78,62 +84,75 @@ for (const lang of ['en', 'de']) {
       if (bad(json(e))) fail(`${tag}: undefined or NaN`);
       if (!e.hints.length || !e.solution.length) fail(`${tag}: no hints or solution`);
       checkQuestions(tag, e);
+      if (type in CHECK) {
+        const qs = e.questions.filter((q) => q.type !== 'multi' && (!CHECK[type] || q.key === CHECK[type]));
+        if (!qs.length || qs.some((q) => q.options.length !== 4)) fail(`${tag}: a question of the check without four options`);
+      }
       if (lang === 'de') continue;
-      if (type === 'force-dir') {
-        const Ed = e.p.E.split(',').map(Number), F2 = e.p.q ? Ed.map((x) => x * e.p.q) : null;
-        if (!rightLabel(e, 'F').includes(`<span>${E.dirName(F2, 'no force')}</span>`)) fail(`${tag}: the force is not q·E`);
-      }
-      if (type === 'superpose') {
-        const ch = e.p.ch.split(' ').map((s) => { const [q, xy] = s.split('@'); const [x, y] = xy.split(',').map(Number); return { q: Number(q), x, y }; });
-        const net = C.field({ kind: 'points', charges: ch }, 0, 0), d = E.dirOf(net);
-        if (!rightLabel(e, 'E').includes(`<span>${E.dirName(d, 'zero')}</span>`)) fail(`${tag}: the net field is not the right answer`);
-      }
-      if (type === 'zero') {
-        const { a, b, d } = e.p, xq = e.questions.find((q) => q.key === 'x');
-        if (xq) {
-          const dist = Number(xq.options.find((o) => o.ok).label.split(' ')[0]), reg = rightLabel(e, 'reg');
-          const x = /left|links/.test(reg) ? -dist : dist, Ex = a / (x * x) * Math.sign(x) + b / ((x - d) ** 2) * Math.sign(x - d);
-          // the position is shown to 3 digits
-          if (Math.abs(Ex) > 0.05 * (Math.abs(a / (x * x)) + 1e-9)) fail(`${tag}: the field is not zero there (${x} cm)`);
-        }
+      if (type === 'lines-wire' && rightOf(e, 'E') !== '×1/2') fail(`${tag}: the field of a wire at twice the distance`);
+      if (type === 'lines-read') {
+        // the strongest of the four points, independently
+        const c = X.pts2([[e.p.qa, -1], [e.p.qb, 1]]), pts = e.p.pts.split(';').map((s) => s.split(',').map(Number));
+        const mags = pts.map(([x, y]) => Math.hypot(...C.field(c, x, y))), best = 'PQRS'[mags.indexOf(Math.max(...mags))];
+        if (!rightOf(e, 'P').includes(`<b>${best}</b>`)) fail(`${tag}: the strongest point is ${best}`);
+        if (rightOf(e, 'sg') !== `A ${e.p.qa > 0 ? '+' : '−'}, B ${e.p.qb > 0 ? '+' : '−'}`) fail(`${tag}: the signs`);
       }
       if (type === 'dipole-uniform') {
-        const Ed = e.p.E.split(',').map(Number), a0 = Math.atan2(Ed[1], Ed[0]) + (e.p.ang * Math.PI) / 180, tz = Math.cos(a0) * Ed[1] - Math.sin(a0) * Ed[0];
-        const want = Math.abs(tz) < 1e-9 ? 'does not turn' : tz > 0 ? 'turns anticlockwise' : 'turns clockwise';
-        if (rightLabel(e, 'T') !== want) fail(`${tag}: the dipole turns ${rightLabel(e, 'T')}, not ${want}`);
+        const Ed = e.p.E.split(',').map(Number), a0 = Math.atan2(Ed[1], Ed[0]) + rad(e.p.ang), tz = Math.cos(a0) * Ed[1] - Math.sin(a0) * Ed[0];
+        const along = Math.cos(a0) * Ed[0] + Math.sin(a0) * Ed[1];
+        const want = Math.abs(tz) < 1e-9 ? (along > 0 ? 'does not turn: it is in a stable equilibrium' : 'does not turn: it is in an unstable equilibrium') : tz > 0 ? 'turns anticlockwise' : 'turns clockwise';
+        if (rightOf(e, 'T') !== want) fail(`${tag}: the dipole ${rightOf(e, 'T')}, not ${want}`);
+        if (rightOf(e, 'F') !== 'is zero') fail(`${tag}: the net force in a uniform field`);
       }
-      if (type === 'plates-compare') {
-        const [fs, fA, fd] = e.p.f.split(',').map(Number), kE = e.p.fixedQ ? fs / fA : fs / fd;
-        if (rightLabel(e, 'E') !== X.frac(kE)) fail(`${tag}: the field factor`);
-        if (rightLabel(e, 'F') !== X.frac((kE * e.p.z2) / e.p.z1)) fail(`${tag}: the force factor`);
-        if ((rightLabel(e, 's') === 'the same way') !== (e.p.q1 * e.p.q2 > 0)) fail(`${tag}: the directions of the forces`);
+      if (type === 'dipole-torque') {
+        const [fq, fd, fE] = e.p.f.split(',').map(Number), k = (fq * fd * fE * Math.sin(rad(e.p.a2))) / Math.sin(rad(e.p.a1));
+        if (rightOf(e, 'M') !== X.frac(Number(k.toPrecision(9)))) fail(`${tag}: the torque factor ${rightOf(e, 'M')}, not ${X.frac(k)}`);
       }
-      if (type === 'deflect-compare') {
-        // independently: y = ½·(q·U/(m·d))·(L/v)² for both experiments
-        const P = { p: [1, 1], a: [2, 4], d: [1, 2], e: [-1, 1], 'e+': [1, 1] }, [fv, fU, fL, fd] = e.p.f.split(',').map(Number);
-        const y = ([z, m], U, Lp, d, v) => 0.5 * (Math.abs(z) * U / (m * d)) * (Lp / v) ** 2;
-        const k = y(P[e.p.b], fU, fL, fd, fv) / y(P[e.p.a], 1, 1, 1, 1);
-        if (rightLabel(e, 'y') !== X.frac(k)) fail(`${tag}: the deflection factor ${rightLabel(e, 'y')}, not ${X.frac(k)}`);
-        if (rightLabel(e, 't') !== X.frac(fL / fv)) fail(`${tag}: the time factor`);
-        const same = Math.sign(P[e.p.a][0]) === Math.sign(P[e.p.b][0]) * (e.p.flip ? -1 : 1);
-        if ((rightLabel(e, 's') === 'to the same side') !== same) fail(`${tag}: the side`);
-      }
-      if (type === 'millikan') {
-        // independently: |q| = m·g·d/U for both drops
-        const [fm, fU, fd] = e.p.f.split(',').map(Number), n2 = (e.p.n1 * fm * fd) / fU;
-        if (Number(rightLabel(e, 'n')) !== n2 || rightLabel(e, 'q') !== X.frac(n2 / e.p.n1)) fail(`${tag}: the charge of drop 2`);
-        if ((rightLabel(e, 's') === 'negative') !== (e.p.top2 > 0)) fail(`${tag}: the sign of drop 2`);
-      }
+      if (type === 'error' && rightOf(e, 'err') !== X.FEAT[e.p.err]()) fail(`${tag}: the wrong feature`);
     }
   }
-  R.PROBLEMS.forEach((p, i) => {
-    for (let seed = 1; seed <= 30; seed++) {
-      const e = R.realOf(i, seed), tag = `real ${p.id} ${seed} ${lang}`;
-      if (bad(json(e)) || bad(F[e.pic[0]](e.pic[1]))) fail(`${tag}: undefined or NaN`);
-      checkQuestions(tag, e);
-    }
-  });
 }
-console.log(`${X.TYPES.length} types × ${SEEDS} seeds and ${R.PROBLEMS.length} problems, in both languages`);
+
+// ---------------------------------------------------------------- the sketches of "find the error"
+// two polylines cross (away from the charges and the plates, where lines meet anyway)
+function crossings(lines, c) {
+  const segs = [];
+  lines.forEach((ln, k) => { const d = ln.length > 6 ? 3 : 1; for (let i = 0; i + d < ln.length; i += d) segs.push([ln[i], ln[i + d], k]); });
+  const away = ([x, y]) => (c.kind === 'plates' ? Math.abs(Math.abs(y) - c.h) > 0.2 : c.charges.every((ch) => Math.hypot(x - ch.x, y - ch.y) > 0.4)) && Math.abs(x) < 3 && Math.abs(y) < 2.2;
+  let n = 0;
+  for (let i = 0; i < segs.length; i++) {
+    for (let j = i + 1; j < segs.length; j++) {
+      const [p, p2, a] = segs[i], [q, q2, b] = segs[j];
+      if (a === b) continue;
+      const r = [p2[0] - p[0], p2[1] - p[1]], s = [q2[0] - q[0], q2[1] - q[1]], d = r[0] * s[1] - r[1] * s[0];
+      if (Math.abs(d) < 1e-12) continue;
+      const t = ((q[0] - p[0]) * s[1] - (q[1] - p[1]) * s[0]) / d, u = ((q[0] - p[0]) * r[1] - (q[1] - p[1]) * r[0]) / d;
+      if (t > 0 && t < 1 && u > 0 && u < 1 && away([p[0] + t * r[0], p[1] + t * r[1]])) n++;
+    }
+  }
+  return n;
+}
+for (const key of ['dipole', 'like', 'plates']) {
+  for (const flip of key === 'dipole' ? [false] : [false, true]) {
+    for (const err of Object.keys(X.FEAT)) {
+      const { c, o } = X.sketch(key, err, flip), tag = `sketch ${key}${flip ? ' flipped' : ''} ${err}`;
+      const field = o.equiLines ? o.extra : o.given, n = crossings(field, c);
+      if ((err === 'cross') !== (n > 0)) fail(`${tag}: ${n} crossings of field lines`);
+      // the equipotentials along the field lines: the drawn ones mostly parallel to the field
+      if (err === 'equi') {
+        const segs = o.given.flatMap((ln) => ln.slice(1).map((p, i) => [ln[i], p])).filter(([p]) => Math.abs(p[0]) < 3 && Math.abs(p[1]) < 2.2);
+        const along = segs.filter((sg) => Math.abs(cosTo(c, sg)) > 0.9).length;
+        if (along < 0.8 * segs.length) fail(`${tag}: the equipotentials do not run along the field lines`);
+      }
+      if (err === 'end') {
+        const ends = field.filter((ln) => { const [x, y] = ln[ln.length - 1]; return Math.abs(x) < 2.8 && Math.abs(y) < 2 && (c.kind === 'plates' ? Math.abs(Math.abs(y) - c.h) > 0.2 : c.charges.every((ch) => Math.hypot(x - ch.x, y - ch.y) > 0.3)); });
+        if (!ends.length) fail(`${tag}: no line ends in empty space`);
+      }
+      if (bad(C.fig(c, o))) fail(`${tag}: undefined or NaN in the drawing`);
+    }
+  }
+}
+
+console.log(`${X.TYPES.length} types × ${SEEDS} seeds in both languages, and the sketches of "find the error"`);
 if (failures) { console.error(`${failures} failures`); process.exit(1); }
 console.log('all checks passed');

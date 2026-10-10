@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Force Systems</title>
+  <title>Free-Body Diagrams</title>
   <link rel="stylesheet" href="/katex/katex.min.css">
   <link rel="stylesheet" href="ui.css">
   <link rel="stylesheet" href="style.css">
@@ -16,19 +16,15 @@
   <script defer src="core.js"></script>
   <script defer src="draw.js"></script>
   <script defer src="scenarios.js"></script>
+  <script defer src="equations.js"></script>
   <script defer src="generator.js"></script>
-  <script defer src="figkit.js"></script>
-  <script defer src="figures.js"></script>
-  <script defer src="realproblems.js"></script>
-  <script defer src="realpictures.js"></script>
   <script defer src="lessons.js"></script>
   <script defer src="tutor.js"></script>
-  <script defer src="arcade.js"></script>
+  <script defer src="check.js"></script>
   <script defer src="practice.js"></script>
   <script defer src="topics.js"></script>
   <script defer src="identify.js"></script>
-  <script defer src="problems.js"></script>
-  <script defer src="arcade-src.js"></script>
+  <script defer src="check-src.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -36,7 +32,7 @@
     <div class="wrap">
       <div class="brand">
         <a class="home" href="/">Learning Physics</a><span class="sep" aria-hidden="true">/</span>
-        <h1 data-i18n="title">Force Systems</h1>
+        <h1 data-i18n="title">Free-Body Diagrams</h1>
       </div>
       <div class="top-right">
         <p id="score" class="score"></p>
@@ -53,13 +49,10 @@
       <div id="modes" class="levels" role="radiogroup" data-i18n-label="mode" aria-label="Mode">
         <label><input type="radio" name="mode" value="tutor" checked><span data-i18n="tutor">Tutor</span></label>
         <label><input type="radio" name="mode" value="practice"><span data-i18n="practice">Practice</span></label>
-        <label><input type="radio" name="mode" value="real"><span data-i18n="real">Real problems</span></label>
-        <label><input type="radio" name="mode" value="arcade"><span data-i18n="arcade">Arcade</span></label>
+        <label><input type="radio" name="mode" value="check"><span data-i18n="checkMode">Check</span></label>
       </div>
       <div id="levels" class="levels practice" role="radiogroup" data-i18n-label="difficulty" aria-label="Difficulty" hidden></div>
       <button id="new" type="button" class="new-btn practice" data-i18n="new" hidden>New exercise</button>
-      <label class="topic-pick real" hidden><span data-i18n="problem">Problem</span><select id="real-pick"></select></label>
-      <button id="real-new" type="button" class="real" data-i18n="newNumbers" hidden>New numbers</button>
     </div>
 
     <section id="tutor" class="card">
@@ -77,7 +70,7 @@
       <p class="note" data-i18n-html="tutorNote"></p>
     </section>
 
-    <section id="task" class="card practice real" hidden>
+    <section id="task" class="card practice" hidden>
       <h2 id="title"></h2>
       <div id="prompt"></div>
       <div id="figure" class="figs"></div>
@@ -90,12 +83,15 @@
           <p id="ftable-fb" class="table-fb" aria-live="polite"></p>
         </div>
         <div id="comps-part" hidden>
-          <h3 data-i18n="compsHead">2 · Components</h3>
+          <h3 id="comps-head">2 · Components</h3>
           <p class="note" data-i18n="compsNote">Choose the right expression; its value is then given.</p>
           <div id="comps"></div>
         </div>
-        <h3 id="results-head">2 · Results</h3>
-        <div id="fields" class="fields"></div>
+        <div id="eqs-part" hidden>
+          <h3 id="eqs-head">2 · Equations</h3>
+          <p class="note" id="eqs-note"></p>
+          <div id="eqs"></div>
+        </div>
         <div class="actions">
           <button type="submit" id="check" class="primary">Check</button>
           <button type="button" id="hint">Hint</button>

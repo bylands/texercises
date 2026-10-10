@@ -338,7 +338,7 @@
   <p id="none" class="wrap none" data-i18n="none" hidden>No apps match.</p>
 
   <main class="wrap apps">
-    <a class="app" href="/bulb-brightness/" data-modes="tutor practice arcade">
+    <a class="app" href="/bulb-brightness/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="Circuit with a battery, one bulb in series and two bulbs in parallel">
         <circle class="halo" cx="90" cy="30" r="22" opacity="0.25"/>
         <path class="wire" d="M30 68 V30 H78 M102 30 H210 V63 M210 87 V120 H30 V82 M150 30 V63 M150 87 V120"/>
@@ -365,7 +365,7 @@
       </div>
     </a>
 
-    <a class="app" href="/circuit-trainer/" data-modes="tutor practice real arcade">
+    <a class="app" href="/circuit-trainer/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="Circuit with a battery, one resistor in series and two resistors in parallel">
         <path class="wire" d="M30 68 V30 H72 M108 30 H210 V57 M210 93 V120 H30 V82 M150 30 V57 M150 93 V120"/>
         <line class="plate" x1="16" y1="68" x2="44" y2="68" stroke-width="2.5"/>
@@ -385,7 +385,7 @@
       </div>
     </a>
 
-    <a class="app" href="/impedance/" data-modes="tutor practice real arcade">
+    <a class="app" href="/impedance/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="Impedance curve of a series RLC circuit with its minimum R at the resonance frequency">
         <path class="guide" d="M30 105 H222 M110 105 V125"/>
         <path class="axis" d="M30 132 V14 M25 20 L30 14 L35 20 M24 125 H226 M220 120 L226 125 L220 130"/>
@@ -397,11 +397,11 @@
       </svg>
       <div class="text">
         <h2>Impedance Curves</h2>
-        <p>Read R, L and C off the impedance curve of RL, RC and RLC circuits, and match circuits to their curves.</p>
+        <p>Sketch the impedance of R, L and C against frequency, predict from ωL and 1/(ωC) what a circuit does at low and high frequencies, and spot resonance as the minimum (series) or maximum (parallel) of Z.</p>
       </div>
     </a>
 
-    <a class="app" href="/rl-switch/" data-modes="tutor practice arcade">
+    <a class="app" href="/rl-switch/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="Circuit with a battery, a switch, a resistor and a coil">
         <path class="wire" d="M30 68 V30 H70 M110 30 H200 V50 M200 98 V120 H30 V82"/>
         <path class="wire" d="M70 30 L104 14"/>
@@ -423,7 +423,7 @@
       </div>
     </a>
 
-    <a class="app" href="/torque/" data-modes="tutor practice real arcade">
+    <a class="app" href="/torque/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A beam balanced on a support: a light load far out on the left, a heavy load close in on the right">
         <path class="guide" d="M50 40 H120 M120 40 H155 M50 34 V46 M120 34 V46 M155 34 V46"/>
         <rect class="res" x="30" y="56" width="180" height="9" rx="1"/>
@@ -440,12 +440,28 @@
         <text class="label" x="112" y="112">D</text>
       </svg>
       <div class="text">
-        <h2>Torque</h2>
-        <p>Lever arms and torques: levers and tools, beams on supports, ladders, tipping over, and centres of mass.</p>
+        <h2>Torque and Equilibrium</h2>
+        <p>Lever arms and torques with their sense of rotation, the weight at the centre of mass, and both conditions of equilibrium, including the force at the pivot.</p>
       </div>
     </a>
 
-    <a class="app" href="/coulomb/" data-modes="tutor practice real arcade">
+    <a class="app" href="/centre-of-mass/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A block tilted onto its edge: the vertical through its centre of mass still meets the floor inside the edge">
+        <path class="wire" d="M20 128 H220"/>
+        <polygon class="res" points="140,128 93,111 124,26 171,43"/>
+        <path class="guide" d="M132 77 V128"/>
+        <circle class="wire" cx="132" cy="77" r="5"/>
+        <path class="force" d="M132 82 V108"/>
+        <path class="forcehead" d="M127 104 L132 114 L137 104 Z"/>
+        <text class="label" x="139" y="74">S</text>
+      </svg>
+      <div class="text">
+        <h2>Centre of Mass and Tipping</h2>
+        <p>Centres of mass of wire figures, stable, unstable and neutral equilibrium, and when a tilted body falls over.</p>
+      </div>
+    </a>
+
+    <a class="app" href="/coulomb/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="Three point charges: the forces of two negative charges on a positive one, at a right angle, and their sum">
         <path class="guide" d="M120 95 H190 M120 95 V25"/>
         <path class="force" d="M120 95 L82 95"/>
@@ -464,12 +480,12 @@
         <text class="label" x="128" y="66">F<tspan dy="3">2</tspan></text>
       </svg>
       <div class="text">
-        <h2>Coulomb Force</h2>
-        <p>Point charges: Coulomb’s law, factors, and net forces as vectors, from charges in a line to rankings and points of zero force.</p>
+        <h2>Point Charges</h2>
+        <p>The Coulomb force: which way it points, by what factor it changes with the charges and the distance, forces and fields of several charges added as arrows, and the field as force per charge, E = F/q.</p>
       </div>
     </a>
 
-    <a class="app" href="/coe/" data-modes="tutor practice real arcade">
+    <a class="app" href="/coe/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A ball dropped from a height and halfway down, with bars of its potential and kinetic energy">
         <path class="axis" d="M14 112 H100 M124 112 H210"/>
         <path class="guide" d="M30 112 V40 M136 112 V76"/>
@@ -486,11 +502,11 @@
       </svg>
       <div class="text">
         <h2>Energy Conservation</h2>
-        <p>Falls, throws, pendulums and springs: from energy in each state to speeds and heights, with numbers or formulas.</p>
+        <p>Energy bookkeeping: the forms of energy in each state as bar charts, the energy balance solved with symbols, springs, friction, and why the turning point of a bungee jump is not its equilibrium.</p>
       </div>
     </a>
 
-    <a class="app" href="/force-concepts/" data-modes="tutor practice arcade">
+    <a class="app" href="/force-concepts/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A ball thrown at an angle; at the top of its path only its weight acts, while its velocity points forward">
         <path class="guide" d="M24 128 Q120 -20 216 128"/>
         <path class="axis" d="M10 128 H230"/>
@@ -503,12 +519,29 @@
         <text class="label" x="128" y="104">F<tspan dy="3">G</tspan></text>
       </svg>
       <div class="text">
-        <h2>Force Concepts</h2>
-        <p>Gravity, inertia, net force and interaction: spot the misconceptions behind tempting answers.</p>
+        <h2>Force and Motion</h2>
+        <p>Inertia, the net force and acceleration, balanced forces in motion and the force towards the centre on a circle: spot the misconceptions behind tempting answers.</p>
       </div>
     </a>
 
-    <a class="app" href="/force-systems/" data-modes="tutor practice real arcade">
+    <a class="app" href="/interaction/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="The Earth and an apple pull on each other with equally large, opposite forces">
+        <circle class="bulb" cx="62" cy="75" r="40"/>
+        <circle class="bulb" cx="196" cy="75" r="9"/>
+        <path class="force" d="M104 75 H126"/>
+        <path class="forcehead" d="M124 70 L135 75 L124 80 Z"/>
+        <path class="force" d="M185 75 H163"/>
+        <path class="forcehead" d="M165 70 L154 75 L165 80 Z"/>
+        <text class="label" x="108" y="62">F</text>
+        <text class="label" x="166" y="62">F</text>
+      </svg>
+      <div class="text">
+        <h2>Interaction</h2>
+        <p>Newton’s third law: equal and opposite forces on different bodies, finding the partner of a force, and why weight and normal force are no pair.</p>
+      </div>
+    </a>
+
+    <a class="app" href="/force-systems/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A box pulled up a slope; its weight points down, the pulling force up the slope">
         <path class="axis" d="M20 128 H220 M30 128 L210 48 V128"/>
         <polygon class="res" points="84.8,103.6 125,85.7 111.2,54.6 71,72.5"/>
@@ -520,12 +553,12 @@
         <text class="label" x="106" y="116">F<tspan dy="3">G</tspan></text>
       </svg>
       <div class="text">
-        <h2>Force Systems</h2>
-        <p>Boxes, ropes, pulleys and slopes: find forces and accelerations with Newton’s second law.</p>
+        <h2>Free-Body Diagrams</h2>
+        <p>Draw every force on a chosen system, resolve the weight on a slope, choose the system that makes a rope force external, and set up Newton’s second law along each axis.</p>
       </div>
     </a>
 
-    <a class="app" href="/induction-match/" data-modes="tutor practice real arcade">
+    <a class="app" href="/induction-match/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A flux graph that rises, stays constant and falls, and its induced voltage: negative, zero, then positive">
         <path class="axis" d="M14 120 H112 M20 126 V24 M128 75 H226 M134 126 V24"/>
         <path class="curve" d="M20 104 L50 52 L76 52 L106 92"/>
@@ -542,23 +575,57 @@
       </div>
     </a>
 
-    <a class="app" href="/motion-graphs/" data-modes="tutor practice arcade">
-      <svg viewBox="0 0 240 150" role="img" aria-label="A position graph that curves upward, and its velocity: a rising straight line">
-        <path class="axis" d="M14 120 H112 M20 126 V24 M128 120 H226 M134 126 V24"/>
-        <path class="curve" d="M20 112 Q62 112 104 40"/>
-        <path class="vel" d="M134 112 L218 40"/>
-        <text class="label" x="28" y="30">s</text>
-        <text class="label" x="142" y="30">v</text>
-        <text class="label" x="104" y="140">t</text>
-        <text class="label" x="218" y="140">t</text>
+    <a class="app" href="/motion-data/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A stroboscope picture with growing gaps, and the same positions as dots on a parabola in an s(t) graph">
+        <path class="axis" d="M18 30 H222"/>
+        <circle class="node" cx="24" cy="30" r="3.5"/><circle class="node" cx="32" cy="30" r="3.5"/><circle class="node" cx="48" cy="30" r="3.5"/><circle class="node" cx="72" cy="30" r="3.5"/><circle class="node" cx="104" cy="30" r="3.5"/><circle class="node" cx="144" cy="30" r="3.5"/><circle class="node" cx="192" cy="30" r="3.5"/>
+        <path class="axis" d="M20 132 H226 M26 138 V56"/>
+        <path class="guide" d="M26 128 Q110 128 194 66"/>
+        <circle class="node" cx="26" cy="128" r="3.5"/><circle class="node" cx="54" cy="125" r="3.5"/><circle class="node" cx="82" cy="119" r="3.5"/><circle class="node" cx="110" cy="110" r="3.5"/><circle class="node" cx="138" cy="98" r="3.5"/><circle class="node" cx="166" cy="84" r="3.5"/><circle class="node" cx="194" cy="66" r="3.5"/>
+        <text class="label" x="34" y="66">s</text>
+        <text class="label" x="218" y="146">t</text>
       </svg>
       <div class="text">
-        <h2>Motion Graphs</h2>
-        <p>Speed and direction, value tables, stroboscope pictures, slopes and areas: from position to velocity and back.</p>
+        <h2>Motion Data</h2>
+        <p>Positions and distances, instants and intervals: value tables, stroboscope pictures and s(t) graphs, uniform or uniformly accelerated.</p>
       </div>
     </a>
 
-    <a class="app" href="/oscillations/" data-modes="tutor practice real arcade">
+    <a class="app" href="/motion-graphs/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A position graph that rises and falls, with a slope triangle, and its velocity: a falling line that crosses zero">
+        <path class="axis" d="M14 120 H112 M20 126 V24 M128 76 H226 M134 126 V24"/>
+        <path class="curve" d="M20 110 Q62 10 104 90"/>
+        <path class="guide" d="M28 93 H48 V63"/>
+        <path class="vel" d="M134 36 L218 116"/>
+        <text class="label" x="28" y="30">s</text>
+        <text class="label" x="142" y="30">v</text>
+        <text class="label" x="104" y="140">t</text>
+        <text class="label" x="218" y="96">t</text>
+      </svg>
+      <div class="text">
+        <h2>Slopes of Motion Graphs</h2>
+        <p>Velocity as the slope of s(t), negative velocities, and sketching v(t) from s(t) and a(t) from v(t).</p>
+      </div>
+    </a>
+
+    <a class="app" href="/motion-areas/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A velocity graph that falls below zero, with the area under it hatched, and the position: it rises, then falls">
+        <path class="axis" d="M14 86 H112 M20 126 V24 M128 120 H226 M134 126 V24"/>
+        <path class="guide" d="M30 54 V86 M40 62 V86 M50 70 V86 M60 77 V86 M80 93 V86 M90 101 V86 M100 109 V86"/>
+        <path class="vel" d="M20 46 L104 112"/>
+        <path class="curve" d="M134 100 Q185 20 218 70"/>
+        <text class="label" x="28" y="30">v</text>
+        <text class="label" x="142" y="30">s</text>
+        <text class="label" x="104" y="80">t</text>
+        <text class="label" x="218" y="140">t</text>
+      </svg>
+      <div class="text">
+        <h2>Areas under Motion Graphs</h2>
+        <p>Displacement as the area under v(t), negative below the axis: who is farther, mean velocity, and sketching s(t) from v(t) and v(t) from a(t).</p>
+      </div>
+    </a>
+
+    <a class="app" href="/oscillations/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A harmonic oscillation: the displacement against time, a sine curve, with its period marked">
         <path class="axis" d="M20 75 H226 M26 132 V18"/>
         <path class="curve" d="M26 75 C40 30, 58 30, 72 75 S104 120, 118 75 S150 30, 164 75 S196 120, 210 75"/>
@@ -570,11 +637,11 @@
       </svg>
       <div class="text">
         <h2>Oscillations</h2>
-        <p>Harmonic or not: equations of motion, their periods and graphs, and the speed and acceleration of an oscillating body.</p>
+        <p>Simple harmonic motion as the shadow of a turning pointer: harmonic or not, equations and graphs, where v and a are largest, and the LC circuit as the same equation.</p>
       </div>
     </a>
 
-    <a class="app" href="/cyclic-processes/" data-modes="tutor practice arcade">
+    <a class="app" href="/cyclic-processes/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A cyclic process in a p(V) diagram: an isotherm, an isochore and an isobar">
         <path class="axis" d="M30 132 V14 M25 20 L30 14 L35 20 M24 125 H226 M220 120 L226 125 L220 130"/>
         <path class="curve" d="M70 40 C100 72 140 92 190 98 L190 98 L70 98 Z" fill="none"/>
@@ -596,7 +663,7 @@
       </div>
     </a>
 
-    <a class="app" href="/wave-propagation/" data-modes="tutor practice real arcade">
+    <a class="app" href="/wave-propagation/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A wave crest on a rope runs towards a fixed end at a wall">
         <path class="axis" d="M20 95 H206"/>
         <path class="curve" d="M20 95 H70 V60 H100 V95 L130 120 V95 H206" fill="none"/>
@@ -612,7 +679,7 @@
       </div>
     </a>
 
-    <a class="app" href="/electric-field/" data-modes="tutor practice real arcade">
+    <a class="app" href="/electric-field/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="Field lines running from a positive to a negative charge">
         <path class="curve" d="M80 75 H160 M80 75 C100 40 140 40 160 75 M80 75 C100 110 140 110 160 75 M80 75 C95 15 145 15 160 75 M80 75 C95 135 145 135 160 75 M80 75 H30 M160 75 H210" fill="none"/>
         <circle class="force" cx="80" cy="75" r="11"/>
@@ -621,11 +688,11 @@
         <text class="label" x="155" y="80">−</text>
       </svg>
       <div class="text">
-        <h2>Electric Field</h2>
-        <p>Field lines and their rules, forces on charges, fields that add up, dipoles, and charges flying through a capacitor.</p>
+        <h2>Field Lines and Equipotentials</h2>
+        <p>Sketching and reading the field lines of point charges, a wire and a capacitor, dipoles in a uniform field, equipotential lines, and finding the error in a sketch.</p>
       </div>
     </a>
-    <a class="app" href="/electric-potential/" data-modes="tutor practice real arcade">
+    <a class="app" href="/electric-potential/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="Equipotential circles around a charge, farther apart outwards">
         <circle class="guide" cx="120" cy="75" r="16" fill="none"/>
         <circle class="guide" cx="120" cy="75" r="30" fill="none"/>
@@ -636,10 +703,10 @@
       </svg>
       <div class="text">
         <h2>Electric Potential</h2>
-        <p>Potential and voltage, equipotential lines, the potential of point charges, accelerated particles and the electronvolt.</p>
+        <p>Potential, potential energy and voltage told apart, ΔV = E·d in a uniform field, the potential of point charges by sign and distance, and whether a charge gains or loses potential energy.</p>
       </div>
     </a>
-    <a class="app" href="/magnetic-forces/" data-modes="tutor practice real arcade">
+    <a class="app" href="/magnetic-forces/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="A positive charge moving through a magnetic field into the page; the force on it points up">
         <path class="guide" d="M40 30 l8 8 m0 -8 l-8 8 M100 30 l8 8 m0 -8 l-8 8 M160 30 l8 8 m0 -8 l-8 8 M40 112 l8 8 m0 -8 l-8 8 M100 112 l8 8 m0 -8 l-8 8 M160 112 l8 8 m0 -8 l-8 8 M200 72 l8 8 m0 -8 l-8 8"/>
         <path class="curve" d="M30 95 H90 A55 55 0 0 0 160 40" fill="none"/>
@@ -649,8 +716,25 @@
         <text class="label" x="118" y="86">v</text>
       </svg>
       <div class="text">
-        <h2>Magnetic Forces</h2>
-        <p>Hand rules for charges and currents, forces between currents, circles and helices of charged particles, and the velocity selector.</p>
+        <h2>Magnetic Forces and Fields of Currents</h2>
+        <p>Field lines of wires, loops, solenoids and magnets with the grip rule, the hand rules for charges and currents, the force F = I·L·B·sin θ, attracting and repelling currents, and the torque on a coil in motors, loudspeakers and meters.</p>
+      </div>
+    </a>
+
+    <a class="app" href="/charged-particles/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A charge accelerated between two plates, then bent onto a circle in a magnetic field into the page">
+        <path class="guide" d="M30 30 V120 M62 30 V120"/>
+        <text class="label" x="22" y="26">+</text><text class="label" x="58" y="26">−</text>
+        <path class="guide" d="M120 30 l8 8 m0 -8 l-8 8 M170 30 l8 8 m0 -8 l-8 8 M210 30 l8 8 m0 -8 l-8 8 M120 120 l8 8 m0 -8 l-8 8 M170 120 l8 8 m0 -8 l-8 8 M210 120 l8 8 m0 -8 l-8 8 M210 76 l8 8 m0 -8 l-8 8"/>
+        <path class="curve" d="M40 100 H110 A50 50 0 0 0 160 50" fill="none"/>
+        <circle class="force" cx="40" cy="100" r="8"/>
+        <path class="vel" d="M70 100 H96"/>
+        <path class="velhead" d="M96 95 L106 100 L96 105 Z"/>
+        <text class="label" x="80" y="92">v</text>
+      </svg>
+      <div class="text">
+        <h2>Charged Particles in Fields</h2>
+        <p>Energy from an accelerating voltage in electronvolts, the parabola in a capacitor and the circle in a magnetic field, why a magnetic field never changes the speed, radius and period by ratios, the velocity selector and the Hall voltage.</p>
       </div>
     </a>
     <a class="app" href="/em-waves/" data-modes="tutor practice real arcade" data-tags="Light|Licht; Waves|Wellen; Concepts|Konzepte; Calculations|Berechnungen">
@@ -738,29 +822,35 @@
       const DE = {
         'bulb-brightness': ['Helligkeit von Lampen', 'Sage voraus, welche Lampen in Serien- und Parallelschaltungen heller leuchten.', 'Stromkreis mit einer Batterie, einer Lampe in Serie und zwei Lampen parallel'],
         'circuit-trainer': ['Widerstandsschaltungen', 'Bestimme Ersatzwiderstände, Ströme und Spannungen Schritt für Schritt.', 'Stromkreis mit einer Batterie, einem Widerstand in Serie und zwei Widerständen parallel'],
-        impedance: ['Impedanzkurven', 'Lies R, L und C aus der Impedanzkurve von RL-, RC- und RLC-Schaltungen ab und ordne Schaltungen ihren Kurven zu.', 'Impedanzkurve einer RLC-Serienschaltung mit ihrem Minimum R bei der Resonanzfrequenz'],
-        coulomb: ['Coulombkraft', 'Punktladungen: das Coulombgesetz, Faktoren und resultierende Kräfte als Vektoren, von Ladungen auf einer Geraden bis zu Rangfolgen und Punkten ohne Kraft.', 'Drei Punktladungen: die Kräfte zweier negativer Ladungen auf eine positive, im rechten Winkel, und ihre Summe'],
-        coe: ['Energieerhaltung', 'Fallen, Würfe, Pendel und Federn: von der Energie in jedem Zustand zu Geschwindigkeiten und Höhen, mit Zahlen oder Formeln.', 'Ein Ball, aus einer Höhe fallen gelassen und auf halbem Weg, mit Balken seiner Lage- und kinetischen Energie'],
-        'force-concepts': ['Kraftkonzepte', 'Gewichtskraft, Trägheit, resultierende Kraft und Wechselwirkung: Erkenne die Fehlvorstellungen hinter verlockenden Antworten.', 'Ein schräg geworfener Ball: Im höchsten Punkt wirkt nur seine Gewichtskraft, während seine Geschwindigkeit nach vorne zeigt'],
-        'force-systems': ['Kräftesysteme', 'Kisten, Seile, Rollen und schiefe Ebenen: Bestimme Kräfte und Beschleunigungen mit dem Aktionsprinzip.', 'Eine Kiste wird einen Hang hinaufgezogen: Ihre Gewichtskraft zeigt nach unten, die Zugkraft hangaufwärts'],
+        impedance: ['Impedanzkurven', 'Die Impedanz von R, L und C gegen die Frequenz skizzieren, mit ωL und 1/(ωC) vorhersagen, was eine Schaltung bei tiefen und hohen Frequenzen tut, und die Resonanz als Minimum (Serie) bzw. Maximum (parallel) von Z erkennen.', 'Impedanzkurve einer RLC-Serienschaltung mit ihrem Minimum R bei der Resonanzfrequenz'],
+        coulomb: ['Punktladungen', 'Die Coulombkraft: wohin sie zeigt, um welchen Faktor sie sich mit den Ladungen und dem Abstand ändert, Kräfte und Felder mehrerer Ladungen als Pfeile addiert, und das Feld als Kraft pro Ladung, E = F/q.', 'Drei Punktladungen: die Kräfte zweier negativer Ladungen auf eine positive, im rechten Winkel, und ihre Summe'],
+        coe: ['Energieerhaltung', 'Energie-Buchhaltung: die Energieformen in jedem Zustand als Balkendiagramme, die Energiebilanz mit Symbolen gelöst, Federn, Reibung, und warum der Umkehrpunkt eines Bungee-Sprungs nicht die Gleichgewichtslage ist.', 'Ein Ball, aus einer Höhe fallen gelassen und auf halbem Weg, mit Balken seiner Lage- und kinetischen Energie'],
+        'force-concepts': ['Kraft und Bewegung', 'Trägheit, resultierende Kraft und Beschleunigung, Kräftegleichgewicht in Bewegung und die Kraft zum Zentrum auf der Kreisbahn: Erkenne die Fehlvorstellungen hinter verlockenden Antworten.', 'Ein schräg geworfener Ball: Im höchsten Punkt wirkt nur seine Gewichtskraft, während seine Geschwindigkeit nach vorne zeigt'],
+        interaction: ['Wechselwirkung', 'Das dritte Newtonsche Gesetz: gleich grosse, entgegengesetzte Kräfte auf verschiedene Körper, die Gegenkraft finden, und warum Gewichtskraft und Normalkraft kein Paar sind.', 'Die Erde und ein Apfel ziehen sich mit gleich grossen, entgegengesetzten Kräften an'],
+        'force-systems': ['Kräftediagramme', 'Jede Kraft auf ein gewähltes System einzeichnen, die Gewichtskraft auf der schiefen Ebene zerlegen, das System so wählen, dass die Seilkraft äussere Kraft wird, und das Aktionsprinzip für jede Achse aufstellen.', 'Eine Kiste wird einen Hang hinaufgezogen: Ihre Gewichtskraft zeigt nach unten, die Zugkraft hangaufwärts'],
         'induction-match': ['Elektromagnetische Induktion', 'Vom Flussdiagramm zur induzierten Spannung und zurück, eine Schleife, die durch ein Feld fährt, die Lenzsche Regel: Es zählt die Steigung, nicht der Wert.', 'Ein Flussdiagramm, das steigt, gleich bleibt und fällt, und die induzierte Spannung: negativ, null, dann positiv'],
         'rl-switch': ['Schaltvorgänge mit Spulen', 'Unmittelbar nach dem Umlegen eines Schalters in einem Stromkreis mit Spulen: Der Spulenstrom kann nicht springen.', 'Stromkreis mit einer Batterie, einem Schalter, einem Widerstand und einer Spule'],
-        torque: ['Drehmoment', 'Hebelarme und Drehmomente: Hebel und Werkzeuge, Balken auf Stützen, Leitern, Kippen und Schwerpunkte.', 'Ein Balken im Gleichgewicht auf einer Stütze: links eine leichte Last weit aussen, rechts eine schwere Last nahe an der Stütze'],
-        oscillations: ['Schwingungen', 'Harmonisch oder nicht: Bewegungsgleichungen, ihre Perioden und Graphen, und Geschwindigkeit und Beschleunigung eines schwingenden Körpers.', 'Eine harmonische Schwingung: die Auslenkung gegen die Zeit, eine Sinuskurve, mit ihrer Periode markiert'],
+        torque: ['Drehmoment und Gleichgewicht', 'Hebelarme und Drehmomente mit Drehsinn, die Gewichtskraft im Schwerpunkt und beide Gleichgewichtsbedingungen, auch mit der Kraft in der Drehachse.', 'Ein Balken im Gleichgewicht auf einer Stütze: links eine leichte Last weit aussen, rechts eine schwere Last nahe an der Stütze'],
+        'centre-of-mass': ['Schwerpunkt und Kippen', 'Schwerpunkte von Drahtfiguren, stabiles, labiles und indifferentes Gleichgewicht, und wann ein geneigter Körper umkippt.', 'Ein auf die Kante gekippter Block: Die Senkrechte durch seinen Schwerpunkt trifft den Boden noch innerhalb der Kante'],
+        oscillations: ['Schwingungen', 'Die harmonische Schwingung als Schatten eines drehenden Zeigers: harmonisch oder nicht, Gleichungen und Graphen, wo v und a am grössten sind, und der Schwingkreis als dieselbe Gleichung.', 'Eine harmonische Schwingung: die Auslenkung gegen die Zeit, eine Sinuskurve, mit ihrer Periode markiert'],
         'wave-propagation': ['Wellenausbreitung', 'Wellenbuckel auf einem Seil: wie sie laufen, wie sich ein Ort bewegt, wie sie sich überlagern und wie sie an einem festen oder losen Ende reflektiert werden.', 'Ein Wellenbuckel auf einem Seil läuft auf ein festes Ende an einer Wand zu'],
-        'electric-field': ['Elektrisches Feld', 'Feldlinien und ihre Regeln, Kräfte auf Ladungen, Felder, die sich addieren, Dipole und Ladungen, die durch einen Kondensator fliegen.', 'Feldlinien, die von einer positiven zu einer negativen Ladung laufen'],
-        'electric-potential': ['Elektrisches Potential', 'Potential und Spannung, Äquipotentiallinien, das Potential von Punktladungen, beschleunigte Teilchen und das Elektronvolt.', 'Äquipotentialkreise um eine Ladung, nach aussen weiter auseinander'],
+        'electric-field': ['Feldlinien und Äquipotentiallinien', 'Feldlinien von Punktladungen, eines Drahts und eines Kondensators skizzieren und lesen, Dipole im homogenen Feld, Äquipotentiallinien und den Fehler in einer Skizze finden.', 'Feldlinien, die von einer positiven zu einer negativen Ladung laufen'],
+        'electric-potential': ['Elektrisches Potential', 'Potential, potentielle Energie und Spannung unterscheiden, ΔV = E·d im homogenen Feld, das Potential von Punktladungen nach Vorzeichen und Abstand, und ob eine Ladung potentielle Energie gewinnt oder verliert.', 'Äquipotentialkreise um eine Ladung, nach aussen weiter auseinander'],
         'matter-waves': ['Materiewellen', 'Die de-Broglie-Wellenlänge und Elektronenbeugung, einzelne Quanten am Doppelspalt, die Unschärferelation und der Tunneleffekt.', 'Elektronen durchqueren einzeln einen Doppelspalt und bauen auf einem Schirm Interferenzstreifen auf'],
         photons: ['Photonen', 'Energie und Impuls von Photonen, der Photoeffekt und die Messung von h, Röntgenspektren und der Comptoneffekt.', 'Ein Photon trifft eine Metallplatte und schlägt ein Elektron heraus'],
-        'magnetic-forces': ['Magnetische Kräfte', 'Handregeln für Ladungen und Ströme, Kräfte zwischen Strömen, Kreise und Schraubenbahnen geladener Teilchen und das Geschwindigkeitsfilter.', 'Eine positive Ladung bewegt sich durch ein Magnetfeld in die Seite hinein; die Kraft auf sie zeigt nach oben'],
+        'magnetic-forces': ['Magnetische Kräfte und Felder von Strömen', 'Feldlinien von Drähten, Schleifen, Spulen und Magneten mit der Rechte-Hand-Regel, die Handregeln für Ladungen und Ströme, die Kraft F = I·L·B·sin θ, sich anziehende und abstossende Ströme, und das Drehmoment auf eine Spule in Motor, Lautsprecher und Messgerät.', 'Eine positive Ladung bewegt sich durch ein Magnetfeld in die Seite hinein; die Kraft auf sie zeigt nach oben'],
+        'charged-particles': ['Geladene Teilchen in Feldern', 'Energie aus einer Beschleunigungsspannung in Elektronvolt, die Parabel im Kondensator und der Kreis im Magnetfeld, warum ein Magnetfeld nie den Betrag der Geschwindigkeit ändert, Radius und Umlaufzeit mit Verhältnissen, das Geschwindigkeitsfilter und die Hall-Spannung.', 'Eine Ladung wird zwischen zwei Platten beschleunigt und dann in einem Magnetfeld, das in die Seite hinein zeigt, auf einen Kreis gelenkt'],
         'em-waves': ['Elektromagnetische Wellen', 'Das Spektrum und c = λ·f, Licht in Materie, der Schwingkreis, die Felder E und B, Intensität, Polarisationsfilter, Antennen und stehende Wellen.', 'Eine elektromagnetische Welle: Das elektrische und das magnetische Feld schwingen in Phase, senkrecht zueinander und zur Ausbreitungsrichtung'],
         'cyclic-processes': ['Kreisprozesse', 'Prozesse eines idealen Gases im p(V)-, p(T)- und V(T)-Diagramm: beschreiben, zeichnen, lesen und zwischen ihnen wechseln.', 'Ein Kreisprozess im p(V)-Diagramm: eine Isotherme, eine Isochore und eine Isobare'],
-        'motion-graphs': ['Bewegungsdiagramme', 'Tempo und Richtung, Wertetabellen, Stroboskopbilder, Steigungen und Flächen: vom Ort zur Geschwindigkeit und zurück.', 'Ein Ort-Zeit-Diagramm, das nach oben gekrümmt ist, und seine Geschwindigkeit: eine steigende Gerade'],
+        'motion-data': ['Bewegungsdaten', 'Orte und Wege, Zeitpunkte und Zeitintervalle: Wertetabellen, Stroboskopbilder und s(t)-Graphen, gleichförmig oder gleichmässig beschleunigt.', 'Ein Stroboskopbild mit wachsenden Abständen und dieselben Orte als Punkte auf einer Parabel im s(t)-Diagramm'],
+        'motion-graphs': ['Steigungen in Bewegungsdiagrammen', 'Geschwindigkeit als Steigung von s(t), negative Geschwindigkeiten und das Skizzieren von v(t) aus s(t) und a(t) aus v(t).', 'Ein Ort-Zeit-Diagramm, das steigt und fällt, mit einem Steigungsdreieck, und seine Geschwindigkeit: eine fallende Gerade, die null kreuzt'],
+        'motion-areas': ['Flächen unter Bewegungsdiagrammen', 'Die Verschiebung als Fläche unter v(t), unter der Achse negativ: wer weiter weg ist, mittlere Geschwindigkeit, und das Skizzieren von s(t) aus v(t) und v(t) aus a(t).', 'Ein Geschwindigkeitsdiagramm, das unter null fällt, mit schraffierter Fläche darunter, und der Ort: Er steigt, dann fällt er'],
       };
-      // the modes of the apps: worked examples, practice, problems from everyday life, a timed game
+      // the modes of the apps: worked examples, practice, a check of the learning objectives, problems from everyday life, a timed game
       const MODES = {
         tutor: { en: 'Tutor: worked examples', de: 'Tutor: Beispiele Schritt für Schritt', icon: '<path d="M12 6.5C10 5 7 4.6 4 5v13c3-.4 6 0 8 1.5 2-1.5 5-1.9 8-1.5V5c-3-.4-6 0-8 1.5zM12 6.5v13"/>' },
         practice: { en: 'Practice: exercises with hints', de: 'Üben: Aufgaben mit Tipps', icon: '<path d="M5 19l1-4.5L15.5 5l3.5 3.5L9.5 18 5 19zM13.5 7l3.5 3.5"/>' },
+        check: { en: 'Check: which objectives you master', de: 'Check: welche Lernziele du beherrschst', icon: '<path d="M9 4.5h6M9 4.5a1.5 1.5 0 0 0 0 3h6a1.5 1.5 0 0 0 0-3M9 6H6.5A1.5 1.5 0 0 0 5 7.5v11A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-11A1.5 1.5 0 0 0 17.5 6H15M8.5 13.5l2.5 2.5 4.5-5"/>' },
         real: { en: 'Problems: from everyday life', de: 'Praxisaufgaben: aus dem Alltag', icon: '<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.4 2.3 3.5 5 3.5 8s-1.1 5.7-3.5 8c-2.4-2.3-3.5-5-3.5-8s1.1-5.7 3.5-8z"/>' },
         arcade: { en: 'Arcade: a timed game', de: 'Arcade: ein Spiel auf Zeit', icon: '<path d="M7.5 8h9a4.5 4.5 0 0 1 4.5 4.5v1a3 3 0 0 1-5.5 1.7L14.5 14h-5l-1 1.2A3 3 0 0 1 3 13.5v-1A4.5 4.5 0 0 1 7.5 8zM8 10v3.4M6.3 11.7h3.4"/><circle cx="15.5" cy="11" r="0.6"/><circle cx="17.5" cy="13" r="0.6"/>' },
       };

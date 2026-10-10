@@ -17,12 +17,10 @@
   <script defer src="generator.js"></script>
   <script defer src="figkit.js"></script>
   <script defer src="figures.js"></script>
-  <script defer src="realproblems.js"></script>
   <script defer src="lessons.js"></script>
   <script defer src="tutor.js"></script>
-  <script defer src="arcade.js"></script>
+  <script defer src="check.js"></script>
   <script defer src="practice.js"></script>
-  <script defer src="problems.js"></script>
   <script defer src="artkit.js"></script>
   <script defer src="topics.js"></script>
   <script defer src="app.js"></script>
@@ -49,13 +47,10 @@
       <div id="modes" class="levels" role="radiogroup" data-i18n-label="mode" aria-label="Mode">
         <label><input type="radio" name="mode" value="tutor" checked><span data-i18n="tutor">Tutor</span></label>
         <label><input type="radio" name="mode" value="practice"><span data-i18n="practice">Practice</span></label>
-        <label><input type="radio" name="mode" value="real"><span data-i18n="real">Problems</span></label>
-        <label><input type="radio" name="mode" value="arcade"><span data-i18n="arcade">Arcade</span></label>
+        <label><input type="radio" name="mode" value="check"><span data-i18n="checkMode">Check</span></label>
       </div>
       <div id="levels" class="levels practice" role="radiogroup" data-i18n-label="difficulty" aria-label="Difficulty" hidden></div>
       <button id="new" type="button" class="new-btn practice" data-i18n="new" hidden>New exercise</button>
-      <label class="topic-pick real" hidden><span data-i18n="problem">Problem</span><select id="real-pick"></select></label>
-      <button id="real-new" type="button" class="real" data-i18n="newNumbers" hidden>New numbers</button>
     </div>
 
     <section id="tutor" class="card">
@@ -73,7 +68,7 @@
       <p class="note" data-i18n-html="tutorNote"></p>
     </section>
 
-    <section id="task" class="card practice real" hidden>
+    <section id="task" class="card practice" hidden>
       <h2 id="title"></h2>
       <p id="prompt"></p>
       <div id="figure" class="figs"></div>

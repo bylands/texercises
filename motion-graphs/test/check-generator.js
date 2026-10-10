@@ -1,24 +1,24 @@
-// Verifies the motion-graph exercises: run with `node motion-graphs/test/check-generator.js`.
-// For many seeds of every task it checks that
+// Verifies the exercises on slopes of motion graphs: run with
+// `node motion-graphs/test/check-generator.js`. For many seeds of both drawing tasks (s → v, v → a)
+// it checks that
 // - the five pieces cover 0 … T, last 1–3 s, and 2–3 of them are parabolas in G (sloped in g),
 // - g and G are continuous, G' = g (numerically), g and G are whole numbers at the breakpoints,
 // - both graphs stay on their axes, every breakpoint is visible and every parabola bends visibly,
-// - in a derivative exercise, the slope of every parabola can be read at both ends (readable()),
-//   and the reasons given are true (horizontal tangent, smooth join),
+// - the slope of every parabola can be read at both ends (readable()), and the reasons given are
+//   true (horizontal tangent, smooth join),
 // - the correct answer lies on the snapping grid and evaluate() accepts it,
-// - typical mistakes are recognised: the mirror image (sign), the average slope of a parabola,
-//   the rectangle g(start)·Δt instead of the trapezoid, a parabola drawn straight, a straight piece
-//   bent, and a copy of the given graph,
+// - typical mistakes are recognised: the mirror image (sign), the average slope of a parabola, a
+//   sloped line for a constant slope, and a copy of the given graph,
 // - both diagrams render,
-// - the difficulty fits the task, and every practice level gives its difficulties,
-// - the arcade options (quiz()): one right, and every wrong one is judged wrong by evaluate(),
-//   with the mistake it stands for.
+// - the options of the check (quiz()): one right, and every wrong one is judged wrong by
+//   evaluate(), with the mistake it stands for,
+// - find the error (flaw()): exactly the wrong piece is judged wrong, with its mistake.
+// Then the quiz exercises (concepts.js) and the questions of the check's objectives.
 'use strict';
 
 require('../lang.js');
 const M = require('../generator.js');
 const P = require('../plot.js');
-// the other kinds of exercise register with the generator; the levels need them
 const C = require('../concepts.js');
 
 const SAMPLES = 2000;
@@ -52,7 +52,7 @@ for (const task of Object.keys(M.TASKS)) {
 
     // G' = g, both on their axes
     const { source, target } = ex.axes;
-    const [gAx, GAx] = ex.dir === 'diff' ? [target, source] : [source, target];
+    const [gAx, GAx] = [target, source];
     for (let k = 0; k <= 1000; k++) {
       const t = (k * M.T) / 1000, h = 1e-5;
       const G = M.G(ex, t), g = M.g(ex, t);
@@ -70,18 +70,16 @@ for (const task of Object.keys(M.TASKS)) {
       if (x > 0 && x < M.len(p)) zeros++;
     }
 
-    // derivative: the slopes of the parabolas can be read
-    if (ex.dir === 'diff') {
-      const how = M.readable(ps);
-      if (!how) fail(`${tag}: slopes cannot be read`);
-      else how.forEach((h, i) => {
-        const p = ps[i];
-        if (h.start === 'vertex' && p.g0 !== 0) fail(`${tag}: no horizontal tangent at the start of piece ${i + 1}`);
-        if (h.end === 'vertex' && p.g1 !== 0) fail(`${tag}: no horizontal tangent at the end of piece ${i + 1}`);
-        if (h.start === 'join' && ps[i - 1].g1 !== p.g0) fail(`${tag}: no smooth join at the start of piece ${i + 1}`);
-        if (h.end === 'join' && ps[i + 1].g0 !== p.g1) fail(`${tag}: no smooth join at the end of piece ${i + 1}`);
-      });
-    }
+    // the slopes of the parabolas can be read
+    const how = M.readable(ps);
+    if (!how) fail(`${tag}: slopes cannot be read`);
+    else how.forEach((h, i) => {
+      const p = ps[i];
+      if (h.start === 'vertex' && p.g0 !== 0) fail(`${tag}: no horizontal tangent at the start of piece ${i + 1}`);
+      if (h.end === 'vertex' && p.g1 !== 0) fail(`${tag}: no horizontal tangent at the end of piece ${i + 1}`);
+      if (h.start === 'join' && ps[i - 1].g1 !== p.g0) fail(`${tag}: no smooth join at the start of piece ${i + 1}`);
+      if (h.end === 'join' && ps[i + 1].g0 !== p.g1) fail(`${tag}: no smooth join at the end of piece ${i + 1}`);
+    });
 
     // answers
     const step = ex.axes.target.step;
@@ -93,29 +91,11 @@ for (const task of Object.keys(M.TASKS)) {
       else found[code] = (found[code] || 0) + 1;
     };
     const mirror = ex.answer.map((a) => ({ y0: -a.y0, ym: -a.ym, y1: -a.y1 }));
-    if (ex.dir === 'diff') {
-      ps.forEach((p, i) => { if (p.g0 || p.g1) expect(mirror, i, 'sign', 'mirror image'); });
-      const average = ex.answer.map((a) => { const m = (a.y0 + a.y1) / 2; return { y0: m, ym: m, y1: m }; });
-      ps.forEach((p, i) => { if (M.sloped(p) && onGrid((p.g0 + p.g1) / 2, step)) expect(average, i, 'average', 'average slope'); });
-      const tilted = ex.answer.map((a) => ({ y0: a.y0 - 1, ym: a.ym, y1: a.y1 + 1 }));
-      ps.forEach((p, i) => { if (!M.sloped(p)) expect(tilted, i, 'notConst', 'sloped line'); });
-    } else {
-      // mirror of the changes, from the same start
-      let y = ex.answer[0].y0;
-      const back = ex.answer.map((a) => { const y0 = y; y -= a.y1 - a.y0; return { y0, ym: (y0 + y) / 2 - M.bend(a), y1: y }; });
-      ps.forEach((p, i) => { if (M.area(p)) expect(back, i, 'sign', 'changes reversed'); });
-      // rectangle g(start)·Δt, drawn straight
-      y = ex.answer[0].y0;
-      const rect = ps.map((p) => { const y0 = y; y += p.g0 * M.len(p); return { y0, ym: (y0 + y) / 2, y1: y }; });
-      ps.forEach((p, i) => {
-        if (M.sloped(p) && Math.abs(p.g0 * M.len(p) - M.area(p)) > step && Math.abs(p.g0 * M.len(p) + M.area(p)) > step) expect(rect, i, 'rectStart', 'rectangle');
-        if (M.sloped(p)) expect(rect, i, 'curve', 'parabola drawn straight');
-      });
-      const bent = ex.answer.map((a) => ({ ...a, ym: a.ym + 2 }));
-      ps.forEach((p, i) => { if (!M.sloped(p)) expect(bent, i, 'straight', 'straight piece bent'); });
-      const other = ex.answer.map((a) => ({ ...a, ym: a.ym - 2 * M.bend(a) }));
-      ps.forEach((p, i) => { if (M.sloped(p)) expect(other, i, 'bendDir', 'bent the wrong way'); });
-    }
+    ps.forEach((p, i) => { if (p.g0 || p.g1) expect(mirror, i, 'sign', 'mirror image'); });
+    const average = ex.answer.map((a) => { const m = (a.y0 + a.y1) / 2; return { y0: m, ym: m, y1: m }; });
+    ps.forEach((p, i) => { if (M.sloped(p) && onGrid((p.g0 + p.g1) / 2, step)) expect(average, i, 'average', 'average slope'); });
+    const tilted = ex.answer.map((a) => ({ y0: a.y0 - 1, ym: a.ym, y1: a.y1 + 1 }));
+    ps.forEach((p, i) => { if (!M.sloped(p)) expect(tilted, i, 'notConst', 'sloped line'); });
     // a copy of the given graph, scaled to the other axis
     const { lo: sl, hi: sh } = ex.axes.source, { lo: tl, hi: th } = ex.axes.target;
     const map = (v) => Math.round((tl + ((v - sl) / (sh - sl)) * (th - tl)) / step) * step;
@@ -127,7 +107,7 @@ for (const task of Object.keys(M.TASKS)) {
     if (M.copied(ex, ex.answer)) fail(`${tag}: correct answer taken for a copy`);
 
     // diagrams
-    for (const s of [P.sourceGraph(ex), P.targetGraph(ex, ex.answer, { solution: true, marks: ps.map(() => 'ok'), active: ex.dir === 'diff' ? 'n1' : 'm1' })]) {
+    for (const s of [P.sourceGraph(ex), P.targetGraph(ex, ex.answer, { solution: true, marks: ps.map(() => 'ok'), active: 'n1' })]) {
       if (/NaN|undefined/.test(s)) fail(`${tag}: diagram`);
     }
   }
@@ -135,32 +115,20 @@ for (const task of Object.keys(M.TASKS)) {
   console.log(`  mistakes recognised: ${JSON.stringify(found)}`);
 }
 
-const RANGE = { diff: [3, 4], int: [3, 4, 5] };
 for (const task of Object.keys(M.TASKS)) {
   for (let seed = 1; seed <= 300; seed++) {
     const ex = M.generate(task, seed);
-    if (!RANGE[ex.dir].includes(ex.difficulty)) fail(`${task}-${seed}: difficulty ${ex.difficulty}`);
+    if (![3, 4].includes(ex.difficulty)) fail(`${task}-${seed}: difficulty ${ex.difficulty}`);
   }
 }
-for (const [level, ds] of Object.entries(M.LEVELS)) {
-  const seen = {};
-  for (let seed = 1; seed <= 200; seed++) {
-    const ex = M.generate(level, seed);
-    if (!ds.includes(ex.difficulty)) fail(`${level}-${seed}: difficulty ${ex.difficulty}`);
-    if (ex.id !== `${level}-${seed}`) fail(`${level}-${seed}: id ${ex.id}`);
-    seen[ex.difficulty] = (seen[ex.difficulty] || 0) + 1;
-  }
-  if (Object.keys(seen).length !== ds.length) fail(`${level}: difficulties ${JSON.stringify(seen)}`);
-  console.log(`${level}: ${JSON.stringify(seen)}`);
-}
-const CODE = { sign: 'sign', average: 'average', rectStart: 'rectStart', curve: 'curve' };
-for (let d = 1; d <= 5; d++) {
+
+// the options of the check
+const CODE = { sign: 'sign', average: 'average' };
+for (const task of Object.keys(M.TASKS)) {
   let none = 0;
-  for (let seed = 1; seed <= 200; seed++) {
-    const ex = M.ofDifficulty(d, seed), tag = `quiz ${d}/${seed}`;
-    if (ex.kind) continue; // a quiz exercise (concepts.js), checked below
+  for (let seed = 1; seed <= 500; seed++) {
+    const ex = M.generate(task, seed), tag = `quiz ${task}/${seed}`;
     const q = M.quiz(ex, seed);
-    if (ex.difficulty !== d) fail(`${tag}: difficulty ${ex.difficulty}`);
     if (!q) { none++; continue; }
     if (q.options.length !== 4 || q.options.filter((o) => o.correct).length !== 1) fail(`${tag}: options`);
     for (const o of q.options) {
@@ -171,14 +139,31 @@ for (let d = 1; d <= 5; d++) {
       if (/NaN|undefined/.test(P.answerGraph(ex, { vals: o.vals, axis: o.axis }))) fail(`${tag}: option diagram`);
     }
   }
-  console.log(`quiz, difficulty ${d}: ${none} of 200 seeds give options that look alike`);
+  console.log(`quiz, ${task}: ${none} of 500 seeds give options that look alike`);
+}
+
+// find the error: one wrong piece, judged wrong with its mistake; the others right
+const FLAW_CODE = { sign: 'sign', average: 'average', direction: 'direction' };
+for (const task of Object.keys(M.TASKS)) {
+  const count = {};
+  for (let seed = 1; seed <= 1000; seed++) {
+    const ex = M.generate(task, seed), f = M.flaw(ex, seed), tag = `flaw ${task}/${seed}`;
+    if (!f) { fail(`${tag}: no flaw`); continue; }
+    count[f.code] = (count[f.code] || 0) + 1;
+    const res = M.evaluate(ex, f.vals), ax = ex.axes.target;
+    res.forEach((r, i) => { if (r.ok !== (i !== f.piece)) fail(`${tag}: piece ${i + 1} judged ${r.ok ? 'right' : 'wrong'} (${f.code} in piece ${f.piece + 1})`); });
+    if (FLAW_CODE[f.code] && !res[f.piece].codes.includes(FLAW_CODE[f.code])) fail(`${tag}: ${f.code} not recognised: ${JSON.stringify(res[f.piece].codes)}`);
+    if (f.vals.some((v) => [v.y0, v.ym, v.y1].some((y) => y < ax.lo - 1e-9 || y > ax.hi + 1e-9))) fail(`${tag}: sketch off its axis`);
+  }
+  if (Object.keys(count).length !== M.FLAWS.length) fail(`flaw ${task}: not every mistake comes up: ${JSON.stringify(count)}`);
+  console.log(`flaw, ${task}: ${JSON.stringify(count)}`);
 }
 
 // ---------------------------------------------------------------- the quiz exercises (concepts.js)
 // For every kind and difficulty: one right option per choice, distinct options, an explanation for
 // every wrong one, traps different from the answer, numbers in steps of 0.05, and answers that
-// agree with the motion behind the exercise (data), worked out again here; four valid arcade
-// options; the same in German, without ß.
+// agree with the motion behind the exercise (data), worked out again here; four valid options for
+// the check; the same in German, without ß.
 const Lang = require('../lang.js');
 const near = (a, b) => Math.abs(a - b) < 1e-6;
 const nice = (x) => near(Math.round(x * 20), x * 20);
@@ -220,42 +205,11 @@ for (const lang of ['en', 'de']) {
           if (right('neg').length !== want) fail(`${tag}: negative intervals`);
           if (!near(qOf('v').value, (D.asked.s1 - D.asked.s0) / (D.asked.t1 - D.asked.t0))) fail(`${tag}: wrong velocity`);
         }
-        if (kind === 'table' && d === 2) {
+        if (kind === 'table') {
           const back = D.rows.filter((r) => r.values.every((v, k) => k === 0 || v < r.values[k - 1])).map((r) => r.name);
           if (right('back').join() !== back.join() && right('back').slice().sort().join() !== back.slice().sort().join()) fail(`${tag}: always backwards ${right('back')} vs ${back}`);
           const U = D.rows.find((r) => r.name === D.uniform);
           if (!near(qOf('v').value, (U.values[1] - U.values[0]) / 5)) fail(`${tag}: wrong velocity`);
-        }
-        if (kind === 'table' && d === 3) {
-          if (!near(qOf('vA').value, D.A.v) || !near(qOf('vB').value, D.B.v)) fail(`${tag}: wrong velocities`);
-          if (['A', 'B'].some((n) => !near(qOf(`s${n}`).value, D[n].s0 + D[n].v * D.times[D[n].asked]))) fail(`${tag}: wrong positions`);
-          if (['A', 'B'].some((n) => D[n].known.includes(D[n].asked))) fail(`${tag}: a known position asked for`);
-        }
-        if (kind === 'strobe' || kind === 'strobegraph') {
-          if (D.xs.some((x) => x < -7 || x > 7)) fail(`${tag}: dot off the number line`);
-          if (D.xs.slice(1).some((x, k) => !near(x - D.xs[k], D.gaps[k]))) fail(`${tag}: gaps disagree with the dots`);
-          // constant acceleration: the distances per second change by a each second, and the
-          // positions follow s₀ + v₀·t + a·t²/2
-          if (D.gaps.slice(1).some((g, k) => !near(g - D.gaps[k], D.acc))) fail(`${tag}: acceleration not constant`);
-          if (D.xs.some((x, t) => !near(x, D.xs[0] + D.v0 * t + (D.acc * t * t) / 2))) fail(`${tag}: positions are not s0 + v0 t + a t²/2`);
-          if (kind === 'strobe' && d === 3 && !near(qOf('a').value, D.acc)) fail(`${tag}: wrong acceleration`);
-          if (kind === 'strobe' && d === 2 && right('fastest')[0] !== (() => { const k = D.gaps.reduce((m, g, i) => (Math.abs(g) > Math.abs(D.gaps[m]) ? i : m), 0); return `${k}–${k + 1}&nbsp;s`; })()) fail(`${tag}: fastest second`);
-          if (Math.abs(D.v0) > 6 || Math.abs(D.v0 + D.acc * D.gaps.length) > 6) fail(`${tag}: v off the axis`);
-        }
-        if (kind === 'atable' || kind === 'atablegraph') {
-          // the changes of position per time step change by a · (step)² each step
-          const g = D.xs.slice(1).map((x, k) => x - D.xs[k]), st = D.step || 1;
-          if (g.slice(1).some((x, k) => !near(x - g[k], D.a * st * st))) fail(`${tag}: acceleration not constant`);
-          if (kind === 'atable' && !near(qOf('a').value, D.a)) fail(`${tag}: wrong acceleration`);
-          if (kind === 'atable' && D.asked.some((k) => !near(qOf(`s${k}`).value, D.xs[k]))) fail(`${tag}: wrong positions`);
-          if (kind === 'atable' && D.asked.some((k) => k >= D.b && k <= D.b + 2)) fail(`${tag}: one of the three neighbours asked for`);
-          if (kind === 'atable' && d === 4 && !near(qOf('vm').value, (D.xs[D.b + 2] - D.xs[D.b]) / (2 * st))) fail(`${tag}: wrong velocity in the middle`);
-          // the strategy: the missing positions are asked before the acceleration
-          const keys = ex.questions.map((q) => q.key);
-          if (kind === 'atable' && D.asked.some((k) => keys.indexOf(`s${k}`) > keys.indexOf('a'))) fail(`${tag}: the acceleration is asked before the positions`);
-          // one kind of question per exercise: the table's questions, or one graph
-          if (kind === 'atable' && qOf('graph')) fail(`${tag}: a graph among the questions`);
-          if (kind === 'atablegraph' && (ex.questions.length !== 1 || qOf('graph').options.length !== 4)) fail(`${tag}: not one graph with four options`);
         }
         if (kind === 'match') {
           // the right graph is the slope of the given one, piece by piece
@@ -264,8 +218,6 @@ for (const lang of ['en', 'de']) {
           if (d >= 3 && D.pieces.some((p) => !near(p.a, (p.v1 - p.v0) / (p.t1 - p.t0)))) fail(`${tag}: wrong a`);
           if (d === 4 && D.pieces.some((p, i) => i && !near(p.v0, D.pieces[i - 1].v1))) fail(`${tag}: v jumps`);
         }
-        if (['table', 'strobe'].includes(kind) && ex.questions.some((q) => q.pics)) fail(`${tag}: a graph among the questions`);
-        if (['tablegraph', 'strobegraph'].includes(kind) && (ex.questions.length !== 1 || !ex.questions[0].pics || ex.questions[0].options.length !== 4)) fail(`${tag}: not one graph with four options`);
         // every curve of a graph inside its plot (y from 30 to 192 in figs.js)
         const graphs = [ex.figure, ...ex.steps.map((x) => x.figure), ...ex.questions.flatMap((q) => (q.pics ? q.options.map((o) => o.html) : []))];
         for (const g of graphs) {
@@ -273,25 +225,33 @@ for (const lang of ['en', 'de']) {
             if (m[1].split(/ ?L/).some((pt) => { const y = Number(pt.split(',')[1]); return y < 29.5 || y > 192.5; })) { fail(`${tag}: a curve off its axis`); break; }
           }
         }
-        if (kind === 'area' && D.pts) {
-          const ds = C.integrate(D.pts, D.a, D.b, false), dist = C.integrate(D.pts, D.a, D.b, true);
-          if (!near(qOf('ds').value, Math.round(ds * 100) / 100)) fail(`${tag}: wrong displacement`);
-          if (d === 4 && !near(qOf('dist').value, Math.round(dist * 100) / 100)) fail(`${tag}: wrong distance`);
-          if (d === 4 && !(dist - Math.abs(ds) >= 1)) fail(`${tag}: distance and displacement too close`);
-        }
-        if (kind === 'area' && D.tq) {
-          const sA = C.integrate(D.A, 0, D.tq, false), sB = C.integrate(D.B, 0, D.tq, false);
-          if (right('far')[0] !== (Math.abs(sA) > Math.abs(sB) ? 'A' : 'B')) fail(`${tag}: wrong answer to far`);
-          if (!near(qOf('sB').value, Math.round(sB * 100) / 100)) fail(`${tag}: wrong displacement of B`);
-        }
-        const a = C.arcade(ex, seed);
-        if (a.options.length !== 4 || a.options.filter((o) => o.correct).length !== 1 || new Set(a.options.map((o) => o.html)).size !== 4) fail(`${tag}: arcade options`);
+        const a = C.question(ex, seed);
+        if (a.options.length !== 4 || a.options.filter((o) => o.correct).length !== 1 || new Set(a.options.map((o) => o.html)).size !== 4) fail(`${tag}: check options`);
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------- the check
+// The quiz kinds of the objectives in app.js (kind:difficulty); the drawing tasks and find the
+// error are checked above.
+const OBJECTIVES = { slope: ['compare:1', 'compare:2'], negative: ['direction:2', 'table:2'], sketch: ['match:2'], uniform: ['match:3', 'match:4'] };
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  for (const [id, kinds] of Object.entries(OBJECTIVES)) {
+    for (const kind of kinds) {
+      const [k, d] = kind.split(':');
+      for (let seed = 1; seed <= 300; seed++) {
+        const tag = `${lang} check ${id} ${kind}/${seed}`;
+        const ex = M.KINDS[k].make(seed, Number(d)), q = C.question(ex, seed);
+        if (!q.ask || q.options.length !== 4 || q.options.filter((o) => o.correct).length !== 1 || new Set(q.options.map((o) => o.html)).size !== 4) fail(`${tag}: options`);
+        if (q.options.some((o) => !o.correct && !o.why)) fail(`${tag}: wrong option without why`);
       }
     }
   }
 }
 Lang.set('en', true);
-console.log(`quiz exercises: ${C.KINDS.length} kinds checked`);
+console.log(`${C.KINDS.length} kinds and ${Object.keys(OBJECTIVES).length} objectives checked`);
 
 if (failures) { console.error(`\n${failures} failures`); process.exit(1); }
 console.log('Generator OK');

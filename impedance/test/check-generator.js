@@ -111,7 +111,7 @@ for (const filter of Object.keys(I.LEVELS)) {
 
 // tutor lessons
 for (const e of EXAMPLES) {
-  if (e.match) continue; // the matching example: test/check-match.js
+  if (e.match || e.elements) continue; // the matching examples: test/check-match.js; the elements: no graph
   const c = e.circuit, ax = I.axesFor(c), an = I.analysis(c, ax);
   if (!I.usable(c, ax)) fail(`lesson ${e.name}: features not readable`);
   for (const k of I.UNKNOWNS[c.kind]) if (!near(an.est[k], c[k], I.TOL)) fail(`lesson ${e.name}: ${k} estimated as ${an.est[k]}`);

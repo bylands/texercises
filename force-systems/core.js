@@ -27,12 +27,6 @@
     m: { en: ['m', ''], de: ['m', ''] },
     mu: { en: ['μ', 'k'], de: ['μ', 'G'] },
     alpha: { en: ['α', ''], de: ['α', ''] },
-    // for the real problems: static friction coefficient, air resistance, thrust, a scale's reading
-    mus: { en: ['μ', 's'], de: ['μ', 'H'] },
-    v: { en: ['v', ''], de: ['v', ''] },
-    D: { en: ['F', 'd'], de: ['F', 'L'] },
-    Th: { en: ['F', 'th'], de: ['F', 'Sch'] },
-    mS: { en: ['m', 'scale'], de: ['m', 'Waage'] },
   };
   const TEX_LETTER = { μ: '\\mu', α: '\\alpha' };
   const parts = (key, i = '') => { const [l, s] = SYM[key][getLang()]; return [l, `${s}${i}`]; };

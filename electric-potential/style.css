@@ -120,47 +120,16 @@ svg.ef .traj { fill: none; stroke: var(--ef-traj); stroke-width: 2.6; stroke-lin
 .stmts .fb { display: block; font-size: 0.9rem; margin: 4px 0 0 26px; }
 .stmts .fb:empty { display: none; }
 
-/* the pictures of the problems */
-svg.tb .ef-sign { fill: var(--ink); font: 700 16px system-ui, sans-serif; }
-svg.tb .ef-lbl { fill: var(--ink); font: 13px var(--serif); }
-svg.tb .ef-arrow line, svg.tb .ef-field line { stroke: var(--motion); stroke-width: 2; }
-svg.tb .ef-arrow polygon, svg.tb .ef-field polygon { fill: var(--motion); }
-svg.tb .ef-force line { stroke: #c0392b; stroke-width: 2.2; }
-svg.tb .ef-force polygon { fill: #c0392b; }
-svg.tb .ef-weight line { stroke: var(--ink); stroke-width: 2.2; }
-svg.tb .ef-weight polygon { fill: var(--ink); }
-svg.tb .ef-drop { fill: #e3b04b; stroke: var(--ink); stroke-width: 1; }
-svg.tb .ef-dust { fill: #8a7e70; stroke: var(--ink); stroke-width: 0.8; }
-svg.tb .ef-cloud { fill: #c9ced6; stroke: var(--ink); stroke-width: 1.3; }
-svg.tb .ef-bolt { fill: none; stroke: #e8b923; stroke-width: 4; stroke-linejoin: round; }
-svg.tb .ef-flow { fill: none; stroke: #e8b923; stroke-width: 2; stroke-dasharray: 5 4; }
-svg.tb .ef-wire { stroke: var(--ink); stroke-width: 2; }
-svg.tb .ef-laser { stroke: #d32f2f; stroke-width: 2; }
-svg.tb .ef-water { fill: none; stroke: #4f86b8; stroke-width: 5; stroke-linecap: round; }
-
-svg.tb .ef-beam { fill: none; stroke: #2e7dd7; stroke-width: 2; stroke-dasharray: 6 3; }
-svg.tb .ef-xray { fill: none; stroke: #8e44ad; stroke-width: 2; stroke-dasharray: 2 3; }
-svg.tb .ef-ion line { stroke: #2e7dd7; stroke-width: 1.6; }
-svg.tb .ef-ion polygon { fill: #2e7dd7; }
-svg.tb .ef-tumour { fill: #c0392b; }
-svg.tb .ef-spark { fill: none; stroke: #e8b923; stroke-width: 2.5; }
-svg.tb .ef-membrane { fill: #f3dc98; stroke: var(--ink); stroke-width: 1.2; }
-svg.tb .ef-ion-c { fill: #f2c2bb; stroke: var(--ink); }
-svg.tb .ef-foil { fill: #e8b923; stroke: var(--ink); stroke-width: 1; }
-/* arcade: manim's colours */
-#arcade { --ef-line: #58c4dd; --ef-force: #fc6255; --ef-equi: #f0ac5f; --ef-traj: #c59df5; --ef-pos: #7a3e37; --ef-neg: #34507a; --ef-neu: #444; --ef-metal: #555; --ef-grid: #222; }
-#arcade svg.ef .bg { fill: #000; }
-#arcade svg.ef .lbl { stroke: #000; }
-#arcade .ar-opt .val svg.ef:not(.icon) { width: 100%; max-width: 260px; }
-#arcade .ar-opt .val svg.icon { width: 48px; height: 48px; }
-#arcade .ar-opt .dtile { justify-content: center; }
-.ar-hero .figs .fig svg { width: 320px; }
+/* check: drawings and direction tiles as options */
+#ck .ck-opt .val svg.ef:not(.icon) { width: 100%; max-width: 260px; }
+#ck .ck-opt .val svg.icon { width: 40px; height: 40px; }
+#ck .ck-opt .dtile { justify-content: center; }
 
 /* the nudge after a wrong check of statements */
 .stmts-fb { color: var(--bad); font-size: 0.9rem; margin: 4px 0 0; }
 .stmts-fb:empty { display: none; }
 
-/* two situations side by side */
+/* a small table of cases */
 table.cmp { border-collapse: collapse; margin: 0.6em 0; font-size: 0.95em; }
 table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 0.3em 0.8em; text-align: center; }
 table.cmp thead th { color: var(--accent); }

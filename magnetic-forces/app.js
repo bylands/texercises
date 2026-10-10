@@ -1,17 +1,17 @@
 (function () {
   'use strict';
 
-  const M = window.Magnet, X = window.MagEx, P = window.MagPlot, Figs = window.MagFigures;
-  const { scene, pathFig } = P;
-  const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const M = window.Magnet, X = window.MagEx, P = window.MagPlot;
+  const { scene, linesFig } = P;
+  const Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Magnetic Forces', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
-      tutor: 'Tutor', practice: 'Practice', real: 'Problems', arcade: 'Arcade', new: 'New exercise', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
-      tutorNote: 'Use the arrow keys ← → to step through. Blue: velocity or current, green: magnetic field, red: force; ⊙ points out of the page, ⊗ into it.',
+      title: 'Magnetic Forces and Fields of Currents', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
+      tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
+      tutorNote: 'Use the arrow keys ← → to step through. Blue: velocity or current, green: magnetic field and field lines, red: force; ⊙ points out of the page, ⊗ into it.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', option: (k) => `Option ${k}`,
       revealNote: (n) => `The solution unlocks once you have solved the exercise, used all hints or made ${n} attempts.`,
       stars: (d) => `Difficulty: ${d} of 5`, score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
@@ -21,9 +21,9 @@
       correct: 'Correct', notThis: 'Not this one: check your reasoning, or take a hint.', notAll: 'Not all the answers that fit are chosen yet.', stmtsWrong: (n) => (n === 1 ? 'One statement is judged wrong.' : `${n} statements are judged wrong.`), missed: 'This one fits too:', shown: 'The right answers are marked.',
     },
     de: {
-      title: 'Magnetische Kräfte', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
-      tutor: 'Tutor', practice: 'Üben', real: 'Praxisaufgaben', arcade: 'Arcade', new: 'Neue Aufgabe', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
-      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Blau: Geschwindigkeit oder Strom, grün: Magnetfeld, rot: Kraft; ⊙ zeigt aus der Seite heraus, ⊗ hinein.',
+      title: 'Magnetische Kräfte und Felder von Strömen', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
+      tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
+      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Blau: Geschwindigkeit oder Strom, grün: Magnetfeld und Feldlinien, rot: Kraft; ⊙ zeigt aus der Seite heraus, ⊗ hinein.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', option: (k) => `Antwort ${k}`,
       revealNote: (n) => `Die Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder ${n} Versuche gemacht hast.`,
       stars: (d) => `Schwierigkeit: ${d} von 5`, score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
@@ -35,19 +35,18 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null, problems = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
   function stored(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; } }
   function store(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable */ } }
   function showScore() { const s = stored('mf-score', { solved: 0, clean: 0 }); $('#score').textContent = s.solved ? ui().score(s.solved, s.clean) : ''; }
   const starsOf = (d) => `<span class="stars" role="img" aria-label="${ui().stars(d)}" title="${ui().stars(d)}">${'★'.repeat(d)}${'☆'.repeat(5 - d)}</span>`;
-  const pic = (e) => (e.pic ? Figs[e.pic[0]](e.pic[1]) : '');
 
   // ---------------------------------------------------------------- questions
-  // tiles: directions or names (one, or all that fit); pick: drawings; choice: a row of options;
-  // multi: statements to tick.
+  // tiles: directions or names (one, or all that fit; wide: sentences, one per row); pick:
+  // drawings; choice: a row of options; multi: statements to tick.
   function questionHtml(q) {
     if (q.type === 'tiles') {
-      return `<p class="ask">${q.label}</p><div class="tiles" role="${q.multi ? 'group' : 'radiogroup'}">${q.options.map((o, k) => `<label class="tile" data-k="${k}"><input type="${q.multi ? 'checkbox' : 'radio'}" name="q-${q.key}" value="${k}">${o.html}</label>`).join('')}</div><ul class="qfb" data-fb="${q.key}"></ul>`;
+      return `<p class="ask">${q.label}</p><div class="tiles${q.wide ? ' wide' : ''}" role="${q.multi ? 'group' : 'radiogroup'}">${q.options.map((o, k) => `<label class="tile" data-k="${k}"><input type="${q.multi ? 'checkbox' : 'radio'}" name="q-${q.key}" value="${k}">${o.html}</label>`).join('')}</div><ul class="qfb" data-fb="${q.key}"></ul>`;
     }
     if (q.type === 'pick') {
       return `<p class="ask">${q.label}</p><div class="cands" role="radiogroup">${q.options.map((o, k) => `<label class="cand" data-k="${k}"><input type="radio" name="q-${q.key}" value="${k}"><span class="letter">${k + 1}</span>${o.html}</label>`).join('')}</div><ul class="qfb" data-fb="${q.key}"></ul>`;
@@ -118,15 +117,15 @@
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null };
     if (location.hash !== `#${ex.id}`) history.replaceState(null, '', `#${ex.id}`);
     render();
-    if (ex.real == null) topics.shown(ex);
+    topics.shown(ex);
   }
   const fresh = () => open(topics.next(ex));
-  const again = (e) => (e.real != null ? problems.parse(e.id) : topics.parse(e.id) || X.make(e.type, e.seed));
+  const again = (e) => topics.parse(e.id) || X.make(e.type, e.seed);
 
   function render() {
     $('#title').innerHTML = `${ex.title} ${starsOf(ex.difficulty)}`;
     $('#prompt').innerHTML = ex.text;
-    $('#figure').innerHTML = pic(ex) + (ex.figs || '');
+    $('#figure').innerHTML = ex.figs || '';
     $('#fields').innerHTML = ex.questions.map(questionHtml).join('');
     $('#hint-list').innerHTML = '';
     $('#hints').hidden = true;
@@ -143,7 +142,7 @@
     $('#reveal').title = canReveal() ? '' : ui().unlocks(maxTries());
     $('#reveal-note').textContent = ui().revealNote(maxTries());
     $('#reveal-note').hidden = canReveal() || st.revealed;
-    $('#check').textContent = st.solved ? (ex.real != null ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     $('#check').disabled = st.revealed && !st.solved;
@@ -157,7 +156,7 @@
   }
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (ex.real != null) problems.next(); else fresh(); return; }
+    if (st.solved) { fresh(); return; } // the button reads New exercise
     if (st.revealed) return;
     const r = feedback();
     st.checked = true;
@@ -175,8 +174,7 @@
     st.solved = true;
     Practice.markSolved(PRACTICE, ex.id);
     finish();
-    st.advance = ex.real != null ? '' : topics.solved(st, ex);
-    if (ex.real != null) problems.solved(ex);
+    st.advance = topics.solved(st, ex);
     document.querySelectorAll('#fields input').forEach((x) => { x.disabled = true; });
     showStatus('ok');
   }
@@ -218,15 +216,24 @@
   const fig = (html) => `<div class="fig">${html}</div>`;
   const dn = X.dirName;
   const IN = [0, 0, -1], OUT = [0, 0, 1], RIGHT = [1, 0, 0], LEFT = [-1, 0, 0], UP = [0, 1, 0], DOWN = [0, -1, 0];
+  const at30 = [Math.cos(Math.PI / 6), Math.sin(Math.PI / 6), 0];
   const LESSONS = [
-    { topic: 0, stage: 0, name: () => L('The hand rules', 'Die Handregeln'), idea: () => L('Right hand for positive charges and currents, left hand for negative charges: thumb along the motion, index finger along the field, middle finger: the force.', 'Rechte Hand für positive Ladungen und Ströme, linke Hand für negative Ladungen: Daumen in Bewegungsrichtung, Zeigefinger in Feldrichtung, Mittelfinger: die Kraft.'),
+    { topic: 0, stage: 0, name: () => L('Field lines', 'Feldlinien'), idea: () => L('Grip each conductor with the right hand, thumb along the current: the fingers curl the way of the field. Magnetic field lines are closed.', 'Umfasse jeden Leiter mit der rechten Hand, Daumen in Stromrichtung: Die gekrümmten Finger zeigen die Richtung des Feldes. Magnetische Feldlinien sind geschlossen.'),
+      frames: () => [
+        frame(L('A straight wire', 'Ein gerader Draht'), `<p>${X.GRIP()} ${L('Here the current comes out of the page (⊙): the field lines are circles around the wire, anticlockwise. Further out, the field is weaker: the circles are drawn further apart.', 'Hier kommt der Strom aus der Seite heraus (⊙): Die Feldlinien sind Kreise um den Draht, im Gegenuhrzeigersinn. Weiter aussen ist das Feld schwächer: Die Kreise liegen weiter auseinander.')}</p>`, fig(linesFig({ src: 'wire', s: 1 }))),
+        frame(L('A loop', 'Eine Leiterschleife'), `<p>${L(`A circular loop, cut through its middle and seen from the side: at the top the current comes out of the page, at the bottom it goes in. Grip each conductor: between them, both fields point ${dn(RIGHT)} and add up. Outside, the lines come back round: each line is closed.`, `Eine kreisförmige Leiterschleife, in der Mitte durchgeschnitten und von der Seite gesehen: Oben kommt der Strom aus der Seite heraus, unten geht er hinein. Umfasse jeden Leiter: Dazwischen zeigen beide Felder ${dn(RIGHT)} und addieren sich. Aussen laufen die Linien zurück: Jede Linie ist geschlossen.`)}</p>`, fig(linesFig({ src: 'loop', s: 1 }))),
+        frame(L('A solenoid', 'Eine Spule'), `<p>${L('A solenoid is many loops in a row. Inside, the fields of all turns add up to a nearly uniform field along the axis; outside, the lines spread out and come back round. The end where the field lines come out acts as a north pole.', 'Eine Spule besteht aus vielen Schleifen hintereinander. Innen addieren sich die Felder aller Windungen zu einem nahezu homogenen Feld längs der Achse; aussen laufen die Linien auseinander und zurück. Das Ende, wo die Feldlinien austreten, wirkt als Nordpol.')}</p>`, fig(linesFig({ src: 'solenoid', s: 1 }))),
+        frame(L('A bar magnet', 'Ein Stabmagnet'), `<p>${L('A bar magnet has the same field as a solenoid: outside, the lines run from the north pole N to the south pole S, inside from S back to N.', 'Ein Stabmagnet hat dasselbe Feld wie eine Spule: Aussen laufen die Linien vom Nordpol N zum Südpol S, innen von S zurück nach N.')}</p>`, fig(linesFig({ src: 'magnet', s: 1 }))),
+        frame(L('Not like this', 'Nicht so'), `<p>${L('Here the arrows inside the magnet point from N to S, like those outside: the lines would start at N and end at S. Magnetic field lines have no beginning and no end: inside they go on in the same sense, from S to N.', 'Hier zeigen die Pfeile im Magneten von N nach S, wie die aussen: Die Linien würden bei N beginnen und bei S enden. Magnetische Feldlinien haben weder Anfang noch Ende: Innen laufen sie im selben Sinn weiter, von S nach N.')}</p>`, fig(linesFig({ src: 'magnet', s: 1, wrong: 'inside' }))),
+      ] },
+    { topic: 1, stage: 0, name: () => L('The hand rules', 'Die Handregeln'), idea: () => L('Right hand for positive charges and currents, left hand for negative charges: thumb along the motion, index finger along the field, middle finger: the force.', 'Rechte Hand für positive Ladungen und Ströme, linke Hand für negative Ladungen: Daumen in Bewegungsrichtung, Zeigefinger in Feldrichtung, Mittelfinger: die Kraft.'),
       frames: () => [
         frame(L('A positive charge', 'Eine positive Ladung'), `<p>${X.RULE()}</p><p>${X.howForce(1, 'v', RIGHT, IN)}</p>`, fig(scene({ field: { dir: IN }, items: [{ kind: 'particle', q: 1, at: [0, 0] }], vecs: [{ of: 0, kind: 'v', dir: RIGHT }, { of: 0, kind: 'F', dir: M.force(1, RIGHT, IN) }] }))),
         frame(L('A negative charge', 'Eine negative Ladung'), `<p>${X.howForce(-1, 'v', RIGHT, IN)}</p><p>${L(`The same motion and field, the opposite force: ${X.LAW()} changes sign with the charge.`, `Dieselbe Bewegung und dasselbe Feld, die entgegengesetzte Kraft: ${X.LAW()} wechselt mit der Ladung das Vorzeichen.`)}</p>`, fig(scene({ field: { dir: IN }, items: [{ kind: 'particle', q: -1, at: [0, 0] }], vecs: [{ of: 0, kind: 'v', dir: RIGHT }, { of: 0, kind: 'F', dir: M.force(-1, RIGHT, IN) }] }))),
         frame(L('A current', 'Ein Strom'), `<p>${L('A current is moving positive charge: the right hand, thumb along the current.', 'Ein Strom ist bewegte positive Ladung: die rechte Hand, Daumen in Stromrichtung.')} ${X.howForce(1, 'I', UP, OUT)}</p>`, fig(scene({ field: { dir: OUT }, items: [{ kind: 'piece', d: UP, at: [0, 0], name: '<tspan class="it">I</tspan>' }], vecs: [{ of: 0, kind: 'F', dir: M.force(1, UP, OUT) }] }))),
         frame(L('No force', 'Keine Kraft'), `<p>${X.PERP()}</p>`, fig(scene({ field: { dir: RIGHT }, items: [{ kind: 'particle', q: 1, at: [0, 0] }], vecs: [{ of: 0, kind: 'v', dir: RIGHT }] }))),
       ] },
-    { topic: 0, stage: 2, name: () => L('Which directions fit?', 'Welche Richtungen passen?'), idea: () => L('Only the part of the field across the motion matters: several field directions can give the same force.', 'Nur der Teil des Feldes quer zur Bewegung zählt: Mehrere Feldrichtungen können dieselbe Kraft ergeben.'),
+    { topic: 1, stage: 2, name: () => L('Which directions fit?', 'Welche Richtungen passen?'), idea: () => L('Only the part of the field across the motion matters: several field directions can give the same force.', 'Nur der Teil des Feldes quer zur Bewegung zählt: Mehrere Feldrichtungen können dieselbe Kraft ergeben.'),
       frames: () => {
         const v = RIGHT, F = OUT, fit = M.fitting('B', 1, v, F);
         return [
@@ -238,13 +245,27 @@
             fig(scene({ items: [{ kind: 'particle', q: 1, at: [0, 0] }], vecs: [{ of: 0, kind: 'v', dir: v }, { of: 0, kind: 'F', dir: F }, { of: 0, kind: 'B', unknown: true }] }))),
         ];
       } },
-    { topic: 1, stage: 0, name: () => L('Two currents', 'Zwei Ströme'), idea: () => L('First the field of one current at the other, then the force on the other.', 'Zuerst das Feld des einen Stroms beim anderen, dann die Kraft auf den anderen.'),
+    { topic: 2, stage: 0, name: () => L('The size of the force', 'Der Betrag der Kraft'), idea: () => L('F = I·L·B·sin θ: only the part of the wire across the field counts. Each factor changes the force in proportion.', 'F = I·L·B·sin θ: Nur der Teil des Drahts quer zum Feld zählt. Jeder Faktor ändert die Kraft im selben Verhältnis.'),
+      frames: () => {
+        const piece = (d) => ({ kind: 'piece', d, at: [0, 0], name: '<tspan class="it">I</tspan>' });
+        return [
+          frame(L('Across the field', 'Quer zum Feld'), `<p>${L('A piece of wire of length L carries a current I perpendicular to a field B: the force on it is F = I·L·B. With 2 A, 50 cm and 0.2 T: F = 2 A · 0.5 m · 0.2 T = 0.2 N. The length in metres!', 'Ein Drahtstück der Länge L führt einen Strom I senkrecht zu einem Feld B: Die Kraft darauf ist F = I·L·B. Mit 2 A, 50 cm und 0.2 T: F = 2 A · 0.5 m · 0.2 T = 0.2 N. Die Länge in Metern!')}</p>`,
+            fig(scene({ field: { dir: RIGHT }, items: [piece(UP)], vecs: [{ of: 0, kind: 'F', dir: M.force(1, UP, RIGHT) }] }))),
+          frame(L('At an angle', 'Schräg zum Feld'), `<p>${L('At an angle θ to the field, only the part of the wire across the field counts: F = I·L·B·sin θ. At 30°, sin 30° = 0.5: half the force, 0.1 N. The direction is still given by the hand rule: perpendicular to the wire and to the field.', 'Unter einem Winkel θ zum Feld zählt nur der Teil des Drahts quer zum Feld: F = I·L·B·sin θ. Bei 30° ist sin 30° = 0.5: die halbe Kraft, 0.1 N. Die Richtung gibt weiterhin die Handregel: senkrecht zum Draht und zum Feld.')}</p>`,
+            fig(scene({ field: { dir: RIGHT }, items: [piece(at30)], vecs: [{ of: 0, kind: 'F', dir: M.force(1, at30, RIGHT) }] }))),
+          frame(L('Along the field', 'Längs des Feldes'), `<p>${L('Along the field lines, θ = 0° and sin 0° = 0: no force at all, however large the current.', 'Längs der Feldlinien ist θ = 0° und sin 0° = 0: überhaupt keine Kraft, wie gross der Strom auch ist.')}</p>`,
+            fig(scene({ field: { dir: RIGHT }, items: [piece(RIGHT)], vecs: [] }))),
+          frame(L('Ratios', 'Verhältnisse'), `<p>${L('The force is proportional to I, to L, to B and to sin θ. Twice the current and half the field: 2 · ½ = 1, the same force. Three times the current, turned from 90° to 30°: 3 · 0.5 = 1.5 times the force. No numbers needed.', 'Die Kraft ist proportional zu I, zu L, zu B und zu sin θ. Doppelter Strom und halbes Feld: 2 · ½ = 1, dieselbe Kraft. Dreifacher Strom, von 90° auf 30° gedreht: 3 · 0.5 = das 1.5-Fache der Kraft. Ganz ohne Zahlen.')}</p>`,
+            fig(scene({ field: { dir: RIGHT }, items: [piece(UP)], vecs: [{ of: 0, kind: 'F', dir: M.force(1, UP, RIGHT) }] }))),
+        ];
+      } },
+    { topic: 3, stage: 0, name: () => L('Two currents', 'Zwei Ströme'), idea: () => L('First the field of one current at the other, then the force on the other.', 'Zuerst das Feld des einen Stroms beim anderen, dann die Kraft auf den anderen.'),
       frames: () => {
         const w1 = { kind: 'wire', d: OUT, at: [-1.2, 0], name: '1' };
         return [
           frame(L('The field of a current', 'Das Feld eines Stroms'), `<p>${X.GRIP()} ${L(`Wire 1 carries a current out of the page: at wire 2, to its right, the field points ${dn(UP)}.`, `Draht 1 führt einen Strom aus der Seite heraus: Bei Draht 2, rechts davon, zeigt das Feld ${dn(UP)}.`)}</p>`,
             fig(scene({ items: [w1, { kind: 'wire', d: OUT, at: [1.2, 0], name: '2' }], vecs: [{ of: 1, kind: 'B', dir: UP }] }))),
-          frame(L('The force on the other', 'Die Kraft auf den anderen'), `<p>${X.howForce(1, 'I', OUT, UP)} ${L('Currents in the same direction attract each other.', 'Gleich gerichtete Ströme ziehen sich an.')}</p>`,
+          frame(L('The force on the other', 'Die Kraft auf den anderen'), `<p>${X.howForce(1, 'I', OUT, UP)} ${L('Currents in the same direction attract each other. Wire 1 is pulled towards wire 2 just as strongly, even if the currents differ (Newton’s third law).', 'Gleich gerichtete Ströme ziehen sich an. Draht 1 wird ebenso stark zu Draht 2 gezogen, auch wenn die Ströme verschieden sind (drittes Newtonsches Axiom).')}</p>`,
             fig(scene({ items: [w1, { kind: 'wire', d: OUT, at: [1.2, 0], name: '2' }], vecs: [{ of: 1, kind: 'B', dir: UP }, { of: 1, kind: 'F', dir: M.force(1, OUT, UP) }] }))),
           frame(L('Opposite currents', 'Entgegengesetzte Ströme'), `<p>${X.howForce(1, 'I', IN, UP)} ${L('Opposite currents repel each other.', 'Entgegengesetzte Ströme stossen sich ab.')}</p>`,
             fig(scene({ items: [w1, { kind: 'wire', d: IN, at: [1.2, 0], name: '2' }], vecs: [{ of: 1, kind: 'B', dir: UP }, { of: 1, kind: 'F', dir: M.force(1, IN, UP) }] }))),
@@ -252,84 +273,44 @@
             fig(scene({ items: [{ kind: 'wire', d: UP, at: [-0.8, 0], name: '1' }, { kind: 'piece', d: RIGHT, at: [1.2, 0], name: '2' }], vecs: [{ of: 1, kind: 'B', dir: M.wireField(UP, [1.6, 0, 0]) }, { of: 1, kind: 'F', dir: M.force(1, RIGHT, M.wireField(UP, [1.6, 0, 0])) }] }))),
         ];
       } },
-    { topic: 2, stage: 0, name: () => L('On a circle', 'Auf einem Kreis'), idea: () => L('The magnetic force is always perpendicular to the velocity: the charge circles at constant speed, r = m·v/(q·B).', 'Die magnetische Kraft steht immer senkrecht zur Geschwindigkeit: Die Ladung kreist mit konstantem Betrag der Geschwindigkeit, r = m·v/(q·B).'),
-      frames: () => {
-        const run = (k) => M.path({ x0: -0.6, y0: 0.5, vx: 1, vy: 0, k, Bz: () => -1, inside: (x) => x >= 1, dt: 0.02, n: 900, stop: (x, y) => x < -1.2 || Math.abs(y) > 3.5 });
-        const base = { box: [-1, 6, -3.2, 3.2], region: [1, 6, -3.2, 3.2], bz: -1, q: 1 };
-        return [
-          frame(L('Into the field', 'Ins Feld hinein'), `<p>${L('A proton flies into a field that points into the page. Right hand: the force points up, perpendicular to the velocity. As the proton turns, the force turns with it: always towards the centre of a circle.', 'Ein Proton fliegt in ein Feld, das in die Seite hinein zeigt. Rechte Hand: Die Kraft zeigt nach oben, senkrecht zur Geschwindigkeit. Während sich das Proton dreht, dreht die Kraft mit: immer zum Mittelpunkt eines Kreises.')}</p>`, fig(pathFig({ ...base, pts: run(1 / 1.4) }))),
-          frame(L('The radius', 'Der Radius'), `<p>${L('The magnetic force is the centripetal force: q·v·B = m·v²/r, so r = m·v/(q·B). Faster or heavier: a wider circle; more charge or a stronger field: a tighter one.', 'Die magnetische Kraft ist die Zentripetalkraft: q·v·B = m·v²/r, also r = m·v/(q·B). Schneller oder schwerer: ein weiterer Kreis; mehr Ladung oder ein stärkeres Feld: ein engerer.')}</p>`, fig(pathFig({ ...base, pts: run(1 / 2) }))),
-          frame(L('The period', 'Die Umlaufzeit'), `<p>${L('One turn takes T = 2π·r/v = 2π·m/(q·B): the speed cancels out. A faster charge runs a larger circle in the same time. The cyclotron is built on this.', 'Ein Umlauf dauert T = 2π·r/v = 2π·m/(q·B): Die Geschwindigkeit kürzt sich heraus. Eine schnellere Ladung läuft einen grösseren Kreis in derselben Zeit. Darauf beruht das Zyklotron.')}</p>`, fig(pathFig({ ...base, q: -1, pts: run(-1 / 1.4) }))),
-        ];
-      } },
-    { topic: 2, stage: 1, name: () => L('Helix and growing field', 'Schraube und wachsendes Feld'), idea: () => L('Along the field nothing changes: a slanting start gives a helix. Where the field grows, the circles get tighter.', 'Längs des Feldes ändert sich nichts: Ein schräger Start ergibt eine Schraube. Wo das Feld wächst, werden die Kreise enger.'),
-      frames: () => {
-        const helix = [], R = 0.8;
-        for (let t = 0; t <= 60; t += 0.05) helix.push([0.7 * t, R * Math.sin((0.7 / R) * t)]);
-        const grow = M.path({ x0: 0, y0: 0, vx: 0, vy: 1, dt: 0.02, n: 1700, k: 1 / 1, Bz: (x, y) => 1 + 0.3 * y });
-        return [
-          frame(L('A slanting start', 'Ein schräger Start'), `<p>${L('Split the velocity into a part along the field and a part across it. Along the field there is no force: that part stays. Across it the charge circles. Together: a helix around the field lines.', 'Zerlege die Geschwindigkeit in einen Teil längs des Feldes und einen Teil quer dazu. Längs des Feldes gibt es keine Kraft: Dieser Teil bleibt. Quer dazu kreist die Ladung. Zusammen: eine Schraubenlinie um die Feldlinien.')}</p>`, fig(pathFig({ box: [-0.5, 7.5, -2.4, 2.4], bx: 1, q: 1, pts: helix }))),
-          frame(L('In three dimensions', 'Räumlich'), `<p>${L('In space, the charge winds around a field line, as if on the surface of a cylinder: across the field (v<sub>⊥</sub>) it circles, along the field (v<sub>∥</sub>) it moves on steadily. One turn takes T = 2π·m/(q·B); in that time it moves on by v<sub>∥</sub>·T, the pitch of the helix. The lighter parts of the path are behind the field line.',
-            'Im Raum windet sich die Ladung um eine Feldlinie, wie auf der Oberfläche eines Zylinders: quer zum Feld (v<sub>⊥</sub>) kreist sie, längs des Feldes (v<sub>∥</sub>) bewegt sie sich gleichmässig weiter. Ein Umlauf dauert T = 2π·m/(q·B); in dieser Zeit kommt sie um v<sub>∥</sub>·T weiter, die Ganghöhe der Schraube. Die helleren Teile der Bahn liegen hinter der Feldlinie.')}</p>`,
-            fig(P.helix3d({ R: 1.2, pitch: 2, turns: 2.6, q: 1 }))),
-          frame(L('Seen along the field', 'Längs des Feldes gesehen'), `<p>${L('Look at the same path along the field lines (the field now points towards you): you see its projection onto the plane perpendicular to the field. The part of the velocity along the field disappears, the part across it remains: the path is a circle with r = m·v<sub>⊥</sub>/(q·B), where v<sub>⊥</sub> is the part of the velocity across the field. A positive charge circles clockwise here, a negative one anticlockwise.',
-            'Betrachte dieselbe Bahn längs der Feldlinien (das Feld zeigt jetzt auf dich zu): Du siehst ihre Projektion auf die Ebene senkrecht zum Feld. Der Teil der Geschwindigkeit längs des Feldes verschwindet, der Teil quer dazu bleibt: Die Bahn ist ein Kreis mit r = m·v<sub>⊥</sub>/(q·B), wobei v<sub>⊥</sub> der Teil der Geschwindigkeit quer zum Feld ist. Eine positive Ladung kreist hier im Uhrzeigersinn, eine negative im Gegenuhrzeigersinn.')}</p>`,
-            fig(pathFig({ box: [-2.4, 2.4, -2.1, 1.5], bz: 1, q: 1, pts: M.path({ x0: 0, y0: 0.8, vx: 1, vy: 0, k: 1 / 0.8, Bz: () => 1, dt: 0.02, n: 330 }) }))),
-          frame(L('A growing field', 'Ein wachsendes Feld'), `<p>${L('Here the field (out of the page) gets stronger upwards. In the strong field the circle is tighter, in the weak field wider: the loops do not close, and the charge drifts sideways.', 'Hier wird das Feld (aus der Seite heraus) nach oben stärker. Im starken Feld ist der Kreis enger, im schwachen weiter: Die Schleifen schliessen sich nicht, und die Ladung driftet seitwärts.')}</p>`, fig(pathFig({ box: [-5, 5, -2.6, 2.6], bz: 1, grad: 0.3, q: 1, pts: grow }))),
-          frame(L('A magnetic mirror', 'Ein magnetischer Spiegel'), `<p>${L('A charge spiralling along field lines that crowd together meets a stronger and stronger field: its circles get tighter and it can be turned back. This is how the Earth’s field traps charged particles, which make the aurora near the poles.', 'Eine Ladung, die längs zusammenlaufender Feldlinien schraubt, trifft auf ein immer stärkeres Feld: Ihre Kreise werden enger, und sie kann umgekehrt werden. So fängt das Erdfeld geladene Teilchen ein, die in Polnähe das Polarlicht erzeugen.')}</p>`, Figs.earth({ aurora: true })),
-        ];
-      } },
-    { topic: 4, stage: 0, name: () => L('The velocity selector', 'Das Geschwindigkeitsfilter'), idea: () => L('An electric and a magnetic force in opposite directions cancel at exactly one speed, v = E/B.', 'Eine elektrische und eine magnetische Kraft in entgegengesetzten Richtungen heben sich bei genau einer Geschwindigkeit auf, v = E/B.'),
+    { topic: 4, stage: 0, name: () => L('A coil in a field', 'Eine Spule im Feld'), idea: () => L('Opposite sides of a coil feel opposite forces: together they turn it. The torque is largest when the field lies in the plane of the coil, zero when it is perpendicular to it.', 'Gegenüberliegende Seiten einer Spule spüren entgegengesetzte Kräfte: Zusammen drehen sie sie. Das Drehmoment ist am grössten, wenn das Feld in der Ebene der Spule liegt, null, wenn es senkrecht dazu steht.'),
       frames: () => [
-        frame(L('Two forces', 'Zwei Kräfte'), `<p>${L('A positive ion flies between two plates. The electric field pushes it down with q·E; the magnetic field (into the page) pushes it up with q·v·B (right hand).', 'Ein positives Ion fliegt zwischen zwei Platten. Das elektrische Feld drückt es mit q·E nach unten; das Magnetfeld (in die Seite hinein) drückt es mit q·v·B nach oben (rechte Hand).')}</p>`, fig(P.selectorFig({ Edown: true, bz: -1, q: 1 }))),
-        frame(L('Straight through', 'Gerade durch'), `<p>${L('The forces cancel when q·E = q·v·B, so at v = E/B: the same for every charge and every mass. Faster ions are pushed the way of the magnetic force, slower ones the way of the electric force.', 'Die Kräfte heben sich auf, wenn q·E = q·v·B, also bei v = E/B: gleich für jede Ladung und jede Masse. Schnellere Ionen werden in Richtung der magnetischen Kraft gedrückt, langsamere in Richtung der elektrischen.')}</p>`, fig(P.selectorFig({ Edown: true, bz: -1, q: -1 }))),
+        frame(L('The forces on the sides', 'Die Kräfte auf die Seiten'), `<p>${L(`A rectangular coil can turn about an axis perpendicular to the page (the dot); we look along the axis. Side 1 carries the current out of the page, side 2 into it. ${X.howForce(1, 'I', OUT, RIGHT)} On side 2 the force points ${dn(DOWN)}.`, `Eine rechteckige Spule kann sich um eine Achse senkrecht zur Seite drehen (der Punkt); wir schauen längs der Achse. Seite 1 führt den Strom aus der Seite heraus, Seite 2 hinein. ${X.howForce(1, 'I', OUT, RIGHT)} Auf Seite 2 zeigt die Kraft ${dn(DOWN)}.`)}</p>`, fig(X.coilFig(0, 1, 1, true))),
+        frame(L('A pair that turns', 'Ein Paar, das dreht'), `<p>${L('The two forces are equal and opposite: they do not push the coil away, but they turn it, here anticlockwise. With the field in the plane of the coil, their lever arm is the whole half-width of the coil: the torque is largest.', 'Die beiden Kräfte sind gleich gross und entgegengesetzt: Sie schieben die Spule nicht weg, aber sie drehen sie, hier im Gegenuhrzeigersinn. Liegt das Feld in der Ebene der Spule, ist ihr Hebelarm die ganze halbe Breite der Spule: Das Drehmoment ist am grössten.')}</p>`, fig(X.coilFig(0, 1, 1, true))),
+        frame(L('As it turns', 'Während sie sich dreht'), `<p>${L('The forces keep pointing up and down, but as the coil turns their lever arm gets shorter: the torque gets smaller.', 'Die Kräfte zeigen weiter nach oben und unten, aber während sich die Spule dreht, wird ihr Hebelarm kürzer: Das Drehmoment wird kleiner.')}</p>`, fig(X.coilFig(60, 1, 1, true))),
+        frame(L('No torque', 'Kein Drehmoment'), `<p>${L('With the field perpendicular to the plane of the coil, both forces act along one line through the axis: no torque. The coil comes to rest here, unless the current is reversed.', 'Steht das Feld senkrecht zur Ebene der Spule, wirken beide Kräfte längs einer Geraden durch die Achse: kein Drehmoment. Hier kommt die Spule zur Ruhe, ausser der Strom wird umgekehrt.')}</p>`, fig(X.coilFig(90, 1, 1, true))),
+        frame(L('Motor, loudspeaker, meter', 'Motor, Lautsprecher, Messgerät'), `<p>${L('In an electric motor, a commutator reverses the current every half turn, so that the torque keeps turning the coil the same way. In a moving-coil meter, the torque is proportional to the current and a spring balances it: the pointer shows the current. In a loudspeaker, an alternating current in a coil in the field of a magnet makes the coil, and the cone, move back and forth.', 'Im Elektromotor kehrt ein Kommutator den Strom bei jeder halben Drehung um, damit das Drehmoment die Spule immer in dieselbe Richtung dreht. Im Drehspulinstrument ist das Drehmoment proportional zum Strom, und eine Feder hält ihm das Gleichgewicht: Der Zeiger zeigt den Strom. Im Lautsprecher lässt ein Wechselstrom in einer Spule im Feld eines Magneten die Spule und die Membran hin und her schwingen.')}</p>`, fig(X.coilFig(120, 1, 1, true))),
       ] },
+    { topic: 5, stage: 0, name: () => L('Find the error', 'Finde den Fehler'), idea: () => L('Go through a worked attempt step by step: which hand, the thumb, the index finger, the middle finger. The usual error: the sign of the charge ignored.', 'Gehe einen Lösungsversuch Schritt für Schritt durch: welche Hand, der Daumen, der Zeigefinger, der Mittelfinger. Der übliche Fehler: das Vorzeichen der Ladung übersehen.'),
+      frames: () => {
+        const e = [{ kind: 'particle', q: -1, at: [0, 0], sym: 'e⁻' }];
+        return [
+          frame(L('An attempt', 'Ein Versuch'), `<p>${L(`An electron moves ${dn(RIGHT)} through a field ${dn(IN)}. Mia writes: (1) The electron moves ${dn(RIGHT)}: the right hand, as for any charge. (2) Thumb along the velocity, ${dn(RIGHT)}. (3) Index finger along the field, ${dn(IN)}. (4) The middle finger points ${dn(UP)}: that is the force.`, `Ein Elektron bewegt sich ${dn(RIGHT)} durch ein Feld, das ${dn(IN)} zeigt. Mia schreibt: (1) Das Elektron bewegt sich ${dn(RIGHT)}: die rechte Hand, wie für jede Ladung. (2) Daumen in Richtung der Geschwindigkeit, ${dn(RIGHT)}. (3) Zeigefinger in Richtung des Feldes, ${dn(IN)}. (4) Der Mittelfinger zeigt ${dn(UP)}: Das ist die Kraft.`)}</p>`,
+            fig(scene({ field: { dir: IN }, items: e, vecs: [{ of: 0, kind: 'v', dir: RIGHT }, { of: 0, kind: 'F', unknown: true }] }))),
+          frame(L('Check each step', 'Jeden Schritt prüfen'), `<p>${L(`Step 1 is wrong: an electron is negative, so the left hand. Steps 2 and 3 are right. With the left hand, the middle finger points ${dn(DOWN)}: the force on the electron points ${dn(DOWN)}, not ${dn(UP)}. Step 4 followed correctly from the wrong hand.`, `Schritt 1 ist falsch: Ein Elektron ist negativ, also die linke Hand. Die Schritte 2 und 3 sind richtig. Mit der linken Hand zeigt der Mittelfinger ${dn(DOWN)}: Die Kraft auf das Elektron zeigt ${dn(DOWN)}, nicht ${dn(UP)}. Schritt 4 folgte richtig aus der falschen Hand.`)}</p>`,
+            fig(scene({ field: { dir: IN }, items: e, vecs: [{ of: 0, kind: 'v', dir: RIGHT }, { of: 0, kind: 'F', dir: M.force(-1, RIGHT, IN) }] }))),
+          frame(L('Electrons in a wire', 'Elektronen in einem Draht'), `<p>${L(`The same error in a wire: the electrons drift ${dn(RIGHT)}, so the current flows ${dn(LEFT)}. Right hand, thumb along the current ${dn(LEFT)}, index finger ${dn(IN)}: the force points ${dn(M.force(1, LEFT, IN))}, the same as for the electrons with the left hand. Other steps that go wrong: ⊙ and ⊗ mixed up, or a middle finger that is not perpendicular to the thumb and the index finger.`, `Derselbe Fehler in einem Draht: Die Elektronen driften ${dn(RIGHT)}, also fliesst der Strom ${dn(LEFT)}. Rechte Hand, Daumen in Stromrichtung ${dn(LEFT)}, Zeigefinger ${dn(IN)}: Die Kraft zeigt ${dn(M.force(1, LEFT, IN))}, wie für die Elektronen mit der linken Hand. Andere Schritte, die schiefgehen: ⊙ und ⊗ verwechselt, oder ein Mittelfinger, der nicht senkrecht zu Daumen und Zeigefinger steht.`)}</p>`,
+            fig(scene({ field: { dir: IN }, items: [{ kind: 'piece', d: LEFT, at: [0, 0], name: '<tspan class="it">I</tspan>' }], vecs: [{ of: 0, kind: 'F', dir: M.force(1, LEFT, IN) }] }))),
+        ];
+      } },
   ];
   const stage = (name, types) => ({ name, types });
   const TOPICS = [
-    { name: () => L('The direction of the force', 'Die Richtung der Kraft'), example: (s) => (s >= 2 && s < 3 ? 1 : 0), stages: [stage(() => L('currents', 'Ströme'), ['dir-current']), stage(() => L('charges', 'Ladungen'), ['dir-particle']), stage(() => L('field or velocity missing', 'Feld oder Geschwindigkeit fehlt'), ['dir-missing'])] },
-    { name: () => L('Two currents or charges', 'Zwei Ströme oder Ladungen'), example: () => 2, stages: [stage(() => L('parallel currents', 'parallele Ströme'), ['pair-parallel']), stage(() => L('at an angle', 'schräg zueinander'), ['pair-angle']), stage(() => L('moving charges', 'bewegte Ladungen'), ['pair-particles'])] },
-    { name: () => L('Paths', 'Bahnen'), example: (s) => (s === 0 ? 3 : 4), stages: [stage(() => L('circle', 'Kreis'), ['path-circle']), stage(() => L('helix', 'Schraube'), ['path-helix']), stage(() => L('growing field', 'wachsendes Feld'), ['path-gradient'])] },
-    { name: () => L('Radius and period', 'Radius und Umlaufzeit'), example: () => 3, stages: [stage(() => L('comparing', 'vergleichen'), ['radius-compare']), stage(() => L('numbers', 'Zahlen'), ['radius-num']), stage(() => L('tracks', 'Spuren'), ['tracks'])] },
-    { name: () => L('The velocity selector', 'Das Geschwindigkeitsfilter'), example: () => 5, stages: [stage(() => L('selector', 'Filter'), ['selector'])] },
-    { name: () => L('True or false', 'Richtig oder falsch'), example: () => 0, stages: [stage(() => L('statements', 'Aussagen'), ['stmts'])] },
+    { name: () => L('Field lines', 'Feldlinien'), example: () => 0, stages: [stage(() => L('wire and loop', 'Draht und Schleife'), ['lines-wire', 'lines-loop']), stage(() => L('solenoid and magnet', 'Spule und Magnet'), ['lines-solenoid', 'lines-magnet'])] },
+    { name: () => L('The direction of the force', 'Die Richtung der Kraft'), example: (s) => (s >= 2 ? 2 : 1), stages: [stage(() => L('currents', 'Ströme'), ['dir-current']), stage(() => L('charges', 'Ladungen'), ['dir-particle']), stage(() => L('field or velocity missing', 'Feld oder Geschwindigkeit fehlt'), ['dir-missing'])] },
+    { name: () => L('The size of the force', 'Der Betrag der Kraft'), example: () => 3, stages: [stage(() => L('mental arithmetic', 'Kopfrechnen'), ['size-num']), stage(() => L('ratios', 'Verhältnisse'), ['size-ratio'])] },
+    { name: () => L('Two currents', 'Zwei Ströme'), example: () => 4, stages: [stage(() => L('parallel currents', 'parallele Ströme'), ['pair-parallel']), stage(() => L('at an angle', 'schräg zueinander'), ['pair-angle'])] },
+    { name: () => L('A coil in a field', 'Eine Spule im Feld'), example: () => 5, stages: [stage(() => L('torque', 'Drehmoment'), ['coil'])] },
+    { name: () => L('Find the error', 'Finde den Fehler'), example: () => 6, stages: [stage(() => L('charges', 'Ladungen'), ['error-charge']), stage(() => L('currents', 'Ströme'), ['error-current'])] },
+    { name: () => L('True or false', 'Richtig oder falsch'), example: () => 1, stages: [stage(() => L('statements', 'Aussagen'), ['stmts'])] },
   ];
   const lessons = () => LESSONS.map((l) => ({ name: l.name(), idea: l.idea(), frames: l.frames, also: topics.also(l.topic) }));
-
-  // ---------------------------------------------------------------- arcade
-  // One question of an exercise with a single right answer: directions, drawings or values.
-  const KINDS = [['dir-current', 1], ['dir-particle', 2], ['pair-parallel', 2], ['path-circle', 2], ['radius-compare', 2], ['pair-angle', 3], ['path-helix', 3], ['radius-num', 3], ['selector', 3], ['tracks', 3], ['pair-particles', 4], ['path-gradient', 4]];
-  const CONCEPT = { hand: 'hand', alongV: 'perp', alongB: 'perp', none: 'none', some: 'none', radial: 'grip', along: 'grip', parabola: 'circle', straight: 'circle', bent: 'none', circle: 'helix', line: 'helix', tilted: 'helix', mirror: 'grad', closed: 'grad', spiral: 'work', diam: 'radius', twopi: 'radius', half: 'radius', inv: 'selector', prod: 'selector' };
-  function arcadeQuestion(kind, seed) {
-    const e = X.make(kind, seed), qs = e.questions.filter((q) => q.type !== 'multi' && !q.multi), q = qs[seed % qs.length];
-    return {
-      title: e.title, text: e.text, figure: `<div class="figs">${e.figs || ''}</div>`, ask: q.label.replace(/^\([a-d]\) /, ''),
-      options: q.options.map((o) => ({ html: o.html || o.label, correct: o.ok, flag: o.ok ? null : o.tag || 'other', why: o.why })),
-      explain: () => `${e.solFig || ''}<div class="steps">${e.solution.map((s) => `<p>${s}</p>`).join('')}</div>`,
-    };
-  }
-  const arcadeSource = {
-    id: 'mf', kinds: KINDS.map(([id, difficulty]) => ({ id, difficulty })), question: arcadeQuestion, concept: CONCEPT,
-    concepts: () => ({
-      hand: L('which hand (the sign of the charge)', 'welche Hand (das Vorzeichen der Ladung)'), perp: L('the force perpendicular to motion and field', 'die Kraft senkrecht zu Bewegung und Feld'),
-      none: L('when there is no force', 'wann es keine Kraft gibt'), grip: L('the field around a current', 'das Feld um einen Strom'), circle: L('a circle, not a parabola', 'ein Kreis, keine Parabel'),
-      helix: L('the helix along the field', 'die Schraube längs des Feldes'), grad: L('the drift in a growing field', 'die Drift in einem wachsenden Feld'), work: L('no work, constant speed', 'keine Arbeit, konstante Geschwindigkeit'),
-      radius: L('radius and period', 'Radius und Umlaufzeit'), selector: L('the velocity selector', 'das Geschwindigkeitsfilter'),
-    }),
-    intro: () => ({
-      tag: L('Hand rules, currents, paths and circles: answer as many questions as you can in <b>5 minutes</b>.', 'Handregeln, Ströme, Bahnen und Kreise: Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich.'),
-      rule: L('Questions get harder as you go. Choose one of the answers: click it or press its number.', 'Die Fragen werden nach und nach schwieriger. Wähle eine der Antworten: Klicke sie an oder drücke ihre Nummer.'),
-      example: L('a force along the field lines', 'eine Kraft längs der Feldlinien'),
-    }),
-    hero: () => `<div class="figs"><div class="fig">${scene({ field: { dir: IN }, items: [{ kind: 'particle', q: 1, at: [0, 0] }], vecs: [{ of: 0, kind: 'v', dir: RIGHT }, { of: 0, kind: 'F', dir: UP }] })}</div></div><p class="ar-law">${X.LAW()}</p>`,
-  };
 
   // ---------------------------------------------------------------- language and modes
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
     if (topics) topics.relabel();
-    if (problems) problems.menu();
   }
   function switchLang() {
     applyStatic();
@@ -349,38 +330,34 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
+  // Practice: exercises by topic; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js, check-src.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('mf-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); });
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
   function practise() {
     setMode('practice');
-    if (ex && ex.real == null) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
   }
-  function realMode() {
-    setMode('real');
-    if (problems.is(ex)) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
-  }
-  function play() { setMode('arcade'); arcade.show(); if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade'); }
+  function checkMode() { setMode('check'); checker.show(); if (location.hash !== '#check') history.replaceState(null, '', '#check'); }
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     const m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= LESSONS.length) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
-    const re = problems.parse(h);
-    if (re) { setMode('real'); if (!ex || ex.id !== h) open(re); problems.menu(); return true; }
     const te = topics.parse(h);
     if (te) { setMode('practice'); if (!ex || ex.id !== h) open(te); return true; }
     const d = h.match(/^([a-z]+(?:-[a-z]+)*)-(\d+)$/);
@@ -390,7 +367,7 @@
 
   function init() {
     Lang.init();
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     topics = window.Topics.create({
       app: PRACTICE,
       topics: TOPICS.map((t) => ({ name: t.name, stages: t.stages, example: (s) => ({ i: t.example(s), name: () => LESSONS[t.example(s)].name() }) })),
@@ -399,10 +376,6 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.MagProblems.PROBLEMS, make: window.MagProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
     applyStatic();
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
@@ -419,14 +392,19 @@
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);
     tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(LESSONS[i].topic, LESSONS[i].stage); setMode('practice'); fresh(); } });
-    arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
+    checker = Check.create(window.MagCheck, {
+      math: () => {}, markScrollable: () => {}, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (t) => { topics.go(t); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
+    // first visit: the first worked example; the problems of earlier versions are now practice
     const last = stored('mf-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

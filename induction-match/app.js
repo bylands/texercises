@@ -5,7 +5,7 @@
   const { flux, volt, curved } = I;
   const { fluxGraph, voltGraph, optionGraph, num, Tut } = P;
   const { describe, describeBack, RULE, fmt, neg, Vi, PHI, DPHI, zeroOf, cap, when, endOf, pairFigure } = X;
-  const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
   const r1 = (x) => Math.round(x * 10) / 10;
 
@@ -13,7 +13,7 @@
   const UI = {
     en: {
       title: 'Electromagnetic Induction', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
-      tutor: 'Tutor', practice: 'Practice', real: 'Problems', arcade: 'Arcade', new: 'New exercise', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
+      tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
       tutorNote: 'Use the arrow keys ← → to step through. The part of the graph a step is about is <span class="k-band">highlighted</span> in both graphs; short lines are tangents (the slope at that point), triangles show the change of <i>Φ</i> over a time span, and shaded areas the area under the voltage graph.',
       fluxH: 'Magnetic flux', voltH: 'Induced voltage', option: (k) => `Graph ${k}`, clear: 'Reset the drawing', yours: 'Your graph',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution',
@@ -28,7 +28,7 @@
     },
     de: {
       title: 'Elektromagnetische Induktion', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
-      tutor: 'Tutor', practice: 'Üben', real: 'Praxisaufgaben', arcade: 'Arcade', new: 'Neue Aufgabe', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
+      tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Der Teil des Graphen, um den es in einem Schritt geht, ist in beiden Graphen <span class="k-band">hervorgehoben</span>; kurze Linien sind Tangenten (die Steigung an dieser Stelle), Dreiecke zeigen die Änderung von <i>Φ</i> in einer Zeitspanne und schattierte Flächen die Fläche unter dem Spannungsgraphen.',
       fluxH: 'Magnetischer Fluss', voltH: 'Induzierte Spannung', option: (k) => `Graph ${k}`, clear: 'Zeichnung zurücksetzen', yours: 'Dein Graph',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung',
@@ -44,7 +44,7 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null, problems = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
   function stored(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; } }
   function store(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable */ } }
   function showScore() { const s = stored('im-score', { solved: 0, clean: 0 }); $('#score').textContent = s.solved ? ui().score(s.solved, s.clean) : ''; }
@@ -143,10 +143,10 @@
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null, values: ex.draw ? [...ex.draw.init] : null, wrong: null };
     if (location.hash !== `#${ex.id}`) history.replaceState(null, '', `#${ex.id}`);
     render();
-    if (ex.real == null) topics.shown(ex);
+    topics.shown(ex);
   }
   const fresh = () => open(topics.next(ex));
-  const again = (e) => (e.real != null ? problems.parse(e.id) : topics.parse(e.id) || X.make(e.type, e.seed));
+  const again = (e) => topics.parse(e.id) || X.make(e.type, e.seed);
 
   function render() {
     $('#title').innerHTML = `${ex.title} ${starsOf(ex.difficulty)}`;
@@ -172,7 +172,7 @@
     $('#reveal').title = canReveal() ? '' : ui().unlocks(maxTries());
     $('#reveal-note').textContent = ui().revealNote(maxTries());
     $('#reveal-note').hidden = canReveal() || st.revealed;
-    $('#check').textContent = st.solved ? (ex.real != null ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     $('#check').disabled = st.revealed && !st.solved;
@@ -187,7 +187,7 @@
   }
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (ex.real != null) problems.next(); else fresh(); return; }
+    if (st.solved) { fresh(); return; }
     if (st.revealed) return;
     const r = feedback();
     st.checked = true;
@@ -205,8 +205,7 @@
     st.solved = true;
     Practice.markSolved(PRACTICE, ex.id);
     finish();
-    st.advance = ex.real != null ? '' : topics.solved(st, ex);
-    if (ex.real != null) problems.solved(ex);
+    st.advance = topics.solved(st, ex);
     document.querySelectorAll('#fields input').forEach((x) => { x.disabled = true; });
     showStatus('ok');
   }
@@ -379,25 +378,70 @@
   ];
   const lessons = () => LESSONS.map((l) => ({ name: l.name(), idea: l.idea(), frames: l.frames, also: topics.also(l.topic) }));
 
-  // ---------------------------------------------------------------- arcade
-  // One question of an exercise: four graphs, or a few values or words.
-  const KINDS = [['phi2v-lin', 1], ['value-v-lin', 1], ['lenz-magnet', 1], ['v2phi-lin', 2], ['value-dphi-lin', 2], ['loop-wide', 2], ['lenz-field', 2],
-    ['phi2v-smooth', 3], ['value-v-smooth', 3], ['loop-narrow', 3], ['loop-num', 3], ['v2phi-smooth', 4], ['value-dphi-smooth', 4]];
+  // ---------------------------------------------------------------- check
+  // The learning objectives (check.js), each with the questions it is asked about, its worked
+  // example and its practice topic. A kind is a practice type, or a type and the key of one of its
+  // questions (loop-wide:f): one question of an exercise, four graphs or four values. Lenz's rule has
+  // questions of two or three answers in practice; here two of them are asked together, four
+  // answers in all (lenzQuestion).
+  const OBJECTIVES = [
+    { id: 'flux', kinds: ['loop-wide:f', 'loop-num:b', 'loop-narrow:f'], tutor: 4, topic: 2,
+      name: () => L('Work out the magnetic flux Φ = B·A through a loop, with A its area in the field, and how it changes as the loop moves.',
+        'Den magnetischen Fluss Φ = B·A durch eine Schleife bestimmen, mit A ihrer Fläche im Feld, und wie er sich ändert, wenn sich die Schleife bewegt.') },
+    { id: 'slope', kinds: ['phi2v-lin', 'v2phi-lin', 'value-v-lin', 'value-dphi-lin', 'phi2v-smooth', 'v2phi-smooth'], tutor: 0, topic: 0,
+      name: () => L('Read the induced voltage as minus the slope of the flux graph, and find the flux graph from the voltage.',
+        'Die induzierte Spannung als minus die Steigung des Flussgraphen ablesen und den Flussgraphen aus der Spannung bestimmen.') },
+    { id: 'change', kinds: ['loop-wide:u', 'loop-num:c', 'loop-narrow:u'], tutor: 4, topic: 2,
+      name: () => L('Decide when a voltage is induced in a loop moving through a field: only while the flux through it changes.',
+        'Entscheiden, wann in einer Schleife, die sich durch ein Feld bewegt, eine Spannung induziert wird: nur solange sich der Fluss durch sie ändert.') },
+    { id: 'lenz', kinds: ['lenz-field', 'lenz-magnet'], tutor: 5, topic: 3,
+      name: () => L("Find the direction of an induced current with Lenz's rule.", 'Die Richtung eines induzierten Stroms mit der Lenzschen Regel bestimmen.') },
+  ];
   const CONCEPT = { sign: 'lenz', copy: 'copy', copyF: 'copy', copyV: 'copy', steep: 'rate', delta: 'rate', zero: 'rate', average: 'curve', straight: 'curve',
-    height: 'area', notime: 'area', nostart: 'area', start: 'area', inside: 'loop', once: 'loop', stay: 'loop', width: 'loop', side: 'loop', triangle: 'loop' };
-  function arcadeQuestion(kind, seed) {
-    const e = X.make(kind, seed), q = e.questions[seed % e.questions.length];
-    const options = q.type === 'pick' ? q.options.map((o) => ({ html: o.html, correct: o.ok, flag: o.ok ? null : o.tag || 'other', why: o.why }))
-      : q.options.map((o) => ({ html: o.label, correct: o.ok, flag: o.ok ? null : o.tag || 'other', why: o.why }));
+    height: 'area', notime: 'area', nostart: 'area', start: 'area', inside: 'loop', once: 'loop', stay: 'loop', width: 'loop', side: 'loop', triangle: 'loop',
+    square: 'overlap', sw: 'overlap', ww: 'overlap', along: 'support', against: 'oppose', still: 'still', poles: 'poles', hand: 'hand' };
+  const options = (q) => q.options.map((o) => ({ html: q.type === 'pick' ? o.html : o.label, correct: o.ok, flag: o.ok ? null : o.tag || 'other', why: o.why }));
+  // Lenz's rule, four answers: for a changing field, the direction of the current together with
+  // its field inside the loop (two of them turn the right-hand rule round); for a magnet and a ring,
+  // the force on the ring together with the pole it gets (one of them a pole that does not go with
+  // the force), or no current at all.
+  function lenzQuestion(e, seed) {
+    const r = I.rng(seed * 7 + 3), why = e.solution[0];
+    if (e.type === 'lenz-field') {
+      const { into, how } = e.p, grows = how === 'up', indInto = grows ? !into : into;
+      const field = (inn) => (inn ? L('into the page', 'in die Seite hinein') : L('out of the page', 'aus der Seite heraus'));
+      // clockwise (as seen in the figure) goes with a field into the page inside the loop
+      const list = [[true, true], [false, false], [true, false], [false, true]].map(([cw, inn]) => {
+        const ok = cw === indInto && inn === indInto, flag = ok ? null : cw !== inn ? 'hand' : grows ? 'along' : 'against';
+        const turn = cw ? L('clockwise', 'im Uhrzeigersinn') : L('anticlockwise', 'im Gegenuhrzeigersinn');
+        return { html: L(`${turn}, its field inside the loop pointing ${field(inn)}`, `${turn}, sein Feld innerhalb der Schleife zeigt ${field(inn)}`), correct: ok, flag, why };
+      });
+      return { ask: L('As seen in the figure, the induced current flows', 'Wie in der Abbildung gesehen fliesst der induzierte Strom'), list: r.shuffle(list) };
+    }
+    const { pole, move } = e.p, other = pole === 'N' ? 'S' : 'N';
+    const poleName = (p) => (p === 'N' ? L('a north pole', 'ein Nordpol') : L('a south pole', 'ein Südpol'));
+    const push = L('pushed away from the magnet', 'vom Magneten weggestossen'), pull = L('pulled towards the magnet', 'zum Magneten hingezogen');
+    // pushed away, the side facing the magnet repeats its pole; pulled, it gets the other one
+    const list = [[push, pole, move === 'toward'], [pull, other, move === 'away'], r.next() < 0.5 ? [push, other, false, 'poles'] : [pull, pole, false, 'poles']].map(([f, p, ok, odd]) => ({
+      html: L(`${f}; its side facing the magnet becomes ${poleName(p)}`, `${f}; seine Seite zum Magneten wird ${poleName(p)}`), correct: ok, flag: ok ? null : move === 'still' ? 'still' : odd || 'along', why,
+    }));
+    list.push({ html: L('neither pushed nor pulled: no current flows', 'weder gestossen noch gezogen: Es fliesst kein Strom'), correct: move === 'still', flag: move === 'still' ? null : 'none', why });
+    return { ask: L('The ring is', 'Der Ring wird'), list: r.shuffle(list) };
+  }
+  function checkQuestion(kind, seed) {
+    const [type, key] = kind.split(':'), e = X.make(type, seed);
+    const q = key ? e.questions.find((x) => x.key === key) : e.questions[seed % e.questions.length];
+    const { ask, list } = e.kind === 'lenz' ? lenzQuestion(e, seed) : { ask: cap(q.label.replace(/^\([a-d]\) /, '')), list: options(q) };
     return {
-      title: e.title, text: e.text, figure: `<div class="figs">${pic(e)}${e.figs || ''}</div>`, ask: q.label.replace(/^\([a-d]\) /, ''), options,
+      title: e.title, text: e.text, figure: `<div class="figs">${pic(e)}${e.figs || ''}</div>`, ask, options: list,
       explain: () => `${e.solFig || ''}<div class="steps">${e.solution.map((s) => (s.startsWith('<ul') ? s : `<p>${s}</p>`)).join('')}</div>`,
+      key: `${e.id}|${e.kind === 'lenz' ? '' : q.key}`,
     };
   }
-  const arcadeSource = {
+  const checkSource = {
     id: 'im',
-    kinds: KINDS.map(([id, difficulty]) => ({ id, difficulty })),
-    question: arcadeQuestion,
+    objectives: OBJECTIVES,
+    question: checkQuestion,
     concept: CONCEPT,
     concepts: () => ({
       lenz: L("the sign of the voltage (Lenz's rule)", 'das Vorzeichen der Spannung (Lenzsche Regel)'),
@@ -406,18 +450,13 @@
       curve: L('curved flux, changing voltage', 'gekrümmter Fluss, sich ändernde Spannung'),
       area: L('the change of the flux as minus the area', 'die Änderung des Flusses als minus die Fläche'),
       loop: L('when the flux through a moving loop changes', 'wann sich der Fluss durch eine bewegte Schleife ändert'),
+      overlap: L('the wrong area: only the part of the loop inside the field counts', 'die falsche Fläche: Es zählt nur der Teil der Schleife im Feld'),
+      support: L('the induced current supporting the change instead of opposing it', 'der induzierte Strom unterstützt die Änderung, statt ihr entgegenzuwirken'),
+      oppose: L('the induced field against the field itself, not against its change', 'das induzierte Feld gegen das Feld selbst, nicht gegen seine Änderung'),
+      still: L('a current induced by a magnet at rest', 'ein Strom, den ein ruhender Magnet induziert'),
+      poles: L('like poles attracting, unlike poles repelling', 'gleichnamige Pole ziehen sich an, ungleichnamige stossen sich ab'),
+      hand: L('the right-hand rule turned round', 'die Rechte-Hand-Regel umgekehrt'),
     }),
-    intro: () => ({
-      tag: L('Flux and induced voltage, graphs and numbers: answer as many questions as you can in <b>5 minutes</b>.',
-        'Fluss und induzierte Spannung, Graphen und Zahlen: Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich.'),
-      rule: L('Questions get harder as you go. Choose one of the answers: click it or press its number.',
-        'Die Fragen werden nach und nach schwieriger. Wähle eine der Antworten: Klicke sie an oder drücke ihre Nummer.'),
-      example: L('a voltage graph with the shape of the flux graph', 'ein Spannungsgraph mit der Form des Flussgraphen'),
-    }),
-    hero: () => {
-      const f = I.graphOf('smooth', 4);
-      return `<div class="figs"><figure class="fig">${fluxGraph(f)}</figure><figure class="fig">${voltGraph(f)}</figure></div><p class="ar-law">${Vi()} = −${DPHI}</p>`;
-    },
   };
 
   // ---------------------------------------------------------------- language and modes
@@ -425,7 +464,6 @@
     document.title = ui().title;
     Lang.apply(ui());
     if (topics) topics.relabel();
-    if (problems) problems.menu();
   }
   // The same exercise in the other language, with the answers, feedback, hints and solution kept.
   function switchLang() {
@@ -447,39 +485,35 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
+  // Practice: random exercises; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('im-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); });
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
   function practise() {
     setMode('practice');
-    if (ex && ex.real == null) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
   }
-  function realMode() {
-    setMode('real');
-    if (problems.is(ex)) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
-  }
-  function play() { setMode('arcade'); arcade.show(); if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade'); }
+  function checkMode() { setMode('check'); checker.show(); if (location.hash !== '#check') history.replaceState(null, '', '#check'); }
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     const m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= LESSONS.length) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
-    const re = problems.parse(h);
-    if (re) { setMode('real'); if (!ex || ex.id !== h) open(re); problems.menu(); return true; }
     const te = topics.parse(h);
     if (te) { setMode('practice'); if (!ex || ex.id !== h) open(te); return true; }
     const d = h.match(/^([a-z0-9]+(?:-[a-z0-9]+)+)-(\d+)$/);
@@ -489,7 +523,7 @@
 
   function init() {
     Lang.init();
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     topics = window.Topics.create({
       app: PRACTICE,
       topics: TOPICS.map((t) => ({ name: t.name, stages: t.stages, example: (s) => ({ i: t.example(s), name: () => LESSONS[t.example(s)].name() }) })),
@@ -498,10 +532,6 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.IndProblems.PROBLEMS, make: window.IndProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
     applyStatic();
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
@@ -522,14 +552,18 @@
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);
     tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(LESSONS[i].topic, LESSONS[i].stage); setMode('practice'); fresh(); } });
-    arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
+    checker = Check.create(checkSource, {
+      math: () => {}, markScrollable: () => {}, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (t) => { topics.go(t); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     const last = stored('im-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

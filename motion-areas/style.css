@@ -1,0 +1,163 @@
+/* Areas under Motion Graphs: its colours, diagrams, drawing editor and tutor marks; the general
+   look is in ui.css (shared by the apps). */
+:root {
+  --grid: #ebe8e1;
+  --grid-major: #d9d5cb;
+  /* one colour per quantity */
+  --q-s: #c62828;
+  --q-v: #1f5fc4;
+  --q-a: #1b7f3b;
+  --band: #fdf0c4;
+  --focus-band: rgba(43, 89, 195, 0.1);
+  --area-pos: rgba(43, 89, 195, 0.22);
+  --area-neg: rgba(194, 65, 12, 0.24);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --grid: #2a2e33;
+    --grid-major: #3a3f45;
+    --q-s: #ff7b72;
+    --q-v: #79a8ff;
+    --q-a: #5fd07e;
+    --band: #3a3320;
+    --focus-band: rgba(122, 162, 255, 0.12);
+    --area-pos: rgba(122, 162, 255, 0.28);
+    --area-neg: rgba(251, 146, 60, 0.28);
+  }
+}
+
+.card h3 { margin: 18px 0 6px; }
+.actions { margin-top: 16px; }
+
+i.bar { text-decoration: overline; text-decoration-thickness: 1px; }
+
+/* diagrams */
+.qc-s { color: var(--q-s); }
+.qc-v { color: var(--q-v); }
+.qc-a { color: var(--q-a); }
+.plot svg { display: block; width: 100%; height: auto; }
+#draw { touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 8px; }
+#draw:focus { outline: none; }
+#draw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#draw.dragging { cursor: grabbing !important; }
+svg text { font-family: var(--serif); }
+svg .grid { stroke: var(--grid); stroke-width: 1; }
+svg .grid.major { stroke: var(--grid-major); }
+svg .bp { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.7; }
+svg .ax { stroke: var(--muted); stroke-width: 1.2; }
+svg .tick { fill: var(--muted); font-size: 12px; font-family: system-ui, sans-serif; }
+svg .axis { fill: var(--ink); font-size: 14px; }
+svg .it { font-style: italic; }
+svg .pnum { fill: var(--muted); font-size: 12px; font-weight: 600; font-family: system-ui, sans-serif; }
+svg .pnum.bad { fill: var(--ink); }
+svg .band { fill: var(--band); }
+svg .qc-s { --qc: var(--q-s); }
+svg .qc-v { --qc: var(--q-v); }
+svg .qc-a { --qc: var(--q-a); }
+svg .qlabel { fill: var(--qc); }
+svg .curve { stroke: var(--qc); stroke-width: 2.6; fill: none; stroke-linecap: round; }
+svg .curve.solution { stroke: var(--ink); stroke-width: 2; stroke-dasharray: 7 5; }
+svg .handle { fill: var(--card); stroke: var(--qc); stroke-width: 2; }
+svg .handle.mid { fill: var(--qc); fill-opacity: 0.25; }
+svg .handle.active { fill: var(--qc); fill-opacity: 1; }
+svg .fixed { fill: var(--muted); stroke: var(--card); stroke-width: 2; }
+svg .hover { pointer-events: none; }
+svg .guide { stroke: var(--qc); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
+svg .gp { fill: var(--qc); }
+svg .gp.on { fill: var(--card); stroke: var(--qc); stroke-width: 2; }
+svg .val { fill: var(--ink); font-size: 13px; font-family: system-ui, sans-serif; font-weight: 600; paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+
+.feedback { margin: 6px 0 0; padding-left: 1.2em; }
+.feedback:empty { display: none; }
+.feedback li { margin: 6px 0; }
+
+#hint-list ul, .pieces { margin: 6px 0; padding-left: 1.2em; }
+#sol-text p { margin: 8px 0; }
+.pieces li { margin: 6px 0; }
+
+
+/* tutor mode */
+.tgraphs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+.tgraphs h3 { margin: 4px 0 2px; font-size: 0.95rem; }
+.tutor-text { min-height: 8em; }
+.tutor-text p { margin: 8px 0; }
+.tutor-text .step-rule { color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
+svg .band.focus { fill: var(--focus-band); }
+.tgraphs svg .val { font-size: 19px; }
+.tgraphs svg .tick, .tgraphs svg .pnum { font-size: 15px; }
+/* stacked (tutor): each graph as wide as the page allows, so the usual label sizes */
+.tgraphs.stack { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+.tgraphs.stack svg .val { font-size: 13px; }
+.tgraphs.stack svg .tick, .tgraphs.stack svg .pnum { font-size: 12px; }
+svg .pnum.focus { fill: var(--ink); }
+svg .tangent { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+svg .area.pos { fill: var(--area-pos); }
+svg .area.neg { fill: var(--area-neg); }
+svg .tdot { fill: var(--qc); stroke: var(--card); stroke-width: 1.5; }
+svg .tdot.mean { fill: var(--card); stroke: var(--qc); stroke-width: 2; }
+.k-band { background: var(--focus-band); border-radius: 3px; padding: 0 3px; }
+.k-pos { background: var(--area-pos); border-radius: 3px; padding: 0 3px; }
+.k-neg { background: var(--area-neg); border-radius: 3px; padding: 0 3px; }
+@media (max-width: 760px) {
+  .tgraphs { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* check: the given graph, graphs to choose from, and a given graph with a sketch side by side */
+#ck-figure .fig svg { width: 420px; }
+#ck-figure .fig { flex: 0 1 420px; } /* full width on a phone */
+.ck-opt .val { width: 100%; }
+.ck-opt .val svg { width: 100%; max-width: 380px; margin: 0 auto; }
+.figs > .tgraphs { flex: 1 1 100%; max-width: 760px; }
+
+/* exercises answered by choosing and entering numbers (quiz.js) */
+#q-fields { display: grid; gap: 18px; margin-bottom: 4px; }
+.qprompt { margin: 0 0 8px; font-weight: 600; }
+.qn {
+  display: inline-grid; place-items: center; width: 1.5em; height: 1.5em; margin-right: 8px;
+  border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+  font-size: 0.8rem; font-weight: 700; vertical-align: 1px;
+}
+.qopts { display: flex; flex-wrap: wrap; gap: 8px; }
+.qopts.pics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.qopt { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; }
+.qopt input { margin: 0; accent-color: var(--accent); }
+.qopts.pics .qopt { align-items: flex-start; padding: 6px; }
+.qopts.pics .qval { flex: 1; min-width: 0; }
+.qopts.pics .qval svg { display: block; width: 100%; height: auto; }
+.qopt:hover { border-color: var(--accent); }
+.qopt:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; background: var(--card); }
+.qopts .qopt.right { border-color: var(--ok); background: var(--ok-bg); box-shadow: 0 0 0 1px var(--ok) inset; }
+.qopts .qopt.wrong { border-color: var(--bad); background: var(--bad-bg); box-shadow: 0 0 0 1px var(--bad) inset; }
+.qfb { margin: 8px 0 0; font-size: 0.93rem; }
+.qfb:empty { display: none; }
+.qfb.ok { color: var(--ok); }
+.qfb.ok::before { content: "✓ "; }
+.qfb.bad { color: var(--bad); }
+.qfb.bad::before { content: "✗ "; }
+.qblock .fields { margin-bottom: 0; }
+@media (max-width: 560px) { .qopts.pics { grid-template-columns: minmax(0, 1fr); } }
+
+/* their figures (figs.js): graphs of one or two motions, with areas and marked times */
+#q-figure .fig svg.cgraph, .steps .fig svg.cgraph, #t-figure .fig svg.cgraph { width: 420px; }
+/* two graphs side by side (A and B): the pair takes the full row */
+.figs.pair { flex: 1 1 100%; margin: 0; }
+#q-figure .figs.pair .fig svg.cgraph, .steps .figs.pair .fig svg.cgraph, #t-figure .figs.pair .fig svg.cgraph { width: 320px; }
+.figs.pair figcaption, .fig figcaption { text-align: center; font-style: italic; color: var(--muted); }
+svg .curve.dashed { stroke-dasharray: 9 6; }
+svg .lname { fill: var(--ink); font: italic 600 15px var(--serif); paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
+/* a graph given as the answer in the tutor's summary: the size of the graphs above, not the page's */
+.tutor-text p b svg { display: block; width: min(100%, 360px); height: auto; margin: 6px 0; }
+svg .vline { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+/* their worked examples in the tutor */
+.tutor-text .tq { margin: 8px 0; padding-left: 1.4em; font-weight: 600; }
+.tutor-text details { margin: 2px 0 12px 2.1em; }
+.tutor-text summary { cursor: pointer; color: var(--accent); font-size: 0.93rem; }
+.tutor-text .wrong { margin: 6px 0; padding-left: 1.2em; font-size: 0.93rem; }
+.tutor-text .wrong li { margin: 8px 0; }
+.tag { display: inline-block; margin-left: 4px; padding: 0 8px; border: 1px solid currentColor; border-radius: 999px; color: var(--bad); font-size: 0.78rem; font-weight: 600; }
+.short { list-style: none; padding-left: 0; }
+.short li { margin: 4px 0; }
+/* a graph as an answer (a choice of graphs): small, below its number */
+.short svg.cgraph, .tutor-text p > b > svg.cgraph { display: block; width: 100%; max-width: 280px; height: auto; margin-top: 4px; }

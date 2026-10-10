@@ -235,6 +235,7 @@
 
   // The name of a circuit, e.g. "Series RL circuit".
   function name(c) {
+    if (c.kind.length === 1) return { R: L('Resistor', 'Widerstand'), L: L('Coil', 'Spule'), C: L('Capacitor', 'Kondensator') }[c.kind];
     if (c.conn === 'series-parallel') return L('R in series with L ∥ C', 'R in Serie mit L ∥ C');
     if (c.conn === 'parallel-series') return L('R in parallel with L and C in series', 'R parallel zu L und C in Serie');
     return c.conn === 'series' ? L(`Series ${c.kind} circuit`, `${c.kind}-Serieschaltung`) : L(`Parallel ${c.kind} circuit`, `${c.kind}-Parallelschaltung`);

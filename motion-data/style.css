@@ -1,0 +1,116 @@
+/* Motion Data: its colours, diagrams (graphs, stroboscope pictures, value tables) and worked
+   examples; the general look is in ui.css (shared by the apps). */
+:root {
+  --grid: #ebe8e1;
+  --grid-major: #d9d5cb;
+  /* one colour per quantity */
+  --q-s: #c62828;
+  --q-v: #1f5fc4;
+  --q-a: #1b7f3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --grid: #2a2e33;
+    --grid-major: #3a3f45;
+    --q-s: #ff7b72;
+    --q-v: #79a8ff;
+    --q-a: #5fd07e;
+  }
+}
+
+.card h3 { margin: 18px 0 6px; }
+.actions { margin-top: 16px; }
+
+/* diagrams */
+.qc-s { color: var(--q-s); }
+.qc-v { color: var(--q-v); }
+.qc-a { color: var(--q-a); }
+svg text { font-family: var(--serif); }
+svg .grid { stroke: var(--grid); stroke-width: 1; }
+svg .grid.major { stroke: var(--grid-major); }
+svg .ax { stroke: var(--muted); stroke-width: 1.2; }
+svg .tick { fill: var(--muted); font-size: 12px; font-family: system-ui, sans-serif; }
+svg .axis { fill: var(--ink); font-size: 14px; }
+svg .it { font-style: italic; }
+svg .qc-s { --qc: var(--q-s); }
+svg .qc-v { --qc: var(--q-v); }
+svg .qc-a { --qc: var(--q-a); }
+svg .qlabel { fill: var(--qc); }
+svg .curve { stroke: var(--qc); stroke-width: 2.6; fill: none; stroke-linecap: round; }
+svg .tdot { fill: var(--qc); stroke: var(--card); stroke-width: 1.5; }
+
+#sol-text p { margin: 8px 0; }
+
+/* tutor mode */
+.tutor-text { min-height: 8em; }
+.tutor-text p { margin: 8px 0; }
+.tutor-text .step-rule { color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
+
+/* check: the figure of a question, and graphs to choose from */
+#ck-figure .fig svg.cgraph { width: 420px; }
+#ck-figure .fig { flex: 0 1 420px; } /* full width on a phone */
+.ck-opt .val { width: 100%; }
+.ck-opt .val svg { width: 100%; max-width: 380px; margin: 0 auto; }
+
+/* the exercises, answered by choosing and entering numbers (quiz.js) */
+#q-fields { display: grid; gap: 18px; margin-bottom: 4px; }
+.qprompt { margin: 0 0 8px; font-weight: 600; }
+.qn {
+  display: inline-grid; place-items: center; width: 1.5em; height: 1.5em; margin-right: 8px;
+  border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+  font-size: 0.8rem; font-weight: 700; vertical-align: 1px;
+}
+.qopts { display: flex; flex-wrap: wrap; gap: 8px; }
+.qopts.pics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.qopt { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; }
+.qopt input { margin: 0; accent-color: var(--accent); }
+.qopts.pics .qopt { align-items: flex-start; padding: 6px; }
+.qopts.pics .qval { flex: 1; min-width: 0; }
+.qopts.pics .qval svg { display: block; width: 100%; height: auto; }
+.qopt:hover { border-color: var(--accent); }
+.qopt:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; background: var(--card); }
+.qopts .qopt.right { border-color: var(--ok); background: var(--ok-bg); box-shadow: 0 0 0 1px var(--ok) inset; }
+.qopts .qopt.wrong { border-color: var(--bad); background: var(--bad-bg); box-shadow: 0 0 0 1px var(--bad) inset; }
+.qfb { margin: 8px 0 0; font-size: 0.93rem; }
+.qfb:empty { display: none; }
+.qfb.ok { color: var(--ok); }
+.qfb.ok::before { content: "✓ "; }
+.qfb.bad { color: var(--bad); }
+.qfb.bad::before { content: "✗ "; }
+.qblock .fields { margin-bottom: 0; }
+@media (max-width: 560px) { .qopts.pics { grid-template-columns: minmax(0, 1fr); } }
+
+/* their figures (figs.js): graphs, stroboscope picture, value table */
+#q-figure .fig svg.cgraph, .steps .fig svg.cgraph, #t-figure .fig svg.cgraph { width: 420px; }
+/* two graphs side by side (A and B): the pair takes the full row */
+.figs.pair { flex: 1 1 100%; margin: 0; }
+svg.strobe { width: 480px; max-width: 100%; height: auto; display: block; }
+.figs.pair figcaption, .fig figcaption { text-align: center; font-style: italic; color: var(--muted); }
+svg .curve.dashed { stroke-dasharray: 9 6; }
+svg .lname { fill: var(--ink); font: italic 600 15px var(--serif); paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
+/* a graph given as the answer in the tutor's summary: the size of the graphs above, not the page's */
+.tutor-text p b svg { display: block; width: min(100%, 360px); height: auto; margin: 6px 0; }
+svg .sdot { fill: var(--qc); stroke: var(--card); stroke-width: 1.5; }
+svg .stime { fill: var(--ink); font: 600 11px system-ui, sans-serif; }
+svg .axhead { fill: var(--muted); }
+.vtable { border-collapse: collapse; margin: 4px auto; font-variant-numeric: tabular-nums; }
+.vtable th, .vtable td { padding: 4px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.vtable thead th { font-weight: 600; border-bottom: 2px solid var(--line); }
+.vtable tbody th { text-align: left; font-weight: 400; }
+.vtable td.missing { color: var(--accent); font-size: 0.85rem; }
+.vtable tr.diff th, .vtable tr.diff td { color: var(--muted); font-size: 0.9rem; }
+.vtable tr.diff td { text-align: center; }
+@media (max-width: 560px) { .vtable th, .vtable td { padding: 4px 4px; font-size: 0.85rem; } }
+
+/* their worked examples in the tutor */
+.tutor-text .tq { margin: 8px 0; padding-left: 1.4em; font-weight: 600; }
+.tutor-text details { margin: 2px 0 12px 2.1em; }
+.tutor-text summary { cursor: pointer; color: var(--accent); font-size: 0.93rem; }
+.tutor-text .wrong { margin: 6px 0; padding-left: 1.2em; font-size: 0.93rem; }
+.tutor-text .wrong li { margin: 8px 0; }
+.tag { display: inline-block; margin-left: 4px; padding: 0 8px; border: 1px solid currentColor; border-radius: 999px; color: var(--bad); font-size: 0.78rem; font-weight: 600; }
+.short { list-style: none; padding-left: 0; }
+.short li { margin: 4px 0; }
+/* a graph as an answer (a choice of graphs): small, below its number */
+.short svg.cgraph, .tutor-text p > b > svg.cgraph { display: block; width: 100%; max-width: 280px; height: auto; margin-top: 4px; }

@@ -1,11 +1,12 @@
-/* Electric Field: its colours, the drawings of charges, field lines and fields, the options; the
-   general look is in ui.css (shared by the apps). Field lines and field blue, force red. */
+/* Field Lines and Equipotentials: its colours, the drawings of charges, field lines, equipotentials
+   and fields, the options; the general look is in ui.css (shared by the apps). Field lines and field
+   blue, equipotentials orange, force red. */
 :root {
-  --ef-line: #1f5fc4; --ef-force: #c62828; --ef-equi: #c2620c; --ef-part: #7a8aa3; --ef-traj: #8e44ad;
+  --ef-line: #1f5fc4; --ef-force: #c62828; --ef-equi: #c2620c;
   --ef-pos: #f2c2bb; --ef-neg: #bcd3f2; --ef-neu: #e4e2dc; --ef-metal: #cfd3d8; --ef-grid: #ebe8e1;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --ef-line: #79a8ff; --ef-force: #ff7b72; --ef-equi: #ffb36b; --ef-part: #8d9bb3; --ef-traj: #c7a6ff; --ef-pos: #7a3e37; --ef-neg: #34507a; --ef-neu: #4a4a46; --ef-metal: #4b5157; --ef-grid: #2c3035; }
+  :root { --ef-line: #79a8ff; --ef-force: #ff7b72; --ef-equi: #ffb36b; --ef-pos: #7a3e37; --ef-neg: #34507a; --ef-neu: #4a4a46; --ef-metal: #4b5157; --ef-grid: #2c3035; }
 }
 
 #prompt p { margin: 6px 0; }
@@ -13,6 +14,7 @@
 .vec { position: relative; display: inline-block; }
 .vec::before { content: "→"; position: absolute; left: 0; right: 0; top: -0.62em; text-align: center; font-size: 0.7em; font-style: normal; line-height: 1; }
 .figs .fig { flex: 1 1 100%; }
+.figs .fig.half { flex: 1 1 240px; }
 .figs svg.ef { display: block; width: 100%; max-width: 440px; height: auto; margin: 0 auto; }
 
 /* drawings */
@@ -46,15 +48,7 @@ svg.ef .v-force { stroke: var(--ef-force); fill: none; }
 svg.ef .v-force-head { fill: var(--ef-force); }
 svg.ef .v-force-lbl { fill: var(--ef-force); }
 svg.ef .v-field-lbl { fill: var(--ef-line); }
-svg.ef .v-part { stroke: var(--ef-part); fill: none; stroke-dasharray: 5 3; }
-svg.ef .v-part-head { fill: var(--ef-part); }
-svg.ef .v-vel { stroke: var(--ink); fill: none; }
-svg.ef .v-vel-head { fill: var(--ink); }
-svg.ef .axis { stroke: var(--ink); fill: none; }
-svg.ef .axis-head { fill: var(--ink); }
-svg.ef .gcurve { fill: none; stroke: var(--ef-line); stroke-width: 2.6; }
-svg.ef .gmark { stroke: var(--muted); stroke-dasharray: 3 3; }
-svg.ef .traj { fill: none; stroke: var(--ef-traj); stroke-width: 2.6; stroke-linecap: round; }
+svg.ef .equi-lbl { fill: var(--ef-equi); }
 
 /* direction tiles: one, or all that fit */
 .ask { font-weight: 600; margin: 12px 0 6px; }
@@ -111,32 +105,10 @@ svg.ef .traj { fill: none; stroke: var(--ef-traj); stroke-width: 2.6; stroke-lin
 .stmts .fb { display: block; font-size: 0.9rem; margin: 4px 0 0 26px; }
 .stmts .fb:empty { display: none; }
 
-/* the pictures of the problems */
-svg.tb .ef-sign { fill: var(--ink); font: 700 16px system-ui, sans-serif; }
-svg.tb .ef-lbl { fill: var(--ink); font: 13px var(--serif); }
-svg.tb .ef-arrow line, svg.tb .ef-field line { stroke: var(--motion); stroke-width: 2; }
-svg.tb .ef-arrow polygon, svg.tb .ef-field polygon { fill: var(--motion); }
-svg.tb .ef-force line { stroke: #c0392b; stroke-width: 2.2; }
-svg.tb .ef-force polygon { fill: #c0392b; }
-svg.tb .ef-weight line { stroke: var(--ink); stroke-width: 2.2; }
-svg.tb .ef-weight polygon { fill: var(--ink); }
-svg.tb .ef-drop { fill: #e3b04b; stroke: var(--ink); stroke-width: 1; }
-svg.tb .ef-dust { fill: #8a7e70; stroke: var(--ink); stroke-width: 0.8; }
-svg.tb .ef-cloud { fill: #c9ced6; stroke: var(--ink); stroke-width: 1.3; }
-svg.tb .ef-bolt { fill: none; stroke: #e8b923; stroke-width: 4; stroke-linejoin: round; }
-svg.tb .ef-flow { fill: none; stroke: #e8b923; stroke-width: 2; stroke-dasharray: 5 4; }
-svg.tb .ef-wire { stroke: var(--ink); stroke-width: 2; }
-svg.tb .ef-laser { stroke: #d32f2f; stroke-width: 2; }
-svg.tb .ef-water { fill: none; stroke: #4f86b8; stroke-width: 5; stroke-linecap: round; }
-
-/* arcade: manim's colours */
-#arcade { --ef-line: #58c4dd; --ef-force: #fc6255; --ef-equi: #f0ac5f; --ef-traj: #c59df5; --ef-pos: #7a3e37; --ef-neg: #34507a; --ef-neu: #444; --ef-metal: #555; --ef-grid: #222; }
-#arcade svg.ef .bg { fill: #000; }
-#arcade svg.ef .lbl { stroke: #000; }
-#arcade .ar-opt .val svg.ef:not(.icon) { width: 100%; max-width: 260px; }
-#arcade .ar-opt .val svg.icon { width: 48px; height: 48px; }
-#arcade .ar-opt .dtile { justify-content: center; }
-.ar-hero .figs .fig svg { width: 320px; }
+/* check: drawings as options */
+#ck .ck-opt .val svg.ef:not(.icon) { width: 100%; max-width: 260px; }
+#ck .ck-opt .val svg.icon { width: 40px; height: 40px; }
+#ck .ck-opt .dtile { justify-content: center; }
 
 /* two situations side by side */
 table.cmp { border-collapse: collapse; margin: 0.6em 0; font-size: 0.95em; }

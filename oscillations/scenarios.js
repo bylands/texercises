@@ -4,25 +4,26 @@
 //     why: { flag: () => text }, fields(p, v) → [field], text(p), hints(p, v), steps(p, v) → [{ text,
 //     show: [keys] }], figure(p, v, view) }
 // A field is a number { key, type: 'num', sym, unit, what, signed } (its value in the unit), or a
-// choice { key, type: 'choice', what, ask (for the arcade), options: [[value, html, why, flag]],
+// choice { key, type: 'choice', what, ask (for the check), options: [[value, html, why, flag]],
 // after (shown once the field of that key is right), pics (the options are graphs) }; the value of
 // a choice comes from v[key].
 // view: { task: true } the task; { show: Set } the keys of what a step adds to the figure.
 //
+//   the pointer      circle (an SHM as the shadow of a turning pointer: which graph?)
 //   SHM or not       pick-shm, shm-1 … shm-3
 //   equation, graph  match-1, match-2 (an equation and four graphs), match-back (a graph and four
 //                    equations)
-//   A, T and φ₀      read-3, read-4 (amplitude, period and phase off a graph)
 //   where on y(t)    points (the point where v or a is largest, zero, positive or negative)
 //   kinematics       vmax, back-w, back-A
-//   energy           energy (the kinetic share at a displacement, or where both are equal)
+//   LC circuit       lc-eq (the same equation: which quantity is which, ω and T, when the
+//                    current is largest), lc-scale (f when L or C change)
 (function (root) {
   'use strict';
 
   const OC = root.OC || require('./core.js');
   const Eq = root.Equations || require('./equations.js');
   const Plot = root.Plot || require('./plot.js');
-  const { L, pick, shuffle, num, tnum, q, tq, sig, speedUnit, rng } = OC;
+  const { L, pick, shuffle, tnum, q, tq, sig, speedUnit, rng } = OC;
   const { MISTAKES, PWHY, FORMS, byId } = Eq;
 
   // ---------------------------------------------------------------- helpers
@@ -33,6 +34,80 @@
   const choice = (key, what, options, o = {}) => ({ key, type: 'choice', what, options, ...o });
   const box = (tex) => `<div class="eqbox">$$${tex}$$</div>`;
   const PI2 = 2 * Math.PI;
+
+  // ================================================================ 0 the pointer
+  // A pointer of length A turns anticlockwise at the angular velocity ω; at t = 0 it is at the
+  // angle φ₀ = k·π/4 from the horizontal. A body is always at the height of its tip:
+  // y = A·sin(ωt + φ₀), an SHM. Which graph (no numbers, two periods)? The wrong ones: the pointer
+  // turning the other way, its shadow on the horizontal axis, a start opposite or a quarter turn off.
+  const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));
+  // k·π/4 as TeX
+  function piTex(k) {
+    if (k === 0) return '0';
+    const g = gcd(Math.abs(k), 4), n = k / g, d = 4 / g, sg = n < 0 ? '-' : '', a = Math.abs(n);
+    return d === 1 ? `${sg}${a === 1 ? '' : a}\\pi` : `${sg}\\frac{${a === 1 ? '' : a}\\pi}{${d}}`;
+  }
+  // the displacement over A at u periods, for each graph offered
+  const CIRCLE = {
+    right: (u, phi) => Math.sin(PI2 * u + phi),
+    turn: (u, phi) => Math.sin(phi - PI2 * u),
+    proj: (u, phi) => Math.cos(PI2 * u + phi),
+    start: (u, phi) => -Math.sin(PI2 * u + phi),
+    late: (u, phi) => -Math.cos(PI2 * u + phi),
+  };
+  const CFLAG = { right: null, turn: 'turn', proj: 'proj', start: 'start', late: 'start' };
+  const circlePts = (kind, phi) => Array.from({ length: 241 }, (z, j) => { const u = (j * 2) / 240; return [u, CIRCLE[kind](u, phi)]; });
+  const circleGraph = (kind, phi) => Plot.graph([{ pts: circlePts(kind, phi) }], { tEnd: 2, axis: { lo: -1.4, hi: 1.4, step: 1 }, name: 'y', bare: true, label: L('A graph of the displacement against time', 'Ein Graph der Auslenkung gegen die Zeit') });
+  const circleWhy = () => ({
+    turn: L('This is the shadow of a pointer turning the other way, clockwise. The arrow ω shows it turning anticlockwise.', 'Das ist der Schatten eines Zeigers, der sich andersherum dreht, im Uhrzeigersinn. Der Pfeil ω zeigt: Er dreht sich im Gegenuhrzeigersinn.'),
+    proj: L('This is the shadow on the horizontal axis, A·cos(ωt + φ₀). The body is at the height of the tip: its shadow on the vertical axis.', 'Das ist der Schatten auf der horizontalen Achse, A·cos(ωt + φ₀). Der Körper ist auf der Höhe der Spitze: ihr Schatten auf der vertikalen Achse.'),
+    start: L('This one starts at the opposite point of the circle: y(0) = −A·sin φ₀.', 'Diese beginnt im gegenüberliegenden Punkt des Kreises: y(0) = −A·sin φ₀.'),
+    late: L('This one starts a quarter turn away from where the pointer is at t = 0.', 'Diese beginnt eine Vierteldrehung von dort entfernt, wo der Zeiger bei t = 0 steht.'),
+  });
+  // where the tip is at t = 0, and which way it goes next (it rises where cos φ₀ > 0)
+  function startOf(k) {
+    const phi = (k * Math.PI) / 4, y = Math.sin(phi), c = Math.cos(phi), y0 = Math.abs(y) < 1e-9 ? '0' : Math.abs(Math.abs(y) - 1) < 1e-9 ? (y > 0 ? 'A' : '-A') : `${y > 0 ? '' : '-'}0.71\\,A`;
+    const where = Math.abs(c) < 1e-9 ? (y > 0 ? L('at the top', 'zuoberst') : L('at the bottom', 'zuunterst'))
+      : Math.abs(y) < 1e-9 ? (c > 0 ? L('on the right, at the height of the centre', 'rechts, auf der Höhe des Mittelpunkts') : L('on the left, at the height of the centre', 'links, auf der Höhe des Mittelpunkts'))
+        : y > 0 ? L('above the centre', 'oberhalb des Mittelpunkts') : L('below the centre', 'unterhalb des Mittelpunkts');
+    const next = Math.abs(c) < 1e-9 ? (y > 0 ? L('the body is at its upper turning point and goes down next: the graph starts at a crest', 'der Körper ist am oberen Umkehrpunkt und bewegt sich als Nächstes nach unten: Der Graph beginnt in einem Berg') : L('the body is at its lower turning point and goes up next: the graph starts at a trough', 'der Körper ist am unteren Umkehrpunkt und bewegt sich als Nächstes nach oben: Der Graph beginnt in einem Tal'))
+      : c > 0 ? L('turning anticlockwise, the tip rises: the graph starts upwards', 'im Gegenuhrzeigersinn steigt die Spitze: Der Graph beginnt aufwärts') : L('turning anticlockwise, the tip sinks: the graph starts downwards', 'im Gegenuhrzeigersinn sinkt die Spitze: Der Graph beginnt abwärts');
+    return { y0, where, next };
+  }
+  const circle = {
+    id: 'circle', difficulty: 1, kind: 'circle',
+    title: () => L('The turning pointer', 'Der drehende Zeiger'),
+    make: (r) => {
+      const k = pick(r, [-3, -2, -1, 0, 1, 2, 3, 4]), phi = (k * Math.PI) / 4, kept = [];
+      for (const kind of ['right', ...shuffle(r, ['turn', 'proj', 'start']), 'late']) {
+        const c = circlePts(kind, phi);
+        if (kept.length < 4 && !kept.some(([, d]) => Plot.alike(c, d, 2.8))) kept.push([kind, c]);
+      }
+      return kept.length === 4 ? { k, kinds: shuffle(r, kept.map((x) => x[0])) } : null;
+    },
+    solve: () => ({ graph: 'right' }),
+    traps: [],
+    fields: (p) => [choice('graph', L('Which graph shows y(t)?', 'Welcher Graph zeigt y(t)?'), p.kinds.map((k) => [k, circleGraph(k, (p.k * Math.PI) / 4), k === 'right' ? '' : circleWhy()[k], CFLAG[k]]), { pics: true, ask: L('Which graph shows the displacement y(t) of the body?', 'Welcher Graph zeigt die Auslenkung y(t) des Körpers?') })],
+    text: () => L('A pointer of length A turns anticlockwise at a constant angular velocity ω; the figure shows it at t = 0. A body moves up and down so that it is always at the height of the pointer’s tip. Which graph shows its displacement y(t)?',
+      'Ein Zeiger der Länge A dreht sich mit konstanter Winkelgeschwindigkeit ω im Gegenuhrzeigersinn; die Figur zeigt ihn bei t = 0. Ein Körper bewegt sich so auf und ab, dass er immer auf der Höhe der Zeigerspitze ist. Welcher Graph zeigt seine Auslenkung y(t)?'),
+    hints: () => [
+      L('The displacement is the height of the tip: the shadow of the pointer on the vertical axis, y = A·sin φ, where φ is the angle of the pointer.', 'Die Auslenkung ist die Höhe der Spitze: der Schatten des Zeigers auf der vertikalen Achse, y = A·sin φ, wobei φ der Winkel des Zeigers ist.'),
+      L('At t = 0: is the tip above or below the centre? Does it rise or sink as the pointer turns anticlockwise?', 'Bei t = 0: Ist die Spitze oberhalb oder unterhalb des Mittelpunkts? Steigt oder sinkt sie, wenn sich der Zeiger im Gegenuhrzeigersinn dreht?'),
+    ],
+    steps: (p) => {
+      const s0 = startOf(p.k);
+      return [
+        step(L('The shadow of the pointer', 'Der Schatten des Zeigers'), p$(L('The pointer turns evenly: its angle grows as $\\varphi = \\omega\\, t + \\varphi_0$. The body is at the height of the tip, so', 'Der Zeiger dreht sich gleichmässig: Sein Winkel wächst wie $\\varphi = \\omega\\, t + \\varphi_0$. Der Körper ist auf der Höhe der Spitze, also')) +
+          '$$y(t) = A\\cdot\\sin(\\omega\\, t + \\varphi_0)$$' + p$(L('a harmonic oscillation. Its amplitude is the length $A$ of the pointer, its angular frequency is the angular velocity $\\omega$ of the pointer, and one period $T = 2\\pi/\\omega$ is one turn.', 'eine harmonische Schwingung. Ihre Amplitude ist die Länge $A$ des Zeigers, ihre Kreisfrequenz die Winkelgeschwindigkeit $\\omega$ des Zeigers, und eine Periode $T = 2\\pi/\\omega$ ist eine Umdrehung.')), ['angle']),
+        step(L('At the start', 'Am Anfang'), p$(L(`At $t = 0$ the pointer is at $\\varphi_0 = ${piTex(p.k)}$: the tip is ${s0.where}, $y(0) = A\\cdot\\sin\\varphi_0 = ${s0.y0}$. And ${s0.next}.`, `Bei $t = 0$ steht der Zeiger bei $\\varphi_0 = ${piTex(p.k)}$: Die Spitze ist ${s0.where}, $y(0) = A\\cdot\\sin\\varphi_0 = ${s0.y0}$. Und ${s0.next}.`)), ['angle']),
+        step(L('The graph', 'Der Graph'), p$(L('So the graph is <span class="result">this one</span>; after one turn of the pointer, it starts again.', 'Der Graph ist also <span class="result">dieser</span>; nach einer Umdrehung des Zeigers beginnt er von vorn.')), ['angle', 'graph']),
+      ];
+    },
+    figure: (p, v, view) => {
+      const phi = (p.k * Math.PI) / 4, sh = view.show || new Set();
+      return root.Figures.pointer(phi, { angle: sh.has('angle') }) + (sh.has('graph') ? `<div class="fig">${circleGraph('right', phi)}</div>` : '');
+    },
+  };
 
   // ================================================================ 1 SHM or not
   // An equation (see equations.js) with the numbers for its graph.
@@ -389,71 +464,7 @@
     figure: (p, v, view) => (view.task ? '' : xGraph(p, { dots: peaks(p, view, 'top') })),
   };
 
-  // ================================================================ 4 amplitude, period and phase
-  // y(t) = A·cos(ωt − φ₀), −π < φ₀ ≤ π; the graph with numbers: A, T and φ₀ to read off.
-  // ★3: φ₀ a multiple of π/2; ★4: of π/4 (from y(0) = A·cos φ₀ and the direction at t = 0: y
-  // rises where sin φ₀ > 0). The first crest is at t = φ₀/ω (modulo T).
-  const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));
-  // k·π/4 as TeX
-  function piTex(k) {
-    if (k === 0) return '0';
-    const g = gcd(Math.abs(k), 4), n = k / g, d = 4 / g, sg = n < 0 ? '-' : '', a = Math.abs(n);
-    return d === 1 ? `${sg}${a === 1 ? '' : a}\\pi` : `${sg}\\frac{${a === 1 ? '' : a}\\pi}{${d}}`;
-  }
-  const RA = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8], RT = [0.4, 0.5, 0.8, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6];
-  // a time step for the grid that divides T (labels every step, lines every half step)
-  const tickFor = (T) => [0.1, 0.2, 0.25, 0.5, 1, 2].find((x) => (2 * T) / x <= 10 && Math.abs(T / x - Math.round(T / x)) < 1e-9) || 0.5;
-  function readScenario(id, difficulty, ks) {
-    return {
-      id, difficulty, kind: 'read',
-      title: () => L('Amplitude, period and phase', 'Amplitude, Periode und Phase'),
-      make: (r) => ({ A: pick(r, RA), T: pick(r, RT), k: pick(r, ks) }),
-      solve: (p, o = {}) => {
-        const phi = (p.k * Math.PI) / 4;
-        return { A: (o.peak ? 2 : 1) * p.A / 100, T: o.half ? p.T / 2 : p.T, phi: o.sign ? -phi : o.sin ? Math.PI / 2 - phi : o.deg ? (phi * 180) / Math.PI : phi };
-      },
-      traps: ['peak', 'half', 'sign', 'sin', 'deg'],
-      why: {
-        peak: () => L('That is the distance from the highest to the lowest point: 2A. The amplitude is the largest displacement from the equilibrium.', 'Das ist der Abstand vom höchsten zum tiefsten Punkt: 2A. Die Amplitude ist die grösste Auslenkung aus der Gleichgewichtslage.'),
-        half: () => L('That is only half a period, from a crest to a trough. One period goes from a crest to the next crest.', 'Das ist nur eine halbe Periode, von einem Berg zu einem Tal. Eine Periode geht von einem Berg zum nächsten Berg.'),
-        sign: () => L('Check the sign: with y(t) = A·cos(ωt − φ₀), the first crest comes at t = φ₀/ω, so φ₀ > 0 means the graph is shifted to the right (y rises at t = 0).', 'Prüfe das Vorzeichen: Mit y(t) = A·cos(ωt − φ₀) kommt der erste Berg bei t = φ₀/ω, φ₀ > 0 heisst also: Der Graph ist nach rechts verschoben (y steigt bei t = 0).'),
-        sin: () => L('That would be the phase for y(t) = A·sin(ωt + φ). Here the cosine is asked for: A·cos(ωt − φ₀).', 'Das wäre die Phase für y(t) = A·sin(ωt + φ). Hier ist der Kosinus gefragt: A·cos(ωt − φ₀).'),
-        deg: () => L('That is in degrees. The phase is asked in radians: 90° = π/2.', 'Das ist in Grad. Die Phase ist im Bogenmass gefragt: 90° = π/2.'),
-      },
-      fields: (p) => [num$('A', 'A', 'cm', L('amplitude', 'Amplitude')), num$('T', 'T', 's', L('period', 'Periode')),
-        { ...num$('phi', '\\varphi_0', 'rad', L('phase', 'Phase'), true), phase: true, show: piTex(p.k) }],
-      text: () => L('The graph shows a harmonic oscillation. Write it as y(t) = A·cos(ωt − φ₀) with −π &lt; φ₀ ≤ π: what are the amplitude A, the period T and the phase φ₀? (Type the phase as pi/2, -3pi/4, …)',
-        'Der Graph zeigt eine harmonische Schwingung. Schreib sie als y(t) = A·cos(ωt − φ₀) mit −π &lt; φ₀ ≤ π: Wie gross sind die Amplitude A, die Periode T und die Phase φ₀? (Tippe die Phase als pi/2, -3pi/4, …)'),
-      hints: (p) => [
-        L('The amplitude is the largest displacement from the equilibrium (the line y = 0).', 'Die Amplitude ist die grösste Auslenkung aus der Gleichgewichtslage (der Linie y = 0).'),
-        L('The period is the time from one crest to the next.', 'Die Periode ist die Zeit von einem Berg zum nächsten.'),
-        L('At t = 0: y(0) = A·cos φ₀, and y increases if sin φ₀ > 0, decreases if sin φ₀ < 0. (Or: the first crest is at t = φ₀/ω.)', 'Bei t = 0: y(0) = A·cos φ₀, und y nimmt zu, wenn sin φ₀ > 0, ab, wenn sin φ₀ < 0. (Oder: Der erste Berg ist bei t = φ₀/ω.)'),
-      ],
-      steps: (p) => {
-        const phi = (p.k * Math.PI) / 4, c0 = Math.abs(Math.cos(phi)) < 1e-9 ? 0 : Math.cos(phi), x0 = p.A * c0, up = Math.sin(phi) > 1e-9, down = Math.sin(phi) < -1e-9;
-        return [
-          step(L('The amplitude', 'Die Amplitude'), p$(L(`The largest displacement from y = 0: <span class="result">A = ${num(p.A)} cm</span>.`, `Die grösste Auslenkung aus y = 0: <span class="result">A = ${num(p.A)} cm</span>.`)), ['crest']),
-          step(L('The period', 'Die Periode'), p$(L(`From one crest to the next: <span class="result">T = ${num(p.T)} s</span> (so ω = 2π/T = ${num(PI2 / p.T)} s⁻¹).`, `Von einem Berg zum nächsten: <span class="result">T = ${num(p.T)} s</span> (also ω = 2π/T = ${num(PI2 / p.T)} s⁻¹).`)), ['period']),
-          step(L('The phase', 'Die Phase'), p$(L(`At t = 0 the graph is at y(0) = ${num(sig(x0, 2))} cm${up ? ' and rising' : down ? ' and falling' : p.k === 0 ? ', a crest' : ', a trough'}. So cos φ₀ = y(0)/A = ${num(sig(x0 / p.A, 2))}${up ? ' with sin φ₀ > 0' : down ? ' with sin φ₀ < 0' : ''}:`,
-            `Bei t = 0 ist der Graph bei y(0) = ${num(sig(x0, 2))} cm${up ? ' und steigt' : down ? ' und fällt' : p.k === 0 ? ', ein Berg' : ', ein Tal'}. Also cos φ₀ = y(0)/A = ${num(sig(x0 / p.A, 2))}${up ? ' mit sin φ₀ > 0' : down ? ' mit sin φ₀ < 0' : ''}:`)) +
-            `$$\\varphi_0 = ${res(piTex(p.k))},\\qquad y(t) = ${num(p.A)}\\,\\mathrm{cm}\\cdot\\cos\\!\\left(\\frac{2\\pi}{${num(p.T)}\\,\\mathrm{s}}\\,t ${p.k ? (p.k > 0 ? '-' : '+') + ' ' + piTex(Math.abs(p.k)) : ''}\\right)$$` +
-            p$(L('Check: the crests come at t = φ₀/ω + n·T: the graph is the cosine shifted to the right by φ₀/ω (to the left if φ₀ < 0).', 'Kontrolle: Die Berge kommen bei t = φ₀/ω + n·T: Der Graph ist der Kosinus, um φ₀/ω nach rechts verschoben (nach links, wenn φ₀ < 0).')), ['start', 'crest']),
-        ];
-      },
-      figure: (p, v, view) => {
-        const phi = (p.k * Math.PI) / 4, tEnd = 2 * p.T, sh = view.show || new Set();
-        const pts = Array.from({ length: 241 }, (z, j) => { const t = (j * tEnd) / 240; return [t, p.A * Math.cos((PI2 * t) / p.T - phi)]; });
-        const tc = (((phi / PI2) % 1) + 1) % 1 * p.T; // the first crest
-        return `<div class="fig">${Plot.graph([{ pts }], { tEnd, tStep: tickFor(p.T), name: 'y', unit: 'cm', axis: Plot.niceAxis([-p.A * 1.15, p.A * 1.15]),
-          dots: [...(sh.has('crest') ? [[tc, p.A]] : []), ...(sh.has('start') ? [[0, p.A * Math.cos(phi)]] : [])], marks: sh.has('period') ? [tc, tc + p.T].filter((t) => t <= tEnd + 1e-9) : [],
-          label: L('Displacement against time', 'Auslenkung gegen die Zeit') })}</div>`;
-      },
-    };
-  }
-  const read3 = readScenario('read-3', 3, [0, 2, 4, -2]);
-  const read4 = readScenario('read-4', 4, [1, 3, -1, -3]);
-
-  // ================================================================ 5 where on the graph
+  // ================================================================ 4 where on the graph
   // y(t) = A·sin(ωt) (no formula shown) with four named points; one question, one point the answer.
   const PTS = ['P', 'Q', 'R', 'S'];
   const ASK = {
@@ -495,46 +506,125 @@
     },
   };
 
-  // ================================================================ 6 energy
-  // A body on a spring: E = ½·D·A² all the time, E_pot = ½·D·y², E_kin = E − E_pot.
-  const KS = [[1, 2], [1, 3], [2, 3], [1, 4], [3, 4], [3, 5], [4, 5]];
-  const frac = (n, d) => `\\tfrac{${n}}{${d}}`;
-  const energy = {
-    id: 'energy', difficulty: 3, kind: 'energy',
-    title: () => L('Energy in an oscillation', 'Energie in einer Schwingung'),
-    make: (r) => (r() < 0.75 ? { kind: 'share', k: pick(r, KS) } : { kind: 'equal' }),
-    solve: (p, o = {}) => {
-      if (p.kind === 'equal') return { x: o.half ? 0.5 : 1 / Math.SQRT2 };
-      const k = p.k[0] / p.k[1];
-      return { kin: o.linear ? 1 - k : o.swap ? k * k : 1 - k * k };
+  // ================================================================ 5 the LC circuit
+  // The same equation with other quantities: L·Q̈ = −Q/C as m·ÿ = −D·y, so Q ↔ y, I = Q̇ ↔ v,
+  // L ↔ m, 1/C ↔ D and ω = 1/√(LC). No numbers: which quantity is which, ω or T, the current when
+  // the charge is largest (and the other way round), and how f changes with L or C.
+  const LC_EQ = 'L\\,\\ddot Q = -\\frac{1}{C}\\,Q \\qquad\\longleftrightarrow\\qquad m\\,\\ddot y = -D\\,y';
+  const LC_MAP = '$$Q \\leftrightarrow y,\\qquad I = \\dot Q \\leftrightarrow v = \\dot y,\\qquad L \\leftrightarrow m,\\qquad \\frac{1}{C} \\leftrightarrow D$$';
+  // the voltage of the capacitor and the current against time, two periods
+  function lcGraph() {
+    const n = 200, U = [], I = [];
+    for (let k = 0; k <= n; k++) { const t = (2 * k) / n; U.push([t, Math.cos(PI2 * t)]); I.push([t, -Math.sin(PI2 * t)]); }
+    return `<div class="fig">${Plot.graph([{ pts: U }, { pts: I, cls: 'icurve' }], { tEnd: 2, axis: { lo: -1.2, hi: 1.2, step: 1 }, name: 'Q, I', bare: true, marks: [1], label: L('The charge of the capacitor (solid) and the current (dashed) against time: a quarter of a period apart', 'Die Ladung des Kondensators (ausgezogen) und der Strom (gestrichelt) gegen die Zeit: um eine Viertelperiode verschoben') })}</div>`;
+  }
+  // the roles: what each quantity of the circuit is, and why a wrong pick is wrong (flag 'map')
+  const ROLE = () => ({
+    Q: [L('the charge $Q$ on the capacitor', 'die Ladung $Q$ auf dem Kondensator'), L('The charge $Q$ plays the role of the displacement $y$: it is what oscillates.', 'Die Ladung $Q$ spielt die Rolle der Auslenkung $y$: Sie ist es, die schwingt.')],
+    I: [L('the current $I = \\dot Q$', 'der Strom $I = \\dot Q$'), L('The current $I = \\dot Q$ plays the role of the velocity $v = \\dot y$.', 'Der Strom $I = \\dot Q$ spielt die Rolle der Geschwindigkeit $v = \\dot y$.')],
+    L: [L('the inductance $L$', 'die Induktivität $L$'), L('$L\\,\\ddot Q$ stands where $m\\,\\ddot y$ stands: the inductance plays the role of the mass.', '$L\\,\\ddot Q$ steht dort, wo $m\\,\\ddot y$ steht: Die Induktivität spielt die Rolle der Masse.')],
+    C: [L('the capacitance $C$', 'die Kapazität $C$'), L('$Q/C$ stands where $D\\,y$ stands: not $C$, but $1/C$ plays the role of the spring constant.', '$Q/C$ steht dort, wo $D\\,y$ steht: Nicht $C$, sondern $1/C$ spielt die Rolle der Federkonstante.')],
+    invC: [L('one over the capacitance, $1/C$', 'eins durch die Kapazität, $1/C$'), L('$Q/C$ stands where $D\\,y$ stands: $1/C$ plays the role of the spring constant.', '$Q/C$ steht dort, wo $D\\,y$ steht: $1/C$ spielt die Rolle der Federkonstante.')],
+    invL: [L('one over the inductance, $1/L$', 'eins durch die Induktivität, $1/L$'), L('$L\\,\\ddot Q$ stands where $m\\,\\ddot y$ stands: $L$ itself plays the role of the mass.', '$L\\,\\ddot Q$ steht dort, wo $m\\,\\ddot y$ steht: $L$ selbst spielt die Rolle der Masse.')],
+    dQ: [L('the rate of change of the current, $\\ddot Q = \\dot I$', 'die Änderungsrate des Stroms, $\\ddot Q = \\dot I$'), L('$\\ddot Q$ plays the role of the acceleration $\\ddot y$.', '$\\ddot Q$ spielt die Rolle der Beschleunigung $\\ddot y$.')],
+    U: [L('the voltage $U = Q/C$ of the capacitor', 'die Spannung $U = Q/C$ am Kondensator'), L('$U = Q/C$ plays the role of $D\\,y$, the spring’s force (it is proportional to $Q$).', '$U = Q/C$ spielt die Rolle von $D\\,y$, der Federkraft (sie ist proportional zu $Q$).')],
+  });
+  // ask: [what, right key, three wrong keys]
+  const ROLES = {
+    y: [() => L('the displacement $y$', 'der Auslenkung $y$'), 'Q', ['I', 'U', 'dQ']],
+    v: [() => L('the velocity $v$', 'der Geschwindigkeit $v$'), 'I', ['Q', 'U', 'dQ']],
+    m: [() => L('the mass $m$', 'der Masse $m$'), 'L', ['C', 'invC', 'Q']],
+    D: [() => L('the spring constant $D$', 'der Federkonstante $D$'), 'invC', ['C', 'L', 'invL']],
+  };
+  // ω and T: the right one and the usual wrong ones (as in equations.js)
+  const LC_W = () => [['right', '\\omega = \\frac{1}{\\sqrt{L\\,C}}', ''], ['omega2', '\\omega = \\frac{1}{L\\,C}', L('That is $\\omega^2$: in $\\ddot Q = -\\omega^2\\,Q$ the factor is $\\omega^2 = 1/(LC)$. Take the square root.', 'Das ist $\\omega^2$: In $\\ddot Q = -\\omega^2\\,Q$ ist der Faktor $\\omega^2 = 1/(LC)$. Zieh die Wurzel.')],
+    ['inverse', '\\omega = \\sqrt{L\\,C}', L('Upside down: as $\\omega = \\sqrt{D/m}$, $\\omega = \\sqrt{1/(LC)}$.', 'Kehrwert verwechselt: Wie $\\omega = \\sqrt{D/m}$ ist $\\omega = \\sqrt{1/(LC)}$.')],
+    ['map', '\\omega = \\sqrt{\\frac{C}{L}}', L('$C$ taken for $D$: it is $1/C$ that plays the role of the spring constant, so $\\omega^2 = D/m = 1/(LC)$.', '$C$ für $D$ genommen: $1/C$ spielt die Rolle der Federkonstante, also $\\omega^2 = D/m = 1/(LC)$.')]];
+  const LC_T = () => [['right', 'T = 2\\pi\\sqrt{L\\,C}', ''], ['inverse', 'T = \\frac{2\\pi}{\\sqrt{L\\,C}}', L('That is $2\\pi\\cdot\\omega$. The period is $T = 2\\pi/\\omega$ with $\\omega = 1/\\sqrt{LC}$.', 'Das ist $2\\pi\\cdot\\omega$. Die Periode ist $T = 2\\pi/\\omega$ mit $\\omega = 1/\\sqrt{LC}$.')],
+    ['omega2', 'T = 2\\pi\\,L\\,C', L('The root is missing: $\\omega^2 = 1/(LC)$, so $\\omega = 1/\\sqrt{LC}$.', 'Die Wurzel fehlt: $\\omega^2 = 1/(LC)$, also $\\omega = 1/\\sqrt{LC}$.')],
+    ['freq', 'T = \\frac{1}{2\\pi\\sqrt{L\\,C}}', L('That is the frequency $f = 1/T$.', 'Das ist die Frequenz $f = 1/T$.')]];
+  const LC_WHEN = () => ({
+    Q: [L('When the charge on the capacitor is largest, the current is', 'Wenn die Ladung auf dem Kondensator am grössten ist, ist der Strom'), L('like the velocity at a turning point', 'wie die Geschwindigkeit an einem Umkehrpunkt')],
+    I: [L('When the current is largest, the charge on the capacitor is', 'Wenn der Strom am grössten ist, ist die Ladung auf dem Kondensator'), L('like the displacement at the equilibrium', 'wie die Auslenkung in der Gleichgewichtslage')],
+  });
+  const LC_WHEN_OPTS = () => [['zero', L('zero', 'null'), ''], ['max', L('largest too', 'auch am grössten'), L('Like $y$ and $v$, $Q$ and $I = \\dot Q$ are a quarter of a period apart: when one is largest, the other is zero.', 'Wie $y$ und $v$ sind $Q$ und $I = \\dot Q$ um eine Viertelperiode verschoben: Wenn das eine am grössten ist, ist das andere null.')],
+    ['half', L('half its largest value', 'halb so gross wie am grössten'), L('Like $y$ and $v$, $Q$ and $I = \\dot Q$ are a quarter of a period apart: when one is largest, the other is zero.', 'Wie $y$ und $v$ sind $Q$ und $I = \\dot Q$ um eine Viertelperiode verschoben: Wenn das eine am grössten ist, ist das andere null.')],
+    ['dep', L('it depends on $L$ and $C$', 'das hängt von $L$ und $C$ ab'), L('Whatever $L$ and $C$ are, $Q$ and $I = \\dot Q$ are a quarter of a period apart: when one is largest, the other is zero.', 'Was immer $L$ und $C$ sind: $Q$ und $I = \\dot Q$ sind um eine Viertelperiode verschoben. Wenn das eine am grössten ist, ist das andere null.')]];
+  const lcEq = {
+    id: 'lc-eq', difficulty: 2, kind: 'lc',
+    title: () => L('The LC circuit', 'Der Schwingkreis'),
+    make: (r) => ({ ask: pick(r, ['y', 'v', 'm', 'D', 'w', 'T', 'whenQ', 'whenI']), seed: Math.floor(r() * 1e9) }),
+    solve: () => ({ ans: 'right' }),
+    traps: [],
+    fields: (p) => {
+      const r = orderOf(p);
+      if (ROLES[p.ask]) {
+        const [what, right, wrong] = ROLES[p.ask], R = ROLE();
+        return [choice('ans', L(`The role of ${what()} is played by:`, `Die Rolle ${what()} spielt:`), shuffle(r, [['right', R[right][0], '', null], ...wrong.map((k) => [k, R[k][0], R[k][1], 'map'])]),
+          { stack: true, ask: L(`Which quantity of the LC circuit plays the role of ${what()}?`, `Welche Grösse des Schwingkreises spielt die Rolle ${what()}?`) })];
+      }
+      if (p.ask === 'w' || p.ask === 'T') {
+        const opts = (p.ask === 'w' ? LC_W() : LC_T()).map(([k, tex, why]) => [k, `$${tex}$`, why, k === 'right' ? null : k]);
+        return [choice('ans', p.ask === 'w' ? L('Its angular frequency:', 'Seine Kreisfrequenz:') : L('Its period:', 'Seine Periode:'), shuffle(r, opts),
+          { ask: p.ask === 'w' ? L('What is the angular frequency of the LC circuit?', 'Wie gross ist die Kreisfrequenz des Schwingkreises?') : L('What is the period of the LC circuit?', 'Wie gross ist die Periode des Schwingkreises?') })];
+      }
+      const [lead] = LC_WHEN()[p.ask.slice(4)];
+      return [choice('ans', `${lead} …`, LC_WHEN_OPTS().map(([k, html, why]) => [k === 'zero' ? 'right' : k, html, why, k === 'zero' ? null : 'lcphase']), { stack: true, ask: `${lead} …` })];
     },
-    traps: ['linear', 'swap', 'half'],
-    why: {
-      linear: () => L('The potential energy of a spring grows with y², not with y: E_pot = ½·D·y².', 'Die potentielle Energie einer Feder wächst mit y², nicht mit y: E_pot = ½·D·y².'),
-      swap: () => L('That is the share of the potential energy, ½·D·y² / (½·D·A²). The kinetic energy is the rest.', 'Das ist der Anteil der potentiellen Energie, ½·D·y² / (½·D·A²). Die kinetische Energie ist der Rest.'),
-      half: () => L('At half the amplitude, E_pot = (½)² = ¼ of the total. Equal shares need y² = A²/2.', 'Bei halber Amplitude ist E_pot = (½)² = ¼ der Gesamtenergie. Gleiche Anteile brauchen y² = A²/2.'),
-    },
-    fields: (p) => (p.kind === 'equal' ? [num$('x', 'y/A', '', L('displacement in units of the amplitude', 'Auslenkung in Einheiten der Amplitude'))]
-      : [num$('kin', 'E_\\mathrm{kin}/E', '', L('share of the kinetic energy', 'Anteil der kinetischen Energie'))]),
-    text: (p) => (p.kind === 'equal'
-      ? L('A body on a spring oscillates harmonically with amplitude A. At what displacement are its kinetic and its potential energy equal? Give it in units of A.', 'Ein Körper an einer Feder schwingt harmonisch mit der Amplitude A. Bei welcher Auslenkung sind seine kinetische und seine potentielle Energie gleich gross? Gib sie in Einheiten von A an.')
-      : L(`A body on a spring oscillates harmonically. What share of its total energy is kinetic when it is ${p.k[0]}/${p.k[1]} of the amplitude away from the equilibrium? (A fraction like 3/4 is fine.)`, `Ein Körper an einer Feder schwingt harmonisch. Welcher Anteil seiner Gesamtenergie ist kinetisch, wenn er ${p.k[0]}/${p.k[1]} der Amplitude von der Gleichgewichtslage entfernt ist? (Ein Bruch wie 3/4 geht auch.)`)),
+    text: () => L('In an LC circuit without resistance, the voltages across the coil and the capacitor add up to zero: $L\\,\\dot I + Q/C = 0$, where $Q$ is the charge on the capacitor and $I = \\dot Q$ the current. Compare it with a body on a spring.', 'In einem Schwingkreis ohne Widerstand ergeben die Spannungen an der Spule und am Kondensator zusammen null: $L\\,\\dot I + Q/C = 0$, wobei $Q$ die Ladung auf dem Kondensator ist und $I = \\dot Q$ der Strom. Vergleiche mit einem Körper an einer Feder.'),
     hints: () => [
-      L('The total energy stays the same: at a turning point it is all potential, E = ½·D·A².', 'Die Gesamtenergie bleibt gleich: An einem Umkehrpunkt ist alles potentielle Energie, E = ½·D·A².'),
-      L('At a displacement y: E_pot = ½·D·y², so E_pot/E = (y/A)².', 'Bei einer Auslenkung y: E_pot = ½·D·y², also E_pot/E = (y/A)².'),
-      L('The kinetic energy is the rest: E_kin = E − E_pot.', 'Die kinetische Energie ist der Rest: E_kin = E − E_pot.'),
+      L('Put the two equations side by side, term by term: what stands where $y$, $m$ and $D$ stand?', 'Lege die beiden Gleichungen nebeneinander, Term für Term: Was steht dort, wo $y$, $m$ und $D$ stehen?'),
+      L('For the spring, $\\ddot y = -\\frac{D}{m}\\,y$, so $\\omega^2 = D/m$, and $v = \\dot y$ is zero where $y$ is largest.', 'Für die Feder ist $\\ddot y = -\\frac{D}{m}\\,y$, also $\\omega^2 = D/m$, und $v = \\dot y$ ist null, wo $y$ am grössten ist.'),
     ],
-    steps: (p, v) => [
-      step(L('The total energy', 'Die Gesamtenergie'), p$(L('At a turning point the body is at rest: all energy is potential. Let $D$ be the spring constant:', 'An einem Umkehrpunkt ruht der Körper: Alle Energie ist potentiell. Sei $D$ die Federkonstante:')) + '$$E = \\tfrac12\\,D\\,A^2$$', ['total']),
-      p.kind === 'equal'
-        ? step(L('Equal shares', 'Gleiche Anteile'), p$(L('Equal kinetic and potential energy means each is half of $E$:', 'Gleiche kinetische und potentielle Energie heisst: je die Hälfte von $E$:')) + `$$\\tfrac12\\,D\\,y^2 = \\tfrac12\\cdot\\tfrac12\\,D\\,A^2 \;\\Rightarrow\; y = \\frac{A}{\\sqrt 2} = ${res(`${num(1 / Math.SQRT2)}\\,A`)}$$`, ['equal'])
-        : step(L('At this displacement', 'Bei dieser Auslenkung'), `$$\\frac{E_\\mathrm{pot}}{E} = \\frac{\\tfrac12 D y^2}{\\tfrac12 D A^2} = \\left(\\frac{y}{A}\\right)^2 = \\left(${frac(...p.k)}\\right)^2,\\qquad \\frac{E_\\mathrm{kin}}{E} = 1 - \\left(${frac(...p.k)}\\right)^2 = ${res(`${frac(p.k[1] ** 2 - p.k[0] ** 2, p.k[1] ** 2)} = ${num(v.kin)}`)}$$`, ['x']),
-    ],
-    figure: (p, v, view) => (view.task || !root.Figures ? '' : root.Figures.energyWell(p.kind === 'equal' ? 1 / Math.SQRT2 : p.k[0] / p.k[1])),
+    steps: (p) => {
+      const R = ROLE();
+      const answer = ROLES[p.ask] ? p$(L(`So ${ROLES[p.ask][0]()} corresponds to <span class="result">${R[ROLES[p.ask][1]][0]}</span>.`, `Der Rolle ${ROLES[p.ask][0]()} entspricht also <span class="result">${R[ROLES[p.ask][1]][0]}</span>.`))
+        : p.ask === 'w' ? p$(L('As $\\omega^2 = D/m$ for the spring:', 'Wie $\\omega^2 = D/m$ bei der Feder:')) + `$$\\omega^2 = \\frac{1}{L\\,C}\\qquad\\Longrightarrow\\qquad ${res('\\omega = \\frac{1}{\\sqrt{L\\,C}}')}$$`
+          : p.ask === 'T' ? p$(L('With $\\omega^2 = 1/(LC)$, as $\\omega^2 = D/m$ for the spring (Thomson’s formula):', 'Mit $\\omega^2 = 1/(LC)$, wie $\\omega^2 = D/m$ bei der Feder (Thomsonsche Formel):')) + `$$T = \\frac{2\\pi}{\\omega} = ${res('2\\pi\\sqrt{L\\,C}')}$$`
+            : p$(L(`${LC_WHEN()[p.ask.slice(4)][0]} <span class="result">zero</span>, ${LC_WHEN()[p.ask.slice(4)][1]}: the charge and the current are a quarter of a period apart.`, `${LC_WHEN()[p.ask.slice(4)][0]} <span class="result">null</span>, ${LC_WHEN()[p.ask.slice(4)][1]}: Ladung und Strom sind um eine Viertelperiode verschoben.`));
+      return [
+        step(L('The same equation', 'Dieselbe Gleichung'), p$(L('The voltage across the coil is $L\\,\\dot I = L\\,\\ddot Q$; with the one across the capacitor, $Q/C$, it adds up to zero:', 'Die Spannung an der Spule ist $L\\,\\dot I = L\\,\\ddot Q$; mit jener am Kondensator, $Q/C$, ergibt sie null:')) +
+          `$$L\\,\\ddot Q = -\\frac{1}{C}\\,Q\\qquad\\Longrightarrow\\qquad \\ddot Q = -\\frac{1}{L\\,C}\\,Q$$` + p$(L('This is $\\ddot y = -\\omega^2\\, y$ again: the charge oscillates harmonically. Term by term, as $m\\,\\ddot y = -D\\,y$:', 'Das ist wieder $\\ddot y = -\\omega^2\\, y$: Die Ladung schwingt harmonisch. Term für Term, wie $m\\,\\ddot y = -D\\,y$:')) + LC_MAP),
+        step(L('The answer', 'Die Antwort'), answer, p.ask.startsWith('when') ? ['graph'] : []),
+      ];
+    },
+    figure: (p, v, view) => box(LC_EQ) + root.Figures.lc(p.ask === 'whenI' ? 1 : 0, { caption: !view.task }) + (view.show && view.show.has('graph') ? lcGraph() : ''),
   };
 
-  const SCENARIOS = [pickShm, shm1, shm2, shm3, match1, match2, matchBack, read3, read4, points, vmax, backW, backA, energy];
+  // how the frequency changes with L or C: f ∝ 1/√(LC), as for a spring f ∝ √(D/m)
+  const fac = (x) => (x >= 1 ? `$\\times ${sig(x, 3)}$` : `$\\times \\tfrac{1}{${sig(1 / x, 3)}}$`);
+  const lcScale = {
+    id: 'lc-scale', difficulty: 3, kind: 'lcscale',
+    title: () => L('Change the circuit', 'Den Schwingkreis ändern'),
+    make: (r) => { const what = pick(r, ['C', 'L', 'C', 'L', 'both']); return { what, k: pick(r, what === 'both' ? [2, 3, 4, 0.5] : [4, 9, 16, 0.25]) }; },
+    solve: () => ({ fac: 'right' }),
+    traps: [],
+    fields: (p) => {
+      const k = p.k, LC = p.what === 'both' ? k * k : k, right = 1 / Math.sqrt(LC);
+      const opts = [[1 / LC, 'root', L('The root is missing: the frequency goes with $1/\\sqrt{L\\,C}$, not with $1/(L\\,C)$.', 'Die Wurzel fehlt: Die Frequenz geht mit $1/\\sqrt{L\\,C}$, nicht mit $1/(L\\,C)$.')], [right, 'right', ''],
+        [Math.sqrt(LC), 'dirn', L('The right size, the wrong way: a larger inductance is like a larger mass, a larger capacitance like a softer spring: both make the oscillation slower.', 'Die richtige Grösse, die falsche Richtung: Eine grössere Induktivität ist wie eine grössere Masse, eine grössere Kapazität wie eine weichere Feder: Beide machen die Schwingung langsamer.')],
+        [LC, 'prop', L('$f = 1/(2\\pi\\sqrt{L\\,C})$: the frequency changes with one over the square root of $L\\cdot C$.', '$f = 1/(2\\pi\\sqrt{L\\,C})$: Die Frequenz ändert sich mit eins durch die Wurzel aus $L\\cdot C$.')]]
+        .sort((a, b) => a[0] - b[0]);
+      return [choice('fac', L('The frequency changes by:', 'Die Frequenz ändert sich um:'), opts.map(([x, key, why]) => [key, fac(x), why, key === 'right' ? null : key === 'dirn' ? 'inverse' : 'omega2']), { ask: L('By what factor does the frequency change?', 'Um welchen Faktor ändert sich die Frequenz?') })];
+    },
+    text: (p) => {
+      const k = p.k, what = { C: L('the capacitance', 'die Kapazität'), L: L('the inductance', 'die Induktivität') };
+      const by = (x) => (x >= 1 ? L(`${x} times as large`, `${x}-mal so gross`) : 1 / x === 2 ? L('half as large', 'halb so gross') : L('a quarter as large', 'einen Viertel so gross'));
+      return p.what === 'both'
+        ? L(`In an LC circuit, both the capacitance and the inductance are made ${by(k)}. By what factor does its frequency change?`, `In einem Schwingkreis werden sowohl die Kapazität als auch die Induktivität ${by(k)} gemacht. Um welchen Faktor ändert sich seine Frequenz?`)
+        : L(`In an LC circuit, ${what[p.what]} is made ${by(k)}. By what factor does its frequency change?`, `In einem Schwingkreis wird ${what[p.what]} ${by(k)} gemacht. Um welchen Faktor ändert sich seine Frequenz?`);
+    },
+    hints: () => [L('As $\\omega = \\sqrt{D/m}$ for a spring, $\\omega = 1/\\sqrt{L\\,C}$ for the circuit: what happens to $\\sqrt{L\\,C}$?', 'Wie $\\omega = \\sqrt{D/m}$ bei der Feder ist $\\omega = 1/\\sqrt{L\\,C}$ beim Schwingkreis: Was passiert mit $\\sqrt{L\\,C}$?'), L('A larger $L$ (like a larger mass) or a larger $C$ (like a softer spring) makes the oscillation slower.', 'Ein grösseres $L$ (wie eine grössere Masse) oder ein grösseres $C$ (wie eine weichere Feder) macht die Schwingung langsamer.')],
+    steps: (p) => {
+      const LC = p.what === 'both' ? p.k * p.k : p.k, right = 1 / Math.sqrt(LC);
+      return [step(L('The factor', 'Der Faktor'), p$(L(`From $\\omega = 1/\\sqrt{L\\,C}$, $f = \\omega/(2\\pi) = 1/(2\\pi\\sqrt{L\\,C})$. The product $L\\cdot C$ changes by the factor ${sig(LC, 3)}; its root by ${sig(Math.sqrt(LC), 3)}. The frequency is one over it:`, `Aus $\\omega = 1/\\sqrt{L\\,C}$ folgt $f = \\omega/(2\\pi) = 1/(2\\pi\\sqrt{L\\,C})$. Das Produkt $L\\cdot C$ ändert sich um den Faktor ${sig(LC, 3)}; seine Wurzel um ${sig(Math.sqrt(LC), 3)}. Die Frequenz ist eins durch sie:`)) +
+        `$$f' = \\frac{1}{2\\pi\\sqrt{${sig(LC, 3)}\\,L\\,C}} = \\frac{1}{\\sqrt{${sig(LC, 3)}}}\\cdot f = ${res(right >= 1 ? `${sig(right, 3)}\\,f` : `\\tfrac{1}{${sig(1 / right, 3)}}\\,f`)}$$`)];
+    },
+    figure: (p, v, view) => (view.task ? root.Figures.lc(0, { caption: false }) : lcGraph()),
+  };
 
-  root.Scenarios = { SCENARIOS, NKINDS, curveOf, Y0, AXIS, xGraph };
+  const SCENARIOS = [circle, pickShm, shm1, shm2, shm3, match1, match2, matchBack, points, vmax, backW, backA, lcEq, lcScale];
+
+  root.Scenarios = { SCENARIOS, NKINDS, curveOf, Y0, AXIS, xGraph, CIRCLE };
   if (typeof module !== 'undefined') module.exports = root.Scenarios;
 })(typeof window !== 'undefined' ? window : globalThis);

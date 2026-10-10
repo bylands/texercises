@@ -1,19 +1,17 @@
 // Verifies Electric Potential: run with `node electric-potential/test/check-exercises.js`. It checks
 // - the physics, independently: in a uniform field ΔV = −E·Δx (only the distance along the field
 //   counts); the field and potential at the centre of each arrangement (fields add as vectors,
-//   potentials as numbers); the speed after an acceleration voltage, v = √(2·|q|·U/m); the
-//   closest approach k·q·Q/E_kin; a particle released at rest moves the way its sign says,
+//   potentials as numbers); a test charge changes the potential energy, not the potential or the
+//   voltage; ΔE_pot = q·ΔV; a particle released at rest moves the way its sign says,
 // - for every type, in both languages and many seeds: each question has a right option (exactly one
 //   unless several may fit), a reason for each wrong one, distinct options; statements are mixed,
-// - every problem, and no text or drawing contains undefined, NaN and the like.
+//   and no text or drawing contains undefined, NaN and the like,
+// - the check: every kind of every objective gives questions with four options, exactly one right.
 'use strict';
 
 const Lang = require('../lang.js');
-const C = require('../../electric-field/charges.js');
-const E = require('../../electric-field/elec.js');
+const C = require('../charges.js');
 const X = require('../exercises.js');
-const R = require('../realproblems.js');
-const F = require('../figures.js');
 
 let failures = 0;
 const fail = (msg) => { failures++; if (failures < 30) console.error('  FAIL ' + msg); };
@@ -64,22 +62,16 @@ for (const lang of ['en', 'de']) {
         if (right(e, 'V').label !== wantV) fail(`${tag}: the potential at the centre`);
         if (zeroE !== right(e, 'E').html.includes('nowhere')) fail(`${tag}: the field at the centre`);
       }
-      if (type === 'accel') {
-        const pt = Object.values(E.NAMED).flat().find((x) => x[0] === e.p.pt), v = Math.sqrt((2 * Math.abs(pt[3]) * E.K.e * e.p.U) / pt[4]);
-        if (!rel(num(right(e, 'v').label), v, 0.01)) fail(`${tag}: the speed`);
+      if (type === 'which-qty') {
+        // independently: V and U belong to the points, E_pot = q′·V_P
+        const { VP, VQ, q, k } = e.p, val = (key) => num(right(e, key).label);
+        if (val('V') !== VP || val('U') !== VP - VQ || val('Ep') !== k * q * VP) fail(`${tag}: potential, energy or voltage`);
       }
-      if (type === 'closest') {
-        // independently: r_min = k·q·Q/E_kin; the mass does not matter
-        const z = { p: 1, d: 1, a: 2 }, k = (z[e.p.pb] / z[e.p.pa]) * e.p.fZ / e.p.fE;
-        if (right(e, 'r').label !== X.frac(k)) fail(`${tag}: the closest approach ${right(e, 'r').label}, not ${X.frac(k)}`);
-        if (right(e, 'U').label !== X.frac(e.p.fE)) fail(`${tag}: the potential energy at the closest point`);
-      }
-      if (type === 'repel') {
-        // independently: V = k·Q/R, E_kin = |q|·V, v = √(2·E_kin/m)
-        const z = { p: 1, d: 1, a: 2 }, m = { p: 1, d: 2, a: 4 }, fV = e.p.fQ / e.p.fR, fE = fV * z[e.p.pb] / z[e.p.pa], fv2 = fE / (m[e.p.pb] / m[e.p.pa]);
-        if (right(e, 'V').label !== X.frac(fV) || right(e, 'E').label !== X.frac(fE)) fail(`${tag}: the potential or the energy`);
-        const lab = right(e, 'v').label, v = lab.includes('√') ? (lab.includes('1/') ? 1 / Math.sqrt(Number(lab.split('√')[1])) : Math.sqrt(Number(lab.split('√')[1]))) : (lab.includes('1/') ? 1 / Number(lab.split('1/')[1]) : Number(lab.slice(1)));
-        if (!rel(v * v, fv2, 1e-6)) fail(`${tag}: the speed ${lab}`);
+      if (type === 'gain-lose') {
+        const { step, V0, ia, ib, pt } = e.p, V = (i) => V0 + (5 - i) * step, z = { p: 1, 'e+': 1, a: 2, na: 1, e: -1, cl: -1 }[pt], dE = z * (V(ib) - V(ia));
+        const lab = right(e, 'Ep').label;
+        if (!lab.includes(String(Math.abs(dE))) || lab.startsWith('increases') !== dE > 0) fail(`${tag}: ΔE_pot ${lab}, not ${dE} eV`);
+        if (right(e, 'K').label !== (dE < 0 ? 'increases' : 'decreases')) fail(`${tag}: the kinetic energy`);
       }
       if (type === 'point-v') {
         // independently: V = k·Q/r in units of V₀ = k·q/r
@@ -95,14 +87,20 @@ for (const lang of ['en', 'de']) {
       }
     }
   }
-  R.PROBLEMS.forEach((p, i) => {
-    for (let seed = 1; seed <= 30; seed++) {
-      const e = R.realOf(i, seed), tag = `real ${p.id} ${seed} ${lang}`;
-      if (bad(json(e)) || bad(F[e.pic[0]](e.pic[1]))) fail(`${tag}: undefined or NaN`);
-      checkQuestions(tag, e);
+  // the check: each kind of each objective, many seeds
+  for (const o of X.OBJECTIVES) {
+    if (!o.name() || !o.kinds.length) fail(`objective ${o.id}: no name or kinds`);
+    for (const kind of o.kinds) {
+      for (let seed = 1; seed <= SEEDS; seed++) {
+        const q = X.question(kind, seed), tag = `check ${kind} ${seed} ${lang}`;
+        if (q.options.length !== 4 || q.options.filter((x) => x.correct).length !== 1) fail(`${tag}: ${q.options.length} options, ${q.options.filter((x) => x.correct).length} right`);
+        if (new Set(q.options.map((x) => x.html)).size !== 4) fail(`${tag}: two options alike`);
+        if (q.options.some((x) => !x.correct && !x.why)) fail(`${tag}: a wrong option without a reason`);
+        if (bad(json(q)) || bad(q.explain()) || !q.ask) fail(`${tag}: undefined or NaN`);
+      }
     }
-  });
+  }
 }
-console.log(`${X.TYPES.length} types × ${SEEDS} seeds and ${R.PROBLEMS.length} problems, in both languages`);
+console.log(`${X.TYPES.length} types × ${SEEDS} seeds and ${X.OBJECTIVES.length} objectives of the check, in both languages`);
 if (failures) { console.error(`${failures} failures`); process.exit(1); }
 console.log('all checks passed');

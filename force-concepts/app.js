@@ -1,14 +1,14 @@
 (function () {
   'use strict';
 
-  const FC = window.FC, Q = window.Questions, Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const FC = window.FC, Q = window.Questions, Lang = window.Lang, Check = window.Check;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Force Concepts', mode: 'Mode', difficulty: 'Difficulty', example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
+      title: 'Force and Motion', mode: 'Mode', difficulty: 'Difficulty', example: 'Example', tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
       levels: { easy: 'Easy', medium: 'Medium', hard: 'Hard', mixed: 'Mixed' },
       stars: (d) => `Difficulty: ${d} of 5`,
       tutorNote: 'Use the arrow keys ← → to step through. Arrows in the pictures: <span class="k-f">forces</span>, <span class="k-v">velocities</span>, <span class="k-a">accelerations</span> and the <span class="k-net">net force</span>.',
@@ -28,7 +28,7 @@
       often: (w) => `about ${Math.round(w * 10) / 10}× as often as a mastered type`,
     },
     de: {
-      title: 'Kraftkonzepte', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
+      title: 'Kraft und Bewegung', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
       levels: { easy: 'Einfach', medium: 'Mittel', hard: 'Schwierig', mixed: 'Gemischt' },
       stars: (d) => `Schwierigkeit: ${d} von 5`,
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Pfeile in den Bildern: <span class="k-f">Kräfte</span>, <span class="k-v">Geschwindigkeiten</span>, <span class="k-a">Beschleunigungen</span> und die <span class="k-net">resultierende Kraft</span>.',
@@ -50,7 +50,7 @@
   };
   const ui = () => UI[FC.getLang()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -131,13 +131,8 @@
     name: () => e.name[FC.getLang()],
     stages: e.practice.map((st, i) => ({ name: i ? () => [...new Set(st.types.map((t) => FC.typeName(t.split('/')[1])))].join(', ') : null, types: st.types })),
   }));
-  // the same exercise again (e.g. in the other language); links of earlier versions name a level or topic
-  function again(e) {
-    const te = topics.parse(e.id);
-    if (te) return te;
-    const [, key, f, seed] = e.id.match(ID);
-    return FC.generate(key, Number(seed), f || 'all');
-  }
+  // the same exercise again (e.g. in the other language)
+  const again = (e) => topics.parse(e.id);
 
   // solved now, or solved before (its solution can be looked at again)
   const canReveal = () => st.solved || Practice.solvedBefore('fc', ex.id) || st.tries >= MAX_TRIES || st.hints >= ex.hints.length;
@@ -297,45 +292,28 @@
   }
   const lessons = () => window.Lessons.EXAMPLES.map((d, i) => ({ ...lesson(d), also: topics.also(i) }));
 
-  // ---------------------------------------------------------------- arcade
-  // Each question is a single-choice question with four options (a prediction counts too) from
-  // an exercise of the right difficulty; the misconception codes of the wrong options are the
-  // arcade's misconceptions.
-  const arcadeTypes = (d) => FC.pool('mixed').filter((g) => FC.DIFFICULTY[g.name] === d);
-  function arcadeQuestion(kind, seed) {
-    const types = arcadeTypes(Number(kind.slice(1)));
-    for (let k = 0; ; k++) {
-      const s = (seed + 7919 * k) >>> 0, r = FC.rng(s), g = r.pick(types), e = FC.build(g.name, g.params, s);
-      const qs = FC.arcadeQuestions(e, r);
-      if (!qs.length) continue;
-      const qu = r.pick(qs);
-      return {
-        title: e.title,
-        text: e.situation,
-        figure: `<figure class="fig">${e.figure}</figure>`,
-        ask: qu.ask,
-        options: qu.options.map((x) => ({ html: x.html, correct: x.ok, flag: FC.MIS[x.code] ? x.code : null, why: x.ok ? '' : x.why })),
-        explain: () => `<div class="steps">${e.steps.map(stepHtml).join('')}</div>`,
-      };
-    }
+  // ---------------------------------------------------------------- check
+  // The learning objectives (lessons.js), each with its question kinds, worked example and
+  // practice topic. A question of a kind is one of the questions of an exercise asked with four
+  // options (core.js); the misconception codes of the wrong options are the check's
+  // misconceptions, and the exercise's worked solution explains it.
+  function checkQuestion(kind, seed) {
+    const c = FC.checkQuestion(kind, seed), e = c.ex;
+    return {
+      title: e.title,
+      text: e.situation,
+      figure: `<figure class="fig">${e.figure}</figure>`,
+      ask: c.ask,
+      options: c.options.map((x) => ({ html: x.html, correct: x.ok, flag: FC.MIS[x.code] ? x.code : null, why: x.why })),
+      explain: () => `<div class="steps">${e.steps.map(stepHtml).join('')}</div>`,
+    };
   }
-  const arcadeSource = {
+  const checkSource = {
     id: 'fc',
-    kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })),
-    question: arcadeQuestion,
+    objectives: window.Lessons.OBJECTIVES.map((o) => ({ ...o, name: () => o.name[FC.getLang()] })),
+    question: checkQuestion,
     concept: Object.fromEntries(Object.keys(FC.MIS).map((c) => [c, c])),
-    concepts: () => Object.fromEntries(Object.keys(FC.MIS).map((c) => [c, FC.mis(c).name.toLowerCase()])),
-    intro: () => ({
-      tag: L('Forces and motion: answer as many questions as you can in <b>5 minutes</b>.', 'Kräfte und Bewegung: Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich.'),
-      rule: L('Questions get harder as you go. Each describes a situation; choose one of four answers. Click an answer or press 1–4.',
-        'Die Fragen werden nach und nach schwieriger. Jede beschreibt eine Situation; wähle eine von vier Antworten. Klicke eine Antwort an oder drücke 1–4.'),
-      example: L('thinking that motion needs a force', 'denken, dass Bewegung eine Kraft braucht'),
-    }),
-    // the ball at the top of its throw (the first worked example), and Newton's second law
-    hero: () => {
-      const e = FC.build('throw', { kind: 'vertical', phase: 'top', obj: 'ball' });
-      return `<div class="figs"><figure class="fig">${e.steps[e.steps.length - 1].figure}</figure></div><p class="ar-law">${FC.F('net')} = <i>m</i> · <i>a</i></p>`;
-    },
+    concepts: () => Object.fromEntries(Object.keys(FC.MIS).map((c) => [c, FC.getLang() === 'de' ? FC.mis(c).name : FC.mis(c).name.toLowerCase()])), // German nouns keep their capitals
   };
 
   // ---------------------------------------------------------------- language
@@ -366,24 +344,20 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
-  // Exercise ids: level-seed; older links topic-seed or topic-format-seed.
-  const ID = /^(easy|medium|hard|mixed|gravity|inertia|force|interact)(?:-(choice|sort|predict|tf))?-(\d+)$/;
-
   // ---------------------------------------------------------------- modes
-  // Practice: random exercises; tutor: worked examples; arcade: a timed game (arcade.js). Hints,
-  // solution and profile belong to practice. Leaving the arcade ends a running game.
+  // Practice: random exercises; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js). Hints, solution and profile belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('fc-mode', m);
     document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
+    $('#ck').hidden = m !== 'check';
     if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
     if (m !== 'practice' && $('#profile').open) $('#profile').close();
     showProfile();
   }
@@ -391,16 +365,17 @@
     setMode('practice');
     if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
   }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
 
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
-    let m = h.match(/^tutor-(\d+)$/);
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
+    const m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
@@ -412,19 +387,13 @@
       if (!ex || ex.id !== h) open(te);
       return true;
     }
-    m = h.match(ID);
-    if (m) {
-      setMode('practice');
-      if (!ex || ex.id !== h) open(FC.generate(m[1], Number(m[3]), m[2] || 'all'));
-      return true;
-    }
     return false;
   }
 
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     applyStatic();
     Lang.wire(switchLang);
     topics = window.Topics.create({
@@ -454,15 +423,19 @@
     window.addEventListener('hashchange', fromHash);
 
     tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(i); setMode('practice'); fresh(); } });
-    arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
+    checker = Check.create(checkSource, {
+      math: () => {}, markScrollable: () => {}, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('fc-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

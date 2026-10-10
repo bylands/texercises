@@ -1,5 +1,6 @@
 // The tutor's worked examples, from easy to hard, with the tasks of the worksheet “Force Vectors”
-// (the ranking of arrangements A, B and C, and the charge in B moved slightly). Each is a topic of
+// (the ranking of arrangements A, B and C, and the charge in B moved slightly), then the field: the
+// force per charge, and the fields of several charges added. Each is a topic of
 // practice (see topics.js) with its stages: first exercises like the example, then variations
 // with new ideas (types: the situations of scenarios.js).
 (function (root) {
@@ -8,14 +9,14 @@
   const h = Math.sqrt(3) / 2;
   const EXAMPLES = [
     {
-      scenario: 'pair', p: { q1: 3e-6, q2: -2e-6, r: 0.3 },
-      practice: [{ types: ['pair'] }, { en: 'distance or charge wanted', de: 'Abstand oder Ladung gesucht', types: ['pair-r', 'pair-q'] }],
+      scenario: 'pair-dir', p: { a: [0, 0], b: [1, 1], qa: 3e-6, qb: -1e-6 },
+      practice: [{ types: ['pair-dir'] }, { en: 'with numbers: Coulomb’s law', de: 'mit Zahlen: Coulombgesetz', types: ['pair'] }],
       name: { en: 'Two charges', de: 'Zwei Ladungen' },
-      idea: { en: 'Coulomb’s law: the force grows with each charge and falls with the square of the distance. Like charges repel, unlike charges attract.', de: 'Coulombgesetz: Die Kraft wächst mit jeder Ladung und nimmt mit dem Quadrat des Abstands ab. Gleichnamige Ladungen stossen sich ab, ungleichnamige ziehen sich an.' },
+      idea: { en: 'The force lies on the line through the two charges: like charges repel, unlike charges attract. Both charges feel a force of the same size, F = k |q₁| |q₂|/r², in opposite directions, however different the charges.', de: 'Die Kraft liegt auf der Geraden durch die beiden Ladungen: Gleichnamige Ladungen stossen sich ab, ungleichnamige ziehen sich an. Beide Ladungen spüren eine gleich grosse Kraft, F = k |q₁| |q₂|/r², in entgegengesetzte Richtungen, wie verschieden die Ladungen auch sind.' },
     },
     {
       scenario: 'factor', p: { what: 'r', n: 2, a: 1, b: 1, s1: 1, s2: 1 },
-      practice: [{ types: ['factor'] }, { en: 'several changes, distance wanted', de: 'mehrere Änderungen, Abstand gesucht', types: ['factor-mix', 'factor-find'] }],
+      practice: [{ types: ['factor'] }, { en: 'several changes, or the distance wanted', de: 'mehrere Änderungen, oder der Abstand gesucht', types: ['factor-mix', 'factor-find'] }],
       name: { en: 'Twice as far', de: 'Doppelt so weit' },
       idea: { en: 'Without numbers: compare the new force with the old one, and everything that stays the same cancels.', de: 'Ohne Zahlen: Vergleiche die neue Kraft mit der alten, und alles Gleichbleibende kürzt sich.' },
     },
@@ -54,6 +55,18 @@
       practice: [{ types: ['nudge-along'] }, { en: 'moved off the line', de: 'neben die Gerade verschoben', types: ['nudge-across'] }],
       name: { en: 'Moved slightly', de: 'Leicht verschoben' },
       idea: { en: 'In the middle the forces cancel. Moved slightly, the nearer charge acts more strongly: does the net force push the charge back, or further away?', de: 'In der Mitte heben sich die Kräfte auf. Leicht verschoben wirkt die nähere Ladung stärker: Treibt die resultierende Kraft die Ladung zurück oder weiter weg?' },
+    },
+    {
+      scenario: 'field-force', p: { q1: 2e-9, E: 3000, d: 'E', q2: -4e-9 },
+      practice: [{ types: ['field-force'] }],
+      name: { en: 'Field and force', de: 'Feld und Kraft' },
+      idea: { en: 'The field at a point is the force per charge, E = F/q: it belongs to the point, not to the test charge. A positive charge is pushed along the field, a negative charge against it.', de: 'Das Feld in einem Punkt ist die Kraft pro Ladung, E = F/q: Es gehört zum Punkt, nicht zur Probeladung. Eine positive Ladung wird in Feldrichtung gestossen, eine negative entgegen.' },
+    },
+    {
+      scenario: 'field-sum', p: { ch: [{ c: [-1, 1], s: 1 }, { c: [1, 1], s: -1 }, { c: [-2, 0], s: 1 }] },
+      practice: [{ types: ['field-sum'] }],
+      name: { en: 'Fields add up', de: 'Felder addieren sich' },
+      idea: { en: 'Like forces, the fields of several charges add up as arrows. The force on a charge at that point follows from the net field.', de: 'Wie Kräfte addieren sich die Felder mehrerer Ladungen als Pfeile. Die Kraft auf eine Ladung in diesem Punkt folgt aus dem Gesamtfeld.' },
     },
   ];
 

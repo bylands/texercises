@@ -1,14 +1,14 @@
 (function () {
   'use strict';
 
-  const C = window.Cycles, D = window.Diagram, Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const C = window.Cycles, D = window.Diagram, Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Cyclic Processes', mode: 'Mode', example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise', difficulty: 'Difficulty',
+      title: 'Cyclic Processes', mode: 'Mode', example: 'Example', tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise', difficulty: 'Difficulty',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       stars: (d) => `Difficulty: ${d} of 5`, score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
@@ -19,7 +19,7 @@
       tutorNote: 'Use the arrow keys ← → to step through.',
     },
     de: {
-      title: 'Kreisprozesse', mode: 'Modus', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe', difficulty: 'Schwierigkeit',
+      title: 'Kreisprozesse', mode: 'Modus', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe', difficulty: 'Schwierigkeit',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       stars: (d) => `Schwierigkeit: ${d} von 5`, score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
@@ -32,7 +32,7 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
 
   function stored(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; } }
   function store(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable */ } }
@@ -371,17 +371,32 @@
     { name: () => L('State table', 'Zustandstabelle'), example: 4, stages: [{ name: null, types: ['table'] }] },
   ];
 
-  // ---------------------------------------------------------------- arcade
-  // Four options, no calculations beyond a factor: which line, which statement, which diagram,
-  // the step back, another diagram, a value of the table, the wrong step.
+  // ---------------------------------------------------------------- check
+  // The learning objectives (check.js), each with the question kinds it is asked about, its worked
+  // example and its practice topic. Four options, no calculations beyond a factor: which line,
+  // which statement, which diagram, the step back, another diagram, a value of the table, the
+  // wrong step.
+  const OBJECTIVES = [
+    { id: 'states', kinds: ['table', 'close'], tutor: 4, topic: 6,
+      name: () => L('Tell a state (p, V and T at one moment, a point) from a process (a line from one state to the next): find a state from the process before it, and the process that links two states.',
+        'Einen Zustand (p, V und T in einem Moment, ein Punkt) von einem Prozess (eine Linie von einem Zustand zum nächsten) unterscheiden: einen Zustand aus dem Prozess davor bestimmen und den Prozess, der zwei Zustände verbindet.') },
+    { id: 'identify', kinds: ['line', 'stmt', 'stmt3'], tutor: 0, topic: 0,
+      name: () => L('Identify isobaric, isochoric and isothermal processes in p(V), p(T) and V(T) diagrams, using pV ∝ T.',
+        'Isobare, isochore und isotherme Prozesse in p(V)-, p(T)- und V(T)-Diagrammen erkennen, mit pV ∝ T.') },
+    { id: 'sketch', kinds: ['match', 'switch'], tutor: 1, topic: 1,
+      name: () => L('Sketch a cycle from a description and transfer it from one diagram to another.',
+        'Einen Kreisprozess nach einer Beschreibung skizzieren und von einem Diagramm in ein anderes übertragen.') },
+    { id: 'error', kinds: ['error'], tutor: 2, topic: 5,
+      name: () => L('Find the error in a sketch of a cycle.', 'Den Fehler in der Skizze eines Kreisprozesses finden.') },
+  ];
   const FLAG = { type: 'type', factor: 'factor', inverse: 'factor', reverse: 'direction', shape: 'shape', copy: 'copy', celsius: 'celsius', same: 'factor' };
-  function arcadeQuestion(kind, seed) {
+  function checkQuestion(kind, seed) {
     const r = C.rng(seed), d = r.pick(C.DIAGRAMS);
     if (kind === 'line') {
       const e = C.generate(`lines-${d}`, seed), types = e.lines.map((x) => x.type), want = types.find((t) => types.filter((u) => u === t).length === 1);
       const name = { isobaric: L('the isobar', 'die Isobare'), isochoric: L('the isochore', 'die Isochore'), isothermal: L('the isotherm', 'die Isotherme') }[want];
       return { title: TITLE.lines(), text: '', figure: `<div class="fig">${D.linesDiagram(d, e.lines)}</div>`, ask: L(`Which line is ${name}?`, `Welche Linie ist ${name}?`),
-        options: e.lines.map((x, k) => ({ html: L(`line ${k + 1}`, `Linie ${k + 1}`), correct: x.type === want, flag: 'shape', why: L(`Line ${k + 1}: ${C.shape(x.type, d)}.`, `Linie ${k + 1}: ${C.shape(x.type, d)}.`) })), explain: () => e.solution.map((s) => `<p>${s}</p>`).join('') };
+        options: e.lines.map((x, k) => ({ html: L(`line ${k + 1}`, `Linie ${k + 1}`), correct: x.type === want, flag: d === 'pV' && want === 'isothermal' ? 'shape' : 'type', why: L(`Line ${k + 1}: ${C.shape(x.type, d)}.`, `Linie ${k + 1}: ${C.shape(x.type, d)}.`) })), explain: () => e.solution.map((s) => `<p>${s}</p>`).join('') };
     }
     if (kind === 'stmt' || kind === 'stmt3') {
       const c = C.randomCycle(r, 3, { standard: true }), pool = r.shuffle(C.statementPool(c, r)), t = pool.find((x) => x.ok), fs = [];
@@ -401,22 +416,16 @@
     return { title: TITLE[e.kind](), text: `<div class="desc">${e.text}</div>`, figure: kind === 'table' ? `<div class="fig">${tableHtml(e, false)}</div>` : `<div class="fig">${figureOf(e)}</div>`, ask: kind === 'table' ? `${qq.label} = ?` : qq.label,
       options: qq.options.map((o) => ({ html: o.label, correct: o.ok, flag: FLAG[o.tag] || 'other', why: o.why })), explain };
   }
-  const arcadeSource = {
+  const checkSource = {
     id: 'cyc',
-    kinds: [{ id: 'line', difficulty: 1 }, { id: 'stmt', difficulty: 2 }, { id: 'match', difficulty: 2 }, { id: 'table', difficulty: 3 }, { id: 'close', difficulty: 3 }, { id: 'switch', difficulty: 4 }, { id: 'error', difficulty: 4 }, { id: 'stmt3', difficulty: 3 }],
-    question: arcadeQuestion,
+    objectives: OBJECTIVES,
+    question: checkQuestion,
     concept: { type: 'type', factor: 'factor', direction: 'direction', shape: 'shape', copy: 'copy', celsius: 'celsius' },
     concepts: () => ({
       type: L('one process taken for another', 'einen Prozess mit einem anderen verwechselt'), factor: L('the factor upside down or wrong', 'den Faktor umgekehrt oder falsch'),
       direction: L('the cycle run backwards', 'den Kreisprozess rückwärts durchlaufen'), shape: L('an isotherm drawn straight in p(V)', 'eine Isotherme im p(V)-Diagramm gerade gezeichnet'),
       copy: L('a diagram copied without changing it', 'ein Diagramm unverändert übernommen'), celsius: L('°C instead of kelvin', '°C statt Kelvin'),
     }),
-    intro: () => ({
-      tag: L('Processes of an ideal gas in p(V), p(T) and V(T) diagrams: as many questions as you can in <b>5 minutes</b>.', 'Prozesse eines idealen Gases in p(V)-, p(T)- und V(T)-Diagrammen: so viele Fragen wie möglich in <b>5 Minuten</b>.'),
-      rule: L('Questions get harder as you go: lines, statements, diagrams and states. Choose one of four answers, or press 1–4.', 'Die Fragen werden nach und nach schwieriger: Linien, Aussagen, Diagramme und Zustände. Wähle eine von vier Antworten oder drücke 1–4.'),
-      example: L('a cycle run backwards', 'einen Kreisprozess rückwärts'),
-    }),
-    hero: () => `<div class="figs"><div class="fig">${D.diagram({ cycle: WS1(), diagram: 'pV' })}</div></div>`,
   };
 
   // ---------------------------------------------------------------- language and modes
@@ -446,7 +455,7 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
   const lessons = () => EXAMPLES.map((e) => ({ name: e.name(), idea: e.idea(), frames: e.frames, also: topics.also(e.topic) }));
 
@@ -456,22 +465,22 @@
     store('cyc-mode', m);
     document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
+    $('#ck').hidden = m !== 'check';
     if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
   }
   function practise() {
     setMode('practice');
     if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
   }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     const m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= EXAMPLES.length) {
       setMode('tutor');
@@ -485,7 +494,7 @@
 
   function init() {
     Lang.init();
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     topics = window.Topics.create({
       app: PRACTICE,
       topics: TOPICS.map((t) => ({ name: t.name, stages: t.stages, example: { i: t.example, name: () => EXAMPLES[t.example].name() } })),
@@ -510,14 +519,18 @@
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);
     tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(EXAMPLES[i].topic); setMode('practice'); fresh(); } });
-    arcade = Arcade.create(arcadeSource, { math, markScrollable, stored, store });
+    checker = Check.create(checkSource, {
+      math, markScrollable, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     const last = stored('cyc-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

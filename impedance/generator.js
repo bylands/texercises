@@ -24,7 +24,7 @@
     hard: { name: () => L('Hard', 'Schwierig'), kinds: ['series RLC', 'parallel RLC'] },
     mixed: { name: () => L('Mixed', 'Gemischt'), kinds: Object.keys(DIFFICULTY) },
   };
-  const UNKNOWNS = { RL: ['R', 'L'], RC: ['R', 'C'], RLC: ['R', 'L', 'C'], LC: ['L', 'C'] }; // LC: matching only (match.js)
+  const UNKNOWNS = { RL: ['R', 'L'], RC: ['R', 'C'], RLC: ['R', 'L', 'C'], LC: ['L', 'C'], R: ['R'], L: ['L'], C: ['C'] }; // LC and one element: matching only (match.js)
   const NICE = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
   const E6 = [1, 1.5, 2.2, 3.3, 4.7, 6.8];
   const E12 = [1, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2];
@@ -52,7 +52,7 @@
   // exercise (match.js), with R, L and C: 'series-parallel', R in series with the pair L ∥ C
   // (reactance X = 1/(1/(ωL) − ωC)), and 'parallel-series', R in parallel with the pair L + C
   // (reactance X = ωL − 1/(ωC)).
-  // A device of a problem (realproblems.js) gives its impedance as a function c.fn of the variable
+  // A device with its own curve gives its impedance as a function c.fn of the variable
   // of its axis, there the frequency f in Hz.
   function Z(c, w) {
     if (c.fn) return c.fn(w);

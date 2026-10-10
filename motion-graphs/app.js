@@ -1,22 +1,22 @@
 (function () {
   'use strict';
 
-  const { generate, KINDS, ofDifficulty, quiz, evaluate, copied, sloped, len, rate, area } = window.Motion;
+  const { generate, KINDS, TASKS, register, rng, quiz, flaw, evaluate, copied, sloped, len } = window.Motion;
   const Concepts = window.Concepts, Quiz = window.Quiz;
   const Plot = window.Plot, { sourceGraph, UNIT, dec } = Plot;
-  const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const Lang = window.Lang, Check = window.Check, L = Lang.L;
   const NARROW = 560;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
-  const LABEL = { sv: 's → v', va: 'v → a', vs: 'v → s', av: 'a → v' };
+  const LABEL = { sv: 's → v', va: 'v → a' };
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Motion Graphs', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
-      tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
-      tutorNote: 'Use the arrow keys ← → to step through. The piece a step is about is <span class="k-band">highlighted</span> in both graphs; dashed lines are chords (mean values), short lines tangents, and shaded areas count <span class="k-pos">positive</span> above and <span class="k-neg">negative</span> below the time axis.',
-      given: 'Given', yours: 'Your graph', answer: 'Answer',
+      title: 'Slopes of Motion Graphs', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
+      tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
+      tutorNote: 'Use the arrow keys ← → to step through. The piece a step is about is <span class="k-band">highlighted</span> in both graphs; dashed lines are chords (mean values), and short lines tangents.',
+      given: 'Given', yours: 'Your graph', answer: 'Answer', sketch: 'Sketch',
       check: 'Check', reset: 'Reset drawing', reveal: 'Show solution', hints: 'Hints', solution: 'Solution',
       revealNote: 'The solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       levels: { easy: 'Easy', medium: 'Medium', hard: 'Hard', mixed: 'Mixed' },
@@ -35,10 +35,10 @@
       answers: 'Answers', wrongs: 'Typical wrong answers',
     },
     de: {
-      title: 'Bewegungsdiagramme', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
-      tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
-      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Das Stück, um das es in einem Schritt geht, ist in beiden Graphen <span class="k-band">hervorgehoben</span>; gestrichelte Linien sind Sekanten (Mittelwerte), kurze Linien Tangenten, und schattierte Flächen zählen über der Zeitachse <span class="k-pos">positiv</span> und darunter <span class="k-neg">negativ</span>.',
-      given: 'Gegeben', yours: 'Dein Graph', answer: 'Lösung',
+      title: 'Steigungen in Bewegungsdiagrammen', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
+      tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
+      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Das Stück, um das es in einem Schritt geht, ist in beiden Graphen <span class="k-band">hervorgehoben</span>; gestrichelte Linien sind Sekanten (Mittelwerte), und kurze Linien Tangenten.',
+      given: 'Gegeben', yours: 'Dein Graph', answer: 'Lösung', sketch: 'Skizze',
       check: 'Prüfen', reset: 'Zeichnung zurücksetzen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung',
       revealNote: 'Die Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       levels: { easy: 'Einfach', medium: 'Mittel', hard: 'Schwierig', mixed: 'Gemischt' },
@@ -59,7 +59,7 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, editor = null, tutor = null, arcade = null, topics = null;
+  let ex = null, editor = null, tutor = null, checker = null, topics = null;
   // tries, hints used, solved, revealed, res: the result of the last check (null after an edit)
   let st = null;
 
@@ -101,19 +101,8 @@
     return L(`${many ? 'Pieces' : 'Piece'} ${ns}`, `${many ? 'Die Stücke' : 'Stück'} ${ns}`);
   };
   const piece = (i) => L(`Piece ${i}`, `Stück ${i}`);
-  const times = (ts) => and(ts.map((t) => `${fmt(t)} s`));
   const indices = (test) => ex.pieces.map((p, i) => i).filter((i) => test(ex.pieces[i], i));
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-  // Where g is zero inside a sloped piece or at one of its ends (G has a horizontal tangent).
-  function zeros() {
-    const out = [];
-    for (const p of ex.pieces) {
-      if (!sloped(p)) continue;
-      const x = -p.g0 / rate(p);
-      if (x >= 0 && x <= len(p) && !out.includes(p.t0 + x)) out.push(p.t0 + x);
-    }
-    return out.sort((a, b) => a - b);
-  }
 
   // The text helpers read the exercise from ex; withEx(e, f) runs f for another exercise.
   function withEx(e, f) {
@@ -122,7 +111,7 @@
     try { return f(); } finally { ex = saved; }
   }
 
-  // ---------------------------------------------------------------- derivative: s → v, v → a
+  // ---------------------------------------------------------------- the slope: s → v, v → a
   // F is the given graph (G), f the one to draw (g). Parabolas are solved with the mean velocity
   // (or mean acceleration) f̄ = ΔF/Δt: f changes linearly, so f̄ is the mean of f at the start and
   // at the end, and f passes through f̄ in the middle of the piece.
@@ -234,142 +223,34 @@
     }
   }
 
-  // ---------------------------------------------------------------- integral: v → s, a → v
-  // g is the given graph, G the one to draw.
-  function hintsInt() {
-    const g = Q(ex.from), G = Q(ex.to), ps = ex.pieces;
-    const constant = indices((p) => !sloped(p)), changing = indices(sloped);
-    const zs = zeros(), rest = indices((p) => !sloped(p) && p.g0 === 0);
-    const h1 = L(`${g}(<i>t</i>) has five straight pieces. In ${pieceList(constant, 'in')}, ${g} is constant, so ${G} is a straight line there. ` +
-      `In ${pieceList(changing, 'in')}, ${g} changes steadily, so ${G} is a parabola there. ${g} does not jump, so ${G} joins smoothly (without a kink) at every breakpoint.` +
-      (zs.length ? ` ${g} = 0 at ${times(zs)}: ${G} has a horizontal tangent there.` : '') +
-      (rest.length ? ` In ${pieceList(rest, 'in')}, ${g} = 0, so ${G} stays constant.` : ''),
-    `${g}(<i>t</i>) hat fünf gerade Stücke. In ${pieceList(constant, 'in')} ist ${g} konstant, also ist ${G} dort eine Gerade. ` +
-      `In ${pieceList(changing, 'in')} ändert sich ${g} gleichmässig, also ist ${G} dort eine Parabel. ${g} springt nicht, also geht ${G} an jeder Übergangsstelle glatt (ohne Knick) weiter.` +
-      (zs.length ? ` Bei ${times(zs)} ist ${g} = 0: Dort hat ${G} eine waagrechte Tangente.` : '') +
-      (rest.length ? ` In ${pieceList(rest, 'in')} ist ${g} = 0, also bleibt ${G} konstant.` : ''));
-    const h2 = L(`Start at ${at(ex.to, 0)} = ${val(ex.pieces[0].G0, ex.to)}. In every piece, the change Δ${G} is the area between the ${g} graph and the <i>t</i> axis (area below the axis counts negative). ` +
-      `Mark ${G} at the breakpoints piece by piece, then draw the shape: straight where ${g} is constant; where ${g} increases, ${G} curves upward, and where ${g} decreases, ${G} curves downward. ` +
-      `At every instant, the slope of ${G} is ${g}. For a curved piece, put the diamond in the middle at ${G} at its start plus the area under ${g} over its first half.`,
-    `Beginne bei ${at(ex.to, 0)} = ${val(ex.pieces[0].G0, ex.to)}. In jedem Stück ist die Änderung Δ${G} die Fläche zwischen dem ${g}-Graphen und der <i>t</i>-Achse (Fläche unter der Achse zählt negativ). ` +
-      `Markiere ${G} an den Übergangsstellen Stück für Stück und zeichne dann die Form: gerade, wo ${g} konstant ist; wo ${g} zunimmt, krümmt sich ${G} nach oben, und wo ${g} abnimmt, nach unten. ` +
-      `In jedem Moment ist die Steigung von ${G} gleich ${g}. Bei einem gekrümmten Stück setzt du die Raute in der Mitte auf ${G} an seinem Anfang plus die Fläche unter ${g} über seine erste Hälfte.`);
-    const formulas = ps.map((p, i) => {
-      if (!sloped(p)) return `<li>${piece(i + 1)} (${L('rectangle', 'Rechteck')}): Δ${G} = ${g} · Δ<i>t</i> = ${at(ex.from, p.t0)} · ${len(p)} s</li>`;
-      const cross = p.g0 * p.g1 < 0 ? L('; the triangles above and below the axis partly cancel', '; die Dreiecke über und unter der Achse heben sich teilweise auf') : '';
-      return `<li>${piece(i + 1)} (${L('trapezoid', 'Trapez')}): Δ${G} = (${at(ex.from, p.t0)} + ${at(ex.from, p.t1)})/2 · ${len(p)} s${cross}</li>`;
-    });
-    const h3 = `${L('Formulas, piece by piece:', 'Formeln, Stück für Stück:')}<ul>${formulas.join('')}</ul>`;
-    const h4 = `Δ${G} ${L('per piece', 'pro Stück')}: ${and(ps.map((p, i) => `${L('piece', 'Stück')} ${i + 1}: ${sval(area(p), ex.to)}`))}.`;
-    return [h1, h2, h3, h4];
-  }
-
-  // The middle of a curved piece of the integral, where the editor's diamond sits: its value is
-  // the start value plus the area under the given graph over the first half of the piece (a
-  // trapezoid of half the width); dev is how far it lies above (+) or below (−) the straight line
-  // between the ends, (g0 − g1)·Δt/8.
-  function midOf(p) {
-    const T = len(p), tm = (p.t0 + p.t1) / 2, gm = (p.g0 + p.g1) / 2, Gm = p.G0 + ((p.g0 + gm) / 2) * (T / 2);
-    return { T, tm, gm, Gm, dev: Gm - (p.G0 + p.G1) / 2 };
-  }
-
-  function describeInt(p, i) {
-    const g = Q(ex.from), G = Q(ex.to), T = len(p), dG = area(p);
-    const head = `<b>${piece(i + 1)} (${when(p)})</b>: `;
-    const span = L(`from ${val(p.G0, ex.to)} to ${val(p.G1, ex.to)}`, `von ${val(p.G0, ex.to)} auf ${val(p.G1, ex.to)}`);
-    if (!sloped(p)) {
-      if (p.g0 === 0) return head + L(`${g} = 0, so ${G} stays at ${val(p.G0, ex.to)}.`, `${g} = 0, also bleibt ${G} bei ${val(p.G0, ex.to)}.`);
-      return head + L(`${g} = ${sval(p.g0, ex.from)} is constant, so ${G} is a straight line: Δ${G} = ${sval(p.g0, ex.from)} · ${T} s = ${sval(dG, ex.to)}, ${span}.`,
-        `${g} = ${sval(p.g0, ex.from)} ist konstant, also ist ${G} eine Gerade: Δ${G} = ${sval(p.g0, ex.from)} · ${T} s = ${sval(dG, ex.to)}, ${span}.`);
-    }
-    const x = -p.g0 / rate(p), up = p.g1 > p.g0;
-    const turn = x > 0 && x < T ? L(` ${g} = 0 at ${fmt(p.t0 + x)} s, where ${G} has a horizontal tangent.`, ` Bei ${fmt(p.t0 + x)} s ist ${g} = 0; dort hat ${G} eine waagrechte Tangente.`) : '';
-    // how strongly it curves: set by the diamond in the middle of the piece, at the start value
-    // plus the area under g over the first half
-    const mid = midOf(p), half = fmt(mid.T / 2), side = mid.dev < 0 ? L('below', 'unter') : L('above', 'über');
-    const bend = L(`How strongly it curves is set by the diamond in the middle of the piece, at ${fmt(mid.tm)} s. The middle point follows from the area under ${g} over the first half of the piece, a trapezoid of width ${half} s: ` +
-      `${at(ex.to, mid.tm)} = ${val(p.G0, ex.to)} + (${plus(p.g0, mid.gm)})/2 ${UNIT[ex.from]} · ${half} s = ${val(mid.Gm, ex.to)}. That is ${val(Math.abs(mid.dev), ex.to)} ${side} the straight line between the ends of the piece. ` +
-      `(The slope of ${G} is ${g}: the tangents at the ends have the slopes ${sval(p.g0, ex.from)} and ${sval(p.g1, ex.from)}, the short lines.) `,
-    `Wie stark sie sich krümmt, stellst du mit der Raute in der Mitte des Stücks ein, bei ${fmt(mid.tm)} s. Der Mittelpunkt folgt aus der Fläche unter ${g} über die erste Hälfte des Stücks, einem Trapez der Breite ${half} s: ` +
-      `${at(ex.to, mid.tm)} = ${val(p.G0, ex.to)} + (${plus(p.g0, mid.gm)})/2 ${UNIT[ex.from]} · ${half} s = ${val(mid.Gm, ex.to)}. Das ist ${val(Math.abs(mid.dev), ex.to)} ${side} der Geraden zwischen den Enden des Stücks. ` +
-      `(Die Steigung von ${G} ist ${g}: Die Tangenten an den Enden haben die Steigungen ${sval(p.g0, ex.from)} und ${sval(p.g1, ex.from)}, die kurzen Linien.) `);
-    return head + L(`${g} changes from ${sval(p.g0, ex.from)} to ${sval(p.g1, ex.from)}, so ${G} is a parabola that curves ${up ? 'upward' : 'downward'}. `,
-      `${g} ändert sich von ${sval(p.g0, ex.from)} auf ${sval(p.g1, ex.from)}, also ist ${G} eine Parabel, die sich nach ${up ? 'oben' : 'unten'} krümmt. `) + bend +
-      `Δ${G} = (${plus(p.g0, p.g1)})/2 ${UNIT[ex.from]} · ${T} s = ${sval(dG, ex.to)}, ${span}.${turn}`;
-  }
-
-  function whyInt(code, p) {
-    const g = Q(ex.from), G = Q(ex.to), dG = area(p), pos = dG > 0;
-    switch (code) {
-      case 'sign': return p.g0 * p.g1 < 0
-        ? L(`${G} changes the wrong way. The area ${pos ? 'above' : 'below'} the <i>t</i> axis is larger than the one ${pos ? 'below' : 'above'}, so ${G} ${pos ? 'increases' : 'decreases'} overall.`,
-          `${G} ändert sich in die falsche Richtung. Die Fläche ${pos ? 'über' : 'unter'} der <i>t</i>-Achse ist grösser als jene ${pos ? 'darunter' : 'darüber'}, also nimmt ${G} insgesamt ${pos ? 'zu' : 'ab'}.`)
-        : L(`${G} changes the wrong way: ${g} is ${pos ? 'positive' : 'negative'} here, so ${G} ${pos ? 'increases' : 'decreases'}.`,
-          `${G} ändert sich in die falsche Richtung: ${g} ist hier ${pos ? 'positiv' : 'negativ'}, also nimmt ${G} ${pos ? 'zu' : 'ab'}.`);
-      case 'rectStart': case 'rectEnd': {
-        const t = code === 'rectStart' ? p.t0 : p.t1;
-        return L(`Your change of ${G} is ${at(ex.from, t)} · Δ<i>t</i>. But ${g} changes in this piece: Δ${G} is the area of the trapezoid under the ${g} graph, (${at(ex.from, p.t0)} + ${at(ex.from, p.t1)})/2 · Δ<i>t</i>.`,
-          `Deine Änderung von ${G} ist ${at(ex.from, t)} · Δ<i>t</i>. Aber ${g} ändert sich in diesem Stück: Δ${G} ist die Fläche des Trapezes unter dem ${g}-Graphen, (${at(ex.from, p.t0)} + ${at(ex.from, p.t1)})/2 · Δ<i>t</i>.`);
-      }
-      case 'unsigned': return L(`${g} changes sign in this piece: the area below the <i>t</i> axis counts negative.`, `${g} wechselt in diesem Stück das Vorzeichen: Die Fläche unter der <i>t</i>-Achse zählt negativ.`);
-      case 'area': return L(`Check the change of ${G}: Δ${G} is the area between the ${g} graph and the <i>t</i> axis from ${p.t0} s to ${p.t1} s.`,
-        `Prüfe die Änderung von ${G}: Δ${G} ist die Fläche zwischen dem ${g}-Graphen und der <i>t</i>-Achse von ${p.t0} s bis ${p.t1} s.`);
-      case 'straight': return L(`${g} is constant here, so ${G} is a straight line: drag the diamond back onto the line between the ends.`,
-        `${g} ist hier konstant, also ist ${G} eine Gerade: Zieh die Raute zurück auf die Linie zwischen den Enden.`);
-      case 'curve': return L(`${g} changes here, so ${G} is curved (a parabola): drag the diamond to bend the piece.`,
-        `${g} ändert sich hier, also ist ${G} gekrümmt (eine Parabel): Zieh an der Raute, um das Stück zu biegen.`);
-      case 'bendDir': return p.g1 > p.g0
-        ? L(`${g} increases here, so the slope of ${G} increases: ${G} curves upward (the middle lies below the straight line between the ends).`,
-          `${g} nimmt hier zu, also nimmt die Steigung von ${G} zu: ${G} krümmt sich nach oben (die Mitte liegt unter der Geraden zwischen den Enden).`)
-        : L(`${g} decreases here, so the slope of ${G} decreases: ${G} curves downward (the middle lies above the straight line between the ends).`,
-          `${g} nimmt hier ab, also nimmt die Steigung von ${G} ab: ${G} krümmt sich nach unten (die Mitte liegt über der Geraden zwischen den Enden).`);
-      default: return L(`${G} bends the right way, but too ${code === 'bendMore' ? 'little' : 'much'}. The diamond in the middle belongs at ${G} at the start of the piece plus the area under ${g} over the first half of the piece (a trapezoid of half the width).`,
-        `${G} krümmt sich in die richtige Richtung, aber zu ${code === 'bendMore' ? 'wenig' : 'stark'}. Die Raute in der Mitte gehört auf ${G} am Anfang des Stücks plus die Fläche unter ${g} über die erste Hälfte des Stücks (ein Trapez der halben Breite).`);
-    }
-  }
-
-  // The drawing (or an arcade option) has the shape of the given graph.
+  // The drawing (or a check option) has the shape of the given graph.
   function copiedText(start) {
     const F = Q(ex.from), f = Q(ex.to);
-    return start + ' ' + (ex.dir === 'diff'
-      ? L(`But ${f} is the <em>slope</em> of ${F}, not its value: where ${F} is large but constant, ${f} = 0.`,
-        `Aber ${f} ist die <em>Steigung</em> von ${F}, nicht sein Wert: Wo ${F} gross, aber konstant ist, ist ${f} = 0.`)
-      : L(`But ${F} is the <em>slope</em> of ${f}: where ${F} is constant, ${f} changes steadily.`,
-        `Aber ${F} ist die <em>Steigung</em> von ${f}: Wo ${F} konstant ist, ändert sich ${f} gleichmässig.`));
+    return start + ' ' + L(`But ${f} is the <em>slope</em> of ${F}, not its value: where ${F} is large but constant, ${f} = 0.`,
+      `Aber ${f} ist die <em>Steigung</em> von ${F}, nicht sein Wert: Wo ${F} gross, aber konstant ist, ist ${f} = 0.`);
   }
 
   // ---------------------------------------------------------------- exercise text
-  const taskTitle = (e) => `${LABEL[e.task]}: ${e.dir === 'diff' ? L('from a graph to its slope', 'vom Graphen zu seiner Steigung') : L('from a graph to the area under it', 'vom Graphen zur Fläche darunter')}`;
+  const taskTitle = (e) => `${LABEL[e.task]}: ${L('from a graph to its slope', 'vom Graphen zu seiner Steigung')}`;
   function statement() {
     const { from, to } = ex;
-    if (ex.dir === 'diff') {
-      return L(`A body moves along a straight line. The graph shows ${its(from)} ${Q(from)}(<i>t</i>), made of straight and parabolic pieces. Draw ${graphOf(to)} ${Q(to)}(<i>t</i>).`,
-        `Ein Körper bewegt sich auf einer Geraden. Der Graph zeigt ${its(from)} ${Q(from)}(<i>t</i>), zusammengesetzt aus geraden und parabelförmigen Stücken. Zeichne ${graphOf(to)} ${Q(to)}(<i>t</i>).`);
-    }
-    return L(`A body moves along a straight line. The graph shows ${its(from)} ${Q(from)}(<i>t</i>), made of straight pieces. At <i>t</i> = 0, ${at(to, 0)} = ${val(ex.pieces[0].G0, to)}. Draw ${graphOf(to)} ${Q(to)}(<i>t</i>).`,
-      `Ein Körper bewegt sich auf einer Geraden. Der Graph zeigt ${its(from)} ${Q(from)}(<i>t</i>), zusammengesetzt aus geraden Stücken. Bei <i>t</i> = 0 ist ${at(to, 0)} = ${val(ex.pieces[0].G0, to)}. Zeichne ${graphOf(to)} ${Q(to)}(<i>t</i>).`);
+    return L(`A body moves along a straight line. The graph shows ${its(from)} ${Q(from)}(<i>t</i>), made of straight and parabolic pieces. Draw ${graphOf(to)} ${Q(to)}(<i>t</i>).`,
+      `Ein Körper bewegt sich auf einer Geraden. Der Graph zeigt ${its(from)} ${Q(from)}(<i>t</i>), zusammengesetzt aus geraden und parabelförmigen Stücken. Zeichne ${graphOf(to)} ${Q(to)}(<i>t</i>).`);
   }
   function howTo() {
     const q = Q(ex.to);
-    const keys = L(' Keyboard: Tab to the graph, ←/→ choose a point, ↑/↓ move it.', ' Tastatur: Mit Tab zum Graphen, ←/→ wählt einen Punkt, ↑/↓ verschiebt ihn.');
-    if (ex.dir === 'diff') {
-      return L(`Drag the dots at the breakpoints to set ${q} there, or drag the line of a piece to move both of its ends.`,
-        `Zieh die Punkte an den Übergangsstellen, um ${q} dort festzulegen, oder zieh die Linie eines Stücks, um beide Enden zu verschieben.`) + keys;
-    }
-    return L(`Drag the dots at the breakpoints to set ${q} there (${at(ex.to, 0)} is given), and the diamond in the middle of a piece to bend it into a parabola. Each piece is judged by how much ${q} changes in it, so a mistake only counts once.`,
-      `Zieh die Punkte an den Übergangsstellen, um ${q} dort festzulegen (${at(ex.to, 0)} ist gegeben), und die Raute in der Mitte eines Stücks, um es zu einer Parabel zu biegen. Jedes Stück wird danach beurteilt, wie stark sich ${q} darin ändert, also zählt ein Fehler nur einmal.`) + keys;
+    return L(`Drag the dots at the breakpoints to set ${q} there, or drag the line of a piece to move both of its ends.`,
+      `Zieh die Punkte an den Übergangsstellen, um ${q} dort festzulegen, oder zieh die Linie eines Stücks, um beide Enden zu verschieben.`) +
+      L(' Keyboard: Tab to the graph, ←/→ choose a point, ↑/↓ move it.', ' Tastatur: Mit Tab zum Graphen, ←/→ wählt einen Punkt, ↑/↓ verschiebt ihn.');
   }
 
   const ruleText = () => {
     const F = Q(ex.from), f = Q(ex.to);
-    return ex.dir === 'diff'
-      ? L(`${f} is the slope of the ${F}(<i>t</i>) graph: constant where ${F} is straight, a sloped straight line where ${F} is a parabola. ${F} has no kinks, so ${f} does not jump.`,
-        `${f} ist die Steigung des ${F}(<i>t</i>)-Graphen: konstant, wo ${F} gerade ist, eine schräge Gerade, wo ${F} eine Parabel ist. ${F} hat keine Knicke, also springt ${f} nicht.`)
-      : L(`The change of ${f} is the area under the ${F}(<i>t</i>) graph, and the slope of ${f} is ${F}: a straight line where ${F} is constant, a parabola where it changes linearly. ${F} does not jump, so ${f} has no kinks.`,
-        `Die Änderung von ${f} ist die Fläche unter dem ${F}(<i>t</i>)-Graphen, und die Steigung von ${f} ist ${F}: eine Gerade, wo ${F} konstant ist, eine Parabel, wo sich ${F} linear ändert. ${F} springt nicht, also hat ${f} keine Knicke.`);
+    return L(`${f} is the slope of the ${F}(<i>t</i>) graph: constant where ${F} is straight, a sloped straight line where ${F} is a parabola. ${F} has no kinks, so ${f} does not jump.`,
+      `${f} ist die Steigung des ${F}(<i>t</i>)-Graphen: konstant, wo ${F} gerade ist, eine schräge Gerade, wo ${F} eine Parabel ist. ${F} hat keine Knicke, also springt ${f} nicht.`);
   };
 
-  const describe = (p, i) => (ex.dir === 'diff' ? describeDiff : describeInt)(p, i);
+  const describe = describeDiff;
   // the worked steps of a quiz exercise, then the answers
   const stepsHtml = (e) => e.steps.map((x) => `<p class="step-rule">${x.title}</p><div class="figs">${x.figure.startsWith('<div') ? x.figure : `<figure class="fig">${x.figure}</figure>`}</div><p>${x.text}</p>`).join('') +
     `<ul class="short">${e.questions.map((q, k) => `<li><span class="qn">${k + 1}</span>${e.answers[k]}</li>`).join('')}</ul>`;
@@ -405,8 +286,8 @@
     const el = old.cloneNode(false); // drop the listeners of the previous editor
     old.replaceWith(el);
     el.setAttribute('viewBox', `0 0 ${Plot.W} ${Plot.H}`);
-    el.setAttribute('aria-label', L(`Graph of ${NAME()[ex.to]} against time to draw. ${ex.dir === 'diff' ? 'Handles at the breakpoints.' : 'Handles at the breakpoints and in the middle of each piece.'} Use the arrow keys.`,
-      `Zu zeichnender Graph ${{ s: 'des Orts', v: 'der Geschwindigkeit', a: 'der Beschleunigung' }[ex.to]} gegen die Zeit. ${ex.dir === 'diff' ? 'Griffe an den Übergangsstellen.' : 'Griffe an den Übergangsstellen und in der Mitte jedes Stücks.'} Mit den Pfeiltasten bedienbar.`));
+    el.setAttribute('aria-label', L(`Graph of ${NAME()[ex.to]} against time to draw. Handles at the breakpoints. Use the arrow keys.`,
+      `Zu zeichnender Graph ${{ s: 'des Orts', v: 'der Geschwindigkeit', a: 'der Beschleunigung' }[ex.to]} gegen die Zeit. Griffe an den Übergangsstellen. Mit den Pfeiltasten bedienbar.`));
     editor = window.createEditor(el, ex, onEdit);
     if (saved) editor.restore(saved);
     showDrawing();
@@ -456,8 +337,7 @@
     }
     status.textContent = ui().some(right, st.res.length, st.tries) + (canReveal() ? ui().canReveal : ui().tryAgain);
     status.className = 'status bad';
-    const why = ex.dir === 'diff' ? whyDiff : whyInt;
-    const items = st.res.map((r, i) => (r.ok ? '' : `<li><b>${piece(i + 1)} (${when(ex.pieces[i])})</b>: ${r.codes.map((c) => why(c, ex.pieces[i], i)).join(' ')}</li>`));
+    const items = st.res.map((r, i) => (r.ok ? '' : `<li><b>${piece(i + 1)} (${when(ex.pieces[i])})</b>: ${r.codes.map((c) => whyDiff(c, ex.pieces[i], i)).join(' ')}</li>`));
     if (st.copied) items.unshift(`<li>${copiedText(L('Your graph has the same shape as the given one.', 'Dein Graph hat dieselbe Form wie der gegebene.'))}</li>`);
     $('#feedback').innerHTML = items.join('');
   }
@@ -508,10 +388,9 @@
   }
 
   // ---------------------------------------------------------------- exercise lifecycle
-  const newSeed = () => 1 + Math.floor(Math.random() * 999999);
   // solved now, or solved before (its solution can be looked at again)
   const canReveal = () => st.solved || Practice.solvedBefore(PRACTICE, ex.id) || st.hints >= ex.hints.length || st.tries >= MAX_TRIES;
-  const hintsOf = () => (isQuiz() ? ex.hints : ex.dir === 'diff' ? hintsDiff() : hintsInt());
+  const hintsOf = () => (isQuiz() ? ex.hints : hintsDiff());
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
   const PRACTICE = 'mg', typeOf = (e) => e.kind || e.task;
@@ -623,10 +502,74 @@
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+
+  // ---------------------------------------------------------------- find the error
+  // A student's sketch of v(t) for a given s(t) (or of a(t) for a given v(t)) with one piece wrong
+  // (flaw() in generator.js): which piece is wrong, and what is wrong with it. An exercise like
+  // those of concepts.js (answered with quiz.js), made here because it uses the texts of the
+  // drawing exercises. Its graphs are drawn narrow, to fit side by side.
+  const FLAW_TEXT = {
+    height: () => L(`It shows the value of ${Q(ex.from)}, not its slope.`, `Es zeigt den Wert von ${Q(ex.from)}, nicht seine Steigung.`),
+    sign: () => L('Its sign is wrong.', 'Sein Vorzeichen ist falsch.'),
+    average: () => L(`It is constant at the mean value ${BAR[ex.to]}, but ${Q(ex.to)} changes in this piece.`, `Es ist konstant beim Mittelwert ${BAR[ex.to]}, aber ${Q(ex.to)} ändert sich in diesem Stück.`),
+    direction: () => L(`${Q(ex.to)} changes the wrong way.`, `${Q(ex.to)} ändert sich in die falsche Richtung.`),
+  };
+  // what the sketch shows in its wrong piece p, and why that is wrong
+  function flawWhy(code, p) {
+    const F = Q(ex.from), f = Q(ex.to), fb = BAR[ex.to], up = p.g1 > p.g0;
+    switch (code) {
+      case 'height': return L(`The sketch copies the value of ${F} in this piece instead of its slope. But ${f} is how steep the ${F}(<i>t</i>) graph is, not how high it lies.`,
+        `Die Skizze übernimmt in diesem Stück den Wert von ${F} statt seiner Steigung. ${f} ist aber, wie steil der ${F}(<i>t</i>)-Graph ist, nicht wie hoch er liegt.`);
+      case 'sign': return `${L('The sketch has the wrong sign here.', 'Die Skizze hat hier das falsche Vorzeichen.')} ${whyDiff('sign', p)}`;
+      case 'average': return L(`The sketch shows the mean value ${fb} = Δ${F}/Δ<i>t</i> for the whole piece. But ${F} is curved here, so ${f} changes steadily: it equals ${fb} only in the middle of the piece.`,
+        `Die Skizze zeigt den Mittelwert ${fb} = Δ${F}/Δ<i>t</i> für das ganze Stück. ${F} ist hier aber gekrümmt, also ändert sich ${f} gleichmässig: Es ist nur in der Mitte des Stücks gleich ${fb}.`);
+      default: return L(`In the sketch, ${f} ${up ? 'decreases' : 'increases'} in this piece. But ${F} curves ${up ? 'upward' : 'downward'} here: its slope ${up ? 'increases' : 'decreases'}, and so does ${f}.`,
+        `In der Skizze nimmt ${f} in diesem Stück ${up ? 'ab' : 'zu'}. ${F} krümmt sich hier aber nach ${up ? 'oben' : 'unten'}: Seine Steigung nimmt ${up ? 'zu' : 'ab'}, und damit auch ${f}.`);
+    }
+  }
+  function errorEx(seed) {
+    const r = rng(seed), e = generate(r.next() < 0.7 ? 'sv' : 'va', seed), f = flaw(e, seed), i = f.piece, p = e.pieces[i];
+    return withEx(e, () => narrowed(() => {
+      const F = Q(e.from), g = Q(e.to);
+      const sketch = (o = {}) => Plot.answerGraph(e, { vals: f.vals, ...o });
+      const fig = (given, drawn) => `<div class="tgraphs"><div><h3>${ui().given}: ${qc(e.from)}</h3><div class="plot">${given}</div></div>` +
+        `<div><h3>${ui().sketch}: ${qc(e.to)}</h3><div class="plot">${drawn}</div></div></div>`;
+      const marks = e.pieces.map((x, k) => (k === i ? 'focus' : ''));
+      const right = (k) => describe(e.pieces[k], k).replace(/^<b>[^<]*<\/b>: /, '');
+      const questions = [
+        { type: 'choice', key: 'piece', prompt: L('Which piece of the sketch is wrong?', 'Welches Stück der Skizze ist falsch?'),
+          options: e.pieces.map((x, k) => ({ html: `${piece(k + 1)} (${when(x)})`, correct: k === i, flag: null, why: k === i ? '' : `${L(`${piece(k + 1)} is right:`, `${piece(k + 1)} stimmt:`)} ${right(k)}` })) },
+        { type: 'choice', key: 'what', prompt: L('What is wrong with it?', 'Was ist daran falsch?'),
+          options: window.Motion.FLAWS.map((c) => ({ html: FLAW_TEXT[c](), correct: c === f.code, flag: null, why: c === f.code ? '' : flawWhy(f.code, p) })) },
+      ];
+      return {
+        kind: 'error', id: `error-${seed}`, seed, difficulty: 4, flaw: f,
+        title: L('Find the error', 'Finde den Fehler'),
+        text: L(`<p>A body moves along a straight line. The first graph shows ${its(e.from)} ${F}(<i>t</i>). A student sketched ${graphOf(e.to)} ${g}(<i>t</i>) below it; one of its five pieces is wrong.</p>`,
+          `<p>Ein Körper bewegt sich auf einer Geraden. Der erste Graph zeigt ${its(e.from)} ${F}(<i>t</i>). Eine Schülerin hat darunter ${graphOf(e.to)} ${g}(<i>t</i>) skizziert; eines der fünf Stücke ist falsch.</p>`),
+        figure: fig(sourceGraph(e), sketch()),
+        questions,
+        hints: [
+          ruleText(),
+          L(`Check the sketch piece by piece: is ${g} constant where ${F} is straight, and a sloped line where ${F} curves? Does its sign match whether ${F} rises or falls? Is its value the slope of ${F}, not its height?`,
+            `Prüfe die Skizze Stück für Stück: Ist ${g} konstant, wo ${F} gerade ist, und eine schräge Gerade, wo ${F} gekrümmt ist? Passt das Vorzeichen dazu, ob ${F} steigt oder fällt? Ist der Wert die Steigung von ${F}, nicht seine Höhe?`),
+          L(`${piece(i + 1)} (${when(p)}) is wrong.`, `${piece(i + 1)} (${when(p)}) ist falsch.`),
+        ],
+        steps: [
+          { title: L('Piece by piece', 'Stück für Stück'), text: `${ruleText()} ${L(`Compare each piece of the sketch with the slope of the ${F}(<i>t</i>) graph.`, `Vergleiche jedes Stück der Skizze mit der Steigung des ${F}(<i>t</i>)-Graphen.`)}`, figure: fig(sourceGraph(e), sketch()) },
+          { title: `${piece(i + 1)} (${when(p)})`, text: `${flawWhy(f.code, p)} ${L('Right', 'Richtig')}: ${right(i)}`, figure: fig(sourceGraph(e, { marks }), sketch({ marks })) },
+          { title: L('The right graph', 'Der richtige Graph'), text: L(`The other pieces of the sketch are right. With ${piece(i + 1).toLowerCase()} corrected, ${g}(<i>t</i>) is one connected line again.`, `Die anderen Stücke der Skizze stimmen. Mit korrigiertem ${piece(i + 1)} ist ${g}(<i>t</i>) wieder eine zusammenhängende Linie.`), figure: fig(sourceGraph(e), Plot.answerGraph(e, { marks })) },
+        ],
+        answers: questions.map((q) => q.options.find((o) => o.correct).html),
+      };
+    }));
+  }
+  register('error', { difficulties: [4], make: (seed) => errorEx(seed) });
+
   // ---------------------------------------------------------------- tutor
-  // Worked examples, one per task: the given graph and the answer graph piece by piece. The piece
-  // is highlighted in both graphs; derivative: the chord of the given graph (its mean slope)
-  // and, for a parabola, the tangents at its ends; integral: the area under the given graph.
+  // Worked examples: the exercises of concepts.js and find the error with their worked steps, and
+  // the drawing task s → v piece by piece: the piece is highlighted in both graphs, with the
+  // chord of the given graph (its mean slope) and, for a parabola, the tangents at its ends.
   const LESSONS = [
     { name: () => L('Faster', 'Schneller'), kind: 'compare', d: 2, seed: 1, practice: [{ types: ['compare:1', 'compare:2'] }],
       idea: () => L('The speed is the steepness of the s(t) graph, not its height; a falling graph means motion in the negative direction.',
@@ -634,30 +577,18 @@
     { name: () => L('Direction', 'Richtung'), kind: 'direction', d: 2, seed: 1, practice: [{ types: ['direction:2'] }],
       idea: () => L('The sign of v is the direction of motion: negative where s decreases, wherever the graph lies.',
         'Das Vorzeichen von v ist die Bewegungsrichtung: negativ, wo s abnimmt, egal wo der Graph liegt.') },
-    { name: () => L('Value table', 'Wertetabelle'), kind: 'table', d: 2, seed: 1, practice: [{ types: ['table:2'] }, { name: () => L('more values', 'mehr Werte'), types: ['table:3'] }, { name: () => L('table and graph', 'Tabelle und Graph'), types: ['tablegraph:2', 'tablegraph:3'] }],
+    { name: () => L('Value table', 'Wertetabelle'), kind: 'table', d: 2, seed: 1, practice: [{ types: ['table:2'] }],
       idea: () => L('In a value table, the direction shows in the changes from one time to the next, not in the signs of the positions.',
         'In einer Wertetabelle zeigt sich die Richtung in den Änderungen von einem Zeitpunkt zum nächsten, nicht in den Vorzeichen der Orte.') },
-    { name: () => L('Accelerated table', 'Tabelle mit Beschleunigung'), kind: 'atable', d: 3, seed: 1, practice: [{ types: ['atable:3'] }, { name: () => L('values to fill in', 'Werte ergänzen'), types: ['atable:4'] }, { name: () => L('table and graph', 'Tabelle und Graph'), types: ['atablegraph:3', 'atablegraph:4'] }],
-      idea: () => L('With constant acceleration, the changes of position Δs in equal time steps Δt change by the same amount Δ(Δs) from step to step. Continuing this pattern fills the gaps in the table, and Δ(Δs) = a · (Δt)² gives the acceleration.',
-        'Bei konstanter Beschleunigung ändern sich die Ortsänderungen Δs in gleichen Zeitschritten Δt von Schritt zu Schritt um gleich viel, Δ(Δs). Setzt man dieses Muster fort, füllen sich die Lücken der Tabelle, und Δ(Δs) = a · (Δt)² ergibt die Beschleunigung.') },
-    { name: () => L('Stroboscope', 'Stroboskop'), kind: 'strobe', d: 3, seed: 1, practice: [{ types: ['strobe:2', 'strobe:3'] }, { name: () => L('picture and graph', 'Bild und Graph'), types: ['strobegraph:2', 'strobegraph:3'] }],
-      idea: () => L('With constant acceleration, the distances between neighbouring dots change by the same amount each second; each is the mean velocity in that second, and v(t) is a straight line.',
-        'Bei konstanter Beschleunigung ändern sich die Abstände benachbarter Punkte jede Sekunde um gleich viel; jeder ist die mittlere Geschwindigkeit in dieser Sekunde, und v(t) ist eine Gerade.') },
     { name: 's → v', task: 'sv', seed: 17, practice: [{ types: ['sv'] }, { name: () => L('from v to a', 'von v zu a'), types: ['va'] }],
       idea: () => L('The velocity is the slope of the position graph: read it piece by piece, from straight lines and from the tangents to the curves.',
         'Die Geschwindigkeit ist die Steigung des Ort-Zeit-Graphen: Lies sie Stück für Stück ab, an Geraden und an den Tangenten der Kurven.') },
-    { name: () => L('Area', 'Fläche'), kind: 'area', d: 4, seed: 1, practice: [{ types: ['area:3', 'area:4'] }],
-      idea: () => L('The area under v(t) is the displacement (below the axis negative); counting all areas positive gives the distance travelled.',
-        'Die Fläche unter v(t) ist die Verschiebung (unter der Achse negativ); zählt man alle Flächen positiv, erhält man den zurückgelegten Weg.') },
-    { name: 'v → s', task: 'vs', seed: 45, practice: [{ types: ['vs'] }],
-      idea: () => L('The change of position in a piece is the area between the velocity graph and the time axis; below the axis it counts negative.',
-        'Die Ortsänderung in einem Stück ist die Fläche zwischen dem Geschwindigkeit-Zeit-Graphen und der Zeitachse; unter der Achse zählt sie negativ.') },
-    { name: 'a → v', task: 'av', seed: 12, practice: [{ types: ['av'] }],
-      idea: () => L('The change of velocity is the area under the acceleration graph, and the acceleration is the slope of the velocity graph.',
-        'Die Geschwindigkeitsänderung ist die Fläche unter dem Beschleunigung-Zeit-Graphen, und die Beschleunigung ist die Steigung des Geschwindigkeit-Zeit-Graphen.') },
     { name: () => L('Matching graphs', 'Graphen zuordnen'), kind: 'match', d: 4, seed: 1, practice: [{ types: ['match:2'] }, { name: () => L('from v to a', 'von v zu a'), types: ['match:3'] }, { name: () => L('from s to a', 'von s zu a'), types: ['match:4'] }],
-      idea: () => L('v(t) is the slope of s(t), and a(t) the slope of v(t): a straight piece gives a constant slope, a curved one a changing slope, whatever the height of the graph.',
-        'v(t) ist die Steigung von s(t), und a(t) die Steigung von v(t): Ein gerades Stück gibt eine konstante Steigung, ein gekrümmtes eine veränderliche, egal wie hoch der Graph liegt.') },
+      idea: () => L('v(t) is the slope of s(t), and a(t) the slope of v(t): a uniform acceleration is a parabola in s(t), a sloped straight line in v(t) and a horizontal line in a(t).',
+        'v(t) ist die Steigung von s(t), und a(t) die Steigung von v(t): Eine gleichmässige Beschleunigung ist eine Parabel in s(t), eine schräge Gerade in v(t) und eine waagrechte Gerade in a(t).') },
+    { name: () => L('Find the error', 'Finde den Fehler'), kind: 'error', d: 4, seed: 2, practice: [{ types: ['error'] }],
+      idea: () => L('A sketch of v(t) is checked piece by piece against the slope of s(t): constant where s is straight, sloped where s curves, with the sign of the slope and not the height of s.',
+        'Eine Skizze von v(t) prüft man Stück für Stück an der Steigung von s(t): konstant, wo s gerade ist, schräg, wo s gekrümmt ist, mit dem Vorzeichen der Steigung und nicht der Höhe von s.') },
   ];
   const bar = (q) => `${q}̄`; // q with a bar: the mean value
   // A given graph and its answer side by side, or (stack: in the tutor) the answer below the given
@@ -668,7 +599,7 @@
   function lesson(def) {
     const e = generate(def.task, def.seed);
     return withEx(e, () => {
-      const { Tut } = Plot, f = e.from, g = e.to, ps = e.pieces, n = ps.length;
+      const { Tut } = Plot, g = e.to, ps = e.pieces, n = ps.length;
       const marks = (i) => ps.map((p, k) => (k === i ? 'focus' : ''));
       const num = (x) => (r2(x) > 0 ? '+' : '') + fmt(x);
       const frames = [{
@@ -676,38 +607,22 @@
         figure: pairFigure(e, sourceGraph(e), Plot.answerGraph(e, { upto: 0 }), true),
       }];
       ps.forEach((p, i) => {
-        const tm = (p.t0 + p.t1) / 2;
-        let over, under = () => '', ans;
-        if (e.dir === 'diff') {
-          const m = (p.G1 - p.G0) / len(p);
-          over = (s) => Tut.chord(s, p.t0, p.G0, p.t1, p.G1) + Tut.dot(s, p.t0, p.G0) + Tut.dot(s, p.t1, p.G1) +
-            (sloped(p) ? Tut.tangent(s, p.t0, p.G0, p.g0) + Tut.tangent(s, p.t1, p.G1, p.g1) : '') +
-            Tut.tag(s, tm, (p.G0 + p.G1) / 2, `${sloped(p) ? bar(g) : g} = ${num(m)} ${UNIT[g]}`, m >= 0 ? 'left' : 'right');
-          ans = (s) => Tut.dot(s, p.t0, p.g0) + Tut.dot(s, p.t1, p.g1) +
-            (sloped(p) ? Tut.dot(s, tm, m, 'mean') + Tut.tag(s, tm, m, bar(g), p.g1 > p.g0 ? 'left' : 'right') : '') +
-            Tut.tag(s, p.t1, p.g1, num(p.g1), p.g1 >= p.g0 ? 'above' : 'below');
-        } else {
-          const dG = area(p);
-          under = (s) => Tut.area(s, p.t0, p.g0, p.t1, p.g1);
-          // the label just outside the shaded area: above it if the area counts positive, else below
-          over = (s) => Tut.tag(s, tm, dG >= 0 ? Math.max(p.g0, p.g1, 0) : Math.min(p.g0, p.g1, 0), `Δ${g} = ${num(dG)} ${UNIT[g]}`, dG >= 0 ? 'above' : 'below');
-          ans = (s) => Tut.dot(s, p.t0, p.G0) + Tut.dot(s, p.t1, p.G1) +
-            (sloped(p) ? Tut.dot(s, tm, midOf(p).Gm, 'mean') : '') + // the middle point, where the diamond goes
-            Tut.tangent(s, p.t0, p.G0, p.g0) + Tut.tangent(s, p.t1, p.G1, p.g1) +
-            Tut.tag(s, p.t1, p.G1, `${num(p.G1)} ${UNIT[g]}`, dG >= 0 ? 'above' : 'below');
-        }
+        const tm = (p.t0 + p.t1) / 2, m = (p.G1 - p.G0) / len(p);
+        const over = (s) => Tut.chord(s, p.t0, p.G0, p.t1, p.G1) + Tut.dot(s, p.t0, p.G0) + Tut.dot(s, p.t1, p.G1) +
+          (sloped(p) ? Tut.tangent(s, p.t0, p.G0, p.g0) + Tut.tangent(s, p.t1, p.G1, p.g1) : '') +
+          Tut.tag(s, tm, (p.G0 + p.G1) / 2, `${sloped(p) ? bar(g) : g} = ${num(m)} ${UNIT[g]}`, m >= 0 ? 'left' : 'right');
+        const ans = (s) => Tut.dot(s, p.t0, p.g0) + Tut.dot(s, p.t1, p.g1) +
+          (sloped(p) ? Tut.dot(s, tm, m, 'mean') + Tut.tag(s, tm, m, bar(g), p.g1 > p.g0 ? 'left' : 'right') : '') +
+          Tut.tag(s, p.t1, p.g1, num(p.g1), p.g1 >= p.g0 ? 'above' : 'below');
         const text = describe(p, i).replace(/^<b>[^<]*<\/b>: /, '');
         frames.push({
           text: `<p class="step-rule">${L(`Piece ${i + 1} of ${n}`, `Stück ${i + 1} von ${n}`)} (${when(p)})</p><p>${text}</p>`,
-          figure: pairFigure(e, sourceGraph(e, { marks: marks(i), under, overlay: over }), Plot.answerGraph(e, { upto: i + 1, marks: marks(i), overlay: ans }), true),
+          figure: pairFigure(e, sourceGraph(e, { marks: marks(i), overlay: over }), Plot.answerGraph(e, { upto: i + 1, marks: marks(i), overlay: ans }), true),
         });
       });
-      const F = Q(f), G = Q(g);
-      const check = e.dir === 'diff'
-        ? L(`Check: where ${F} has a horizontal tangent, ${G} = 0; where ${F} rises, ${G} &gt; 0; where it falls, ${G} &lt; 0.`,
-          `Kontrolle: Wo ${F} eine waagrechte Tangente hat, ist ${G} = 0; wo ${F} steigt, ist ${G} &gt; 0; wo ${F} fällt, ist ${G} &lt; 0.`)
-        : L(`Check: where ${F} = 0, the ${G} graph is horizontal; where ${F} &gt; 0, ${G} rises; where ${F} &lt; 0, it falls.`,
-          `Kontrolle: Wo ${F} = 0 ist, ist der ${G}-Graph waagrecht; wo ${F} &gt; 0 ist, steigt ${G}; wo ${F} &lt; 0 ist, fällt ${G}.`);
+      const F = Q(e.from), G = Q(g);
+      const check = L(`Check: where ${F} has a horizontal tangent, ${G} = 0; where ${F} rises, ${G} &gt; 0; where it falls, ${G} &lt; 0.`,
+        `Kontrolle: Wo ${F} eine waagrechte Tangente hat, ist ${G} = 0; wo ${F} steigt, ist ${G} &gt; 0; wo ${F} fällt, ist ${G} &lt; 0.`);
       frames.push({ text: `<p class="step-rule">${L('The whole graph', 'Der ganze Graph')}</p><p>${ruleText()}</p><p>${check}</p>`, figure: pairFigure(e, sourceGraph(e), Plot.answerGraph(e), true) });
       return frames;
     });
@@ -718,7 +633,7 @@
   // typical wrong ones and the misconception behind each.
   const figOf = (f) => `<div class="figs">${f.startsWith('<div') ? f : `<figure class="fig">${f}</figure>`}</div>`;
   function quizLesson(def) {
-    const e = Concepts.make(def.kind, def.seed, def.d);
+    const e = KINDS[def.kind].make(def.seed, def.d);
     const task = { text: `<p class="step-rule">${L('The task', 'Die Aufgabe')}</p>${e.text}<ol class="tq">${e.questions.map((q) => `<li>${q.prompt}</li>`).join('')}</ol>`, figure: figOf(e.figure) };
     const steps = e.steps.map((x) => ({ text: `<p class="step-rule">${x.title}</p><p>${x.text}</p>`, figure: figOf(x.figure) }));
     const wrongs = (q) => (q.type === 'num' ? q.traps.map((t) => ({ html: `${fmt(t.value)} ${q.unit}`, flag: t.flag, why: t.why })) : q.options.filter((o) => !o.correct))
@@ -730,84 +645,79 @@
   const nameOf = (l) => (typeof l.name === 'function' ? l.name() : l.name);
   const lessons = () => LESSONS.map((l, i) => ({ name: nameOf(l), idea: l.idea(), also: topics.also(i), frames: () => (l.kind ? quizLesson(l) : phone() ? narrowed(() => lesson(l)) : lesson(l)) }));
 
-  // ---------------------------------------------------------------- arcade
-  // Each question shows a given graph; the options are the right graph and three from typical
-  // mistakes (see quiz() in generator.js). The graphs are drawn narrow, to fit two side by side.
+  // ---------------------------------------------------------------- check
+  // The learning objectives (check.js), each with the kinds of question it is asked with, its
+  // worked example and its practice topic. A drawing task (sv, va) shows the given graph and four
+  // graphs to choose from (quiz() in generator.js); find the error asks for the wrong piece of a
+  // sketch; the other kinds ask one question of an exercise of concepts.js, with four options.
+  const OBJECTIVES = [
+    { id: 'slope', kinds: ['compare:1', 'compare:2'], tutor: 0, topic: 0,
+      name: () => L('Read a velocity as the slope of the s(t) graph, not as its height.', 'Eine Geschwindigkeit als Steigung des s(t)-Graphen lesen, nicht als seine Höhe.') },
+    { id: 'negative', kinds: ['direction:2', 'table:2'], tutor: 1, topic: 1,
+      name: () => L('Recognise a negative velocity in a falling s(t) graph or in decreasing positions in a value table.', 'Eine negative Geschwindigkeit an einem fallenden s(t)-Graphen oder an abnehmenden Orten in einer Wertetabelle erkennen.') },
+    { id: 'sketch', kinds: ['sv', 'va', 'match:2', 'error'], tutor: 3, topic: 3,
+      name: () => L('Sketch v(t) from s(t), and a(t) from v(t), and find the error in such a sketch.', 'v(t) aus s(t) und a(t) aus v(t) skizzieren und den Fehler in einer solchen Skizze finden.') },
+    { id: 'uniform', kinds: ['match:3', 'match:4'], tutor: 4, topic: 4,
+      name: () => L('Recognise a uniform acceleration as a straight line in v(t) and as a parabola in s(t).', 'Eine gleichmässige Beschleunigung als Gerade im v(t)-Diagramm und als Parabel im s(t)-Diagramm erkennen.') },
+  ];
+  // The graphs are drawn narrow, to fit two side by side.
   function narrowed(f) {
     const wide = Plot.W >= 640;
     Plot.setNarrow(true);
     try { return f(); } finally { Plot.setNarrow(!wide); }
   }
-  // What a wrong option shows, by its flag.
-  function arcadeWhy(flag) {
+  // What a wrong graph shows, by its flag (quiz() in generator.js).
+  function graphWhy(flag) {
     const F = Q(ex.from), f = Q(ex.to), fb = BAR[ex.to];
-    switch (flag) {
-      case 'copy': return copiedText(L('This graph has the shape of the given one.', 'Dieser Graph hat die Form des gegebenen.'));
-      case 'sign': return ex.dir === 'diff' ? whyDiff('sign')
-        : L(`This graph changes the wrong way: where ${F} is positive, ${f} increases; where it is negative, ${f} decreases.`,
-          `Dieser Graph ändert sich in die falsche Richtung: Wo ${F} positiv ist, nimmt ${f} zu; wo ${F} negativ ist, nimmt ${f} ab.`);
-      case 'average': return L(`This graph shows ${M()} ${fb} = Δ${F}/Δ<i>t</i> for each whole piece. But where ${F} is curved, ${f} changes steadily: it equals ${fb} only in the middle of the piece.`,
-        `Dieser Graph zeigt für jedes ganze Stück ${M('acc')} ${fb} = Δ${F}/Δ<i>t</i>. Aber wo ${F} gekrümmt ist, ändert sich ${f} gleichmässig: Es ist nur in der Mitte des Stücks gleich ${fb}.`);
-      case 'rectStart': return L(`This graph takes the change of ${f} in each piece as the value of ${F} at its start times Δ<i>t</i>. But where ${F} changes, Δ${f} is the area of a trapezoid: (start + end)/2 · Δ<i>t</i>.`,
-        `Dieser Graph nimmt als Änderung von ${f} in jedem Stück den Wert von ${F} am Anfang mal Δ<i>t</i>. Aber wo sich ${F} ändert, ist Δ${f} die Fläche eines Trapezes: (Anfang + Ende)/2 · Δ<i>t</i>.`);
-      default: return L(`The values at the breakpoints are right, but where ${F} changes, the slope of ${f} changes too: ${f} is a parabola there, not a straight line.`,
-        `Die Werte an den Übergangsstellen stimmen, aber wo sich ${F} ändert, ändert sich auch die Steigung von ${f}: ${f} ist dort eine Parabel, keine Gerade.`);
-    }
+    if (flag === 'copy') return copiedText(L('This graph has the shape of the given one.', 'Dieser Graph hat die Form des gegebenen.'));
+    if (flag === 'sign') return whyDiff('sign');
+    return L(`This graph shows ${M()} ${fb} = Δ${F}/Δ<i>t</i> for each whole piece. But where ${F} is curved, ${f} changes steadily: it equals ${fb} only in the middle of the piece.`,
+      `Dieser Graph zeigt für jedes ganze Stück ${M('acc')} ${fb} = Δ${F}/Δ<i>t</i>. Aber wo ${F} gekrümmt ist, ändert sich ${f} gleichmässig: Es ist nur in der Mitte des Stücks gleich ${fb}.`);
   }
-  function arcadeQuestion(kind, seed) {
-    const d = Number(kind.slice(1));
+  function graphQuestion(task, seed) {
     let e = null, q = null;
     for (let k = 0; !q; k++) {
-      e = ofDifficulty(d, (seed + 7919 * k) >>> 0);
-      if (e.kind) break;
+      e = generate(task, (seed + 7919 * k) >>> 0);
       q = quiz(e, seed);
-    }
-    if (e.kind) {
-      // a quiz exercise: one of its questions with four options (concepts.js)
-      const a = Concepts.arcade(e, seed);
-      return {
-        title: e.title, text: e.text, figure: e.figure.startsWith('<div') ? e.figure : `<figure class="fig">${e.figure}</figure>`, ask: a.ask,
-        options: a.options.map((o) => ({ html: o.html, correct: o.correct, flag: o.correct ? null : o.flag, why: o.correct ? '' : o.why })),
-        explain: () => `<div class="steps">${stepsHtml(e)}</div>`,
-      };
     }
     return withEx(e, () => narrowed(() => ({
       title: taskTitle(e),
       text: `<p>${statement().replace(/ (Draw|Zeichne) .*$/, '')}</p>`,
       figure: `<figure class="fig">${sourceGraph(e)}</figure>`,
       ask: L(`Which graph shows ${its(e.to)} ${Q(e.to)}(<i>t</i>)?`, `Welcher Graph zeigt ${its(e.to)} ${Q(e.to)}(<i>t</i>)?`),
-      options: q.options.map((o) => ({ html: Plot.answerGraph(e, { vals: o.vals, axis: o.axis }), correct: !!o.correct, flag: o.flag, why: o.correct ? '' : arcadeWhy(o.flag) })),
+      options: q.options.map((o) => ({ html: Plot.answerGraph(e, { vals: o.vals, axis: o.axis }), correct: !!o.correct, flag: o.flag, why: o.correct ? '' : graphWhy(o.flag) })),
       explain: () => withEx(e, () => narrowed(() => `${pairFigure(e, sourceGraph(e), Plot.answerGraph(e))}` +
         `<div class="steps"><p>${ruleText()}</p><ul>${e.pieces.map((p, i) => `<li>${describe(p, i)}</li>`).join('')}</ul></div>`)),
     })));
   }
-  const arcadeSource = {
+  // find the error: the wrong piece among four
+  function errorQuestion(seed) {
+    const e = errorEx(seed), i = e.flaw.piece, r = rng(seed ^ 0x51ed), q = e.questions[0];
+    const shown = [i, ...r.shuffle([0, 1, 2, 3, 4].filter((k) => k !== i)).slice(0, 3)].sort((a, b) => a - b);
+    return { title: e.title, text: e.text, figure: e.figure, ask: q.prompt, options: shown.map((k) => q.options[k]), explain: () => `<div class="steps">${stepsHtml(e)}</div>` };
+  }
+  function checkQuestion(kind, seed) {
+    const [k, d] = kind.split(':');
+    if (TASKS[k]) return graphQuestion(k, seed);
+    if (k === 'error') return errorQuestion(seed);
+    const e = KINDS[k].make(seed, Number(d)), a = Concepts.question(e, seed);
+    return {
+      title: e.title, text: e.text, figure: e.figure.startsWith('<div') ? e.figure : `<figure class="fig">${e.figure}</figure>`, ask: a.ask,
+      options: a.options.map((o) => ({ html: o.html, correct: o.correct, flag: o.correct ? null : o.flag, why: o.correct ? '' : o.why })),
+      explain: () => `<div class="steps">${stepsHtml(e)}</div>`,
+    };
+  }
+  const IDEAS = ['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'value', 'skip'];
+  const checkSource = {
     id: 'mg',
-    kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })),
-    question: arcadeQuestion,
-    concept: {
-      copy: 'copy', sign: 'sign', average: 'mean', rectStart: 'area', curve: 'shape', rect: 'area',
-      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned', 'linear', 'steps', 'value', 'skip'].map((f) => [f, f])),
-    },
+    objectives: OBJECTIVES,
+    question: checkQuestion,
+    concept: { copy: 'copy', sign: 'sign', average: 'mean', ...Object.fromEntries(IDEAS.map((f) => [f, f])) },
     concepts: () => ({
-      ...Object.fromEntries(['position', 'magnitude', 'crossing', 'below', 'negpos', 'nodt', 'origin', 'gaps', 'order', 'height', 'unsigned', 'linear', 'steps', 'value', 'skip'].map((f) => [f, Concepts.FLAGS[f]()])),
+      ...Object.fromEntries(IDEAS.map((f) => [f, Concepts.FLAGS[f]()])),
       copy: L('the value instead of the slope', 'der Wert statt der Steigung'),
       sign: L('the sign', 'das Vorzeichen'),
       mean: L('the mean value for a whole piece', 'der Mittelwert für ein ganzes Stück'),
-      area: L('the area under a changing graph', 'die Fläche unter einem veränderlichen Graphen'),
-      shape: L('straight instead of curved', 'gerade statt gekrümmt'),
-    }),
-    intro: () => ({
-      tag: L('Position, velocity and their graphs: answer as many questions as you can in <b>5 minutes</b>.', 'Ort, Geschwindigkeit und ihre Graphen: Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich.'),
-      rule: L('Questions get harder as you go: speeds and directions, value tables and stroboscope pictures first, then slopes and areas of graphs. Choose one of four answers: click it or press 1–4.',
-        'Die Fragen werden nach und nach schwieriger: zuerst Tempo und Richtung, Wertetabellen und Stroboskopaufnahmen, dann Steigungen und Flächen von Graphen. Wähle eine von vier Antworten: Klicke sie an oder drücke 1–4.'),
-      example: L('copying the shape of the given graph', 'die Form des gegebenen Graphen übernehmen'),
-    }),
-    // the position and velocity of the first worked example, and the velocity as a slope
-    hero: () => narrowed(() => {
-      const e = generate('sv', 17);
-      return `<div class="figs"><figure class="fig">${sourceGraph(e)}</figure><figure class="fig">${Plot.answerGraph(e)}</figure></div>` +
-        '<p class="ar-law"><i>v</i> = d<i>s</i>/d<i>t</i></p>';
     }),
   };
 
@@ -824,7 +734,7 @@
     showScore();
     if (ex && isQuiz()) {
       const keep = quizAnswers(), id = ex.id, old = /^([a-z]+)-(\d+)$/.exec(id);
-      ex = topics.parse(id) || generate(old[1], Number(old[2])); // links of earlier versions name a level
+      ex = topics.parse(id) || generate(old[1], Number(old[2])); // links of earlier versions name a kind
       ex.id = id;
       render(keep);
       if ($('#task').hidden) { $('#hints').hidden = true; $('#solution').hidden = true; }
@@ -834,35 +744,35 @@
       if ($('#task').hidden) { $('#hints').hidden = true; $('#solution').hidden = true; }
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
   // ---------------------------------------------------------------- modes
-  // Practice: random exercises; tutor: worked examples; arcade: a timed game (arcade.js). Hints
-  // and solution belong to practice. Leaving the arcade ends a running game.
+  // Practice: random exercises; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('mg-mode', m);
     document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
+    $('#ck').hidden = m !== 'check';
     if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
   }
   function practise() {
     setMode('practice');
     if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; relayout(); } else fresh();
   }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
 
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     let m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
@@ -875,8 +785,8 @@
       if (!ex || ex.id !== h) open(te);
       return true;
     }
-    // a level, or (older links) a task
-    m = h.match(/^(easy|medium|hard|mixed|sv|va|vs|av|compare|direction|table|tablegraph|atable|atablegraph|strobe|strobegraph|area|match)-(\d+)$/);
+    // (older links) a task or kind of this module
+    m = h.match(/^(sv|va|compare|direction|table|match|error)-(\d+)$/);
     if (!m) return false;
     setMode('practice');
     if (!ex || ex.id !== h) open(generate(m[1], Number(m[2])));
@@ -886,7 +796,7 @@
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     applyStatic();
     Lang.wire(switchLang);
     topics = window.Topics.create({
@@ -909,15 +819,19 @@
     window.addEventListener('hashchange', fromHash);
     window.addEventListener('resize', relayout);
     tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(i); setMode('practice'); fresh(); } });
-    arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
+    checker = Check.create(checkSource, {
+      math: () => {}, markScrollable: () => {}, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('mg-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

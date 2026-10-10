@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
-  const { generate, tutorial } = window.Switching;
+  const Lang = window.Lang, Check = window.Check, L = Lang.L;
+  const { generate, tutorial, after, fval } = window.Switching;
   const { esc, fitText } = window.Circuit;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
@@ -14,7 +14,7 @@
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Switching RL Circuits', mode: 'Mode', difficulty: 'Difficulty', example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
+      title: 'Switching RL Circuits', mode: 'Mode', difficulty: 'Difficulty', example: 'Example', tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
       stars: (d) => `Difficulty: ${d} of 5`,
       tutorNote: 'Use the arrow keys ← → to step through. In the diagram, the parts a step is about are <span class="k-strong">highlighted</span>, the value just found is <span class="k-new">marked</span>, values used are <b>bold</b>, and parts without current are <span class="k-dim">greyed out</span>.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
@@ -30,7 +30,7 @@
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
     de: {
-      title: 'Schaltvorgänge mit Spulen', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
+      title: 'Schaltvorgänge mit Spulen', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
       stars: (d) => `Schwierigkeit: ${d} von 5`,
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. In der Schaltung sind die Teile, um die es in einem Schritt geht, <span class="k-strong">hervorgehoben</span>, der eben gefundene Wert ist <span class="k-new">markiert</span>, verwendete Werte sind <b>fett</b>, und Teile ohne Strom sind <span class="k-dim">ausgegraut</span>.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
@@ -57,7 +57,7 @@
     sign: () => L('Wrong direction: compare the direction of the current with the arrow.', 'Falsche Richtung: Vergleiche die Richtung des Stroms mit dem Pfeil.'),
   };
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -151,7 +151,7 @@
 
   function render() {
     $('#title').textContent = ex.title;
-    // the difficulty, as in the arcade: ★★★☆☆
+    // the difficulty: ★★★☆☆
     const stars = document.createElement('span');
     stars.className = 'stars';
     stars.textContent = '★'.repeat(ex.difficulty) + '☆'.repeat(5 - ex.difficulty);
@@ -274,65 +274,94 @@
     $('#solution').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // ---------------------------------------------------------------- arcade
-  // Each question asks for one current right after switching (or the size of an induced emf).
-  // Wrong options: the values under the typical wrong ideas (the inductor acts like a wire at
-  // once, its current drops to zero, nothing changes at the switch), the current in the wrong
-  // direction, then simple slips.
-  const LEVEL_OF = (d) => (d <= 2 ? 'easy' : d === 3 ? 'medium' : 'hard');
-  function arcadeQuestion(kind, seed) {
-    const d = Number(kind.slice(1));
-    let e = null;
-    for (let k = 0; k < 400 && !e; k++) {
-      const c = generate(LEVEL_OF(d), seed * 37 + k);
-      if (c.difficulty === d || k === 399) e = c;
+  // ---------------------------------------------------------------- check
+  // The learning objectives (check.js), each with its question kinds, its worked example and its
+  // practice topic (lessons.js). A kind is 'what/type': what is asked about an exercise of a
+  // practice type. coil: the current through an inductor right after switching; jump: another
+  // current right after switching; steady: a current before t = 0, when the switch has been set
+  // for a long time (the inductor acts like a wire). The induced emf is not asked.
+  const OBJECTIVES = [
+    { id: 'keep', kinds: ['coil/main-open:easy', 'coil/main-closed:easy', 'coil/branch-open:medium'], tutor: 1, topic: 1,
+      name: () => L('Use that the current through an inductor cannot jump: right after switching, it keeps the value it had before.',
+        'Nutzen, dass der Strom durch eine Spule nicht springen kann: Unmittelbar nach dem Schalten behält er seinen Wert von vorher.') },
+    { id: 'after', kinds: ['jump/main-closed:medium', 'jump/branch-open:medium', 'jump/main-open:hard'], tutor: 3, topic: 3,
+      name: () => L('Find the currents right after a switch closes or opens: the inductor current is kept, the others follow from Kirchhoff’s rules.',
+        'Die Ströme unmittelbar nach dem Schliessen oder Öffnen eines Schalters bestimmen: Der Spulenstrom bleibt, die anderen folgen aus den Kirchhoffschen Regeln.') },
+    { id: 'steady', kinds: ['steady/main-closed:easy', 'steady/main-closed:medium', 'steady/branch-closed:medium'], tutor: 2, topic: 2,
+      name: () => L('Find the steady currents long after a switch was set: the inductor then acts like a wire.',
+        'Die konstanten Ströme lange nach dem Schalten bestimmen: Die Spule wirkt dann wie ein Draht.') },
+  ];
+
+  // The currents of exercise e that a kind can ask for: [{ f, value, models: { flag: value },
+  // why: { flag: html } }]. Right after switching, the models are those of the exercise (the
+  // inductor acts like a wire at once, its current drops to zero, nothing changes at the switch);
+  // before t = 0, the wrong idea is an inductor that blocks the current like a break.
+  function checkCandidates(e, what) {
+    const c = e.circuit, coil = (f) => f.key !== 'IR1' && c.branches[Number(f.key.slice(1))].L;
+    const cur = e.fields.map((f, k) => ({ f, k })).filter(({ f }) => f.unit === 'mA');
+    if (what !== 'steady') {
+      return cur.filter(({ f }) => (what === 'coil') === !!coil(f)).map(({ f, k }) => ({ f, value: f.value, models: e.models[k], why: {} }));
     }
-    // a quantity with at least one telling wrong idea, if there is one
-    const cands = e.fields.map((f, k) => ({ f, m: e.models[k] }));
-    const telling = cands.filter(({ f, m }) => ['wire', 'zero', 'same'].some((x) => m[x] !== null && Math.abs(m[x] - f.value) > 0.5));
-    const pool = telling.length ? telling : cands, { f, m } = pool[seed % pool.length];
-    const mA = f.unit === 'mA', gap = mA ? 0.5 : 0.05;
-    const options = [{ value: f.value, correct: true }];
-    const add = (value, flag) => {
-      if (options.length < 4 && Number.isFinite(value) && !(f.abs && value < 0) && options.every((o) => Math.abs(o.value - value) > gap)) options.push({ value, flag, why: flag ? WHY[flag]() : undefined });
+    const of = (s, f) => 1000 * fval(f.key === 'IR1' ? s.IR1 : s.Ib[Number(f.key.slice(1))]);
+    const cut = after(c, e.st.first, c.branches.map(() => ({ n: 0, d: 1 })));
+    return cur.map(({ f }) => ({
+      f, value: of(e.st.s0, f), models: { zero: cut ? Math.round(of(cut, f)) : null }, // whole mA, like the answers
+      why: { zero: L('The currents have been constant for a long time, so the inductor acts like a wire, not like a break.', 'Die Ströme sind seit langer Zeit konstant, also wirkt die Spule wie ein Draht, nicht wie eine Unterbrechung.') },
+    }));
+  }
+
+  // A current of a kind, preferably one that is not zero and where a wrong idea gives another
+  // value. Wrong options: the values under the wrong ideas (for the inductor current, a zero
+  // current counts as the idea that it drops to zero), the current in the wrong direction, then
+  // simple slips.
+  function checkQuestion(kind, seed) {
+    const [what, type] = kind.split('/');
+    let e = null, pool = [];
+    for (let k = 0; k < 50 && !pool.length; k++) {
+      e = ofType(type, seed + 7919 * k);
+      const cands = checkCandidates(e, what);
+      const telling = cands.filter((x) => Object.values(x.models).some((v) => v !== null && Math.abs(v - x.value) > 0.5));
+      const nonzero = telling.filter((x) => Math.abs(x.value) > 0.5);
+      pool = nonzero.length ? nonzero : telling.length ? telling : cands;
+    }
+    const { f, value, models, why } = pool[seed % pool.length];
+    const gap = 0.5, options = [{ value, correct: true }];
+    const add = (v, flag) => {
+      if (options.length < 4 && Number.isFinite(v) && options.every((o) => Math.abs(o.value - v) > gap)) options.push({ value: v, flag, why: flag ? (why[flag] || WHY[flag]()) : undefined });
     };
-    ['wire', 'zero', 'same'].forEach((x) => { if (m[x] !== null) add(m[x], x); });
-    if (!f.abs) add(-f.value, 'sign');
-    const step = mA ? (Math.abs(f.value) >= 100 ? 50 : 10) : (f.value >= 10 ? 5 : 1);
-    [2 * f.value, f.value / 2, f.value + step, f.value - step, f.value + 2 * step, 3 * f.value].forEach((x) => add(Math.round(x * 10) / 10, null));
+    (what === 'coil' ? ['zero', 'wire', 'same'] : ['wire', 'zero', 'same']).forEach((x) => { if (models[x] != null) add(models[x], x); });
+    add(-value, 'sign');
+    const step = Math.abs(value) >= 100 ? 50 : 10;
+    [2 * value, value / 2, value + step, value - step, value + 2 * step, 3 * value].forEach((x) => add(Math.round(x * 10) / 10, null));
     options.sort((a, b) => a.value - b.value);
     const num = (x) => String(parseFloat(x.toFixed(2))).replace('-', '−');
-    const unitTex = mA ? '\\mathrm{mA}' : '\\mathrm{V}';
+    const steady = what === 'steady', first = e.st.first;
+    // before t = 0: the steps up to the moment of switching, with the circuit as it was
+    const jump = e.solution.findIndex((p) => p.includes('\\Delta t \\to 0'));
+    const steps = steady && jump > 0 ? e.solution.slice(0, jump) : e.solution;
     return {
       title: e.title,
       text: `<p>${e.situation}</p>`,
       figure: e.figure(false, f.key),
-      ask: mA ? L(`Find $${f.sym}$ right after switching.`, `Wie gross ist $${f.sym}$ unmittelbar nach dem Schalten?`)
-        : L(`Find the size of the induced emf, $${f.sym}$, right after switching.`, `Wie gross ist der Betrag der induzierten Spannung, $${f.sym}$, unmittelbar nach dem Schalten?`),
-      options: options.map((o) => ({ html: `$${num(o.value)}\\,${unitTex}$`, correct: !!o.correct, flag: o.flag, why: o.why })),
-      explain: () => `<div class="figs">${e.figure(true)}</div><div class="steps">${e.solution.map((p) => `<p>${p}</p>`).join('')}</div>`,
+      ask: steady
+        ? L(`Find $${f.sym}$ before $t = 0$, when the switch has been ${first ? 'closed' : 'open'} for a long time.`, `Wie gross ist $${f.sym}$ vor $t = 0$, wenn der Schalter seit langer Zeit ${first ? 'geschlossen' : 'offen'} ist?`)
+        : L(`Find $${f.sym}$ right after switching.`, `Wie gross ist $${f.sym}$ unmittelbar nach dem Schalten?`),
+      options: options.map((o) => ({ html: `$${num(o.value)}\\,\\mathrm{mA}$`, correct: !!o.correct, flag: o.flag, why: o.why })),
+      explain: () => `<div class="figs">${e.figure(!steady)}</div><div class="steps">${steps.map((p) => `<p>${p}</p>`).join('')}</div>`,
+      key: `${e.id}|${f.key}|${what}`,
     };
   }
-  const arcadeSource = {
+  const checkSource = {
     id: 'rl',
-    kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })),
-    question: arcadeQuestion,
+    objectives: OBJECTIVES,
+    question: checkQuestion,
     concept: { wire: 'wire', zero: 'zero', same: 'same', sign: 'sign' },
     concepts: () => ({
       wire: L('the inductor as a wire at once', 'die Spule sofort als Draht'),
-      zero: L('the inductor current drops to zero', 'der Spulenstrom fällt auf null'),
+      zero: L('no current through the inductor', 'kein Strom durch die Spule'),
       same: L('nothing changes at the switch', 'beim Schalten ändert sich nichts'),
       sign: L('the direction of the current', 'die Richtung des Stroms'),
     }),
-    intro: () => ({
-      tag: L('A switch flips: find the currents right after it, as many as you can in <b>5 minutes</b>, four answers each.',
-        'Ein Schalter wird umgelegt: Bestimme die Ströme unmittelbar danach, so viele wie möglich in <b>5 Minuten</b>, je vier Antworten.'),
-      rule: L('Questions get harder as you go. Choose one of four answers, or press 1–4. Currents count along the arrows: a current against its arrow is negative.',
-        'Die Fragen werden nach und nach schwieriger. Wähle eine von vier Antworten oder drücke 1–4. Ströme zählen in Pfeilrichtung: Ein Strom gegen seinen Pfeil ist negativ.'),
-      example: L('treating the inductor as a wire right away', 'die Spule sofort als Draht zu behandeln'),
-    }),
-    // an inductor switched off, with its currents and emf, and the law of induction
-    hero: () => `<div class="figs">${tutorial(window.Lessons.EXAMPLES[1].circuit).ex.figure(true)}</div><p class="ar-law">$${L('\\mathcal{E}_\\mathrm{i}', 'U_\\mathrm{ind}')} = -L\\,\\frac{\\Delta I}{\\Delta t}$</p>`,
   };
 
   // ---------------------------------------------------------------- language
@@ -365,26 +394,25 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
   // ---------------------------------------------------------------- modes
-  // Practice: random exercises; tutor: worked examples; arcade: a timed game (arcade.js). Hints
-  // and solution belong to practice. Leaving the arcade ends a running game.
+  // Practice: random exercises; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('rl-mode', m);
     document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
+    $('#ck').hidden = m !== 'check';
     if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
   }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
   function practise() {
     setMode('practice');
@@ -393,7 +421,8 @@
 
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     let m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
@@ -418,7 +447,7 @@
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     applyStatic();
     topics = window.Topics.create({
       app: PRACTICE, topics: topicList(),
@@ -440,15 +469,19 @@
       practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
       t: () => ui().tutorBtns,
     });
-    arcade = Arcade.create(arcadeSource, { math, markScrollable, stored, store });
+    checker = Check.create(checkSource, {
+      math, markScrollable, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('rl-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

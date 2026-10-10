@@ -4,13 +4,13 @@
 //   const P = new Pic(scale, label)
 //   P.px([x, y])                     the point in px
 //   P.grid(x0, y0, x1, y1, step)     a light grid (squares of step cm)
-//   P.line(a, b, cls), P.poly(pts, cls), P.circle(c, r, cls), P.dot(a, cls)
+//   P.line(a, b, cls), P.path(pts, cls), P.circle(c, r, cls), P.dot(a, cls)
 //   P.text(a, html, cls, anchor, [dx, dy])  (dx, dy in px)
 //   P.arrow(a, dir, len, cls, label, [dx, dy])  from a along the unit vector dir (y up), len px
 //   P.arc(c, rPx, a0, a1, label)      an angle from direction a0 to a1 (degrees, counter-clockwise)
 //   P.turn(c, rPx, sense, cls)       a curved arrow around c: ↺ (sense 1) or ↻ (sense −1)
 //   P.dim(a, b, label, off)          a dimension line, off px to the left of a → b
-//   P.pivot(c), P.support(c), P.mass(a, len, label), P.com(c, label)
+//   P.pivot(c), P.support(c), P.mass(a, len, label)
 //   P.svg()                          the picture, cropped, in a <div class="fig">
 (function (root) {
   'use strict';
@@ -45,11 +45,6 @@
       const [p, q] = [this.px(a), this.px(b)];
       this.see(...p); this.see(...q);
       return this.add(`<line class="${cls}" x1="${f(p[0])}" y1="${f(p[1])}" x2="${f(q[0])}" y2="${f(q[1])}"/>`, top);
-    }
-    poly(pts, cls = 'body', top) {
-      const ps = pts.map((p) => this.px(p));
-      ps.forEach((p) => this.see(...p));
-      return this.add(`<polygon class="${cls}" points="${ps.map((p) => p.map(f).join(',')).join(' ')}"/>`, top);
     }
     path(pts, cls = 'wire', top) {
       const ps = pts.map((p) => this.px(p));
@@ -130,16 +125,6 @@
       }
       return this;
     }
-    // A fixed surface from a to b (world), hatched on its side: side 1 is to the right of the
-    // direction a → b on screen (below a floor drawn left to right), −1 the other side.
-    surface(a, b, side = 1) {
-      const [p, q] = [this.px(a), this.px(b)], len = Math.hypot(q[0] - p[0], q[1] - p[1]);
-      const t = [(q[0] - p[0]) / len, (q[1] - p[1]) / len], n = [-t[1] * side, t[0] * side], d = [(n[0] - t[0]) * 6, (n[1] - t[1]) * 6];
-      let path = '';
-      for (let k = 5; k < len; k += 8) { const r = [p[0] + k * t[0], p[1] + k * t[1]]; path += `M${f(r[0])} ${f(r[1])}l${f(d[0])} ${f(d[1])}`; this.see(r[0] + d[0], r[1] + d[1]); }
-      this.see(...p); this.see(...q);
-      return this.add(`<path class="hatch" d="${path}"/><line class="ground" x1="${f(p[0])}" y1="${f(p[1])}" x2="${f(q[0])}" y2="${f(q[1])}"/>`);
-    }
     // The axis of rotation: a hub with a pin.
     pivot(c) { this.circle(c, 5.5 / this.s, 'hub', true); return this.dot(c, 'dot', 2); }
     // A pointed support under the beam at c (the beam's underside).
@@ -160,16 +145,6 @@
       if (label) this.add(`<text class="lbl mass" x="${f(p[0])}" y="${f(p[1] + len + h + 15)}" text-anchor="middle">${label}</text>`, true), this.seeText(p[0], p[1] + len + h + 15, label, 'middle');
       return this;
     }
-    // The centre of mass: a circle with two filled quarters.
-    com(c, label, cls = 'com') {
-      const p = this.px(c), r = 6;
-      this.see(p[0] - r, p[1] - r); this.see(p[0] + r, p[1] + r);
-      this.add(`<g class="${cls}"><circle cx="${f(p[0])}" cy="${f(p[1])}" r="${r}"/>` +
-        `<path d="M${f(p[0])} ${f(p[1])}V${f(p[1] - r)}A${r} ${r} 0 0 1 ${f(p[0] + r)} ${f(p[1])}ZM${f(p[0])} ${f(p[1])}V${f(p[1] + r)}A${r} ${r} 0 0 1 ${f(p[0] - r)} ${f(p[1])}Z"/></g>`, true);
-      if (label) this.text(c, label, 'lbl com-lbl', 'start', [9, -9]);
-      return this;
-    }
-
     svg(pad = 10) {
       const [x0, y0, x1, y1] = this.b.map((v, k) => Math.round(v + (k < 2 ? -pad : pad)));
       return `<div class="fig"><svg viewBox="${x0} ${y0} ${x1 - x0} ${y1 - y0}" width="${x1 - x0}" role="img" aria-label="${this.label}">` +

@@ -1,14 +1,14 @@
 (function () {
   'use strict';
 
-  const TQ = window.TQ, Lang = window.Lang, Arcade = window.Arcade, { generate, practiceOf, tutorial } = window.Torque;
+  const TQ = window.TQ, Lang = window.Lang, Check = window.Check, { generate, practiceOf, tutorial } = window.Torque;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Torque', mode: 'Mode', difficulty: 'Difficulty', calc: 'Calculator', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise', real: 'Problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
+      title: 'Torque and Equilibrium', mode: 'Mode', difficulty: 'Difficulty', calc: 'Calculator', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
       tutorNote: 'Use the arrow keys ← → to step through. What a step is about is highlighted. Torques: ↺ counterclockwise, ↻ clockwise.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
@@ -23,7 +23,7 @@
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
     de: {
-      title: 'Drehmoment', mode: 'Modus', difficulty: 'Schwierigkeit', calc: 'Taschenrechner', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
+      title: 'Drehmoment und Gleichgewicht', mode: 'Modus', difficulty: 'Schwierigkeit', calc: 'Taschenrechner', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Worum es in einem Schritt geht, ist hervorgehoben. Drehmomente: ↺ im Gegenuhrzeigersinn, ↻ im Uhrzeigersinn.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
@@ -40,7 +40,7 @@
   };
   const ui = () => UI[TQ.getLang()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -108,14 +108,14 @@
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
     topics.shown(ex);
-    $(`#in-${ex.fields[0].key}`).focus({ preventScroll: true });
+    if (ex.fields.length) $(`#in-${ex.fields[0].key}`).focus({ preventScroll: true });
   }
 
   // A new exercise of the topic and stage chosen (topics.js), of another situation than the
   // current one if possible.
   function fresh() { open(topics.next(ex)); }
   // the same exercise again (e.g. in the other language); links of earlier versions name a level
-  const again = (e) => (e.real != null ? window.TorqueProblems.realOf(e.real, e.seed) : null) || topics.parse(e.id) || generate(e.level, e.seed, e.calc);
+  const again = (e) => topics.parse(e.id) || generate(e.level, e.seed, e.calc);
 
   // The topics of practice: those of the tutor's examples, with their stages (lessons.js).
   const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
@@ -138,7 +138,7 @@
 
   function render() {
     $('#title').textContent = ex.title;
-    // the difficulty, as in the arcade: ★★★☆☆
+    // the difficulty: ★★★☆☆
     const stars = document.createElement('span');
     stars.className = 'stars';
     stars.textContent = '★'.repeat(ex.difficulty) + '☆'.repeat(5 - ex.difficulty);
@@ -159,8 +159,9 @@
     updateButtons();
   }
 
-  // What to identify first (lever arms at an angle, a ring's wire, see identify.js): the app gives
-  // the values, so that no calculator is needed.
+  // What to identify first (lever arms at an angle, see identify.js): the app gives the values, so
+  // that no calculator is needed. An exercise without fields is a choice only (a ranking, the error
+  // in a sketch): a right choice solves it.
   const identItems = () => (ex.comps || []).map((c) => (c.options ? c : Identify.trig({ ...c, alpha: ex.p.alpha, num: (x) => TQ.num(x, 2) })));
   // the task's drawing, with what has been identified drawn in (all once the solution is shown)
   function drawTask() {
@@ -170,6 +171,7 @@
   }
   function showComps() {
     $('#comps-part').hidden = !(ex.comps || []).length;
+    $('#comps-part').classList.toggle('only', !ex.fields.length);
     $('#comps').innerHTML = Identify.html(identItems(), st ? st.ident || {} : {}, st && st.revealed);
     math($('#comps'));
   }
@@ -179,7 +181,7 @@
 
   function updateButtons() {
     // once everything is right, Check becomes New exercise, like the button at the top
-    $('#check').textContent = st.solved ? (isReal() ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     const left = ex.hints.length - st.hints;
@@ -219,7 +221,7 @@
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (isReal()) problems.next(); else fresh(); return; } // the button reads New exercise
+    if (st.solved) { fresh(); return; } // the button reads New exercise
     if (!Identify.ok(identItems(), st.ident)) { showStatus('ident'); return; }
     const r = feedback();
     st.checked = true;
@@ -235,7 +237,6 @@
       }
       st.solved = true;
       Practice.markSolved(PRACTICE, ex.id);
-      if (isReal()) problems.solved(ex);
       finish();
       st.advance = topics.solved(st, ex);
       showStatus('ok');
@@ -283,7 +284,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    if (topics) { topics.relabel(); problems.menu(); }
+    if (topics) topics.relabel();
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
@@ -310,54 +311,39 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
   // ---------------------------------------------------------------- modes
-  // Practice: random exercises; tutor: worked examples; arcade: a timed game (arcade.js). Hints
-  // and solution belong to practice. Leaving the arcade ends a running game.
+  // Practice: random exercises; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js, check-src.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('tq-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); }); // practice and problems share the card
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
   function practise() {
     setMode('practice');
-    if (ex && !isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
-  }
-
-  // Problems from everyday life (realproblems.js, shared problems.js), chosen in a menu.
-  let problems = null;
-  const isReal = () => !!problems && problems.is(ex);
-  function realMode() {
-    setMode('real');
-    if (isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
   }
 
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     let m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
-      return true;
-    }
-    const re = problems.parse(h);
-    if (re) {
-      setMode('real');
-      if (!ex || ex.id !== h) open(re);
-      problems.menu();
       return true;
     }
     const te = topics.parse(h);
@@ -378,7 +364,7 @@
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     topics = window.Topics.create({
       app: PRACTICE, topics: topicList(),
       make: (type, seed) => practiceOf(type, seed), typeOf,
@@ -386,16 +372,12 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.TorqueProblems.PROBLEMS, make: window.TorqueProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
-    problems.menu();
     applyStatic();
     Identify.attach($('#comps'), identItems, () => st.ident, (right) => {
       math($('#comps'));
       if (right) drawTask(); // the lever arm or component appears in the drawing
       else { st.tries++; updateButtons(); } // a wrong choice counts as an attempt
+      if (right && !ex.fields.length && !st.solved && Identify.ok(identItems(), st.ident)) check({ preventDefault() {} }); // a choice only: solved
     });
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
@@ -410,15 +392,19 @@
       practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
       t: () => ui().tutorBtns,
     });
-    arcade = Arcade.create(window.ArcadeSource, { math, markScrollable, stored, store });
+    checker = Check.create(window.CheckSource, {
+      math, markScrollable, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('tq-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

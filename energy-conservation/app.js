@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  const EC = window.EC, Expr = window.Expr, Lang = window.Lang, Arcade = window.Arcade;
-  const { generate, generateFor, tutorial, judgeFormula, judgeNumber } = window.Energy;
+  const EC = window.EC, Expr = window.Expr, Lang = window.Lang, Check = window.Check, Concepts = window.EnergyConcepts;
+  const { generate, generateFor, tutorial, judgeFormula } = window.Energy;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
@@ -13,13 +13,13 @@
   };
   const UI = {
     en: {
-      title: 'Energy Conservation', mode: 'Mode', difficulty: 'Difficulty', formal: 'Formulas', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise', real: 'Problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
+      title: 'Energy Conservation', mode: 'Mode', difficulty: 'Difficulty', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
       tutorNote: `Use the arrow keys ← → to step through. The bars show the energy in each state: ${LEGEND.en}; the dashed line is the total energy.`,
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', result: 'Result',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
       hint: (n) => `Hint (${n} left)`, noHints: 'No more hints', unlocks: (n) => `Unlocks after all hints or ${n} attempts`,
-      tableHead: '1 · Energy in each state', formulaHead: '2 · Energy as a formula', answerHead: '3 · Result', answerHead2: '2 · Results',
+      tableHead: '1 · Energy in each state', formulaHead: '2 · Energy as a formula', answerHead: '3 · Result',
       formulaNote: (syms, typing) => `Write the energy of each state as a formula in ${syms}.${typing ? ` Type ${typing}.` : ''}`,
       missing: 'A form of energy is missing: compare with your ticks in step 1', half: 'Check the factor ½',
       tableNote: (z) => `Tick the forms of energy that are not zero in each state. Zero level: ${z}.`,
@@ -28,7 +28,7 @@
       fill: 'Fill in all fields, then check again.',
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
-      number: 'Enter a number', correct: 'Correct', close: 'Close: check your rounding', wrong: 'Not correct',
+      correct: 'Correct', wrong: 'Not correct', choose: 'Choose one of the options.',
       empty: 'Type a formula', syntax: 'This formula cannot be read: check the brackets and operators',
       unknown: (v, ok) => `${v} is not given here: use only ${ok}`,
       wanted: (v) => `Express ${v} by the given quantities`,
@@ -37,13 +37,13 @@
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
     de: {
-      title: 'Energieerhaltung', mode: 'Modus', difficulty: 'Schwierigkeit', formal: 'Formeln', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
+      title: 'Energieerhaltung', mode: 'Modus', difficulty: 'Schwierigkeit', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
       tutorNote: `Mit den Pfeiltasten ← → blätterst du weiter. Die Balken zeigen die Energie in jedem Zustand: ${LEGEND.de}; die gestrichelte Linie ist die Gesamtenergie.`,
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', result: 'Resultat',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
       hint: (n) => `Tipp (${n} übrig)`, noHints: 'Keine Tipps mehr', unlocks: (n) => `Wird nach allen Tipps oder ${n} Versuchen freigeschaltet`,
-      tableHead: '1 · Energie in jedem Zustand', formulaHead: '2 · Energie als Formel', answerHead: '3 · Resultat', answerHead2: '2 · Resultate',
+      tableHead: '1 · Energie in jedem Zustand', formulaHead: '2 · Energie als Formel', answerHead: '3 · Resultat',
       formulaNote: (syms, typing) => `Schreibe die Energie jedes Zustands als Formel in ${syms}.${typing ? ` Tippe ${typing}.` : ''}`,
       missing: 'Eine Energieform fehlt: Vergleiche mit deinen Kreuzen in Schritt 1', half: 'Prüfe den Faktor ½',
       tableNote: (z) => `Kreuze in jedem Zustand die Energieformen an, die nicht null sind. Nullniveau: ${z}.`,
@@ -52,7 +52,7 @@
       fill: 'Fülle alle Felder aus und prüfe dann nochmals.',
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
-      number: 'Gib eine Zahl ein', correct: 'Richtig', close: 'Knapp daneben: Prüfe deine Rundung', wrong: 'Nicht richtig',
+      correct: 'Richtig', wrong: 'Nicht richtig', choose: 'Wähle eine der Antworten.',
       empty: 'Gib eine Formel ein', syntax: 'Diese Formel ist nicht lesbar: Prüfe Klammern und Rechenzeichen',
       unknown: (v, ok) => `${v} ist hier nicht gegeben: Verwende nur ${ok}`,
       wanted: (v) => `Drücke ${v} durch die gegebenen Grössen aus`,
@@ -63,7 +63,7 @@
   };
   const ui = () => UI[EC.getLang()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -97,22 +97,11 @@
   }
 
   // ---------------------------------------------------------------- input and feedback
-  function parse(s) {
-    s = s.trim().replace(/,/g, '.').replace(/[−–—‒]/g, '-').replace(/[^\d.)]+$/, '').trim();
-    const m = s.match(/^([-+]?\d*\.?\d+(?:e[-+]?\d+)?)(?:\s*\/\s*(\d*\.?\d+))?$/i);
-    if (!m) return NaN;
-    return m[2] ? Number(m[1]) / Number(m[2]) : Number(m[1]);
-  }
-
   const symList = (keys) => keys.map((k) => EC.plainSym(k)).join(', ');
   // The symbols as typed: "v0 for v₀, l for ℓ"
   const typeHints = (keys) => keys.filter((k) => EC.typed(k) !== EC.plainSym(k)).map((k) => `${EC.typed(k)} ${EC.L('for', 'für')} ${EC.plainSym(k)}`);
 
   function judge(raw) {
-    if (!ex.formal) {
-      const r = judgeNumber(ex, parse(raw));
-      return { cls: r.cls, msg: r.msg || { ok: ui().correct, number: ui().number, close: ui().close, wrong: ui().wrong }[r.key] };
-    }
     const r = judgeFormula(ex, raw), allowed = [...new Set([...ex.vars, 'g'])];
     const named = (v) => (EC.SYM[v] ? EC.plainSym(v) : v.replace(/p/, '′'));
     const msg = r.msg || {
@@ -124,8 +113,6 @@
   }
 
   // ---------------------------------------------------------------- exercise lifecycle
-  const newSeed = () => 1 + Math.floor(Math.random() * 999999);
-  const formal = () => $('#formal').checked;
 
   // Practice comes back more often to the types of exercise that were hard (shared practice.js).
   const PRACTICE = 'ec', typeOf = (e) => e.scenario;
@@ -145,7 +132,10 @@
   // one if possible.
   function fresh() { open(topics.next(ex)); }
   // the same exercise again (e.g. in the other language); links of earlier versions name a level
-  const again = (e) => (e.real != null ? window.EnergyProblems.realOf(e.real, e.seed) : null) || topics.parse(e.id) || generate(e.level, e.seed, e.formal);
+  const again = (e) => topics.parse(e.id) || generate(e.level, e.seed);
+  // An exercise of a type: a situation (scenarios.js), with the energy table and formulas, or a
+  // question of concepts.js with options to choose from.
+  const ofType = (type, seed) => (Concepts.KINDS.includes(type) ? Concepts.exercise(type, seed) : generateFor(type, seed));
 
   // The topics of practice: those of the tutor's examples, with their stages (lessons.js).
   const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
@@ -161,27 +151,15 @@
     return `<table class="etable"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>`;
   }
 
-  // a problem (realproblems.js): several numbers, no formulas
-  const fieldId = (f) => `in-${f.key}`;
-  const inputs = () => (isReal() ? ex.fields.map(fieldId) : ['in-ans']);
-  function judgeField(f, raw) {
-    const x = parse(raw), near = (y, z, tol) => Math.abs(y - z) <= tol * Math.abs(z);
-    if (Number.isNaN(x)) return { cls: 'bad', msg: ui().number };
-    if (near(x, f.value, 0.02)) return { cls: 'ok', msg: ui().correct };
-    const t = f.traps.find((u) => near(x, u.value, 0.015));
-    if (t) return { cls: 'bad', msg: t.why };
-    return near(x, f.value, 0.06) ? { cls: 'warn', msg: ui().close } : { cls: 'bad', msg: ui().wrong };
+  // a question with options (concepts.js): one to choose
+  function choiceHtml() {
+    return `<div class="choices" role="radiogroup">${ex.options.map((o, k) => `<label class="choice" data-k="${k}"><input type="radio" name="choice" value="${k}"><span class="letter">${k + 1}</span><span class="val"><span>${o.html}</span></span></label>`).join('')}</div>
+      <p class="fb choice-fb" aria-live="polite"></p>`;
   }
 
   function fieldHtml() {
-    if (isReal()) return ex.fields.map((f) => `<div class="field" data-key="${f.key}">
-        <label for="${fieldId(f)}" class="sym"><span class="what">${f.what}</span> $${f.sym}$&nbsp;=</label>
-        <input id="${fieldId(f)}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" spellcheck="false">
-        <span class="unit">${{ m: 'm', v: 'm/s' }[f.unit] || f.unit}</span><span class="fb" aria-live="polite"></span></div>`).join('');
+    if (ex.choice) return choiceHtml();
     const w = ex.want, label = `<label for="in-ans" class="sym"><span class="what">${w.what}</span> $${EC.tex(w.key)}$&nbsp;=</label>`;
-    if (!ex.formal) return `<div class="field" data-key="ans">${label}
-        <input id="in-ans" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" spellcheck="false">
-        <span class="unit">${EC.UNITS[w.unit]}</span><span class="fb" aria-live="polite"></span></div>`;
     const keys = [...new Set([...ex.vars, 'g'])], th = typeHints(keys);
     return `<div class="field formula" data-key="ans">${label}
         <input id="in-ans" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" enterkeyhint="done" spellcheck="false">
@@ -220,7 +198,7 @@
     el.innerHTML = raw.trim() && r.tree ? `${ui().preview}: ${katex1(`${lhs} = ${Expr.tex(r.tree)}`)}` : '';
   }
   function preview() {
-    if (isReal()) return;
+    if (ex.choice) return;
     previewOne('in-ans', EC.tex(ex.want.key));
     ex.table.forEach((_, i) => previewOne(`in-e${i}`, eTex(i)));
   }
@@ -236,16 +214,17 @@
     $('#title').append(' ', stars);
     $('#prompt').innerHTML = ex.text;
     $('#figure').innerHTML = ex.figure({});
-    $('#table-note').textContent = ui().tableNote(ex.zero);
-    $('#etable').innerHTML = tableHtml();
+    // a question with options has no table and no formulas: its question takes the place of the result
+    $('#etable-part').hidden = !!ex.choice;
+    $('#eformula').hidden = !!ex.choice;
+    $('#table-note').textContent = ex.choice ? '' : ui().tableNote(ex.zero);
+    $('#etable').innerHTML = ex.choice ? '' : tableHtml();
     $('#table-fb').textContent = '';
     $('#table-fb').className = 'table-fb';
-    // a problem has no formulas to type: its results follow the table
-    $('#eformula').hidden = isReal();
-    $('#answer-head').textContent = isReal() ? ui().answerHead2 : ui().answerHead;
-    $('#formula-note').textContent = formulaNote();
-    $('#efields').innerHTML = isReal() ? '' : efieldHtml();
-    $('#fields').className = `fields${ex.formal ? ' formula' : ''}`;
+    $('#answer-head').innerHTML = ex.choice ? ex.ask : ui().answerHead;
+    $('#formula-note').textContent = ex.choice ? '' : formulaNote();
+    $('#efields').innerHTML = ex.choice ? '' : efieldHtml();
+    $('#fields').className = `fields${ex.choice ? ' choice-fields' : ' formula'}`;
     $('#fields').innerHTML = fieldHtml();
     $('#hint-list').innerHTML = '';
     $('#hints').hidden = true;
@@ -261,7 +240,7 @@
 
   function updateButtons() {
     // once everything is right, Check becomes New exercise, like the button at the top
-    $('#check').textContent = st.solved ? (isReal() ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     const left = ex.hints.length - st.hints;
@@ -274,8 +253,22 @@
     $('#reveal-note').hidden = canReveal() || st.revealed;
   }
 
+  // Marks the option chosen; true if right, null if none is chosen.
+  function choiceFeedback() {
+    const sel = document.querySelector('#fields input[name="choice"]:checked'), fb = $('#fields .choice-fb');
+    document.querySelectorAll('#fields .choice').forEach((el) => el.classList.remove('ok', 'bad'));
+    if (!sel) { fb.textContent = ''; return null; }
+    const o = ex.options[Number(sel.value)];
+    sel.closest('.choice').classList.add(o.correct ? 'ok' : 'bad');
+    fb.className = `fb choice-fb ${o.correct ? 'ok' : 'bad'}`;
+    fb.innerHTML = o.correct ? ui().correct : o.why || ui().wrong;
+    math(fb);
+    return !!o.correct;
+  }
+
   // Marks the table and the result; true if all is right, null if the result is empty.
   function feedback() {
+    if (ex.choice) return choiceFeedback();
     let wrongCells = 0;
     document.querySelectorAll('#etable input').forEach((box) => {
       const right = box.checked === ex.table[box.dataset.i][box.dataset.j];
@@ -293,10 +286,8 @@
       row.querySelector('.fb').textContent = r.msg;
       return r.cls === 'ok';
     };
-    const verdicts = isReal()
-      ? ex.fields.map((f) => mark($(`#fields .field[data-key="${f.key}"]`), $(`#${fieldId(f)}`).value, (raw) => judgeField(f, raw)))
-      : [...ex.table.map((_, i) => mark($(`#efields .field[data-key="e${i}"]`), $(`#in-e${i}`).value, (raw) => judgeE(i, raw))),
-        mark($('#fields .field'), $('#in-ans').value, judge)];
+    const verdicts = [...ex.table.map((_, i) => mark($(`#efields .field[data-key="e${i}"]`), $(`#in-e${i}`).value, (raw) => judgeE(i, raw))),
+      mark($('#fields .field'), $('#in-ans').value, judge)];
     if (verdicts.includes(null)) return null;
     return verdicts.every(Boolean) && !wrongCells;
   }
@@ -306,14 +297,14 @@
     const el = $('#status');
     st.status = kind;
     el.className = 'status' + (kind === 'ok' ? ' ok' : kind === 'bad' ? ' bad' : '');
-    el.textContent = !kind ? '' : kind === 'fill' ? ui().fill
+    el.textContent = !kind ? '' : kind === 'fill' ? (ex.choice ? ui().choose : ui().fill)
       : kind === 'ok' ? (st.revealed ? ui().ok : ui().okWell) + (st.advance ? ` ${st.advance}` : '')
         : ui().notYet(st.tries) + (st.tries < MAX_TRIES && !canReveal() ? ui().tryAgain : ui().canReveal);
   }
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (isReal()) problems.next(); else fresh(); return; } // the button reads New exercise
+    if (st.solved) { fresh(); return; } // the button reads New exercise
     const r = feedback();
     st.checked = true;
     if (r === null) { showStatus('fill'); return; }
@@ -328,7 +319,6 @@
       }
       st.solved = true;
       Practice.markSolved(PRACTICE, ex.id);
-      if (isReal()) problems.solved(ex);
       finish();
       st.advance = topics.solved(st, ex);
       showStatus('ok');
@@ -353,6 +343,7 @@
     $('#sol-figure').innerHTML = ex.solutionFigure();
     $('#sol-steps').innerHTML = ex.solution.join('');
     $('#sol-short').innerHTML = `${ui().result}: ${ex.results}`;
+    $('#sol-short').hidden = !!ex.choice && /<svg/.test(ex.results); // a bar chart is in the solution already
     $('#solution').hidden = false;
     math($('#solution'));
     markScrollable();
@@ -416,7 +407,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    if (topics) { topics.relabel(); problems.menu(); }
+    if (topics) topics.relabel();
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
@@ -424,15 +415,17 @@
     applyStatic();
     showScore();
     if (ex) {
-      const values = inputs().map((id) => $(`#${id}`).value), boxes = [...document.querySelectorAll('#etable input')].map((b) => b.checked);
-      const energies = isReal() ? [] : ex.table.map((_, i) => $(`#in-e${i}`).value);
+      const answer = ex.choice ? null : $('#in-ans').value, boxes = [...document.querySelectorAll('#etable input')].map((b) => b.checked);
+      const energies = ex.choice ? [] : ex.table.map((_, i) => $(`#in-e${i}`).value);
+      const chosen = document.querySelector('#fields input[name="choice"]:checked');
       const keep = { ...st };
       ex = again(ex);
       render();
       st = keep;
-      inputs().forEach((id, k) => { $(`#${id}`).value = values[k]; });
+      if (answer != null) $('#in-ans').value = answer;
       energies.forEach((v, i) => { $(`#in-e${i}`).value = v; });
       document.querySelectorAll('#etable input').forEach((b, k) => { b.checked = boxes[k]; });
+      if (chosen) document.querySelector(`#fields input[name="choice"][value="${chosen.value}"]`).checked = true;
       preview();
       if (st.checked) feedback();
       showStatus(st.status);
@@ -442,54 +435,39 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
   // ---------------------------------------------------------------- modes
-  // Practice: random exercises; tutor: worked examples; arcade: a timed game (arcade.js). Hints
-  // and solution belong to practice. Leaving the arcade ends a running game.
+  // Practice: exercises by topic; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js, the questions of concepts.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('ec-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); }); // practice and problems share the card
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
-  }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
   function practise() {
     setMode('practice');
-    if (ex && !isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
   }
-
-  // Problems from everyday life (realproblems.js, shared problems.js), chosen in a menu.
-  let problems = null;
-  const isReal = () => !!problems && problems.is(ex);
-  function realMode() {
-    setMode('real');
-    if (isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
 
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     let m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
-      return true;
-    }
-    const re = problems.parse(h);
-    if (re) {
-      setMode('real');
-      if (!ex || ex.id !== h) open(re);
-      problems.menu();
       return true;
     }
     const te = topics.parse(h);
@@ -498,11 +476,11 @@
       if (!ex || ex.id !== h) open(te);
       return true;
     }
+    // links of earlier versions: a level, with symbols (numbers are no longer practised)
     m = h.match(/^(easy|medium|hard|mixed)(-num)?-(\d+)$/);
     if (m) {
       setMode('practice');
-      $('#formal').checked = !m[2];
-      if (!ex || ex.id !== h) open(generate(m[1], Number(m[3]), !m[2]));
+      if (!ex || ex.id !== h) open(generate(m[1], Number(m[3])));
       return true;
     }
     return false;
@@ -511,25 +489,18 @@
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     applyStatic();
     topics = window.Topics.create({
       app: PRACTICE, topics: topicList(),
-      make: (type, seed) => generateFor(type, seed, formal()), typeOf,
-      // with symbols, an exercise is new by its text; with numbers, by its values
-      keyOf: (e) => (e.formal ? `${e.title}|${e.text}` : JSON.stringify(e.p)), variant: () => (formal() ? 'symbols' : 'numbers'),
+      make: ofType, typeOf,
+      // an exercise is new by its text (and, with options, by its options)
+      keyOf: (e) => e.key || `${e.title}|${e.text}`,
       onChange: fresh,
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.EnergyProblems.PROBLEMS, make: window.EnergyProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
-    problems.menu();
-    $('#formal').checked = stored('ec-formal', true);
-    topics.relabel(); // the steps depend on it
-    $('#formal').addEventListener('change', () => { store('ec-formal', formal()); topics.relabel(); tutor.relabel(lessons()); fresh(); });
+    topics.relabel();
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
@@ -537,6 +508,12 @@
       const id = evt.target.id;
       if (id === 'in-ans') previewOne(id, EC.tex(ex.want.key));
       else if (/^in-e\d$/.test(id)) previewOne(id, eTex(Number(id.slice(4))));
+    });
+    // another option chosen: its mark goes until the next check
+    $('#fields').addEventListener('change', (evt) => {
+      if (evt.target.name !== 'choice') return;
+      document.querySelectorAll('#fields .choice').forEach((el) => el.classList.remove('ok', 'bad'));
+      $('#fields .choice-fb').textContent = '';
     });
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
@@ -548,15 +525,19 @@
       practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
       t: () => ui().tutorBtns,
     });
-    arcade = Arcade.create(window.ArcadeSource, { math, markScrollable, stored, store });
+    checker = Check.create(Concepts.CHECK, {
+      math, markScrollable, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
-    // First visit: start with the first worked example.
+    // First visit: start with the first worked example; problems of earlier versions are now practice.
     const last = stored('ec-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

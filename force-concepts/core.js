@@ -1,7 +1,8 @@
-// Force concepts: conceptual questions on gravity, inertia, net force and interactions, in the
-// spirit of the Force Concept Inventory (Hestenes, Wells & Swackhamer, 1992). The situations are
-// our own and randomised; the wrong options follow the misconceptions the inventory probes, and
-// every wrong option carries the misconception it stands for and an explanation.
+// Force and motion: conceptual questions on inertia, the net force and the motion it causes
+// (also under gravity and on a circle), in the spirit of the Force Concept Inventory (Hestenes,
+// Wells & Swackhamer, 1992). The situations are our own and randomised; the wrong options follow
+// the misconceptions the inventory probes, and every wrong option carries the misconception it
+// stands for and an explanation. (Interaction, the third law, is a module of its own.)
 //
 // A scenario generator is fn(r, params) → { title, situation, figure, questions, hints, steps },
 // where questions are [{ key, prompt, pics, options: [{ label, ok, code, why, text }] }] (pics:
@@ -26,15 +27,6 @@
   const getLang = () => Lang.get();
   const T = (en, de) => Lang.L(en, de);
 
-  const TOPICS = {
-    mixed: { en: 'Mixed', de: 'Gemischt' },
-    gravity: { en: 'Gravity', de: 'Schwerkraft' },
-    inertia: { en: 'Inertia', de: 'Trägheit' },
-    force: { en: 'Net force', de: 'Resultierende' },
-    interact: { en: 'Interaction', de: 'Wechselwirkung' },
-  };
-  const topicName = (k) => TOPICS[k][getLang()];
-
   // Each misconception: its name, what it claims, and the correct concept.
   const MIS = {
     impetus: {
@@ -57,6 +49,10 @@
       en: ['Circular impetus', 'A body that has been moving in a circle keeps curving for a while after it is released.', 'Once released, no force pulls the body towards the centre any more, so it moves on in a straight line along the tangent (only gravity may still bend its path downward).'],
       de: ['Kreis-Impetus', 'Ein Körper, der sich im Kreis bewegt hat, fliegt nach dem Loslassen noch eine Weile im Bogen weiter.', 'Nach dem Loslassen zieht keine Kraft den Körper mehr zum Zentrum, also fliegt er geradlinig entlang der Tangente weiter (nur die Schwerkraft kann seine Bahn noch nach unten krümmen).'],
     },
+    'constant-speed': {
+      en: ['Constant speed, no force', 'A body moving at constant speed has no net force on it, even on a curve.', 'Velocity has a direction: on a curve it changes all the time, even at constant speed. So there is an acceleration, towards the centre, and a net force towards the centre causes it.'],
+      de: ['Konstantes Tempo, keine Kraft', 'Auf einen Körper mit konstantem Tempo wirkt keine resultierende Kraft, auch in einer Kurve nicht.', 'Die Geschwindigkeit hat eine Richtung: In einer Kurve ändert sie sich ständig, auch bei konstantem Tempo. Es gibt also eine Beschleunigung zum Zentrum hin, und eine resultierende Kraft zum Zentrum bewirkt sie.'],
+    },
     centrifugal: {
       en: ['Centrifugal push', 'A body moving in a circle is pushed outward and flies outward when it is released.', 'On a circle, the net force points inward, towards the centre; no force pushes outward. When released, the body moves on along the tangent, not outward.'],
       de: ['Fliehkraft nach aussen', 'Ein Körper auf einer Kreisbahn wird nach aussen gedrückt und fliegt beim Loslassen nach aussen weg.', 'Auf einer Kreisbahn zeigt die resultierende Kraft nach innen, zum Zentrum; keine Kraft drückt nach aussen. Beim Loslassen fliegt der Körper entlang der Tangente weiter, nicht nach aussen.'],
@@ -69,21 +65,9 @@
       en: ['At rest, no force', 'A body whose velocity is zero, even only at one instant, has no force acting on it or no acceleration.', 'Being at rest says nothing about the forces. A body at rest can have several forces acting on it that balance. At a turning point, such as the top of a throw, the velocity is zero at one instant, but gravity still acts and the acceleration is g.'],
       de: ['In Ruhe, keine Kraft', 'Auf einen Körper, dessen Geschwindigkeit null ist (auch nur in einem Augenblick), wirkt keine Kraft, oder er hat keine Beschleunigung.', 'Ruhe sagt nichts über die Kräfte aus. Auf einen ruhenden Körper können mehrere Kräfte wirken, die sich aufheben. In einem Umkehrpunkt, etwa im höchsten Punkt eines Wurfs, ist die Geschwindigkeit in einem Augenblick null, aber die Schwerkraft wirkt weiter und die Beschleunigung ist g.'],
     },
-    'mass-wins': {
-      en: ['The larger mass pushes harder', 'In an interaction, the heavier body exerts the larger force.', 'Two interacting bodies always exert forces of the same size on each other, in opposite directions, whatever their masses (Newton’s third law). The lighter body just accelerates more.'],
-      de: ['Die grössere Masse drückt stärker', 'Bei einer Wechselwirkung übt der schwerere Körper die grössere Kraft aus.', 'Zwei Körper in Wechselwirkung üben immer gleich grosse, entgegengesetzte Kräfte aufeinander aus, egal wie gross ihre Massen sind (drittes Newtonsches Gesetz). Der leichtere Körper wird nur stärker beschleunigt.'],
-    },
-    'active-wins': {
-      en: ['The active one pushes harder', 'In an interaction, the body that is faster or does the pushing exerts the larger force.', 'Two interacting bodies always exert forces of the same size on each other, in opposite directions, no matter which one moves faster or does the pushing (Newton’s third law).'],
-      de: ['Wer aktiv ist, drückt stärker', 'Bei einer Wechselwirkung übt der Körper, der schneller ist oder stösst, die grössere Kraft aus.', 'Zwei Körper in Wechselwirkung üben immer gleich grosse, entgegengesetzte Kräfte aufeinander aus, egal welcher schneller ist oder stösst (drittes Newtonsches Gesetz).'],
-    },
     obstacle: {
       en: ['Obstacles exert no force', 'Tables, ropes, walls or parked cars only block the way; they do not push or pull.', 'Tables, ropes, walls and parked cars deform slightly and push or pull back: a table exerts an upward normal force, a rope a tension force, a wall a force on whatever presses against it.'],
       de: ['Hindernisse üben keine Kraft aus', 'Tische, Seile, Wände oder parkierte Autos sind nur im Weg; sie drücken oder ziehen nicht.', 'Tische, Seile, Wände und parkierte Autos verformen sich ein wenig und drücken oder ziehen zurück: Ein Tisch übt eine Normalkraft nach oben aus, ein Seil eine Zugkraft, eine Wand eine Kraft auf alles, was gegen sie drückt.'],
-    },
-    'pair-confusion': {
-      en: ['Balance mistaken for interaction', 'Two forces that balance on one body are taken for an action–reaction pair.', 'The two forces of an action–reaction pair act on two different bodies and are of the same kind. Two forces that balance act on the same body and are often of different kinds, such as weight and normal force.'],
-      de: ['Gleichgewicht mit Wechselwirkung verwechselt', 'Zwei Kräfte, die sich an einem Körper aufheben, werden für ein Kraft-Gegenkraft-Paar gehalten.', 'Die beiden Kräfte eines Kraft-Gegenkraft-Paars wirken auf zwei verschiedene Körper und sind von derselben Art. Zwei Kräfte, die sich aufheben, wirken auf denselben Körper und sind oft von verschiedener Art, etwa Gewichtskraft und Normalkraft.'],
     },
     'vector-add': {
       en: ['Directions ignored', 'Velocities or forces are added as plain numbers, ignoring their directions.', 'Velocities and forces have directions and add as vectors: in opposite directions they subtract, and at an angle the arrows are added head to tail.'],
@@ -199,33 +183,35 @@
     }
   }
 
-  // ---------------------------------------------------------------- arcade: questions with four options
-  // Every question of an exercise that can be asked with exactly four options, one right:
-  // [{ ask, options: [{ html, ok, code, why }], pics }]. Single choice and predictions with four
-  // options as they are; the reason of a prediction (four reasons); a true/false set as "which
-  // statement is true (false)?"; a ranking as the right order against the orders the
-  // misconceptions give (and the reversed order); a matching as "which fits this item?". r picks
-  // among more options than four.
-  function arcadeQuestions(ex, r) {
+  // ---------------------------------------------------------------- check: questions with four options
+  // Every question of an exercise that can be asked with four options, one right: [{ key, ask,
+  // options: [{ html, ok, code, why }], pics }] (key: that of the question it comes from). Single
+  // choice and predictions with three wrong options taken from theirs; the reason of a prediction
+  // (four reasons); a true/false set as "which statement is true (false)?"; a ranking as the right
+  // order against the orders the misconceptions give (and the reversed order); a matching as
+  // "which fits this item?". r picks among more options than four.
+  function checkQuestions(ex, r) {
     const out = [];
     const four = (right, wrong) => {
       const ws = r.shuffle(wrong).filter((w, i, a) => a.findIndex((v) => v.html === w.html) === i && w.html !== right.html).slice(0, 3);
       return ws.length === 3 ? r.shuffle([right, ...ws]) : null;
     };
+    const opt = (x) => ({ html: x.label, ok: x.ok, code: x.code, why: x.ok ? '' : x.why });
     const lq = T('“', '«'), rq = T('”', '»');
     for (const qu of ex.questions) {
-      if ((qu.type === 'choice' || qu.type === 'two') && qu.options.length === 4) {
-        out.push({ ask: qu.prompt, pics: qu.pics, options: qu.options.map((x) => ({ html: x.label, ok: x.ok, code: x.code, why: x.why })) });
+      if ((qu.type === 'choice' || qu.type === 'two') && qu.options.length >= 4) {
+        const opts = four(opt(answerOf(qu.options)), qu.options.filter((x) => !x.ok).map(opt));
+        if (opts) out.push({ key: qu.key, ask: qu.prompt, pics: qu.pics, options: opts });
       }
       if (qu.type === 'two' && qu.reasons.length >= 4) {
-        const right = answerOf(qu.reasons), opts = four({ html: right.label, ok: true, code: 'ok', why: '' }, qu.reasons.filter((x) => !x.ok).map((x) => ({ html: x.label, ok: false, code: x.code, why: x.why })));
-        if (opts) out.push({ ask: `${qu.prompt} <b>${answerOf(qu.options).text}</b> ${qu.reasonPrompt}`, options: opts });
+        const opts = four(opt(answerOf(qu.reasons)), qu.reasons.filter((x) => !x.ok).map(opt));
+        if (opts) out.push({ key: `${qu.key}-reason`, ask: `${qu.prompt} <b>${answerOf(qu.options).text}</b> ${qu.reasonPrompt}`, options: opts });
       }
       if (qu.type === 'tf') {
         const yes = qu.items.filter((x) => x.value), no = qu.items.filter((x) => !x.value);
-        const opt = (x, ok) => ({ html: x.text, ok, code: ok ? 'ok' : x.code, why: ok ? '' : x.why });
-        if (yes.length && no.length >= 3) out.push({ ask: T('Which of these statements is true?', 'Welche dieser Aussagen ist richtig?'), options: four(opt(r.pick(yes), true), no.map((x) => opt(x, false))) });
-        if (no.length && yes.length >= 3) out.push({ ask: T('Which of these statements is false?', 'Welche dieser Aussagen ist falsch?'), options: four(opt(r.pick(no), true), yes.map((x) => opt(x, false))) });
+        const st = (x, ok) => ({ html: x.text, ok, code: ok ? 'ok' : x.code, why: ok ? '' : x.why });
+        if (yes.length && no.length >= 3) out.push({ key: qu.key, ask: T('Which of these statements is true?', 'Welche dieser Aussagen ist richtig?'), options: four(st(r.pick(yes), true), no.map((x) => st(x, false))) });
+        if (no.length && yes.length >= 3) out.push({ key: qu.key, ask: T('Which of these statements is false?', 'Welche dieser Aussagen ist falsch?'), options: four(st(r.pick(no), true), yes.map((x) => st(x, false))) });
       }
       if (qu.type === 'rank') {
         const vs = qu.items.map((x) => x.value), right = rankText(qu.items, vs);
@@ -233,7 +219,7 @@
         wrong.push({ html: rankText(qu.items, vs.map((v) => -v)), ok: false, code: 'other', why: qu.why });
         wrong.push({ html: rankText(qu.items, vs.map(() => 0)), ok: false, code: 'other', why: qu.why });
         const opts = four({ html: right, ok: true, code: 'ok', why: '' }, wrong);
-        if (opts) out.push({ ask: `${qu.prompt.split(/(?<=\.) /)[0].replace(/[,:;] (from the|vom|von der|von den|von dem) .*$/, '').replace(/\.?$/, '.')} ${T('Which order is right?', 'Welche Reihenfolge stimmt?')}`, options: opts });
+        if (opts) out.push({ key: qu.key, ask: `${qu.prompt.split(/(?<=\.) /)[0].replace(/[,:;] (from the|vom|von der|von den|von dem) .*$/, '').replace(/\.?$/, '.')} ${T('Which order is right?', 'Welche Reihenfolge stimmt?')}`, options: opts });
       }
       if (qu.type === 'match' && qu.choices.length >= 4) {
         for (const x of qu.items) {
@@ -241,27 +227,34 @@
           const opts = four({ html: c.label, ok: true, code: 'ok', why: '' }, qu.choices.filter((y) => y.id !== x.answer)
             .map((y) => ({ html: y.label, ok: false, code: w[y.id] ? w[y.id].code : 'other', why: w[y.id] ? w[y.id].why : x.other || x.why })));
           const named = x.label && !/<svg/.test(x.label) ? x.label : x.name;
-          if (opts) out.push({ ask: `${qu.prompt.split(/(?<=\.) /)[0]} ${T('Which fits', 'Was passt zu')} ${lq}${named}${rq}?`, pics: qu.pics, options: opts });
+          if (opts) out.push({ key: qu.key, ask: `${qu.prompt.split(/(?<=\.) /)[0]} ${T('Which fits', 'Was passt zu')} ${lq}${named}${rq}?`, pics: qu.pics, options: opts });
         }
       }
     }
-    return out.filter((q) => q.options && q.options.filter((o) => o.ok).length === 1);
+    return out.filter((x) => x.options && x.options.filter((y) => y.ok).length === 1);
+  }
+
+  // A question of the check: kind 'topic/generator:key' asks one of the questions with that key
+  // (checkQuestions) of an exercise of that type. The same kind and seed give the same question.
+  function checkQuestion(kind, seed) {
+    const [type, key] = kind.split(':');
+    for (let k = 0; k < 50; k++) {
+      const s = (seed + 7919 * k) >>> 0, r = rng(s), ex = generateGen(type, s);
+      const qs = checkQuestions(ex, r).filter((x) => x.key === key);
+      if (qs.length) return { ex, ...r.pick(qs) };
+    }
+    throw new Error(`no check question of kind ${kind}`);
   }
 
   // ---------------------------------------------------------------- registry
+  // The generators by name, and the exercise types of practice by topic: POOLS[topic] lists
+  // { name, params }, the type 'topic/name' (a generator may be registered under several topics,
+  // with other parameters).
   const GENS = {};
-  const POOLS = { gravity: [], inertia: [], force: [], interact: [] };
-  const FORMATS = {
-    all: { en: 'All formats', de: 'Alle Formate' },
-    choice: { en: 'Single choice', de: 'Einfachauswahl' },
-    sort: { en: 'Sort & match', de: 'Ordnen & zuordnen' },
-    predict: { en: 'Predict & explain', de: 'Vorhersagen & begründen' },
-    tf: { en: 'True or false', de: 'Richtig oder falsch' },
-  };
-  const formatName = (k) => FORMATS[k][getLang()];
-  function register(topic, name, fn, params = {}, format = 'choice') {
+  const POOLS = {};
+  function register(topic, name, fn, params = {}) {
     GENS[name] = fn;
-    POOLS[topic].push({ name, params, format });
+    (POOLS[topic] = POOLS[topic] || []).push({ name, params });
   }
 
   function finish(ex, id, topic, gen) {
@@ -277,38 +270,22 @@
   // How hard each exercise type is, 1–5: one simple idea in a familiar situation (1) up to
   // several ideas combined, in a format that asks for every detail (5).
   const DIFFICULTY = {
-    drop: 1, support: 1,
-    collision: 2, 'push-car': 2, kick: 2, balance: 2, 'tf-motion': 2,
-    throw: 3, circle: 3, 'push-apart': 3, magnets: 3, rolloff: 3, engine: 3, 'tf-throw': 3, 'tf-interact': 3,
-    thruster: 4, 'two-forces': 4, 'pendulum-cut': 4, 'rank-elevator': 4, 'rank-launch': 4, 'match-partners': 4,
+    drop: 1,
+    kick: 2, balance: 2, 'tf-motion': 2, centre: 2,
+    throw: 3, circle: 3, rolloff: 3, engine: 3, 'tf-throw': 3,
+    thruster: 4, 'two-forces': 4, 'pendulum-cut': 4, 'rank-elevator': 4,
     'match-diagrams': 5, 'cart-launcher': 5, ramp: 5,
   };
-  // The practice levels: the difficulties they include.
-  const LEVELS = { easy: [1, 2], medium: [3], hard: [4, 5], mixed: [1, 2, 3, 4, 5] };
-
-  // The exercises of a level, or of a topic, in a format ('all' for any); a topic without that
-  // format falls back to all topics. Ids: key-seed, or key-format-seed when a format is chosen.
-  function pool(topic, format = 'all') {
-    const all = LEVELS[topic] ? Object.values(POOLS).flat().filter((g) => LEVELS[topic].includes(DIFFICULTY[g.name]))
-      : topic === 'mixed' ? Object.values(POOLS).flat() : POOLS[topic];
-    if (format === 'all') return all;
-    const some = all.filter((g) => g.format === format);
-    return some.length ? some : Object.values(POOLS).flat().filter((g) => g.format === format);
-  }
-  // The exercise type (generator) a seed gives: the first random number picks it.
-  const genOf = (topic, seed, format = 'all') => rng(seed).pick(pool(topic, format)).name;
 
   // Names of the exercise types, for the student's overview.
   const TYPE_NAMES = {
     drop: ['Heavy and light', 'Schwer und leicht'], rolloff: ['Launched horizontally', 'Horizontal abgeworfen'], throw: ['Forces in flight', 'Kräfte im Flug'],
     kick: ['A brief kick', 'Ein kurzer Stoss'], circle: ['Leaving a circle', 'Aus dem Kreis'], engine: ['Engine on, engine off', 'Triebwerk an, Triebwerk aus'],
     balance: ['Comparing two forces', 'Zwei Kräfte vergleichen'], thruster: ['Thrust to the side', 'Schub zur Seite'], 'two-forces': ['Two strings', 'Zwei Schnüre'],
-    collision: ['Truck and car', 'Lastwagen und Auto'], 'push-apart': ['On the ice', 'Auf dem Eis'], 'push-car': ['Pushing a van', 'Einen Lieferwagen schieben'],
-    support: ['Resting and hanging', 'Liegen und hängen'], 'rank-elevator': ['Four elevator rides', 'Vier Liftfahrten'], 'rank-launch': ['Four balls off the table', 'Vier Kugeln vom Tisch'],
-    'match-diagrams': ['Free-body diagrams', 'Kräftediagramme'], 'match-partners': ['Third-law partners', 'Kraft und Gegenkraft'], 'cart-launcher': ['Ball from a moving cart', 'Ball vom fahrenden Wagen'],
-    magnets: ['Magnets', 'Magnete'], 'pendulum-cut': ['Cutting the pendulum string', 'Pendelschnur durchschneiden'], ramp: ['Up and down the ramp', 'Die Rampe hinauf und hinunter'],
+    centre: ['Towards the centre', 'Zum Zentrum'], 'rank-elevator': ['Four elevator rides', 'Vier Liftfahrten'],
+    'match-diagrams': ['Free-body diagrams', 'Kräftediagramme'], 'cart-launcher': ['Ball from a moving cart', 'Ball vom fahrenden Wagen'],
+    'pendulum-cut': ['Cutting the pendulum string', 'Pendelschnur durchschneiden'], ramp: ['Up and down the ramp', 'Die Rampe hinauf und hinunter'],
     'tf-throw': ['True or false: thrown up', 'Richtig oder falsch: hochgeworfen'], 'tf-motion': ['True or false: Newton’s laws', 'Richtig oder falsch: Newtonsche Gesetze'],
-    'tf-interact': ['True or false: pulling on each other', 'Richtig oder falsch: gegenseitige Anziehung'],
   };
   const typeName = (gen) => (TYPE_NAMES[gen] ? TYPE_NAMES[gen][getLang() === 'de' ? 1 : 0] : gen);
 
@@ -323,31 +300,6 @@
   }
   const weightOf = (stats, gen) => 1 + 3 * (stats[gen] ? stats[gen].s : UNSEEN);
 
-  // A new random seed for the next exercise. Its type is drawn with these weights from the types
-  // available, leaving out the last few in recent (the types shown so far, oldest first): about
-  // half of the types, at most 8, are held back, so the same type does not come back too soon.
-  // With a single type there is no choice.
-  function freshSeed(topic, format = 'all', recent = [], random = Math.random, stats = {}) {
-    const types = [...new Set(pool(topic, format).map((g) => g.name))], w = Math.min(8, Math.floor(types.length / 2));
-    const avoid = w ? recent.slice(-w) : [];
-    const allowed = types.filter((t) => !avoid.includes(t));
-    const from = allowed.length ? allowed : types;
-    const ws = from.map((t) => weightOf(stats, t)), total = ws.reduce((a, b) => a + b, 0);
-    let x = random() * total, type = from[from.length - 1];
-    for (let i = 0; i < from.length; i++) { x -= ws[i]; if (x < 0) { type = from[i]; break; } }
-    let seed = 1 + Math.floor(random() * 999999);
-    for (let i = 0; i < 5000 && genOf(topic, seed, format) !== type; i++) seed = 1 + Math.floor(random() * 999999);
-    return seed;
-  }
-
-  function generate(topic, seed, format = 'all') {
-    const r = rng(seed);
-    const g = r.pick(pool(topic, format));
-    const ex = finish(GENS[g.name](r, { ...g.params }), format === 'all' ? `${topic}-${seed}` : `${topic}-${format}-${seed}`, topic, g.name);
-    ex.format = format;
-    return ex;
-  }
-
   // An exercise of one type, 'topic/generator' (e.g. 'inertia/balance': as registered for that
   // topic, with its parameters), for practice by topic (topics.js).
   function generateGen(key, seed) {
@@ -361,9 +313,9 @@
   }
 
   const api = {
-    LANGS, setLang, getLang, T, TOPICS, LEVELS, DIFFICULTY, topicName, FORMATS, formatName, MIS, mis, POOLS, GENS, rng,
+    LANGS, setLang, getLang, T, DIFFICULTY, MIS, mis, POOLS, GENS, rng,
     it, F, FL, list, cap, num, qty, deg, noun, o, q, stmt, tf, rank, match, two, ranksOf, rankText, answerText, misreads,
-    arcadeQuestions, register, pool, genOf, freshSeed, generate, generateGen, build, TYPE_NAMES, typeName, recordResult, weightOf,
+    checkQuestions, checkQuestion, register, generateGen, build, TYPE_NAMES, typeName, recordResult, weightOf,
   };
   root.FC = api;
   if (typeof module !== 'undefined') module.exports = api;

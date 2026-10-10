@@ -3,7 +3,7 @@
 // solutionFigure(), hints, solution, results, p, v }: a number field has its value in its unit and
 // traps [{ value, why, flag }] (the answers under typical wrong ideas), a choice field its right
 // answer. quiz(exercise, seed) gives a multiple-choice question about one of its fields (for the
-// arcade), tutorial(lesson) the tutor's frames.
+// check), tutorial(lesson) the tutor's frames.
 (function (root) {
   'use strict';
 
@@ -91,8 +91,9 @@
   }
   function tutorial(lesson) {
     const parts = [lesson, ...(lesson.more || [])].map(framesOf);
-    // a further exercise starts with a heading: the next equation
-    parts.slice(1).forEach((fr, i) => { fr[0].text = `<p class="step-rule">${L(`Another equation (${i + 2} of ${parts.length})`, `Eine weitere Gleichung (${i + 2} von ${parts.length})`)}</p>${fr[0].text.replace(/^<p class="step-rule">[^<]*<\/p>/, '')}`; });
+    // a further exercise starts with a heading: the next equation (or exercise)
+    const eq = byId(lesson.scenario).kind === 'shm';
+    parts.slice(1).forEach((fr, i) => { fr[0].text = `<p class="step-rule">${eq ? L(`Another equation (${i + 2} of ${parts.length})`, `Eine weitere Gleichung (${i + 2} von ${parts.length})`) : L(`Another exercise (${i + 2} of ${parts.length})`, `Eine weitere Aufgabe (${i + 2} von ${parts.length})`)}</p>${fr[0].text.replace(/^<p class="step-rule">[^<]*<\/p>/, '')}`; });
     return { frames: parts.flat() };
   }
 

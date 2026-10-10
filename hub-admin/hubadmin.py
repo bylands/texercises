@@ -68,7 +68,7 @@ SESSION_DAYS = 30
 MAX_BODY = 256 * 1024
 MAX_TAGS = 8  # per app
 MAX_TAG_LEN = 32
-MODES = ("tutor", "practice", "real", "arcade")
+MODES = ("tutor", "practice", "check", "real", "arcade")
 MAX_SETS, MAX_TITLE = 100, 80
 MAX_EXAMPLES, MAX_STAGES = 100, 300  # per app in a set
 # names a set cannot have, besides the apps and what is in the web root: the services and paths
@@ -953,7 +953,7 @@ SETS_JS = r"""
 (function () {
   'use strict';
   const $ = (s) => document.querySelector(s);
-  const MODES = { tutor: 'Tutor', practice: 'Practice', real: 'Problems', arcade: 'Arcade' };
+  const MODES = { tutor: 'Tutor', practice: 'Practice', check: 'Check', real: 'Problems', arcade: 'Arcade' };
   const KEY = /^[a-z0-9][a-z0-9-]{0,39}$/, MAX_TITLE = 80;
   let apps = [], sets = [], sel = -1, dirty = false, loaded = false;
   const outlines = {}; // app id → Promise of its outline

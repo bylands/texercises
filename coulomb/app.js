@@ -1,15 +1,15 @@
 (function () {
   'use strict';
 
-  const CL = window.CL, Lang = window.Lang, Arcade = window.Arcade, { practiceOf, tutorial } = window.Coulomb;
+  const CL = window.CL, Lang = window.Lang, Check = window.Check, { practiceOf, tutorial } = window.Coulomb;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Coulomb Force', mode: 'Mode', difficulty: 'Difficulty', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise', real: 'Problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
-      tutorNote: 'Use the arrow keys ← → to step through. What a step is about is highlighted. Positive charges are red, negative ones green.',
+      title: 'Point Charges', mode: 'Mode', difficulty: 'Difficulty', stars: (d) => `Difficulty: ${d} of 5`, example: 'Example', tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
+      tutorNote: 'Use the arrow keys ← → to step through. What a step is about is highlighted. Positive charges are red, negative ones green; the net force or field is purple.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
@@ -17,13 +17,13 @@
       fill: 'Answer every part, then check again.',
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
-      number: 'Enter a number', correct: 'Correct', sign: 'Give the size (a positive number)', close: 'Close: check your rounding', wrong: 'Not correct', power: 'Off by a power of ten: check the units (cm, μC, mN)',
+      number: 'Enter a number', correct: 'Correct', sign: 'Give the size (a positive number)', close: 'Close: check your rounding', wrong: 'Not correct', power: 'Off by a power of ten: check the units (cm, μC, nC, mN, μN)',
       rankWrong: (n) => `${n === 1 ? 'One place is' : `${n} places are`} not right yet`, sci: 'Powers of ten: type 3.2e-8 or 3.2*10^-8.', none: 'none',
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
     },
     de: {
-      title: 'Coulombkraft', mode: 'Modus', difficulty: 'Schwierigkeit', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
-      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Worum es in einem Schritt geht, ist hervorgehoben. Positive Ladungen sind rot, negative grün.',
+      title: 'Punktladungen', mode: 'Modus', difficulty: 'Schwierigkeit', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
+      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Worum es in einem Schritt geht, ist hervorgehoben. Positive Ladungen sind rot, negative grün; die resultierende Kraft oder das Gesamtfeld ist violett.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
@@ -31,14 +31,14 @@
       fill: 'Beantworte alle Teile, dann prüfe nochmals.',
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
-      number: 'Gib eine Zahl ein', correct: 'Richtig', sign: 'Gib den Betrag an (eine positive Zahl)', close: 'Knapp daneben: Prüfe deine Rundung', wrong: 'Nicht richtig', power: 'Um eine Zehnerpotenz daneben: Prüfe die Einheiten (cm, μC, mN)',
+      number: 'Gib eine Zahl ein', correct: 'Richtig', sign: 'Gib den Betrag an (eine positive Zahl)', close: 'Knapp daneben: Prüfe deine Rundung', wrong: 'Nicht richtig', power: 'Um eine Zehnerpotenz daneben: Prüfe die Einheiten (cm, μC, nC, mN, μN)',
       rankWrong: (n) => `${n === 1 ? 'Ein Platz stimmt' : `${n} Plätze stimmen`} noch nicht`, sci: 'Zehnerpotenzen: Tippe 3.2e-8 oder 3.2*10^-8.', none: 'keine',
       tutorBtns: { example: (i, n) => `Beispiel ${i} von ${n}`, back: '← Zurück', prevEx: '← Vorheriges Beispiel', next: 'Weiter →', nextEx: 'Nächstes Beispiel →', done: 'Selbst üben →' },
     },
   };
   const ui = () => UI[CL.getLang()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -115,7 +115,7 @@
   // current one if possible.
   function fresh() { open(topics.next(ex)); }
   // the same exercise again (e.g. in the other language)
-  const again = (e) => (e.real != null ? window.CoulombProblems.realOf(e.real, e.seed) : null) || topics.parse(e.id);
+  const again = (e) => topics.parse(e.id);
 
   // The topics of practice: those of the tutor's examples, with their stages (lessons.js).
   const topicList = () => window.Lessons.EXAMPLES.map((e) => ({
@@ -162,12 +162,14 @@
   function judge(f, val) {
     if (f.type === 'num') return judgeNum(parse(val), f);
     if (f.type === 'rank') { const n = f.items.filter((it) => val[it] !== f.value[it]).length; return n ? { cls: 'bad', msg: ui().rankWrong(n) } : { cls: 'ok', msg: ui().correct }; }
-    return val === f.value ? { cls: 'ok', msg: ui().correct } : { cls: 'bad', msg: ui().wrong };
+    if (val === f.value) return { cls: 'ok', msg: ui().correct };
+    const t = (f.traps || []).find((x) => x.value === val); // the answer of a typical wrong idea
+    return { cls: 'bad', msg: (t && t.why) || ui().wrong };
   }
 
   function render() {
     $('#title').textContent = ex.title;
-    // the difficulty, as in the arcade: ★★★☆☆
+    // the difficulty: ★★★☆☆
     const stars = document.createElement('span');
     stars.className = 'stars';
     stars.textContent = '★'.repeat(ex.difficulty) + '☆'.repeat(5 - ex.difficulty);
@@ -192,7 +194,7 @@
 
   function updateButtons() {
     // once everything is right, Check becomes New exercise, like the button at the top
-    $('#check').textContent = st.solved ? (isReal() ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     const left = ex.hints.length - st.hints;
@@ -231,7 +233,7 @@
 
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (isReal()) problems.next(); else fresh(); return; } // the button reads New exercise
+    if (st.solved) { fresh(); return; } // the button reads New exercise
     const r = feedback();
     st.checked = true;
     if (r === null) { showStatus('fill'); return; }
@@ -246,7 +248,6 @@
       }
       st.solved = true;
       Practice.markSolved(PRACTICE, ex.id);
-      if (isReal()) problems.solved(ex);
       finish();
       st.advance = topics.solved(st, ex);
       showStatus('ok');
@@ -292,7 +293,7 @@
   function applyStatic() {
     document.title = ui().title;
     Lang.apply(ui());
-    if (topics) { topics.relabel(); problems.menu(); }
+    if (topics) topics.relabel();
   }
 
   // The same exercise (same seed) in the other language, with the answers, hints and solution kept.
@@ -313,55 +314,39 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
   // ---------------------------------------------------------------- modes
-  // Practice: exercises by topic; problems: from everyday life and research; tutor: worked
-  // examples; arcade: a timed game (arcade.js). Hints and solution belong to practice and
-  // problems. Leaving the arcade ends a running game.
+  // Practice: exercises by topic; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js, check-src.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('cl-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); }); // practice and problems share the card
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
-  }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
   function practise() {
     setMode('practice');
-    if (ex && !isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; markScrollable(); } else fresh();
   }
-
-  // Problems (realproblems.js, shared problems.js), chosen in a menu.
-  let problems = null;
-  const isReal = () => !!problems && problems.is(ex);
-  function realMode() {
-    setMode('real');
-    if (isReal()) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
 
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     const m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
-      return true;
-    }
-    const re = problems.parse(h);
-    if (re) {
-      setMode('real');
-      if (!ex || ex.id !== h) open(re);
-      problems.menu();
       return true;
     }
     const te = topics.parse(h);
@@ -376,7 +361,7 @@
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     topics = window.Topics.create({
       app: PRACTICE, topics: topicList(),
       make: (type, seed) => practiceOf(type, seed), typeOf,
@@ -384,10 +369,6 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.CoulombProblems.PROBLEMS, make: window.CoulombProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
     applyStatic();
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
@@ -402,15 +383,19 @@
       practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
       t: () => ui().tutorBtns,
     });
-    arcade = Arcade.create(window.ArcadeSource, { math, markScrollable, stored, store });
+    checker = Check.create(window.CheckSource, {
+      math, markScrollable, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('cl-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

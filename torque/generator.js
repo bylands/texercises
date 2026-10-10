@@ -1,8 +1,10 @@
 // Exercises and worked examples from the scenarios (see scenarios.js).
 // generate(level, seed, calc) gives { id, scenario, title, text, fields: [{ key, sym, unit, dec,
 // what, sense, value, senseValue, traps: [{ value, why, flag }] }], figure(view), hints, solution,
-// results }; generateFor(scenario, seed, o) one of a given situation; quiz(exercise, seed) a
-// multiple-choice question about one of its quantities; tutorial(lesson) the tutor's frames.
+// results } (for the links of earlier versions, which named a level); practiceOf(scenario, seed)
+// one of a given situation for practice, generateFor(scenario, seed, o) one for the check;
+// quiz(exercise, seed, keys) a multiple-choice question about one of its quantities;
+// tutorial(lesson) the tutor's frames.
 (function (root) {
   'use strict';
 
@@ -16,7 +18,7 @@
     hard: { name: () => L('Hard', 'Schwierig'), from: 4, to: 5 },
     mixed: { name: () => L('Mixed', 'Gemischt'), from: 1, to: 5 },
   };
-  const pool = (level) => SCENARIOS.filter((s) => s.difficulty >= LEVELS[level].from && s.difficulty <= LEVELS[level].to);
+  const pool = (level) => SCENARIOS.filter((s) => !s.choice && s.difficulty >= LEVELS[level].from && s.difficulty <= LEVELS[level].to);
   const byId = (id) => SCENARIOS.find((s) => s.id === id);
   const same = (x, y) => Math.abs(x - y) <= 0.015 * Math.max(Math.abs(y), 0.05);
 
@@ -45,7 +47,7 @@
       solutionFigure: () => scn.figure(p, v, { show: all }),
       hints: scn.hints(p, v),
       solution: steps.map((s) => s.text),
-      results: fields.map((f) => `$${tex(...f.sym)} = ${tq(f.value, f.unit, f.dec)}$${f.sense ? arrow(f.senseValue) : ''}`).join(', '),
+      results: scn.results ? scn.results(p, v) : fields.map((f) => `$${tex(...f.sym)} = ${tq(f.value, f.unit, f.dec)}$${f.sense ? arrow(f.senseValue) : ''}`).join(', '),
       steps,
       comps: [],
       p, v,
@@ -88,7 +90,7 @@
     return { ...ex, comps: comps(ex.p), seed };
   }
 
-  // An exercise of the given situation (for the arcade); with o.nice, one that needs no calculator.
+  // An exercise of the given situation (for the check); with o.nice, one that needs no calculator.
   function generateFor(scenario, seed, o = {}) {
     const scn = byId(scenario);
     return { ...exercise(scn, make(scn, rng(seed), scn.calc === 'always' ? null : neat(scn), o)), seed, nice: !!o.nice };
@@ -96,13 +98,13 @@
 
   // A multiple-choice question about one quantity of an exercise: the right value and three wrong
   // ones, first those of typical wrong ideas, then other quantities of the exercise, then simple
-  // slips. All options positive and clearly different.
-  function quiz(ex, seed) {
+  // slips. All options positive and clearly different. keys (optional): the quantities to ask about.
+  function quiz(ex, seed, keys) {
     const r = rng(seed), shuffle = (a) => TQ.shuffle(r, a);
-    const cands = ex.fields.filter((f) => f.traps.length && f.value > 0);
+    const cands = ex.fields.filter((f) => f.traps.length && f.value > 0 && (!keys || keys.includes(f.key)));
     const f = cands.length ? cands[Math.floor(r() * cands.length)] : ex.fields.filter((g) => g.value > 0)[0] || ex.fields[0];
     const options = [{ value: f.value, correct: true }];
-    const fits = (x) => Number.isFinite(x) && x > 0 && options.every((o) => Math.abs(o.value - x) > Math.max(10 ** -f.dec * 2, 0.06 * Math.max(o.value, x)));
+    const fits = (x) => Number.isFinite(x) && x > 0 && x < 1e4 && options.every((o) => Math.abs(o.value - x) > Math.max(10 ** -f.dec * 2, 0.06 * Math.max(o.value, x)));
     const add = (list) => { for (const o of list) if (options.length < 4 && fits(TQ.round(o.value, f.dec))) options.push({ ...o, value: TQ.round(o.value, f.dec) }); };
     add(shuffle(f.traps.map((t) => ({ value: t.value, flag: t.flag, why: t.why }))));
     add(shuffle(ex.fields.filter((g) => g !== f && g.unit === f.unit).map((g) => ({ value: g.value }))));
@@ -116,7 +118,7 @@
     const ex = exercise(byId(lesson.scenario), lesson.p);
     const wanted = ex.fields.map((f) => `${f.what} $${tex(...f.sym)}$`).join(', ');
     const first = {
-      text: `<p class="step-rule">${L('The situation', 'Die Situation')}</p>${ex.text}<p>${L('Wanted', 'Gesucht')}: ${wanted}.</p>`,
+      text: `<p class="step-rule">${L('The situation', 'Die Situation')}</p>${ex.text}${wanted ? `<p>${L('Wanted', 'Gesucht')}: ${wanted}.</p>` : ''}`,
       figure: ex.figure({ task: true }),
     };
     const frames = ex.steps.map((s) => ({ text: s.text, figure: ex.figure({ show: new Set(s.show || []), hl: new Set(s.hl || []) }) }));

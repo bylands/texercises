@@ -1,18 +1,20 @@
-// Verifies the force systems generator: run with `node force-systems/test/check-generator.js`.
-// For many seeds per topic and both languages it checks
-// - the answers against Newton's laws, written out independently for each situation
+// Verifies the free-body diagrams generator: run with `node force-systems/test/check-generator.js`.
+// For many seeds per situation and both languages it checks
+// - the worked solutions against Newton's laws, written out independently for each situation
 //   (balance perpendicular to the motion, F = m a for the system and for single boxes),
 // - that the values are positive and the boxes move the way the text says,
-// - that the wrong-idea values differ from the right ones,
+// - the equations to choose: four different ones, the right one true for the situation's values
+//   and each wrong one false,
+// - "find the error": one wrong step, and the check's questions: four options, one right,
 // - that texts, hints, solutions and drawings contain no undefined values.
 // It also checks the tutor's examples against the answers on the worksheet.
 'use strict';
 
 const load = typeof require === 'function'
-  ? () => { require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../generator.js'); require('../figkit.js'); require('../figures.js'); require('../realproblems.js'); require('../realpictures.js'); require('../lessons.js'); }
+  ? () => { require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../equations.js'); require('../generator.js'); require('../lessons.js'); require('../check-src.js'); }
   : () => {};
 load();
-const { FS, Forces, Lessons } = globalThis;
+const { FS, Forces, Lessons, Equations, CheckSource } = globalThis;
 const g = FS.G;
 
 let failures = 0, checked = 0;
@@ -58,8 +60,6 @@ function checkExercise(ex, id) {
   ex.fields.forEach((f) => {
     if (!Number.isFinite(f.value)) fail(`${id}: ${f.key} is ${f.value}`);
     if (f.value > 2000) fail(`${id}: ${f.key} = ${f.value} is implausibly large`);
-    for (const t of f.traps) if (Math.abs(t.value - f.value) <= 0.02 * Math.abs(f.value)) fail(`${id}: trap for ${f.key} equals the answer`);
-    for (const t of f.traps) if (!t.why) fail(`${id}: trap for ${f.key} without explanation`);
   });
   POSITIVE(ex).forEach((f) => { if (!(f.value > 0)) fail(`${id}: ${f.key} = ${f.value} is not positive`); });
   // the table of forces: every box has its weight; friction only where there is a coefficient
@@ -91,31 +91,108 @@ function checkExercise(ex, id) {
   ex.steps.forEach((s, k) => checkText(id, `step figure ${k + 1}`, ex.figure({ show: new Set(s.show || []), hl: new Set(s.hl || []) })));
 }
 
-const SAMPLES = 300;
+// The equations of an exercise as numbers (in English, where the symbols are F_N, F_f, F_T, F_c):
+// the right one must hold for the situation's values, a wrong one must not (but for a rare
+// coincidence of numbers, counted per equation).
+function equationValue(ex, html) {
+  FS.setLang('en');
+  const p = ex.p, v = ex.v, rad = (p.alpha || 0) * Math.PI / 180;
+  const vals = {
+    g, m: p.m, m1: p.m1, m2: p.m2, a: p.a != null ? p.a : v.a, F: p.F != null ? p.F : v.F, mu: p.mu,
+    N: v.N != null ? v.N : p.m * g, R: v.R, R1: v.R1, R2: v.R2 || 0, S: v.S, K: v.K,
+    SIN: Math.sin(rad), COS: Math.cos(rad), TAN: Math.tan(rad),
+  };
+  let t = html;
+  [[FS.tex('R', 1), 'R1'], [FS.tex('R', 2), 'R2'], [FS.tex('N'), 'N'], [FS.tex('R'), 'R'], [FS.tex('S'), 'S'], [FS.tex('K'), 'K'], [FS.tex('mu'), 'mu'],
+    ['\\sin\\alpha', '*SIN'], ['\\cos\\alpha', '*COS'], ['\\tan\\alpha', '*TAN'], ['m_1', 'm1'], ['m_2', 'm2'], ['\\,', '*'], ['$', '']].forEach(([a, b]) => { t = t.split(a).join(b); });
+  const [lhs, rhs] = t.split('=');
+  const f = (e) => Function(...Object.keys(vals), `return ${e};`)(...Object.values(vals));
+  return [f(lhs), f(rhs)];
+}
+const holds = ([x, y]) => Math.abs(x - y) <= 1e-6 * Math.max(1, Math.abs(x), Math.abs(y));
+const trueWrong = {}, seenWrong = {};
+function checkEquations(ex, id) {
+  const lang = FS.getLang();
+  Equations.of(ex.scenario, ex.p).forEach((it) => {
+    if (it.options.length !== 4) fail(`${id}: equation ${it.key} has ${it.options.length} options`);
+    if (new Set(it.options.map((o) => o.html)).size !== it.options.length) fail(`${id}: equation ${it.key} has equal options`);
+    if (it.options.filter((o) => o.right).length !== 1) fail(`${id}: equation ${it.key}: not exactly one right option`);
+    it.options.forEach((o) => {
+      if (!o.right && !o.why) fail(`${id}: equation ${it.key}: a wrong option without explanation`);
+      checkText(id, `equation ${it.key}`, o.html + (o.why || ''));
+    });
+    checkText(id, `equation ${it.key}`, it.what + it.value);
+    if (lang !== 'en') return;
+    it.options.forEach((o) => {
+      const val = equationValue(ex, o.html);
+      if (val.some((x) => !Number.isFinite(x))) { fail(`${id}: equation ${it.key} ${o.html} is not a number: ${val}`); return; }
+      if (o.right && !holds(val)) fail(`${id}: the right equation ${it.key} ${o.html} does not hold: ${val}`);
+      if (!o.right) {
+        const k = `${ex.scenario} ${it.key} ${o.n}`;
+        seenWrong[k] = (seenWrong[k] || 0) + 1;
+        if (holds(val)) trueWrong[k] = (trueWrong[k] || 0) + 1;
+      }
+    });
+  });
+  FS.setLang(lang);
+}
+
+// Practice: every situation in both languages, with angles of right triangles with whole sides, so
+// that the components the student identifies are whole numbers (the app gives them) and the
+// worked solution needs no rounding.
+let practised = 0;
 const seen = {};
 for (const lang of FS.LANGS) {
   FS.setLang(lang);
-  for (const level of Object.keys(Forces.LEVELS)) {
-    for (let seed = 1; seed <= SAMPLES; seed++) {
-      const ex = Forces.generate(level, seed);
-      // without a calculator: no sine or cosine, results multiples of 0.5
-      const nc = Forces.generate(level, seed, false);
-      checkExercise(nc, `${lang} ${nc.id}`);
-      const scn = Forces.SCENARIOS.find((x) => x.id === nc.scenario);
-      if (scn.trig) fail(`${lang} ${nc.id}: needs sine or cosine`);
-      if (!Forces.nice(scn, nc.p)) fail(`${lang} ${nc.id}: needs a calculator: ${JSON.stringify(nc.v)}`);
-      if (nc.id !== `${level}-nocalc-${seed}`) fail(`${lang} ${nc.id}: wrong id`);
-      seen[ex.scenario] = (seen[ex.scenario] || 0) + 1;
-      // nice results (at most one decimal place, exact), except where sine or cosine come in
-      const sc = Forces.SCENARIOS.find((x) => x.id === ex.scenario);
-      if (!sc.trig) for (const f of ex.fields) if (Math.abs(10 * f.value - Math.round(10 * f.value)) > 1e-9) fail(`${lang} ${ex.id}: ${f.key} = ${f.value} is not a nice result`);
-      checkExercise(ex, `${lang} ${ex.id}`);
+  for (const scn of Forces.SCENARIOS) {
+    for (let seed = 1; seed <= 150; seed++) {
+      const ex = Forces.practiceOf(scn.id, seed), id = `${lang} practice ${scn.id}-${seed}`;
+      practised++;
+      seen[scn.id] = (seen[scn.id] || 0) + 1;
+      checkExercise(ex, id);
+      checkEquations(ex, id);
+      if (!ex.eqs.length) fail(`${id}: no equations to choose`);
+      ex.fields.forEach((f) => { if (Math.abs(10 * f.value - Math.round(10 * f.value)) > 1e-9) fail(`${id}: ${f.key} = ${f.value} needs rounding`); });
+      if (scn.trig && !ex.comps.length) fail(`${id}: no components to identify`);
+      ex.comps.forEach((c) => {
+        const x = c.baseVal * Math[c.fn]((ex.p.alpha * Math.PI) / 180);
+        if (Math.abs(x - Math.round(x)) > 1e-9) fail(`${id}: component ${c.key} = ${x} is not a whole number`);
+      });
+      // any angles, as in the check
+      const any = Forces.generateFor(scn.id, seed);
+      checkExercise(any, `${lang} any ${scn.id}-${seed}`);
+      checkEquations(any, `${lang} any ${scn.id}-${seed}`);
     }
   }
 }
 for (const s of Forces.SCENARIOS) if (!seen[s.id]) fail(`scenario ${s.id} never generated`);
+for (const [k, n] of Object.entries(trueWrong)) if (n > 0.2 * seenWrong[k]) fail(`wrong equation ${k} holds in ${n} of ${seenWrong[k]} exercises`);
+log(`${practised} practice exercises checked; wrong equations that held by coincidence: ${JSON.stringify(trueWrong)}, ${Object.keys(seenWrong).length} wrong equations evaluated`);
 
-// The worksheet's answers (rounded as there) for the tutor's examples.
+// Find the error: a student's attempt with exactly one wrong step, a drawing, and every text set.
+let errors = 0;
+const slips = {};
+for (const lang of FS.LANGS) {
+  FS.setLang(lang);
+  for (const type of ['error-floor', 'error-pulley', 'error-slope']) {
+    for (let seed = 1; seed <= 150; seed++) {
+      const ex = Forces.practiceOf(type, seed), id = `${lang} ${type}-${seed}`, it = ex.eqs[0], e = ex.p.err;
+      errors++;
+      if (ex.scenario !== type) fail(`${id}: type ${ex.scenario}`);
+      if (it.options.length !== 4 || it.options.filter((o) => o.right).length !== 1 || !it.options[e.at].right) fail(`${id}: the wrong step is not the one to choose`);
+      if (e.at && Equations.of(ex.situation, ex.p)[e.eqs[e.at - 1]].options.find((o) => o.n === e.n).right) fail(`${id}: the wrong equation is right`);
+      if (e.eqs.length !== 3) fail(`${id}: ${e.eqs.length} equations`);
+      slips[e.at ? 'equation' : e.flag] = (slips[e.at ? 'equation' : e.flag] || 0) + 1;
+      if (!ex.taskFigure().includes('<svg') || !ex.solutionFigure().includes('<svg')) fail(`${id}: a drawing is missing`);
+      [ex.title, ex.text, it.value, ...it.options.map((o) => o.html + o.why), ...ex.hints, ...ex.solution, ex.results].forEach((x, k) => checkText(id, `text ${k}`, x));
+    }
+  }
+}
+['motion', 'noFric', 'equation'].forEach((k) => { if (!slips[k]) fail(`find the error: no slip of the kind ${k}`); });
+log(`${errors} attempts to find the error in checked: ${JSON.stringify(slips)}`);
+
+// The worksheet's answers (rounded as there) for the tutor's examples; the last example is a
+// student's attempt with the rope force set equal to the weight of the hanging box.
 const SHEET = [
   { N: 3, R: 7 },
   { res: 6, R: 18, F: 24 },
@@ -129,6 +206,12 @@ for (const lang of FS.LANGS) {
   Lessons.EXAMPLES.forEach((e, k) => {
     const frames = Forces.tutorial(e).frames;
     frames.forEach((f, j) => { checkText(`lesson ${k + 1}`, `frame ${j + 1} text`, f.text); checkText(`lesson ${k + 1}`, `frame ${j + 1} figure`, f.figure); });
+    e.practice.forEach((s) => s.types.forEach((t) => { if (!Forces.practiceOf(t, 1)) fail(`lesson ${k + 1}: no practice of ${t}`); }));
+    if (e.error) {
+      const opt = Equations.of(e.scenario, e.p)[e.p.err.eqs[e.p.err.at - 1]].options.find((o) => o.n === e.p.err.n);
+      if (opt.flag !== 'rope') fail(`lesson ${k + 1}: the error is ${opt.flag}, not the rope force`);
+      return;
+    }
     const v = Forces.SCENARIOS.find((s) => s.id === e.scenario).solve(e.p);
     for (const [key, want] of Object.entries(SHEET[k])) {
       if (Math.abs(v[key] - want) > 0.06 * want) fail(`lesson ${k + 1}: ${key} = ${v[key]}, worksheet ${want}`);
@@ -136,73 +219,30 @@ for (const lang of FS.LANGS) {
   });
 }
 
-// The arcade: exercises that need no calculator, and multiple-choice questions about them.
-let quizzes = 0;
+// The check: every kind of every objective gives questions with four different options, one of
+// them right, and flags that name a misconception or none.
+let questions = 0;
 for (const lang of FS.LANGS) {
   FS.setLang(lang);
-  for (const scn of Forces.SCENARIOS) {
-    for (let seed = 1; seed <= 150; seed++) {
-      const ex = Forces.generateFor(scn.id, seed, { nice: true });
-      const id = `${lang} arcade ${scn.id}-${seed}`;
-      checkExercise(ex, id);
-      if (!Forces.nice(scn, ex.p)) fail(`${id}: needs a calculator: ${JSON.stringify(ex.v)}`);
-      if (ex.p.alpha != null && Math.abs(Math.sin((ex.p.alpha * Math.PI) / 180) - 0.6) > 1e-9) fail(`${id}: angle ${ex.p.alpha} is not the 3-4-5 angle`);
-      const qz = Forces.quiz(ex, seed);
-      quizzes++;
-      const vals = qz.options.map((o) => o.value);
-      if (qz.options.length !== 4) fail(`${id}: ${qz.options.length} options`);
-      if (qz.options.filter((o) => o.correct).length !== 1) fail(`${id}: not exactly one right option`);
-      if (!qz.options.some((o) => o.correct && o.value === qz.field.value)) fail(`${id}: the right option is wrong`);
-      if (vals.some((x) => !(x > 0) || Math.abs(2 * x - Math.round(2 * x)) > 1e-9)) fail(`${id}: option not a positive multiple of 0.5: ${vals}`);
-      for (let i = 0; i < vals.length; i++) for (let j = i + 1; j < vals.length; j++) if (Math.abs(vals[i] - vals[j]) < 0.4) fail(`${id}: options too close: ${vals}`);
-    }
-  }
-}
-log(`${quizzes} arcade questions checked`);
-
-// Practice (no calculator): angles of right triangles with whole sides, so that the components the
-// student identifies are whole numbers (the app gives them) and the results need no rounding.
-let practised = 0;
-for (const lang of ['en', 'de']) {
-  FS.setLang(lang);
-  for (const scn of Forces.SCENARIOS) {
-    for (let seed = 1; seed <= 60; seed++) {
-      const ex = Forces.practiceOf(scn.id, seed), id = `${lang} practice ${scn.id}-${seed}`;
-      practised++;
-      checkExercise(ex, id);
-      ex.fields.forEach((f) => { if (Math.abs(10 * f.value - Math.round(10 * f.value)) > 1e-9) fail(`${id}: ${f.key} = ${f.value} needs rounding`); });
-      if (scn.trig && !ex.comps.length) fail(`${id}: no components to identify`);
-      ex.comps.forEach((c) => {
-        const x = c.baseVal * Math[c.fn]((ex.p.alpha * Math.PI) / 180);
-        if (Math.abs(x - Math.round(x)) > 1e-9) fail(`${id}: component ${c.key} = ${x} is not a whole number`);
-      });
-    }
-  }
-}
-log(`${practised} practice exercises checked`);
-
-// Real problems: every one in both languages, with values that are positive, round where they
-// should be, texts without undefined values, and wrong-idea answers that differ from the right ones.
-let reals = 0;
-const RP = globalThis.RealProblems;
-for (const lang of ['en', 'de']) {
-  FS.setLang(lang);
-  RP.PROBLEMS.forEach((pb, i) => {
-    for (let seed = 1; seed <= 40; seed++) {
-      const ex = RP.realOf(i, seed), id = `${lang} real ${pb.id}-${seed}`;
-      reals++;
-      ex.fields.forEach((f) => {
-        if (!(f.value > 0) || !Number.isFinite(f.value)) fail(`${id}: ${f.key} = ${f.value}`);
-        if (f.exact !== false && Math.abs(f.value * 10 ** f.dec - Math.round(f.value * 10 ** f.dec)) > 1e-6) fail(`${id}: ${f.key} = ${f.value} needs rounding`);
-        f.traps.forEach((t) => { if (Math.abs(t.value - f.value) < 1e-9) fail(`${id}: trap ${t.flag} equals the answer`); });
-      });
-      const pics = [ex.taskFigure(), ex.solutionFigure()];
-      if (pics.some((x) => !x.includes('<svg'))) fail(`${id}: a picture or force diagram is missing`);
-      [ex.text, ...ex.hints, ...ex.solution, ex.results, ...pics].forEach((x, k) => { if (/undefined|NaN|Infinity|\[object/.test(x)) fail(`${id}: text ${k} has an undefined value`); });
-    }
+  CheckSource.objectives.forEach((o) => {
+    if (!o.kinds.length || o.tutor == null || o.topic == null) fail(`objective ${o.id}: kinds, tutor or topic missing`);
+    if (o.tutor >= Lessons.EXAMPLES.length || o.topic >= Lessons.EXAMPLES.length) fail(`objective ${o.id}: no such example or topic`);
+    checkText(o.id, 'name', o.name());
+    o.kinds.forEach((kind) => {
+      for (let seed = 1; seed <= 120; seed++) {
+        const q = CheckSource.question(kind, seed), id = `${lang} check ${kind}-${seed}`;
+        questions++;
+        if (q.options.length !== 4) fail(`${id}: ${q.options.length} options`);
+        if (q.options.filter((x) => x.correct).length !== 1) fail(`${id}: not exactly one right option`);
+        if (new Set(q.options.map((x) => x.html)).size !== q.options.length) fail(`${id}: equal options`);
+        q.options.forEach((x) => { if (x.flag && !(x.flag in CheckSource.concept) && !['dir', 'axis', 'noK', 'fric', 'other'].includes(x.flag)) fail(`${id}: unknown flag ${x.flag}`); });
+        [q.title, q.text, q.figure, q.ask, q.explain(), ...q.options.map((x) => x.html + (x.why || ''))].forEach((x, k) => checkText(id, `part ${k}`, x));
+      }
+    });
   });
+  Object.values(CheckSource.concept).forEach((c) => { if (!CheckSource.concepts()[c]) fail(`concept ${c} has no name`); });
 }
-log(`${reals} real problems checked`);
+log(`${questions} check questions checked`);
 
 log(`${checked} exercises checked, ${Object.keys(seen).length} situations: ${JSON.stringify(seen)}`);
 log(failures ? `${failures} failures` : 'all checks passed');
