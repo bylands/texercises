@@ -1,0 +1,30 @@
+{
+  "title": "Matter waves – problems from learningphysics",
+  "description": "Story problems with realistic numbers from the former Problems tab of the learningphysics.ch app Matter waves.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "matter wave",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "matter-waves-01-football"
+    },
+    {
+      "exercise": "matter-waves-02-davisson-germer"
+    },
+    {
+      "exercise": "matter-waves-03-electron-microscope"
+    },
+    {
+      "exercise": "matter-waves-04-neutron-diffraction"
+    },
+    {
+      "exercise": "matter-waves-05-scanning-tunnelling-microscope"
+    },
+    {
+      "exercise": "matter-waves-06-alpha-decay"
+    }
+  ]
+}

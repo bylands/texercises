@@ -1,0 +1,46 @@
+{
+  "title": "Resistor circuits – problems from learningphysics",
+  "description": "Story problems on series and parallel circuits (V = R I) from the Problems tab of the learningphysics app Resistor Circuit Trainer.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "circuit",
+    "current",
+    "parallel",
+    "resistor",
+    "series",
+    "voltage"
+  ],
+  "items": [
+    {
+      "exercise": "circuit-trainer-01-led-resistor"
+    },
+    {
+      "exercise": "circuit-trainer-02-live-wire"
+    },
+    {
+      "exercise": "circuit-trainer-03-extension-cable"
+    },
+    {
+      "exercise": "circuit-trainer-04-fairy-lights"
+    },
+    {
+      "exercise": "circuit-trainer-05-car-lights"
+    },
+    {
+      "exercise": "circuit-trainer-06-kitchen-fuse"
+    },
+    {
+      "exercise": "circuit-trainer-07-hair-dryer"
+    },
+    {
+      "exercise": "circuit-trainer-08-temperature-sensor"
+    },
+    {
+      "exercise": "circuit-trainer-09-internal-resistance"
+    },
+    {
+      "exercise": "circuit-trainer-10-ammeter-voltmeter"
+    }
+  ]
+}

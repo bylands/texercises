@@ -1,0 +1,24 @@
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw (0,0) to[battery1, invert, l={$V_0 = \VzO$}] (0,2.5)
+   to[R, l={$R$}] (3,2.5)
+   to[leD, l={LED, $V_\mathrm{L} = \VLO$}] (6,2.5)
+   to[short, i={$I = \IO$}] (6,0) -- (0,0);
+\end{circuitikz}
+\end{center}
+
+\begin{abcliste}
+\abc LED and resistor are in series: the same current flows through both, and their voltages add up to the battery voltage, $V_0 = V_\mathrm{L} + V_R$. Hence
+\begin{align}
+ V_R &= \VRF \\
+   &= \VzO - \VLO \\
+   &= \result{\VRP{0}{2}}
+\end{align}
+
+\abc The same current $I$ flows through the resistor as through the LED:
+\begin{align}
+ R &= \frac{V_R}{I} = \RF \\
+   &= \frac{\VR}{\I} \\
+   &= \R \approx \result{\RP{0}{2}}
+\end{align}
+\end{abcliste}

@@ -1,0 +1,19 @@
+{
+  "title": "A Long Extension Cable",
+  "note": "from learningphysics, Resistor Circuit Trainer, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 2,
+  "default_points": 0,
+  "tags": [
+    "current",
+    "resistor",
+    "series",
+    "voltage",
+    "voltage divider"
+  ],
+  "subbranches": [
+    "Circuits"
+  ],
+  "youtube": ""
+}

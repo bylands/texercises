@@ -1,0 +1,18 @@
+{
+  "title": "An Electron Gun",
+  "note": "from learningphysics, Electric Potential, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 2,
+  "default_points": 0,
+  "tags": [
+    "acceleration voltage",
+    "electron",
+    "kinetic energy",
+    "relativity"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

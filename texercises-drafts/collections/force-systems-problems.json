@@ -1,0 +1,49 @@
+{
+  "title": "Kräftesysteme – Aufgaben aus learningphysics",
+  "description": "Die Alltagsaufgaben (Problems) der App Kräftesysteme von learningphysics.ch: Aktionsprinzip, Reibung, schiefe Ebene, Seile und Rollen. Rechne mit g = 10 m/s².",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "aktionsprinzip",
+    "newtonsche gesetze",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "force-systems-01-waage-im-lift"
+    },
+    {
+      "exercise": "force-systems-02-hafenkran"
+    },
+    {
+      "exercise": "force-systems-03-kiste-auf-lastwagen"
+    },
+    {
+      "exercise": "force-systems-04-notbremsung"
+    },
+    {
+      "exercise": "force-systems-05-abschleppen"
+    },
+    {
+      "exercise": "force-systems-06-gueterzug"
+    },
+    {
+      "exercise": "force-systems-07-fallschirmspringerin"
+    },
+    {
+      "exercise": "force-systems-08-raketenstart"
+    },
+    {
+      "exercise": "force-systems-09-parkhausrampe"
+    },
+    {
+      "exercise": "force-systems-10-skipiste"
+    },
+    {
+      "exercise": "force-systems-11-schlitten-ziehen"
+    },
+    {
+      "exercise": "force-systems-12-lift-gegengewicht"
+    }
+  ]
+}

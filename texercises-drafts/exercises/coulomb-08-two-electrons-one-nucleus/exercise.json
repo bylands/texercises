@@ -1,0 +1,18 @@
+{
+  "title": "Two Electrons, One Nucleus",
+  "note": "from learningphysics, Coulomb Force, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 4,
+  "default_points": 0,
+  "tags": [
+    "atom",
+    "coulomb law",
+    "electrostatic",
+    "superposition"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

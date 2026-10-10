@@ -1,0 +1,43 @@
+{
+  "title": "Energieerhaltung – Aufgaben aus learningphysics",
+  "description": "Die Alltagsaufgaben (Problems) der App Energieerhaltung von learningphysics.ch: Lageenergie, kinetische Energie und Spannenergie. Rechne mit g = 10 m/s².",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "energieerhaltungssatz",
+    "energie",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "energy-conservation-01-crashtest"
+    },
+    {
+      "exercise": "energy-conservation-02-springbrunnen"
+    },
+    {
+      "exercise": "energy-conservation-03-achterbahn"
+    },
+    {
+      "exercise": "energy-conservation-04-stabhochsprung"
+    },
+    {
+      "exercise": "energy-conservation-05-durch-ein-tal"
+    },
+    {
+      "exercise": "energy-conservation-06-skispringen"
+    },
+    {
+      "exercise": "energy-conservation-07-seilschaukel"
+    },
+    {
+      "exercise": "energy-conservation-08-steinschleuder"
+    },
+    {
+      "exercise": "energy-conservation-09-flipperkasten"
+    },
+    {
+      "exercise": "energy-conservation-10-trampolin"
+    }
+  ]
+}

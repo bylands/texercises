@@ -1,0 +1,38 @@
+\begin{abcliste}
+\abc Let $I_\mathrm{m}$ be the current at the end of the scale and $R_\mathrm{m}$ the resistance of the coil. Then
+\begin{align}
+ V_\mathrm{m} &= \VmF \\
+   &= \Rm\times\Ic \\
+   &= \result{\VmP{-3}{2}}
+\end{align}
+
+\abc
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw (-1.5,0) to[short, i={$I = \IaO$}] (0,0) -- (0,1) to[R, l={$R_\mathrm{m}$}, i={$I_\mathrm{m}$}] (3,1) -- (3,0) -- (4,0);
+ \draw (0,0) -- (0,-1) to[R, l_={$R_\mathrm{P}$}] (3,-1) -- (3,0);
+ \fill (0,0) circle (2pt) (3,0) circle (2pt);
+\end{circuitikz}
+\end{center}
+Let $I$ be the largest current to measure. The resistor $R_\mathrm{P}$ in parallel is at the same voltage $V_\mathrm{m}$ as the meter and carries the rest of the current, $I - I_\mathrm{m}$:
+\begin{align}
+ R_\mathrm{P} &= \RpF \\
+   &= \frac{\Rm\times\Ic}{\Ia-\Ic} \\
+   &= \result{\RpP{0}{2}}
+\end{align}
+
+\abc
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw (-1.5,0) to[short, i={$I_\mathrm{m}$}] (0,0) to[R, l={$R_\mathrm{m}$}] (2.5,0) to[R, l={$R_\mathrm{S}$}] (5,0) -- (6,0);
+ \draw[<->, red] (0,-0.8) -- node[below] {$V = \VmaxO$} (5,-0.8);
+\end{circuitikz}
+\end{center}
+Let $V$ be the largest voltage to measure. In series, this voltage must drive just $I_\mathrm{m}$ through meter and resistor together, so together they need the resistance $V/I_\mathrm{m}$:
+\begin{align}
+ R_\mathrm{S} &= \RsF \\
+   &= \frac{\Vmax}{\Ic}-\Rm \\
+   &= \result{\RsP{0}{4}}
+\end{align}
+(Here four digits are kept to show the effect of $R_\mathrm{m}$.) An ammeter must have a small resistance, a voltmeter a large one.
+\end{abcliste}

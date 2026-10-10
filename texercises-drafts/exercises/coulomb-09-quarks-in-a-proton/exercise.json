@@ -1,0 +1,19 @@
+{
+  "title": "Quarks in a Proton",
+  "note": "from learningphysics, Coulomb Force, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 4,
+  "default_points": 0,
+  "tags": [
+    "coulomb law",
+    "electrostatic",
+    "quark",
+    "superposition",
+    "vector"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

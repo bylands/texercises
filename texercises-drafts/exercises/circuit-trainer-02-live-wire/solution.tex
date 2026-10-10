@@ -1,0 +1,27 @@
+\begin{center}
+\begin{circuitikz}[european resistors]
+ \draw (0,0) to[sV, l={$V = \VO$}] (0,2.5)
+   to[R, l={$R_\mathrm{B} = \RbO$}] (3.5,2.5)
+   to[R, l={$R_\mathrm{S}$}] (7,2.5)
+   to[short, i={$I$}] (7,0) -- (0,0);
+\end{circuitikz}
+\end{center}
+
+Body and shoes (with the ground) are in series: their resistances $R_\mathrm{B}$ and $R_\mathrm{S}$ add up.
+
+\begin{abcliste}
+\abc With dry shoes,
+\begin{align}
+ I_1 &= \IaF \\
+   &= \frac{\V}{\Rb + \Rs} \\
+   &= \result{\IaP{-3}{2}}
+\end{align}
+
+\abc Barefoot on wet grass, with the much smaller resistance of the wet ground,
+\begin{align}
+ I_2 &= \IbF \\
+   &= \frac{\V}{\Rb + \Rw} \\
+   &= \result{\IbP{-3}{2}}
+\end{align}
+The current is $\ratioF = \ratioP{0}{2}$ times larger, and deadly: dry, insulating shoes protect.
+\end{abcliste}

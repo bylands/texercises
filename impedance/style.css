@@ -119,7 +119,3 @@ svg .axis .sub { font-size: 10px; }
   .opts span { min-width: 0; padding-inline: 8px; }
   .field .sym { grid-column: auto; text-align: right; margin-top: 0; }
 }
-
-/* arcade: the curve in manim's blue, the tangent in its gold */
-#arcade { --zc: #58c4dd; --tan: #f0ac5f; --grid: #1c1c1c; --grid-major: #333; }
-#arcade .ar-opt { font-size: 1.2rem; }

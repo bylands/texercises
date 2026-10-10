@@ -1,0 +1,19 @@
+{
+  "title": "A Magnet Falls through a Coil",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 0,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "electromagnetic induction",
+    "induced emf",
+    "magnetic flux",
+    "faraday law",
+    "voltage"
+  ],
+  "subbranches": [
+    "Magnetism"
+  ],
+  "youtube": ""
+}

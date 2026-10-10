@@ -1,0 +1,8 @@
+\NewQty{LB}{4}[\meter]
+\NewQty{mB}{10}[\kg]
+\NewQty{mE}{20}[\kg]
+\NewQty{xE}{1.5}[\meter]
+\NewQty{g}{10}[\mpss]
+
+\SolQty{Fh}[\frac{m\,g\cdot\frac{\ell}{2}+M\,g\cdot(\ell-x)}{\ell}]{(\mBX*\gX*\LBX/2+\mEX*\gX*(\LBX-\xEX))/\LBX}[\newton]
+\SolQty{Fv}[m\,g+M\,g-F_\mathrm{h}]{(\mBX+\mEX)*\gX-\FhX}[\newton]

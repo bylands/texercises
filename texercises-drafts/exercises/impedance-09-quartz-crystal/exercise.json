@@ -1,0 +1,19 @@
+{
+  "title": "A Quartz Crystal",
+  "note": "from learningphysics, Impedance Curves, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 5,
+  "default_points": 0,
+  "tags": [
+    "ac circuit",
+    "capacitance",
+    "impedance",
+    "inductance",
+    "resonance"
+  ],
+  "subbranches": [
+    "Circuits"
+  ],
+  "youtube": ""
+}

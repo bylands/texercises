@@ -1,0 +1,31 @@
+{
+  "title": "Wave propagation – problems from learningphysics",
+  "description": "Story problems with realistic numbers from the former Problems tab of the learningphysics.ch app Wave propagation.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "wave",
+    "propagation",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "wave-propagation-01-stadium-wave"
+    },
+    {
+      "exercise": "wave-propagation-02-rope-wall-ring"
+    },
+    {
+      "exercise": "wave-propagation-03-cable-fault"
+    },
+    {
+      "exercise": "wave-propagation-04-harbour-wall"
+    },
+    {
+      "exercise": "wave-propagation-05-slinky-pulses"
+    },
+    {
+      "exercise": "wave-propagation-06-stop-and-go-wave"
+    }
+  ]
+}

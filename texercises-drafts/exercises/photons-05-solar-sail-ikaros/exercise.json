@@ -1,0 +1,19 @@
+{
+  "title": "The Solar Sail IKAROS",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "photon",
+    "radiation pressure",
+    "momentum",
+    "intensity",
+    "solar sail"
+  ],
+  "subbranches": [
+    "quantum physics"
+  ],
+  "youtube": ""
+}

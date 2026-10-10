@@ -1,6 +1,7 @@
 """Tests of the hub admin: run with `python3 hub-admin/test_hubadmin.py`.
 
-Checks the reading of the hub page, the cleaning of a configuration and of sets, the names a set
+Checks the reading of the hub page, the cleaning of a configuration and of sets (with learning
+objectives, and those saved before there were objectives), the names a set
 may have (and that no app or set clashes with a service nginx passes on), the atomic write, the password (in the crossword app's format) and sessions, and the
 service end to end: login, rate limit, the API with and without a session, and that saves reach
 apps.json and sets.json.
@@ -59,33 +60,60 @@ class Unit(unittest.TestCase):
         self.assertIn("taken", H.set_name_problem("folder", ids, lambda n: n == "folder"))
 
     def test_normalize_sets(self):
-        apps = [{"id": "coe", "modes": ["tutor", "practice", "real", "arcade"]}, {"id": "rl", "modes": ["tutor", "practice", "arcade"]}]
+        apps = [{"id": "coe", "modes": ["tutor", "practice", "check"]}, {"id": "rl", "modes": ["tutor", "check"]}]
         out = H.normalize_sets({"sets": {
             "3a": {"title": " Klasse <b>3a</b>\n ", "apps": [
-                {"id": "rl", "modes": ["arcade", "real", "tutor", "x"], "tutor": [2, 0, 2, -1, True, "1"], "practice": ["a+b", "a+b", "a b", "c"]},
+                {"id": "rl", "modes": ["check", "practice", "tutor", "x"], "objectives": ["keep", "keep", "a b", "<x>", 3, "after"]},
                 {"id": "nope", "modes": ["tutor"]},
-                {"id": "coe", "modes": ["practice"], "tutor": [1], "practice": []},  # no stage: practice goes, nothing left
+                {"id": "coe", "modes": ["check"], "objectives": []},  # none: all of them
                 {"id": "rl", "modes": ["tutor"]},  # twice
             ]},
-            "4b": {"apps": [{"id": "coe", "modes": ["tutor", "real"], "tutor": []}, "junk"]},
+            "4b": {"apps": [{"id": "coe", "modes": [], "objectives": ["forms"]}, "junk"]},  # no mode: left out
             "5c": "junk",
         }}, apps)
         self.assertEqual(out, {"sets": {
-            "3a": {"title": "Klasse b3a/b", "apps": [{"id": "rl", "modes": ["tutor", "arcade"], "tutor": [0, 2], "practice": ["a+b", "c"]}]},
-            "4b": {"title": "", "apps": [{"id": "coe", "modes": ["real"]}]},  # no example: the tutor goes
+            "3a": {"title": "Klasse b3a/b", "apps": [{"id": "rl", "modes": ["tutor", "check"], "objectives": ["keep", "after"]}, {"id": "coe", "modes": ["check"]}]},
+            "4b": {"title": "", "apps": []},
             "5c": {"title": "", "apps": []},
         }})
-        # the stages stay with the arcade alone, the examples only with the tutor
-        one = H.normalize_set_app({"id": "coe", "modes": ["arcade"], "tutor": [1], "practice": ["a"]}, {a["id"]: a for a in apps})
-        self.assertEqual(one, {"id": "coe", "modes": ["arcade"], "practice": ["a"]})
-        keys = ["series:easy", "gravity/rank-launch+force/ramp", "pickinv-RL-series+pickinv-RC-series"]  # as in the apps
-        self.assertEqual(H.normalize_set_app({"id": "coe", "modes": ["practice"], "practice": keys + ["<x>", "a b", "x" * 1001]}, {a["id"]: a for a in apps})["practice"], keys)
         self.assertEqual(H.normalize_sets(None, apps), {"sets": {}})
         with self.assertRaises(ValueError):
             H.normalize_sets({"sets": {"coe": {}}}, apps)
         self.assertEqual(H.normalize_sets({"sets": {"coe": {}, "ok": {}}}, apps, strict=False), {"sets": {"ok": {"title": "", "apps": []}}})
         with self.assertRaises(ValueError):
             H.normalize_sets({"sets": {f"s{i}": {} for i in range(H.MAX_SETS + 1)}}, apps)
+
+    def test_set_objectives(self):
+        # with the app's objectives known (objectives.json): in its order, unknown ones dropped,
+        # all of them or none left is no list (all)
+        apps = {"coe": {"id": "coe", "modes": ["tutor", "practice", "check"], "objectives": ["forms", "balance", "path"]}}
+        one = lambda o: H.normalize_set_app({"id": "coe", "modes": ["tutor", "check"], "objectives": o}, apps)
+        self.assertEqual(one(["path", "forms", "gone"]), {"id": "coe", "modes": ["tutor", "check"], "objectives": ["forms", "path"]})
+        self.assertEqual(one(["path", "balance", "forms"]), {"id": "coe", "modes": ["tutor", "check"]})
+        self.assertEqual(one(["gone"]), {"id": "coe", "modes": ["tutor", "check"]})
+        self.assertEqual(len(H.normalize_set_app({"id": "coe", "modes": ["check"], "objectives": [f"o{i}" for i in range(99)]}, {"coe": {"modes": ["check"]}})["objectives"]), H.MAX_OBJECTIVES)
+        # objectives replace the examples and stages of a set saved before
+        self.assertEqual(H.normalize_set_app({"id": "coe", "modes": ["tutor", "practice"], "objectives": ["path"], "tutor": [1], "practice": ["a"]}, apps),
+                         {"id": "coe", "modes": ["tutor", "practice"], "objectives": ["path"]})
+
+    def test_sets_saved_before(self):
+        # sets saved before there were objectives: their examples and stages stay (the apps still
+        # apply them), the arcade is now the check and the problems are now practice
+        apps = {"coe": {"id": "coe", "modes": ["tutor", "practice", "check"]}, "rl": {"id": "rl", "modes": ["tutor", "practice", "check"]}}
+        old = {"sets": {"3a": {"title": "3a", "apps": [
+            {"id": "rl", "modes": ["arcade", "real", "tutor", "x"], "tutor": [2, 0, 2, -1, True, "1"], "practice": ["a+b", "a+b", "a b", "c"]},
+            {"id": "coe", "modes": ["practice"], "tutor": [1], "practice": []},  # no stage: practice goes, nothing left
+            {"id": "coe", "modes": ["arcade"], "tutor": [1], "practice": ["a"]},  # the check, without the stages
+        ]}, "4b": {"apps": [{"id": "coe", "modes": ["tutor", "real"], "tutor": []}]}}}
+        self.assertEqual(H.normalize_sets(old, list(apps.values()), strict=False), {"sets": {
+            "3a": {"title": "3a", "apps": [{"id": "rl", "modes": ["tutor", "practice", "check"], "tutor": [0, 2], "practice": ["a+b", "c"]}, {"id": "coe", "modes": ["check"]}]},
+            "4b": {"title": "", "apps": [{"id": "coe", "modes": ["practice"]}]},  # no example: the tutor goes
+        }})
+        # the stages stay with practice alone, the examples only with the tutor
+        self.assertEqual(H.normalize_set_app({"id": "coe", "modes": ["arcade"], "tutor": [1], "practice": ["a"]}, apps), {"id": "coe", "modes": ["check"]})
+        self.assertEqual(H.normalize_set_app({"id": "coe", "modes": ["real"], "tutor": [1], "practice": ["a"]}, apps), {"id": "coe", "modes": ["practice"], "practice": ["a"]})
+        keys = ["series:easy", "gravity/rank-launch+force/ramp", "pickinv-RL-series+pickinv-RC-series"]  # as in the apps
+        self.assertEqual(H.normalize_set_app({"id": "coe", "modes": ["practice"], "practice": keys + ["<x>", "a b", "x" * 1001]}, apps)["practice"], keys)
 
     def test_names_do_not_clash(self):
         # the services nginx passes on (games, quizzes, the admin panel): an app deployed at the
@@ -275,6 +303,29 @@ class Service(unittest.TestCase):
         st, headers, _ = self.req("/", cookie=cookie)
         self.assertIn("frame-src 'self'", headers["Content-Security-Policy"])
         self.assertEqual(self.req("/static/sets.js")[0], 200)
+
+    def test_sets_with_objectives(self):
+        st, headers, _ = self.login()
+        cookie = headers["Set-Cookie"].split(";")[0]
+        # a set saved before there were objectives, on disk: read as it is now (arcade: the check)
+        old = {"sets": {"3a": {"title": "3a", "apps": [{"id": "electric-field", "modes": ["tutor", "arcade"], "tutor": [0, 3], "practice": ["force-dir"]}]}}}
+        H.write_config(self.sets, old)
+        data = json.loads(self.req("/api/sets", cookie=cookie)[2])
+        self.assertEqual(data["sets"]["3a"]["apps"], [{"id": "electric-field", "modes": ["tutor", "check"], "tutor": [0, 3]}])
+        self.assertNotIn("objectives", data["apps"][0])  # no objectives.json next to the hub page
+        # with objectives.json (as deployed next to the hub page), the apps carry their objectives' ids
+        (Path(self.dir.name) / "objectives.json").write_text((ROOT / "hub" / "objectives.json").read_text())
+        data = json.loads(self.req("/api/sets", cookie=cookie)[2])
+        ef = next(a for a in data["apps"] if a["id"] == "electric-field")
+        self.assertEqual(ef["objectives"], ["sketch", "read", "dipole", "equi", "error"])
+        new = {"sets": {"3a": {"title": "3a", "apps": [
+            {"id": "electric-field", "modes": ["tutor", "practice", "check"], "objectives": ["read", "nope", "sketch"], "tutor": [0, 3]},
+            {"id": "photons", "modes": ["check"], "objectives": ["wave", "einstein", "threshold", "rate"]}]}}}  # all: no list
+        st, _, body = self.req("/api/sets", json.dumps(new).encode(), "application/json", cookie)
+        self.assertEqual(st, 200)
+        self.assertEqual(json.loads(self.sets.read_text())["sets"]["3a"]["apps"], [
+            {"id": "electric-field", "modes": ["tutor", "practice", "check"], "objectives": ["sketch", "read"]},
+            {"id": "photons", "modes": ["check"]}])
 
     def test_rate_limit(self):
         for _ in range(H.LOGIN_ATTEMPTS):

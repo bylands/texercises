@@ -1,0 +1,19 @@
+{
+  "title": "Davisson and Germer, 1927",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 2,
+  "default_points": 0,
+  "tags": [
+    "de broglie",
+    "matter wave",
+    "electron",
+    "acceleration voltage",
+    "diffraction"
+  ],
+  "subbranches": [
+    "quantum physics"
+  ],
+  "youtube": ""
+}

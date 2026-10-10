@@ -1,0 +1,33 @@
+{
+  "title": "Electric field – problems from learningphysics",
+  "description": "Story problems on the electric field in the lab, in nature and in technology (Millikan, inkjet printer, thundercloud, car struck by lightning, electrostatic precipitator, laser printer, jet of water) from the Problems tab of the learningphysics app Electric Field.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "electric field",
+    "electrostatic"
+  ],
+  "items": [
+    {
+      "exercise": "electric-field-01-millikan-oil-drop"
+    },
+    {
+      "exercise": "electric-field-02-inkjet-printer"
+    },
+    {
+      "exercise": "electric-field-03-thundercloud"
+    },
+    {
+      "exercise": "electric-field-04-lightning-strikes-a-car"
+    },
+    {
+      "exercise": "electric-field-05-electrostatic-precipitator"
+    },
+    {
+      "exercise": "electric-field-06-laser-printer"
+    },
+    {
+      "exercise": "electric-field-07-bent-jet-of-water"
+    }
+  ]
+}

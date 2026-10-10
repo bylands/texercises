@@ -1,0 +1,19 @@
+{
+  "title": "A Wireless Charger",
+  "note": "from learningphysics, Impedance Curves, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 4,
+  "default_points": 0,
+  "tags": [
+    "ac circuit",
+    "impedance",
+    "inductance",
+    "resonance",
+    "series resonant circuit"
+  ],
+  "subbranches": [
+    "Circuits"
+  ],
+  "youtube": ""
+}

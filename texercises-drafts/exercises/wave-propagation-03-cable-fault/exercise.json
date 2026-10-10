@@ -1,0 +1,19 @@
+{
+  "title": "Finding a Break in a Cable",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "propagation",
+    "reflection",
+    "echo",
+    "fixed end",
+    "free end"
+  ],
+  "subbranches": [
+    "Mechanical Waves"
+  ],
+  "youtube": ""
+}

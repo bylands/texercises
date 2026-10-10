@@ -1,0 +1,19 @@
+{
+  "title": "Neutrons Look into a Crystal",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "de broglie",
+    "matter wave",
+    "neutron",
+    "bragg condition",
+    "diffraction"
+  ],
+  "subbranches": [
+    "quantum physics"
+  ],
+  "youtube": ""
+}

@@ -1,0 +1,8 @@
+\NewQty{Ic}{1.0}[\milli\ampere][e-3][\ampere]
+\NewQty{Rm}{49}[\ohm]
+\NewQty{Ia}{50}[\milli\ampere][e-3][\ampere]
+\NewQty{Vmax}{10}[\volt]
+
+\SolQty{Vm}[R_\mathrm{m}\,I_\mathrm{m}]{\RmX*\IcX}[\volt]
+\SolQty{Rp}[\frac{R_\mathrm{m}\,I_\mathrm{m}}{I-I_\mathrm{m}}]{\RmX*\IcX/(\IaX-\IcX)}[\ohm]
+\SolQty{Rs}[\frac{V}{I_\mathrm{m}}-R_\mathrm{m}]{\VmaxX/\IcX-\RmX}[\ohm]

@@ -1,0 +1,8 @@
+\NewQty{V}{230}[\volt]
+\NewQty{Rb}{1.0}[\kilo\ohm][e3][\ohm]
+\NewQty{Rs}{45}[\kilo\ohm][e3][\ohm]
+\NewQty{Rw}{1.3}[\kilo\ohm][e3][\ohm]
+
+\SolQty{Ia}[\frac{V}{R_\mathrm{B}+R_{\mathrm{S},1}}]{\VX/(\RbX+\RsX)}[\ampere]
+\SolQty{Ib}[\frac{V}{R_\mathrm{B}+R_{\mathrm{S},2}}]{\VX/(\RbX+\RwX)}[\ampere]
+\SolQty{ratio}[\frac{I_2}{I_1}]{\IbX/\IaX}

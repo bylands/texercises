@@ -1,0 +1,9 @@
+\NewQty{U}{200}[\kilo\volt][e3][\volt]
+
+\SolQty{Ek}[e\,U]{\UX}[\electronvolt]
+\SolQty{Ez}[m_e c^2]{\ncmeX*\nccX^2/\nceX}[\electronvolt]
+\SolQty{gm}[1+\frac{E_\mathrm{kin}}{E_0}]{1+\EkX/\EzX}
+\SolQty{bt}[\sqrt{1-\frac{1}{\gamma^2}}]{sqrt(1-1/\gmX^2)}
+\SolQty{bc}[\sqrt{\frac{2E_\mathrm{kin}}{E_0}}]{sqrt(2*\EkX/\EzX)}
+\SolQty{ratio}[\frac{E_\mathrm{kin}}{E_0}]{\EkX/\EzX}
+\ConvTo{pct}{100}{ratio}{\percent}

@@ -1,0 +1,20 @@
+{
+  "title": "Alpha Decay: Escape by Tunnelling",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "de broglie",
+    "alpha particle",
+    "tunnel effect",
+    "half-life",
+    "potential barrier"
+  ],
+  "subbranches": [
+    "quantum physics",
+    "nuclear and particle physics"
+  ],
+  "youtube": ""
+}

@@ -1,0 +1,19 @@
+{
+  "title": "A Baby Bouncer",
+  "note": "from learningphysics.ch (Problems)",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "learningphysics",
+    "maximum velocity",
+    "oscillation",
+    "oscillation energy",
+    "simple harmonic motion"
+  ],
+  "subbranches": [
+    "Harmonic Oscillations"
+  ],
+  "youtube": ""
+}

@@ -53,8 +53,8 @@ def main() -> int:
             path = path.split("?", 1)[0].split("#", 1)[0]
             if path in ("/", "/index.html"):
                 return str(REPO / "hub" / "index.html")
-            if path == "/lang.js":
-                return str(REPO / "hub" / "lang.js")
+            if path in ("/lang.js", "/objectives.json"):
+                return str(REPO / "hub" / path[1:])
             if path in ("/apps.json", "/sets.json"):
                 return str(data / path[1:])
             m = re.match(r"^/([a-z0-9-]+)(/.*)?$", path)

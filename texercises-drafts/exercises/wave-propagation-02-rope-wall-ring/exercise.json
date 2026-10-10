@@ -1,0 +1,19 @@
+{
+  "title": "A Rope on a Wall or a Ring",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 2,
+  "default_points": 0,
+  "tags": [
+    "propagation",
+    "reflection",
+    "fixed end",
+    "free end",
+    "pulse"
+  ],
+  "subbranches": [
+    "Mechanical Waves"
+  ],
+  "youtube": ""
+}

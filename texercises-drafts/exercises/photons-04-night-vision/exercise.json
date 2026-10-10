@@ -1,0 +1,19 @@
+{
+  "title": "A Night-Vision Device",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "photoelectric effect",
+    "work function",
+    "threshold wavelength",
+    "kinetic energy",
+    "infrared"
+  ],
+  "subbranches": [
+    "quantum physics"
+  ],
+  "youtube": ""
+}

@@ -1,0 +1,21 @@
+{
+  "title": "An Earthquake",
+  "note": "from learningphysics.ch (Problems)",
+  "language": "ENG",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "amplitude",
+    "graph",
+    "learningphysics",
+    "maximum acceleration",
+    "oscillation",
+    "period",
+    "simple harmonic motion"
+  ],
+  "subbranches": [
+    "Harmonic Oscillations"
+  ],
+  "youtube": ""
+}

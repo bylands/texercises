@@ -1,0 +1,8 @@
+\NewQty{Cz}{4.0}[\pico\farad][e-12][\farad]
+\NewQty{fs}{4.0}[\mega\hertz][e6][\hertz]
+
+% read from the graph
+\NewQty{df}{7.5}[\kilo\hertz][e3][\hertz]
+
+\SolQty{Ca}[\frac{2 C_0\,(f_p-f_s)}{f_s}]{2*\CzX*\dfX/\fsX}[\farad]
+\SolQty{La}[\frac{1}{(2\pi f_s)^2 C_1}]{1/((2*pi*\fsX)^2*\CaX)}[\henry]

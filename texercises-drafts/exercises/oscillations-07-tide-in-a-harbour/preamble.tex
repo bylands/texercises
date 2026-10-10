@@ -1,0 +1,11 @@
+\NewQty{dH}{5}[\meter]
+\NewQty*{T}{12.4}[\hour][3600][\second]
+\NewQty{hb}{1}[\meter]
+
+\SolQty{A}[\frac{\Delta h}{2}]{\dHX/2}[\meter]
+\SolQty{yb}[h_1-A]{\hbX-\AX}[\meter]
+\SolQty{om}[\frac{2\pi}{T}]{2*pi/\TX}[\per\second]
+\SolQty{t}[\frac{1}{\omega}\arccos\frac{y_1}{A}]{acos(\ybX/\AX)/\omX}[\second]
+\ConvTo{tH}{1/3600}{t}{\hour}
+\SolQty{vmax}[A\,\omega]{\AX*\omX}[\mps]
+\ConvTo{vmh}{3600}{vmax}{\meter\per\hour}

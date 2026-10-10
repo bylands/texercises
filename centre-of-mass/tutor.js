@@ -8,8 +8,9 @@
 // An example may say what its practice covers (also: HTML, shown under its idea); with
 // helpers.practise(i), the last frame of each example has a button to practise example i's topic
 // (on the last example, the final button does that).
-// In a set of the teacher's (sets.js), only the set's examples are shown (keeping their numbers),
-// and without practice in the set, there is no button to practise and the last example ends there.
+// In a set of the teacher's (sets.js), only the set's examples are shown (keeping their numbers):
+// those of its learning objectives (or, in a set saved before, those it lists); without practice in
+// the set, there is no button to practise and the last example ends there.
 (function (root) {
   'use strict';
 
@@ -27,8 +28,12 @@
     const S = root.LPSets;
     if (S) S.register('tutor', { names: () => examples.map((e) => e.name) });
     // the examples shown, in order, and whether the tutor leads on to practice
-    let only = S && S.tutor() ? S.tutor().filter((i) => i >= 0 && i < examples.length).sort((a, b) => a - b) : null;
-    if (only && !only.length) only = null;
+    let only = null;
+    const limit = () => {
+      only = S && S.tutor() ? S.tutor().filter((i) => i >= 0 && i < examples.length).sort((a, b) => a - b) : null;
+      if (only && !only.length) only = null;
+    };
+    limit();
     const list = () => only || examples.map((_, i) => i);
     const lastEx = () => list()[list().length - 1];
     const toPractice = !S || S.mode('practice');
@@ -86,6 +91,8 @@
         <label><input type="radio" name="example" value="${i}"${i === ex ? ' checked' : ''}><span>${i + 1} · ${examples[i].name}</span></label>`).join('');
     };
     buttons();
+    // the set's objectives, once the check has said which examples are theirs
+    if (S) S.on(() => { limit(); if (!list().includes(ex)) ex = list()[0]; buttons(); });
     $('#examples').addEventListener('change', (evt) => open(Number(evt.target.value)));
     $('#t-next').addEventListener('click', next);
     if ($('#t-practise')) $('#t-practise').addEventListener('click', () => helpers.practise(ex));

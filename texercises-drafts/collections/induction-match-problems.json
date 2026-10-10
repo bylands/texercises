@@ -1,0 +1,27 @@
+{
+  "title": "Electromagnetic induction – problems from learningphysics",
+  "description": "Story problems from the former Problems tab of the learningphysics.ch app Induction (induction-match).",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "electromagnetic induction",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "induction-match-01-falling-magnet"
+    },
+    {
+      "exercise": "induction-match-02-magnetic-brake"
+    },
+    {
+      "exercise": "induction-match-03-guitar-pickup"
+    },
+    {
+      "exercise": "induction-match-04-induction-hob"
+    },
+    {
+      "exercise": "induction-match-05-bicycle-dynamo"
+    }
+  ]
+}

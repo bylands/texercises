@@ -20,16 +20,22 @@ A set is opened at learningphysics.ch/<name> (nginx serves the hub page for it, 
 only the set's apps; see hub/index.html and shared/sets.js, which applies the set in the apps):
 
     {"sets": {"3a-elektro": {"title": "Klasse 3a", "lang": "de", "apps": [
-        {"id": "electric-field", "modes": ["tutor", "practice", "arcade"],
-         "tutor": [0, 1, 3], "practice": ["force-dir", "lines-pick+lines-read"]}]}}}
+        {"id": "electric-field", "modes": ["tutor", "practice", "check"], "objectives": ["sketch", "read"]}]}}}
 
 The language, if the set fixes it ("en" or "de"; without it, the students choose); the apps in
-the order of the set's page; for each, its modes in the set (of those its hub card
-lists) and, optionally, the worked examples of the tutor (indices) and the stages of practice
-(their exercise types joined with +), which also limit the arcade where its questions are of
-those types; without the list, all of them. The admin panel reads the examples and stages from
-the app itself, loaded with ?outline=1 in a hidden frame. A name is a key like a tag's, and not
-that of an app, of a file or folder in the web root, or of a service (RESERVED).
+the order of the set's page; for each, its modes in the set (of those its hub card lists) and,
+optionally, its learning objectives (their ids): the app then shows only their worked examples,
+offers only their practice topics, and its check asks only them; without the list, all of them.
+The admin panel reads the objectives from the app itself, loaded with ?outline=1 in a hidden
+frame; this service knows their ids from objectives.json next to the hub page (written by
+hub/build-objectives.js), if it is there. A name is a key like a tag's, and not that of an app, of
+a file or folder in the web root, or of a service (RESERVED).
+
+Sets saved before there were objectives list, instead, the worked examples of the tutor
+("tutor": indices) and the stages of practice ("practice": their exercise types joined with +);
+they are kept as they are, and the apps still apply them, until the teacher chooses objectives for
+the app. Their modes "arcade" (a timed game, now the check) and "real" (problems, now practice)
+become "check" and "practice".
 
 The apps and their names come from the hub page itself (its <a class="app" href="/id/"> cards),
 so a new app needs no change here. The password is the crossword app's teacher password: the
@@ -68,13 +74,14 @@ SESSION_DAYS = 30
 MAX_BODY = 256 * 1024
 MAX_TAGS = 8  # per app
 MAX_TAG_LEN = 32
-MODES = ("tutor", "practice", "check", "real", "arcade")
+MODES = ("tutor", "practice", "check")
+OLD_MODES = {"arcade": "check", "real": "practice"}  # in sets saved before: what they are now
 MAX_SETS, MAX_TITLE = 100, 80
-MAX_EXAMPLES, MAX_STAGES = 100, 300  # per app in a set
+MAX_EXAMPLES, MAX_STAGES, MAX_OBJECTIVES = 100, 300, 50  # per app in a set
 # names a set cannot have, besides the apps and what is in the web root: the services and paths
 # nginx serves itself, and some kept free
 RESERVED = {"admin", "api", "apps", "crosswords", "electric-circuits", "hub", "hub-admin", "hub-data", "index", "katex",
-            "lang", "millionaire", "privacy", "set", "sets", "static", "www"}
+            "lang", "millionaire", "objectives", "privacy", "set", "sets", "static", "www"}
 LOGIN_ATTEMPTS, LOGIN_WINDOW = 10, 15 * 60  # failed logins per address and window (s)
 
 
@@ -233,15 +240,37 @@ def set_name_problem(name: object, app_ids: List[str], taken=lambda name: False)
     return None
 
 
+OBJECTIVE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,39}")
+
+
 def normalize_set_app(raw: object, apps: Dict[str, Dict[str, object]]) -> Optional[Dict[str, object]]:
-    """An app of a set, cleaned: its modes (of those the app has, in the order of MODES), and if
-    given, the worked examples (sorted indices; with the tutor only) and the practice stages (keys,
-    in their order; with practice or the arcade only). An empty list leaves the tutor or practice
-    out. None if no mode is left."""
+    """An app of a set, cleaned: its modes (of those the app has, in the order of MODES; the old
+    arcade and problems become check and practice), and if given, its learning objectives (ids,
+    each once, in the app's order where it is known, apps[id]["objectives"]: those the app does not
+    have are dropped, and all of them, or none left, is no list: all). Without objectives, the
+    worked examples (sorted indices; with the tutor only) and practice stages (keys, in their order;
+    with practice only) of a set saved before stay; an empty list of those leaves the tutor or
+    practice out. None if no mode is left."""
     if not isinstance(raw, dict) or raw.get("id") not in apps:
         return None
+    app = apps[raw["id"]]
     want = raw.get("modes") if isinstance(raw.get("modes"), list) else []
-    modes = [m for m in MODES if m in want and m in apps[raw["id"]]["modes"]]
+    want = [OLD_MODES.get(m, m) if isinstance(m, str) else m for m in want]
+    modes = [m for m in MODES if m in want and m in app["modes"]]
+    objectives = raw.get("objectives")
+    if isinstance(objectives, list):
+        objectives = [k for i, k in enumerate(objectives) if isinstance(k, str) and OBJECTIVE.fullmatch(k) and k not in objectives[:i]][:MAX_OBJECTIVES]
+        known = app.get("objectives")
+        if isinstance(known, list) and known:
+            objectives = [k for k in known if k in objectives]
+            if len(objectives) == len(known):
+                objectives = []
+    if not modes:
+        return None
+    out: Dict[str, object] = {"id": raw["id"], "modes": modes}
+    if isinstance(objectives, list) and objectives:
+        out["objectives"] = objectives
+        return out
     tutor, practice = raw.get("tutor"), raw.get("practice")
     if isinstance(tutor, list):
         tutor = sorted({i for i in tutor if isinstance(i, int) and not isinstance(i, bool) and 0 <= i < MAX_EXAMPLES})
@@ -253,10 +282,9 @@ def normalize_set_app(raw: object, apps: Dict[str, Dict[str, object]]) -> Option
             modes.remove("practice")
     if not modes:
         return None
-    out: Dict[str, object] = {"id": raw["id"], "modes": modes}
     if isinstance(tutor, list) and tutor and "tutor" in modes:
         out["tutor"] = tutor
-    if isinstance(practice, list) and practice and ("practice" in modes or "arcade" in modes):
+    if isinstance(practice, list) and practice and "practice" in modes:
         out["practice"] = practice
     return out
 
@@ -362,10 +390,19 @@ class Admin:
         self.failures.setdefault(addr, []).append(time.time())
 
     def apps(self) -> List[Dict[str, object]]:
+        """The hub page's apps, each with the ids of its learning objectives if objectives.json
+        (next to the hub page) knows them."""
         try:
-            return hub_apps(self.hub.read_text(encoding="utf-8"))
+            apps = hub_apps(self.hub.read_text(encoding="utf-8"))
         except OSError:
             return []
+        known = read_config(self.hub.parent / "objectives.json")
+        for a in apps:
+            entry = known.get(a["id"]) if isinstance(known, dict) else None
+            ids = [o.get("id") for o in entry.get("objectives", []) if isinstance(o, dict)] if isinstance(entry, dict) and isinstance(entry.get("objectives"), list) else []
+            if ids and all(isinstance(i, str) for i in ids):
+                a["objectives"] = ids
+        return apps
 
     def current(self) -> Dict[str, object]:
         apps = self.apps()
@@ -595,7 +632,7 @@ def panel_page() -> str:
       <p id="no-tags" class="note" hidden>No tags yet: add one to an app above.</p>
     </section>
     <section id="view-sets" hidden>
-      <p class="lead">A set is a selection of apps for a class, opened at learningphysics.ch/<i>name</i>: the apps you choose, in your order, and in each the modes and, for the tutor and practice, the examples and steps. The apps stay open to everyone at their usual addresses: a set is a view, not a lock.</p>
+      <p class="lead">A set is a selection of apps for a class, opened at learningphysics.ch/<i>name</i>: the apps you choose, in your order, and in each the modes (tutor, practice, check) and the learning objectives. With some objectives chosen, the app shows only their worked examples, offers only their practice topics, and its check asks only them. The apps stay open to everyone at their usual addresses: a set is a view, not a lock.</p>
       <div class="bar">
         <button type="button" id="sets-save" class="primary" disabled>Save</button>
         <span id="sets-status" class="status" aria-live="polite"></span>
@@ -724,6 +761,10 @@ h2.section { font-size: 1.15rem; margin: 28px 0 4px; }
 .tree { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 0.95rem; }
 .tree ul { list-style: none; margin: 0 0 4px; padding-left: 24px; display: grid; gap: 2px; }
 .tree .like { color: var(--muted); font-style: italic; }
+.tree .where { color: var(--muted); font-size: 0.85rem; margin: 0 0 4px 26px; }
+.tree li { margin-bottom: 4px; }
+.tree label { align-items: flex-start; }
+.tree label input { margin-top: 5px; }
 .addapp { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .addapp select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; max-width: 100%; }
 .outline-frame { position: absolute; left: -10000px; top: 0; width: 1024px; height: 768px; border: 0; visibility: hidden; }
@@ -945,15 +986,17 @@ ADMIN_JS = r"""
 SETS_JS = r"""
 // The sets of the admin panel, and the switch between its views (#quizzes, the first, and #games:
 // links to them; #sets; #apps: the order and tags of the apps on the hub page, see admin.js). A set is
-// { title, lang?, apps: [{ id, modes, tutor?, practice? }] } under its name; lang fixes the language
-// ('en', 'de'; without it, the students choose); tutor and practice list the
-// worked examples (indices) and practice stages (keys) shown, all of them without the list. The
-// examples and stages of an app (its outline) come from the app itself, loaded with ?outline=1 in
-// a hidden frame that posts them here.
+// { title, lang?, apps: [{ id, modes, objectives? }] } under its name; lang fixes the language
+// ('en', 'de'; without it, the students choose); objectives lists the learning objectives (ids) of
+// the app in the set, all of them without the list. The objectives of an app, with their worked
+// examples and practice topics (its outline), come from the app itself, loaded with ?outline=1 in a
+// hidden frame that posts them here. An app of a set saved before there were objectives may list
+// worked examples (tutor: indices) and practice stages (practice: keys) instead: they stay until
+// objectives are chosen for it.
 (function () {
   'use strict';
   const $ = (s) => document.querySelector(s);
-  const MODES = { tutor: 'Tutor', practice: 'Practice', check: 'Check', real: 'Problems', arcade: 'Arcade' };
+  const MODES = { tutor: 'Tutor', practice: 'Practice', check: 'Check' };
   const KEY = /^[a-z0-9][a-z0-9-]{0,39}$/, MAX_TITLE = 80;
   let apps = [], sets = [], sel = -1, dirty = false, loaded = false;
   const outlines = {}; // app id → Promise of its outline
@@ -1069,9 +1112,8 @@ SETS_JS = r"""
       });
       return el('label', {}, box, MODES[m]);
     }));
-    const parts = a.modes.includes('tutor') || a.modes.includes('practice') || a.modes.includes('arcade');
     const det = el('details', { class: 'sections', open: shown.has(key) });
-    det.append(el('summary', {}, `Examples and steps: ${summary(a)}`));
+    det.append(el('summary', {}, `Learning objectives: ${summary(a)}`));
     det.addEventListener('toggle', () => { if (det.open) { shown.add(key); fill(det, a); } else shown.delete(key); });
     if (det.open) fill(det, a);
     return el('li', { class: 'setapp' },
@@ -1084,63 +1126,55 @@ SETS_JS = r"""
           el('button', { type: 'button', class: 'remove', 'aria-label': `Remove ${info.name} from the set`, onclick: () => { s.apps.splice(k, 1); changed(); render(); } }, '×')),
         modes,
         a.modes.length ? '' : el('p', { class: 'note' }, 'No mode chosen: the app is left out when saved.'),
-        parts ? det : ''));
+        a.modes.length ? det : ''));
   }
-  const summary = (a) => [
-    a.modes.includes('tutor') ? `tutor ${a.tutor ? `${a.tutor.length} chosen` : 'all'}` : '',
-    a.modes.includes('practice') || a.modes.includes('arcade') ? `steps ${a.practice ? `${a.practice.length} chosen` : 'all'}` : '',
-  ].filter(Boolean).join(', ');
+  // an app of a set saved before there were objectives: its worked examples and steps
+  const before = (a) => !a.objectives && (Array.isArray(a.tutor) || Array.isArray(a.practice));
+  function summary(a) {
+    const n = (appOf(a.id).objectives || []).length;
+    if (a.objectives) return `${a.objectives.length}${n ? ` of ${n}` : ''} chosen`;
+    if (before(a)) return 'examples and steps chosen before there were objectives';
+    return n ? `all ${n}` : 'all';
+  }
 
-  // the examples and stages to tick, once the app's outline is there
+  // the objectives to tick, once the app's outline is there
   function fill(det, a) {
-    const body = el('div', {}, el('p', { class: 'note' }, 'Loading the examples and steps of the app…'));
+    const body = el('div', {}, el('p', { class: 'note' }, 'Loading the learning objectives of the app…'));
     det.querySelectorAll('summary ~ *').forEach((x) => x.remove());
     det.append(body);
     outline(a.id).then((o) => {
-      const parts = [];
-      const redo = () => { det.querySelector('summary').textContent = `Examples and steps: ${summary(a)}`; changed(); };
-      if (a.modes.includes('tutor') && o.tutor.length) {
-        const all = o.tutor.map((_, i) => i);
-        const on = (i) => !a.tutor || a.tutor.includes(i);
-        parts.push(el('h4', {}, 'Tutor: worked examples'), el('ul', { class: 'tree' }, ...o.tutor.map((n, i) => {
-          const box = el('input', { type: 'checkbox', checked: on(i) });
-          box.addEventListener('change', () => {
-            const list = all.filter((j) => (j === i ? box.checked : on(j)));
-            if (list.length === all.length) delete a.tutor; else a.tutor = list;
-            redo();
-          });
-          return el('li', {}, el('label', {}, box, `${i + 1} · ${n}`));
-        })));
-        if (a.tutor && !a.tutor.length) parts.push(el('p', { class: 'note' }, 'No example chosen: the tutor is left out when saved.'));
+      if (!o.objectives || !o.objectives.length) {
+        body.replaceChildren(el('p', { class: 'note' }, 'This app has no learning objectives to choose.'));
+        return;
       }
-      if ((a.modes.includes('practice') || a.modes.includes('arcade')) && o.topics.length) {
-        const keys = [...new Set(o.topics.flatMap((t) => t.stages.map((s) => s.key)))];
-        const on = (k) => !a.practice || a.practice.includes(k);
-        const set = (pairs) => { // [[key, on]]
-          const want = new Map(pairs);
-          const list = keys.filter((k) => (want.has(k) ? want.get(k) : on(k)));
-          if (list.length === keys.length) delete a.practice; else a.practice = list;
-          redo();
+      const all = o.objectives.map((x) => x.id);
+      // a set saved before: the objectives whose worked example or practice topic it had chosen
+      const topicOn = (t) => !!o.topics[t] && o.topics[t].stages.some((st) => a.practice.includes(st.key));
+      const oldOn = (x) => (Array.isArray(a.tutor) && a.tutor.includes(x.tutor)) || (Array.isArray(a.practice) && topicOn(x.topic));
+      const on = (x) => (a.objectives ? a.objectives.includes(x.id) : before(a) ? oldOn(x) : true);
+      const where = (x) => [
+        x.tutor != null && o.tutor[x.tutor] ? `worked example ${x.tutor + 1}: ${o.tutor[x.tutor]}` : '',
+        x.topic != null && o.topics[x.topic] ? `practice: ${o.topics[x.topic].name}` : '',
+      ].filter(Boolean).join(' · ');
+      const ticked = o.objectives.filter(on).length;
+      const parts = [el('ul', { class: 'tree' }, ...o.objectives.map((x) => {
+        // at least one stays ticked: none would be the same as all
+        const box = el('input', { type: 'checkbox', checked: on(x), disabled: on(x) && ticked === 1 });
+        box.addEventListener('change', () => {
+          const list = o.objectives.filter((y) => (y === x ? box.checked : on(y))).map((y) => y.id);
+          if (list.length === all.length) delete a.objectives; else a.objectives = list;
+          delete a.tutor; delete a.practice; // the choice of a set saved before goes
+          det.querySelector('summary').textContent = `Learning objectives: ${summary(a)}`;
+          changed();
           fill(det, a);
-        };
-        parts.push(el('h4', {}, 'Practice: topics and their steps'), el('ul', { class: 'tree' }, ...o.topics.map((t, ti) => {
-          const n = t.stages.filter((s) => on(s.key)).length;
-          const top = el('input', { type: 'checkbox', checked: n === t.stages.length });
-          top.indeterminate = n > 0 && n < t.stages.length;
-          top.addEventListener('change', () => set(t.stages.map((s) => [s.key, top.checked])));
-          return el('li', {}, el('label', {}, top, `${ti + 1} · ${t.name}`),
-            t.stages.length > 1 || t.stages[0].name ? el('ul', {}, ...t.stages.map((s, si) => {
-              const box = el('input', { type: 'checkbox', checked: on(s.key) });
-              box.addEventListener('change', () => set([[s.key, box.checked]]));
-              return el('li', {}, el('label', {}, box, `${si + 1} · `, s.name ? s.name : el('span', { class: 'like' }, 'like the example')));
-            })) : '');
-        })));
-        if (a.practice && !a.practice.length) parts.push(el('p', { class: 'note' }, 'No step chosen: practice is left out when saved, and the arcade asks everything.'));
-        else if (a.modes.includes('arcade')) parts.push(el('p', { class: 'note' }, 'The arcade asks only about the chosen steps where its questions are of the same types as the steps (in some apps, its questions go by difficulty instead and are all asked).'));
-      }
-      body.replaceChildren(...(parts.length ? parts : [el('p', { class: 'note' }, 'Nothing to choose here: this app has no examples or steps for the chosen modes.')]));
+        });
+        return el('li', {}, el('label', {}, box, x.name), where(x) ? el('div', { class: 'where' }, where(x)) : '');
+      }))];
+      parts.push(el('p', { class: 'note' }, 'The app shows the worked examples of the objectives ticked, offers practice in their topics, and its check asks only them.'));
+      if (before(a)) parts.push(el('p', { class: 'note' }, 'This app was put in the set before there were objectives: it still shows the worked examples and steps chosen then (ticked here: the objectives they belong to). Ticking objectives replaces that choice.'));
+      body.replaceChildren(...parts);
     }).catch(() => {
-      body.replaceChildren(el('p', { class: 'error' }, 'Could not load the examples and steps of this app.'),
+      body.replaceChildren(el('p', { class: 'error' }, 'Could not load the learning objectives of this app.'),
         el('button', { type: 'button', onclick: () => fill(det, a) }, 'Try again'));
     });
   }

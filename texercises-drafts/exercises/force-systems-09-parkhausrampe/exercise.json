@@ -1,0 +1,22 @@
+{
+  "title": "Auf der Rampe geparkt",
+  "note": "aus learningphysics.ch (Problems)",
+  "language": "GER",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "aktionsprinzip",
+    "haftreibung",
+    "hangabtriebskraft",
+    "kraft",
+    "learningphysics",
+    "newtonsche gesetze",
+    "normalkraft",
+    "schiefe ebene"
+  ],
+  "subbranches": [
+    "Dynamics"
+  ],
+  "youtube": ""
+}

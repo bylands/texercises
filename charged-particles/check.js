@@ -4,7 +4,10 @@
 // feedback until the end. The result names, per objective, whether it is mastered, not yet, or
 // which typical wrong idea (misconception) showed up, with links to the worked example and the
 // practice of that objective. Below it, every question with the answer chosen and, on request,
-// the explanation. The last result is kept in the browser (nothing leaves it).
+// the explanation. The last result is kept in the browser (nothing leaves it), as { at, results:
+// { objective id: status } } under `${src.id}-check`; the hub page reads it too (how many
+// objectives of a module the student masters, see hub/build-objectives.js). In a set of the
+// teacher's (sets.js), the check asks only the set's objectives, and the others keep their result.
 //
 // The app supplies the objectives and the questions, in the current language (see lang.js):
 //   src.id                    a short name, for the last result in storage
@@ -72,9 +75,9 @@
   const T = {
     en: {
       start: 'Check',
-      tag: (n, m) => `${n} questions on the ${m} learning objectives below. No time limit and no hints; one answer each. At the end you see which objectives you already master.`,
+      tag: (n, m) => `${n} questions on ${m === 1 ? 'the learning objective' : `the ${m} learning objectives`} below. No time limit and no hints; one answer each. At the end you see which objectives you already master.`,
       objectives: 'You can …',
-      last: (k, m) => `Your last check: ${k} of ${m} objectives mastered.`,
+      last: (k, m) => `Your last check: ${k} of ${m} ${m === 1 ? 'objective' : 'objectives'} mastered.`,
       go: 'Start the check', skip: "I don't know", quit: 'End the check', again: 'Check again',
       count: (i, n) => `Question ${i} of ${n}`,
       result: 'Your result', resultNote: 'Mastered means at least three quarters of the questions on an objective right.',
@@ -89,9 +92,9 @@
     },
     de: {
       start: 'Check',
-      tag: (n, m) => `${n} Fragen zu den ${m} Lernzielen unten. Keine Zeitbegrenzung und keine Tipps; eine Antwort pro Frage. Am Schluss siehst du, welche Lernziele du schon beherrschst.`,
+      tag: (n, m) => `${n} Fragen ${m === 1 ? 'zum Lernziel' : `zu den ${m} Lernzielen`} unten. Keine Zeitbegrenzung und keine Tipps; eine Antwort pro Frage. Am Schluss siehst du, welche Lernziele du schon beherrschst.`,
       objectives: 'Du kannst …',
-      last: (k, m) => `Dein letzter Check: ${k} von ${m} Lernzielen beherrscht.`,
+      last: (k, m) => `Dein letzter Check: ${k} von ${m} ${m === 1 ? 'Lernziel' : 'Lernzielen'} beherrscht.`,
       go: 'Check starten', skip: 'Weiss ich nicht', quit: 'Check beenden', again: 'Nochmals prüfen',
       count: (i, n) => `Frage ${i} von ${n}`,
       result: 'Dein Resultat', resultNote: 'Beherrscht heisst: mindestens drei Viertel der Fragen zu einem Lernziel richtig.',
@@ -112,7 +115,12 @@
     const key = `${src.id}-check`;
     // run: { plan, at (index of the question shown), items: [{ objective, kind, seed, chosen, ok, flag }], over }
     let run = null;
-    const objectives = () => src.objectives;
+    // in a set of the teacher's (sets.js), only the set's objectives
+    const S = root.LPSets;
+    if (S) S.register('check', src);
+    const objectives = () => { const only = S && S.objectives(); return only ? src.objectives.filter((o) => only.includes(o.id)) : src.objectives; };
+    // the links to the worked example and to practice, if the set has those modes
+    const hasMode = (m) => !S || S.mode(m);
     const per = () => perObjective(objectives().length);
     const total = () => per() * objectives().length;
     const show = (part) => { ['start', 'play', 'summary'].forEach((k) => { $(`#ck-${k}`).hidden = k !== part; }); };
@@ -186,7 +194,8 @@
       if (!run || run.over) return;
       run.over = true;
       const res = grade(objectives(), run.items, src.concept);
-      const results = {};
+      // the objectives not asked (in a set that leaves them out) keep their last result
+      const last = h.stored(key, null), results = last && last.results && typeof last.results === 'object' ? { ...last.results } : {};
       objectives().forEach((o, i) => { results[o.id] = res[i].status; });
       h.store(key, { at: Date.now(), results });
       summary();
@@ -201,7 +210,7 @@
       $('#ck-sum-objectives').innerHTML = objectives().map((o, i) => {
         const r = res[i];
         const ideas = r.ideas.length ? `<div class="ideas">${r.ideas.map((c) => esc(names[c])).join('; ')}</div>` : '';
-        const links = r.status === 'mastered' ? '' : `<div class="actions">${o.tutor != null ? `<button type="button" data-tutor="${o.tutor}">${X.worked(o.tutor + 1)}</button>` : ''}${o.topic != null ? `<button type="button" class="new-btn" data-topic="${o.topic}">${X.practise}</button>` : ''}</div>`;
+        const links = r.status === 'mastered' ? '' : `<div class="actions">${o.tutor != null && hasMode('tutor') ? `<button type="button" data-tutor="${o.tutor}">${X.worked(o.tutor + 1)}</button>` : ''}${o.topic != null && hasMode('practice') ? `<button type="button" class="new-btn" data-topic="${o.topic}">${X.practise}</button>` : ''}</div>`;
         return `<li class="${r.status}"><div class="head"><span class="mark">${mark[r.status]}</span><span class="name">${esc(o.name())}</span></div>` +
           `<div class="verdict">${X[r.status]} · ${X.score(r.right, r.total)}</div>${ideas}${links}</li>`;
       }).join('');

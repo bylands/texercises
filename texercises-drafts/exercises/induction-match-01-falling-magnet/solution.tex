@@ -1,0 +1,14 @@
+\begin{abcliste}
+\abc While the magnet comes in, the flux through the coil increases: a negative voltage. While it leaves, the flux decreases again: a positive voltage. The magnet has sped up by then, so the flux changes faster: the second pulse is higher and shorter.
+\begin{center}
+\begin{tikzpicture}[>=latex, x=1.1cm, y=0.8cm]
+ \draw[->] (0,0) -- (7.3,0) node[right] {$t$};
+ \draw[->] (0,-1.8) -- (0,2.6) node[above] {$U_\text{ind}$};
+ \draw[very thick, blue, domain=0:7, samples=200] plot (\x, {-1.3*exp(-((\x-3)/0.7)^2) + 2.02*exp(-((\x-5)/0.45)^2)});
+\end{tikzpicture}
+\end{center}
+
+\abc The magnet falls faster and faster: $\result{\text{it is faster when it leaves the coil}}$ than when it comes in, so the flux decreases faster than it increased. (Both poles of a bar magnet are equally strong, and by Lenz's rule the induced current opposes the change; neither explains the higher pulse.)
+
+\abc The area under a voltage pulse is the change of the flux (with the opposite sign): $\int U\,\mathrm{d}t = -\Delta\Phi$. The flux rises from 0 to its largest value and falls back to 0, by the same amount. The two areas are therefore $\result{\text{equal in size}}$.
+\end{abcliste}

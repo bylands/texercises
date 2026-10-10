@@ -1,0 +1,17 @@
+{
+  "title": "A Laser Printer",
+  "note": "from learningphysics, Electric Field, Problems tab",
+  "language": "ENG",
+  "type": 0,
+  "default_difficulty": 2,
+  "default_points": 0,
+  "tags": [
+    "charge",
+    "electric force",
+    "electrostatic"
+  ],
+  "subbranches": [
+    "Electrostatics"
+  ],
+  "youtube": ""
+}

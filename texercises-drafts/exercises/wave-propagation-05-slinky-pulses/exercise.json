@@ -1,0 +1,19 @@
+{
+  "title": "Two Pulses on a Slinky",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "superposition",
+    "pulse",
+    "propagation",
+    "energy",
+    "spring"
+  ],
+  "subbranches": [
+    "Mechanical Waves"
+  ],
+  "youtube": ""
+}

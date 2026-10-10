@@ -18,6 +18,8 @@
       --line: #d9d6ce;
       --accent: #2b59c3;
       --glow: #ffc21a;
+      --ok: #1d7a3e;
+      --bad: #b3261e;
       --serif: "STIX Two Text", Cambria, "Times New Roman", serif;
       color-scheme: light;
     }
@@ -31,6 +33,8 @@
         --line: #3a3e44;
         --accent: #7aa2ff;
         --glow: #ffd23f;
+        --ok: #7fd49a;
+        --bad: #ff8a80;
         color-scheme: dark;
       }
     }
@@ -285,6 +289,24 @@
     .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px !important; font-size: 0.9rem; }
     .legend span { display: inline-flex; align-items: center; gap: 5px; }
     .legend svg { color: var(--accent); }
+    /* the learning objectives of an app (/objectives.json, from the apps' checks), folded under a
+       short line, and how many the student masters after a check (the apps keep the last result in
+       this browser) */
+    .goals { margin: 10px 0 0; font-size: 0.85rem; color: var(--muted); }
+    .goals summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; cursor: pointer; width: fit-content; list-style: none; }
+    .goals summary::-webkit-details-marker { display: none; }
+    .goals summary::before { content: "▸"; font-size: 0.75rem; transition: transform 0.15s; }
+    .goals[open] summary::before { transform: rotate(90deg); }
+    .goals summary:hover .count { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+    .goals summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+    .goals .badge { border-radius: 999px; padding: 0 8px; font-size: 0.78rem; font-weight: 600; border: 1px solid var(--line); color: var(--ink); }
+    .goals .badge.all { border-color: var(--ok); color: var(--ok); }
+    .goals ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; color: var(--ink); }
+    .goals li { display: grid; grid-template-columns: 1.1em 1fr; gap: 4px; line-height: 1.35; }
+    .goals li .mark { font-weight: 700; color: var(--muted); }
+    .goals li.mastered .mark { color: var(--ok); }
+    .goals li.notyet .mark, .goals li.misconception .mark { color: var(--bad); }
+
     .app .tags {
       display: flex;
       flex-wrap: wrap;
@@ -849,7 +871,7 @@
     // { order: [app], tags: { app: [key] }, labels: { key: { en, de } } }. Without it, the cards
     // stay as they are in this page. The filters by mode and by tag, and the tags on the cards, show
     // only while the filter icon is open. The chosen modes and tags are kept in the address
-    // (?mode=real,arcade&topic=key,key: the cards with any of the modes and any of the tags), so
+    // (?mode=tutor,check&topic=key,key: the cards with any of the modes and any of the tags), so
     // that a filtered page can be shared in either language; it then opens with the filters shown.
     // The search matches the name of an app or of one of its tags, in English or German. The order
     // is the standard one (the admin panel's) or, if chosen, the most recently used apps first
@@ -859,6 +881,10 @@
     // its title, and only its apps, in its order, with its modes; they link to /app/?set=name, and
     // the set is remembered for the tab (sessionStorage lp-set) so that the apps apply it at once
     // (see shared/sets.js). No filters there. The page at / leaves any set.
+    // Each card lists the module's learning objectives (/objectives.json, read from the apps by
+    // hub/build-objectives.js; on a set's page, those of the set), folded under a short line, and,
+    // once the student has taken the module's check, how many of them they master: the apps keep the
+    // last result in this browser (localStorage `${check}-check`, see shared/check.js).
     (function () {
       const main = document.querySelector('main.apps'), nav = document.getElementById('filter');
       const cards = [...main.querySelectorAll('a.app')];
@@ -905,13 +931,11 @@
         'motion-graphs': ['Steigungen in Bewegungsdiagrammen', 'Geschwindigkeit als Steigung von s(t), negative Geschwindigkeiten und das Skizzieren von v(t) aus s(t) und a(t) aus v(t).', 'Ein Ort-Zeit-Diagramm, das steigt und fällt, mit einem Steigungsdreieck, und seine Geschwindigkeit: eine fallende Gerade, die null kreuzt'],
         'motion-areas': ['Flächen unter Bewegungsdiagrammen', 'Die Verschiebung als Fläche unter v(t), unter der Achse negativ: wer weiter weg ist, mittlere Geschwindigkeit, und das Skizzieren von s(t) aus v(t) und v(t) aus a(t).', 'Ein Geschwindigkeitsdiagramm, das unter null fällt, mit schraffierter Fläche darunter, und der Ort: Er steigt, dann fällt er'],
       };
-      // the modes of the apps: worked examples, practice, a check of the learning objectives, problems from everyday life, a timed game
+      // the modes of the apps: worked examples, practice, a check of the learning objectives
       const MODES = {
         tutor: { en: 'Tutor: worked examples', de: 'Tutor: Beispiele Schritt für Schritt', icon: '<path d="M12 6.5C10 5 7 4.6 4 5v13c3-.4 6 0 8 1.5 2-1.5 5-1.9 8-1.5V5c-3-.4-6 0-8 1.5zM12 6.5v13"/>' },
         practice: { en: 'Practice: exercises with hints', de: 'Üben: Aufgaben mit Tipps', icon: '<path d="M5 19l1-4.5L15.5 5l3.5 3.5L9.5 18 5 19zM13.5 7l3.5 3.5"/>' },
         check: { en: 'Check: which objectives you master', de: 'Check: welche Lernziele du beherrschst', icon: '<path d="M9 4.5h6M9 4.5a1.5 1.5 0 0 0 0 3h6a1.5 1.5 0 0 0 0-3M9 6H6.5A1.5 1.5 0 0 0 5 7.5v11A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-11A1.5 1.5 0 0 0 17.5 6H15M8.5 13.5l2.5 2.5 4.5-5"/>' },
-        real: { en: 'Problems: from everyday life', de: 'Praxisaufgaben: aus dem Alltag', icon: '<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.4 2.3 3.5 5 3.5 8s-1.1 5.7-3.5 8c-2.4-2.3-3.5-5-3.5-8s1.1-5.7 3.5-8z"/>' },
-        arcade: { en: 'Arcade: a timed game', de: 'Arcade: ein Spiel auf Zeit', icon: '<path d="M7.5 8h9a4.5 4.5 0 0 1 4.5 4.5v1a3 3 0 0 1-5.5 1.7L14.5 14h-5l-1 1.2A3 3 0 0 1 3 13.5v-1A4.5 4.5 0 0 1 7.5 8zM8 10v3.4M6.3 11.7h3.4"/><circle cx="15.5" cy="11" r="0.6"/><circle cx="17.5" cy="13" r="0.6"/>' },
       };
       const modeName = (m) => MODES[m][Lang.get()] || MODES[m].en;
       const icon = (m) => `<svg viewBox="0 0 24 24" aria-hidden="true">${MODES[m].icon}</svg>`;
@@ -930,6 +954,57 @@
         modeNav.replaceChildren(...chips(['', ...Object.keys(MODES)], (m) => (m ? icon(m) + modeName(m).split(':')[0] : L('All', 'Alle')), 'mode', modesOn));
       }
       const modesOf = (c) => (c.dataset.modes || '').split(' ');
+
+      // the learning objectives on the cards, and how many the student masters
+      let objectives = null; // /objectives.json, once loaded
+      const setApps = new Map(); // on a set's page: its apps (id → { modes, objectives? })
+      const opened = new Set(); // the cards whose objectives are unfolded
+      const MARK = { mastered: '✓', notyet: '✗', misconception: '!' };
+      const STATUS = {
+        mastered: ['Mastered', 'Beherrscht'], notyet: ['Not yet', 'Noch nicht'], misconception: ['Not yet: a typical wrong idea', 'Noch nicht: eine typische Fehlvorstellung'],
+      };
+      const lastCheck = (key) => { try { const v = JSON.parse(localStorage.getItem(`${key}-check`)); return v && v.results && typeof v.results === 'object' ? v.results : {}; } catch (e) { return {}; } };
+      function goalsOf(c) {
+        const d = objectives && objectives[idOf(c)];
+        if (!d || !Array.isArray(d.objectives)) return null;
+        const only = setApps.get(idOf(c)), ids = only && Array.isArray(only.objectives) ? only.objectives : null;
+        const list = d.objectives.filter((o) => !ids || ids.includes(o.id));
+        // (a set that names none of them does not limit the app: all, as there)
+        return d.objectives.length ? { check: d.check, list: list.length ? list : d.objectives } : null;
+      }
+      function goals() {
+        cards.forEach((c) => {
+          c.querySelectorAll('details.goals').forEach((d) => d.remove());
+          const g = goalsOf(c);
+          if (!g) return;
+          const results = lastCheck(g.check), de = Lang.get() === 'de';
+          const known = g.list.filter((o) => results[o.id]), k = known.filter((o) => results[o.id] === 'mastered').length, n = g.list.length;
+          const det = document.createElement('details');
+          det.className = 'goals';
+          det.open = opened.has(idOf(c));
+          const count = n === 1 ? L('1 learning objective', '1 Lernziel') : L(`${n} learning objectives`, `${n} Lernziele`);
+          const badge = known.length ? `<span class="badge${k === n ? ' all' : ''}">${L(`${k} of ${n} mastered`, `${k} von ${n} beherrscht`)}</span>` : '';
+          det.innerHTML = `<summary><span class="count">${count}</span>${badge}</summary><ul>${g.list.map((o) => {
+            const st = results[o.id], title = st && STATUS[st] ? STATUS[st][de ? 1 : 0] : '';
+            return `<li${st && MARK[st] ? ` class="${st}"` : ''}><span class="mark"${title ? ` title="${title}" aria-label="${title}"` : ''}>${st && MARK[st] ? MARK[st] : '·'}</span><span>${esc(de ? o.de : o.en)}</span></li>`;
+          }).join('')}</ul>`;
+          // the card is a link: unfolding must not open the app
+          det.querySelector('summary').addEventListener('click', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            det.open = !det.open;
+            if (det.open) opened.add(idOf(c)); else opened.delete(idOf(c));
+          });
+          (c.querySelector('ul.modes') || c.querySelector('.text p')).after(det);
+        });
+      }
+      // a check taken in another tab, or in an app and back here
+      window.addEventListener('storage', (evt) => { if (!evt.key || /-check$/.test(evt.key)) goals(); });
+      window.addEventListener('pageshow', (evt) => { if (evt.persisted) goals(); });
+      fetch('/objectives.json', { cache: 'no-cache' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && typeof d === 'object') { objectives = d; goals(); } })
+        .catch(() => { /* no objectives: the cards without them */ });
 
       // the buttons of a filter: '' is All (no filter), the others toggle a key in the set on
       function chips(keys, label, kind, on) {
@@ -974,6 +1049,7 @@
           h.textContent = t[0]; p.textContent = t[1]; svg.setAttribute('aria-label', t[2]);
         });
         modes();
+        goals();
         show();
       }
 
@@ -1090,11 +1166,14 @@
         const byId = new Map(cards.map((c) => [idOf(c), c]));
         const list = (s && Array.isArray(s.apps) ? s.apps : []).filter((a, i, all) => a && byId.has(a.id) && all.findIndex((b) => b && b.id === a.id) === i);
         set = s ? s : false;
+        setApps.clear();
+        list.forEach((a) => setApps.set(a.id, a));
         cards.forEach((c) => c.remove());
         cards.splice(0, cards.length, ...list.map((a) => byId.get(a.id)));
         list.forEach((a) => {
           const c = byId.get(a.id);
-          c.dataset.modes = (Array.isArray(a.modes) ? a.modes : []).join(' ');
+          // (in a set saved before, the arcade is now the check, and the problems are now practice)
+          c.dataset.modes = [...new Set((Array.isArray(a.modes) ? a.modes : []).map((m) => ({ arcade: 'check', real: 'practice' })[m] || m))].join(' ');
           c.href = `/${a.id}/?set=${setName}`;
           main.append(c);
         });

@@ -1,0 +1,10 @@
+\NewQty{Lp}{2.5}[\henry]
+\NewQty{Rp}{8.0}[\kilo\ohm][e3][\ohm]
+\NewQty{cp}{100}[\pico\farad\per\meter][e-12][\farad\per\meter]
+\NewQty{Cw}{100}[\pico\farad][e-12][\farad]
+
+% read from the graph
+\NewQty{fz}{4.1}[\kilo\hertz][e3][\hertz]
+
+\SolQty{C}[\frac{1}{(2\pi f_0)^2 L}]{1/((2*pi*\fzX)^2*\LpX)}[\farad]
+\SolQty{lc}[\frac{C-C_\mathrm{w}}{c'}]{(\CX-\CwX)/\cpX}[\meter]

@@ -1,0 +1,19 @@
+{
+  "title": "A Short Circuit between Two Cables",
+  "note": "learningphysics.ch, Problems tab",
+  "language": "ENG",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "magnetic force",
+    "parallel currents",
+    "magnetic field",
+    "short circuit",
+    "force per length"
+  ],
+  "subbranches": [
+    "Magnetism"
+  ],
+  "youtube": ""
+}

@@ -1,0 +1,33 @@
+{
+  "title": "Electromagnetic waves – problems from learningphysics",
+  "description": "Story problems with realistic numbers from the former Problems tab of the learningphysics.ch app Electromagnetic waves.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "electromagnetic waves",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "em-waves-01-microwave-oven"
+    },
+    {
+      "exercise": "em-waves-02-fm-band"
+    },
+    {
+      "exercise": "em-waves-03-phone-mast"
+    },
+    {
+      "exercise": "em-waves-04-power-of-the-sun"
+    },
+    {
+      "exercise": "em-waves-05-mars-rover"
+    },
+    {
+      "exercise": "em-waves-06-polarizing-sunglasses"
+    },
+    {
+      "exercise": "em-waves-07-wifi-antennas"
+    }
+  ]
+}
