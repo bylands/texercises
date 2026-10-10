@@ -4,6 +4,26 @@ Die Rampe ist ein rechtwinkliges Dreieck: $\ell = \lR$ entlang der Rampe, $h = \
 \end{align}
 Für den Neigungswinkel $\alpha$ gilt damit $\sin\alpha = h/\ell$ und $\cos\alpha = b/\ell$.
 
+\begin{center}
+\begin{tikzpicture}[>=stealth]
+ \draw[fill=gray!8] (0,0) -- (6.24,0) -- (6.24,1.82) -- cycle;
+ \draw (-0.4,0) -- (6.74,0);
+ \draw (0.9,0) arc (0:16.26:0.9);
+ \node at (1.2,0.17) {$\alpha$};
+ \draw[fill=gray!20] (2.5,0.73) -- (4.42,1.29) -- (4.16,2.15) -- (2.24,1.59) -- cycle;
+ \draw[->, very thick] (3.33,1.44) -- (3.33,-0.76);
+ \fill (3.33,1.44) circle (0.05);
+ \node[right] at (3.33,-0.76) {$\vec F_\mathrm{G}$};
+ \draw[->, very thick] (3.7,1.08) -- (3.1,3.11);
+ \fill (3.7,1.08) circle (0.05);
+ \node[right] at (3.1,3.11) {$\vec F_\mathrm{N}$};
+ \draw[->, very thick] (2.54,0.74) -- (3.14,0.91);
+ \fill (2.54,0.74) circle (0.05);
+ \node at (2.68,0.47) {$\vec F_\mathrm{R}$};
+ \node[font=\small] at (3.1,-1.45) {Kräfte auf das Auto};
+\end{tikzpicture}
+\end{center}
+
 \begin{abcliste}
 \abc
 In Ruhe hält die Haftreibung der Hangabtriebskraft $m\,g\sin\alpha$ das Gleichgewicht, die Normalkraft der Komponente $m\,g\cos\alpha$ in die Rampe hinein:
