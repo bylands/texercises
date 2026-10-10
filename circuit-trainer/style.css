@@ -52,3 +52,6 @@ svg .mark { fill: var(--mark); }
 .k-strong { background: var(--zone-strong); border: 1px solid var(--zone-strong-line); border-radius: 3px; padding: 0 3px; }
 .k-light { background: var(--zone-light); border: 1px dashed var(--zone-light-line); border-radius: 3px; padding: 0 3px; }
 .k-new { background: var(--mark); border-radius: 3px; padding: 0 3px; font-weight: 600; }
+
+/* meters: a circle with A or V */
+svg .meter-l { font-size: 15px; font-weight: 600; fill: var(--ink); }

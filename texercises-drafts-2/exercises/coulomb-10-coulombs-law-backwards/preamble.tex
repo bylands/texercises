@@ -1,0 +1,11 @@
+\NewQty{kC}{9.0e9}[\newton\meter\squared\per\coulomb\squared]
+
+\NewQty{qa}{4}[\micro\coulomb][e-6][\coulomb]
+\NewQty{qb}{5}[\micro\coulomb][e-6][\coulomb]
+\NewQty{Fa}{2.0}[\newton]
+\SolQty{ra}[\sqrt{\frac{k\,|q_1|\,|q_2|}{F}}]{sqrt(\kCX*\qaX*\qbX/\FaX)}[\meter]
+
+\NewQty{qc}{3}[\micro\coulomb][e-6][\coulomb]
+\NewQty{rb}{15}[\centi\meter][e-2][\meter]
+\NewQty{Fb}{7.2}[\newton]
+\SolQty{qx}[\frac{F\,r^2}{k\,|q_1|}]{\FbX*\rbX^2/(\kCX*\qcX)}[\coulomb]

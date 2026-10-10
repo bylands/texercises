@@ -1,0 +1,18 @@
+{
+  "title": "Ein Kranausleger",
+  "note": "aus learningphysics.ch (Üben)",
+  "language": "GER",
+  "type": 1,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "drehmoment",
+    "gleichgewicht",
+    "learningphysics",
+    "seilkraft"
+  ],
+  "subbranches": [
+    "Lever"
+  ],
+  "youtube": ""
+}

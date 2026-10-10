@@ -1,0 +1,20 @@
+{
+  "title": "Electric field – more exercises from learningphysics",
+  "description": "Exercises from the practice generators of the learningphysics app Electric Field that were dropped in the module overhaul: how the field of a point charge, a wire, a plate and a capacitor scales, and two capacitors compared at fixed charge or fixed voltage.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "electric field",
+    "electrostatic",
+    "capacitor",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "electric-field-08-by-what-factor"
+    },
+    {
+      "exercise": "electric-field-09-two-capacitors"
+    }
+  ]
+}

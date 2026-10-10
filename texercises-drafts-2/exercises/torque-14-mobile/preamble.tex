@@ -1,0 +1,10 @@
+\NewQty{mKa}{50}[\gram][e-3][\kg]
+\NewQty{aOb}{10}[\cm][e-2][\meter]
+\NewQty{mKb}{20}[\gram][e-3][\kg]
+\NewQty{bLi}{12}[\cm][e-2][\meter]
+\NewQty{bRe}{8}[\cm][e-2][\meter]
+
+\SolQty{mKc}[\frac{m_2\,b_1}{b_2}]{\mKbX*\bLiX/\bReX}[\kg]
+\ConvTo{mKcg}{1e3}{mKc}{\gram}
+\SolQty{xS}[\frac{m_1\,a_1}{m_2+m_3}]{\mKaX*\aObX/(\mKbX+\mKcX)}[\meter]
+\ConvTo{xScm}{1e2}{xS}{\cm}

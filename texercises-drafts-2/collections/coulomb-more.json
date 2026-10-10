@@ -1,0 +1,17 @@
+{
+  "title": "Coulomb force – more exercises from learningphysics",
+  "description": "Exercises from the practice generators of the learningphysics app Coulomb Force that were dropped in the module overhaul: Coulomb's law solved for the distance or a charge.",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "coulomb law",
+    "electrostatic",
+    "point charge",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "coulomb-10-coulombs-law-backwards"
+    }
+  ]
+}

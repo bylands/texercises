@@ -24,12 +24,19 @@
         'Das Aktionsprinzip für jede Achse aufstellen, nach dem Vorgehen: System, Kräfte, Achsen, Komponenten, Gleichungen, dann auflösen.') },
     { id: 'error', kinds: ['error'], tutor: 6, topic: 6,
       name: () => L('Find the wrong step in a student’s free-body diagram and equations.', 'Den falschen Schritt in den Kräften und Gleichungen einer Schülerin finden.') },
+    { id: 'spring', kinds: ['spring-forces', 'spring-dir', 'spring-law'], tutor: 7, topic: 7,
+      name: () => L('Draw the spring force where the spring is attached, back towards its relaxed length (a stretched spring pulls, a compressed one pushes), find it with F = k Δx and use it in Newton’s second law.',
+        'Die Federkraft dort einzeichnen, wo die Feder befestigt ist, zurück zu ihrer entspannten Länge (eine gedehnte Feder zieht, eine gestauchte drückt), sie mit F = k Δx bestimmen und im Aktionsprinzip verwenden.') },
+    { id: 'drag', kinds: ['drag-forces', 'drag-dir', 'drag-law'], tutor: 8, topic: 8,
+      name: () => L('Draw air resistance against the velocity (not the acceleration), knowing that it grows with speed, and use it in Newton’s second law: at terminal velocity it balances the weight.',
+        'Den Luftwiderstand gegen die Geschwindigkeit (nicht gegen die Beschleunigung) einzeichnen, im Wissen, dass er mit der Geschwindigkeit wächst, und ihn im Aktionsprinzip verwenden: Bei der Endgeschwindigkeit hält er der Gewichtskraft das Gleichgewicht.') },
   ];
 
   // The idea behind each wrong-answer flag.
   const concept = {
     flatN: 'normal', rope: 'rope', motion: 'motion', noFric: 'friction', swap: 'comp', whole: 'comp', noSlope: 'slope',
     internal: 'internal', mass: 'mass', pass: 'pass', balance: 'balance',
+    stretch: 'stretch', hooke: 'hooke', accel: 'accel', terminal: 'terminal', noDrag: 'noDrag',
   };
   const concepts = () => ({
     normal: L('normal force taken equal to the weight', 'Normalkraft gleich Gewichtskraft gesetzt'),
@@ -42,9 +49,17 @@
     mass: L('the mass of another system', 'die Masse eines anderen Systems genommen'),
     pass: L('the whole force passed on', 'die ganze Kraft weitergegeben'),
     balance: L('forces taken as balanced although the box accelerates', 'Kräftegleichgewicht trotz Beschleunigung angenommen'),
+    stretch: L('spring force drawn along the stretch instead of back towards the relaxed length', 'Federkraft in Richtung der Dehnung statt zurück zur entspannten Länge eingezeichnet'),
+    hooke: L('law of the spring F = k Δx misapplied', 'Federgesetz F = k Δx falsch angewandt'),
+    accel: L('air resistance drawn against the acceleration instead of the velocity', 'Luftwiderstand gegen die Beschleunigung statt gegen die Geschwindigkeit eingezeichnet'),
+    terminal: L('air resistance taken equal to the weight although the speed changes', 'Luftwiderstand gleich Gewichtskraft gesetzt, obwohl sich die Geschwindigkeit ändert'),
+    noDrag: L('air resistance forgotten', 'Luftwiderstand vergessen'),
   });
 
   const ONE = ['rest-up', 'rest-angle', 'pull-friction', 'incline-pull'], TWO = ['push-pair', 'rope-pair', 'atwood', 'table-pulley', 'incline-pulley'];
+  const SPRING = ['spring-hang', 'spring-floor'], DRAG = ['drag-fall', 'drag-bike'];
+  const MARKS = new Set(['v', 'a']);
+  const LISTS = { 'forces-one': ONE, 'forces-two': TWO, 'spring-forces': SPRING, 'drag-forces': DRAG };
   const shuffle = (r, a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const byId = (id) => SCENARIOS.find((s) => s.id === id);
   // the free-body diagram (all forces, the first step of the worked solution), with hl highlighted
@@ -55,17 +70,21 @@
   // Which forces act on a box: the right list, and lists with one force too many or too few,
   // first a force of motion and friction left out.
   function forces(kind, seed) {
-    const r = FS.rng(seed), scn = byId(FS.pick(r, kind === 'forces-one' ? ONE : TWO)), ex = generateFor(scn.id, seed), t = ex.forces;
+    const r = FS.rng(seed), scn = byId(FS.pick(r, LISTS[kind])), ex = generateFor(scn.id, seed), t = ex.forces;
     const i = Math.floor(r() * t.boxes.length), on = t.table[i], name = (j) => t.kinds[j].name;
     const list = (js, extra) => [...js.map(name), ...(extra ? [extra] : [])].join(', ');
-    const has = KINDS.map((k, j) => j).filter((j) => on[j]), s = KINDS.indexOf('s'), rf = KINDS.indexOf('r');
+    const has = t.kinds.map((k, j) => j).filter((j) => on[j]), s = KINDS.indexOf('s'), rf = KINDS.indexOf('r');
     const typical = [], other = [];
     if (!scn.still && !on[s]) typical.push({ html: list(has, MOTION()), flag: 'motion', why: L('There is no “force of motion”: every force comes from a body that pushes or pulls (or from the Earth).', 'Es gibt keine „Bewegungskraft“: Jede Kraft kommt von einem Körper, der drückt oder zieht (oder von der Erde).') });
     if (on[rf]) typical.push({ html: list(has.filter((j) => j !== rf)), flag: 'noFric', why: L('Friction is missing: it acts wherever a box slides or would slide.', 'Die Reibung fehlt: Sie wirkt, wo immer eine Kiste gleitet oder gleiten würde.') });
-    has.filter((j) => j && j !== rf).forEach((j) => other.push({ html: list(has.filter((x) => x !== j)), why: L(`The ${name(j)} is missing.`, `Es fehlt die ${name(j)}.`) }));
-    KINDS.forEach((k, j) => { if (!on[j] && j !== s) other.push({ html: list(KINDS.map((x, y) => y).filter((y) => on[y] || y === j)), why: L(`No ${name(j)} acts on it.`, `Auf sie wirkt keine ${name(j)}.`) }); });
+    const df = t.kinds.findIndex((k) => k.kind === 'd'), art = (j) => (j === df ? 'der' : 'die');
+    if (df >= 0 && on[df]) typical.push({ html: list(has.filter((j) => j !== df)), flag: 'noDrag', why: L('Air resistance is missing: it acts against the velocity of anything that moves through the air.', 'Der Luftwiderstand fehlt: Er wirkt gegen die Geschwindigkeit von allem, was sich durch die Luft bewegt.') });
+    has.filter((j) => j && j !== rf && j !== df).forEach((j) => other.push({ html: list(has.filter((x) => x !== j)), why: L(`The ${name(j)} is missing.`, `Es fehlt ${art(j)} ${name(j)}.`) }));
+    t.kinds.forEach((k, j) => { if (!on[j] && j !== s) other.push({ html: list(t.kinds.map((x, y) => y).filter((y) => on[y] || y === j)), why: L(`No ${name(j)} acts on it.`, `Auf sie wirkt ${k.kind === 'd' ? 'kein' : 'keine'} ${name(j)}.`) }); });
     const options = [{ html: list(has), correct: true }, ...shuffle(r, typical), ...shuffle(r, other)].slice(0, 4);
-    return { title: ex.title, text: `<p>${byId(ex.scenario).text(ex.p)}</p>`, figure: ex.figure({ task: true }),
+    // with drag, the body with its velocity and acceleration only, so that the drawing does not give the drag away
+    const figure = kind === 'drag-forces' ? ex.figure({ show: MARKS }) : ex.figure({ task: true });
+    return { title: ex.title, text: `<p>${byId(ex.scenario).text(ex.p)}</p>`, figure,
       ask: L(`Which forces act on ${t.boxes[i]}?`, `Welche Kräfte wirken auf ${t.boxes[i]}?`), options: shuffle(r, options),
       explain: explain(ex, ex.solution[0]), key: `${ex.scenario}|${JSON.stringify(ex.p)}|${i}` };
   }
@@ -123,8 +142,78 @@
       explain: () => `<div class="figs">${ex.solutionFigure()}</div><div class="steps">${ex.solution.join('')}</div>` };
   }
 
+  // The spring force on the box: its direction and size. Wrong: along the stretch or compression,
+  // and Δx in centimetres taken as metres.
+  const ARROW = () => ({ up: ['↑', L('upwards', 'nach oben')], down: ['↓', L('downwards', 'nach unten')], left: ['←', L('to the left', 'nach links')], right: ['→', L('to the right', 'nach rechts')] });
+  const way = (d) => { const [a, w] = ARROW()[d]; return `${a} ${w}`; };
+  const OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
+  function springDir(seed) {
+    const r = FS.rng(seed), id = FS.pick(r, SPRING), ex = generateFor(id, seed), p = ex.p, v = ex.v;
+    const d = id === 'spring-hang' ? 'up' : p.state === 'stretch' ? 'left' : 'right', o = OPP[d], dx = id === 'spring-hang' ? v.dx : p.dx, F = v.Fs, cmF = p.k * dx;
+    const opt = (dir, f) => `${way(dir)}, ${FS.q(f, 'N')}`;
+    const pushed = id === 'spring-hang' ? p.state === 'stand' : p.state === 'compress';
+    const along = L(`That is the direction in which the spring was ${pushed ? 'compressed' : 'stretched'}. The spring force points the other way: back towards its relaxed length (${pushed ? 'a compressed spring pushes' : 'a stretched spring pulls'}).`,
+      `Das ist die Richtung, in die die Feder ${pushed ? 'gestaucht' : 'gedehnt'} wurde. Die Federkraft zeigt in die andere Richtung: zurück zu ihrer entspannten Länge (${pushed ? 'eine gestauchte Feder drückt' : 'eine gedehnte Feder zieht'}).`);
+    const unit = L(`Δx must be in metres: ${FS.q(dx, 'cm')} = ${FS.num(dx / 100, 3)} m.`, `Δx muss in Metern stehen: ${FS.q(dx, 'cm')} = ${FS.num(dx / 100, 3)} m.`);
+    const more = id === 'spring-hang' && p.given === 'k' ? ` ${pushed ? L(`The spring is compressed by ${FS.q(dx, 'cm')}.`, `Die Feder ist um ${FS.q(dx, 'cm')} gestaucht.`) : L(`The spring is stretched by ${FS.q(dx, 'cm')}.`, `Die Feder ist um ${FS.q(dx, 'cm')} gedehnt.`)}`
+      : id === 'spring-hang' ? ` ${L(`The spring constant is ${FS.q(p.k, 'Nm')}.`, `Die Federkonstante beträgt ${FS.q(p.k, 'Nm')}.`)}` : '';
+    const options = [
+      { html: opt(d, F), correct: true },
+      { html: opt(o, F), flag: 'stretch', why: along },
+      { html: opt(d, cmF), flag: 'unit', why: unit },
+      { html: opt(o, cmF), flag: 'stretch', why: `${along} ${unit}` },
+    ];
+    return { title: ex.title, text: `<p>${byId(id).text(p)}${more}</p>`, figure: ex.figure({ task: true }),
+      ask: L('Which is the spring force on the box, in direction and size?', 'Welches ist die Federkraft auf die Kiste, nach Richtung und Grösse?'), options: shuffle(r, options),
+      explain: explain(ex, ex.solution.slice(0, 2).join('')), key: `sdir|${id}|${JSON.stringify(p)}` };
+  }
+
+  // Air resistance on a body whose velocity and acceleration differ (a cyclist coasting, a
+  // skydiver whose parachute opens) or at terminal velocity: which way it points, and how large
+  // it is compared with the weight.
+  function dragDir(seed) {
+    const r = FS.rng(seed), c = FS.pick(r, ['bike', 'chute', 'terminal']);
+    const ex = c === 'bike' ? generateFor('drag-bike', seed) : generateFor('drag-fall', seed, { phase: c }), p = ex.p;
+    const she = c === 'bike' ? L('the cyclist', 'die Radfahrerin') : L('the skydiver', 'die Fallschirmspringerin');
+    const accel = { flag: 'accel', why: L('Air resistance acts against the velocity, not against the acceleration.', 'Der Luftwiderstand wirkt gegen die Geschwindigkeit, nicht gegen die Beschleunigung.') };
+    const list = {
+      bike: [
+        [L('← backwards, against her velocity', '← nach hinten, gegen ihre Geschwindigkeit'), true],
+        [L('→ forwards, against her acceleration', '→ nach vorn, gegen ihre Beschleunigung'), false, accel],
+        [L('← backwards, balanced by a force of motion forwards that keeps her rolling', '← nach hinten, im Gleichgewicht mit einer Bewegungskraft nach vorn, die sie rollen lässt'), false,
+          { flag: 'motion', why: L('There is no “force of motion”: once she stops pedalling, nothing pushes her forwards. She keeps rolling by inertia, and slows down.', 'Es gibt keine „Bewegungskraft“: Sobald sie nicht mehr tritt, schiebt sie nichts nach vorn. Sie rollt aus Trägheit weiter und wird langsamer.') }],
+        [L('← backwards, as large as her weight', '← nach hinten, so gross wie ihre Gewichtskraft'), false,
+          { flag: 'terminal', why: L('Air resistance equals the weight only for a body falling at terminal velocity. Here it is the only horizontal force: m a, much less than her weight.', 'Der Luftwiderstand ist nur bei einem Körper, der mit Endgeschwindigkeit fällt, gleich der Gewichtskraft. Hier ist er die einzige waagrechte Kraft: m a, viel kleiner als ihre Gewichtskraft.') }],
+      ],
+      chute: [
+        [L('↑ upwards, against her velocity, larger than her weight', '↑ nach oben, gegen ihre Geschwindigkeit, grösser als ihre Gewichtskraft'), true],
+        [L('↓ downwards, against her acceleration', '↓ nach unten, gegen ihre Beschleunigung'), false, accel],
+        [L('↑ upwards, as large as her weight', '↑ nach oben, so gross wie ihre Gewichtskraft'), false,
+          { flag: 'terminal', why: L('She slows down, so the forces do not balance: the net force points up, and the air resistance is larger than her weight.', 'Sie wird langsamer, also heben sich die Kräfte nicht auf: Die resultierende Kraft zeigt nach oben, und der Luftwiderstand ist grösser als ihre Gewichtskraft.') }],
+        [L('↑ upwards, smaller than her weight, since she still falls', '↑ nach oben, kleiner als ihre Gewichtskraft, da sie noch fällt'), false,
+          { flag: 'motion', why: L('Falling down does not need a net force downwards: she slows down, so the net force points up, against her velocity.', 'Nach unten fallen braucht keine resultierende Kraft nach unten: Sie wird langsamer, also zeigt die resultierende Kraft nach oben, gegen ihre Geschwindigkeit.') }],
+      ],
+      terminal: [
+        [L('↑ upwards, as large as her weight', '↑ nach oben, so gross wie ihre Gewichtskraft'), true],
+        [L('↑ upwards, smaller than her weight, so that she keeps falling', '↑ nach oben, kleiner als ihre Gewichtskraft, damit sie weiterfällt'), false,
+          { flag: 'motion', why: L('A constant speed needs no net force: the forces balance. She does not need a force downwards to keep falling.', 'Eine konstante Geschwindigkeit braucht keine resultierende Kraft: Die Kräfte heben sich auf. Sie braucht keine Kraft nach unten, um weiterzufallen.') }],
+        [L('↑ upwards, larger than her weight', '↑ nach oben, grösser als ihre Gewichtskraft'), false,
+          { flag: 'other', why: L('Then the net force would point up and she would slow down; her speed is constant.', 'Dann zeigte die resultierende Kraft nach oben, und sie würde langsamer; ihre Geschwindigkeit ist aber konstant.') }],
+        [L('↓ downwards, along her velocity', '↓ nach unten, in Richtung ihrer Geschwindigkeit'), false,
+          { flag: 'dir', why: L('Air resistance acts against the velocity: she falls down, so it points up.', 'Der Luftwiderstand wirkt gegen die Geschwindigkeit: Sie fällt nach unten, also zeigt er nach oben.') }],
+      ],
+    }[c].map(([html, correct, w]) => ({ html, correct, ...(w || {}) }));
+    return { title: ex.title, text: `<p>${byId(ex.scenario).text(p)}</p>`, figure: ex.figure({ show: MARKS }),
+      ask: L(`Which describes the air resistance on ${she}?`, `Was beschreibt den Luftwiderstand auf ${she}?`), options: shuffle(r, list),
+      explain: explain(ex, ex.solution.slice(0, 2).join('')), key: `ddir|${c}|${p.m}` };
+  }
+
   function question(kind, seed) {
-    if (kind.startsWith('forces')) return forces(kind, seed);
+    if (kind in LISTS) return forces(kind, seed);
+    if (kind === 'spring-dir') return springDir(seed);
+    if (kind === 'spring-law') return law(SPRING, seed);
+    if (kind === 'drag-dir') return dragDir(seed);
+    if (kind === 'drag-law') return law(DRAG, seed);
     if (kind === 'slope-comp') return component(seed);
     if (kind === 'slope-perp') return law(['incline-pull', 'incline-pulley'], seed, ['perp', 'fric']);
     if (kind === 'law-floor') return law(['rest-up', 'rest-angle', 'pull-friction', 'push-pair', 'rope-pair'], seed);

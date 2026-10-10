@@ -36,6 +36,11 @@
     "id": "backwards",
     "en": "Find an unknown resistance from measured currents and voltages.",
     "de": "Einen unbekannten Widerstand aus gemessenen Strömen und Spannungen bestimmen."
+   },
+   {
+    "id": "meters",
+    "en": "Place an ammeter (in series) and a voltmeter (in parallel) correctly and read what an ideal meter shows in a circuit.",
+    "de": "Ein Amperemeter (in Serie) und ein Voltmeter (parallel) richtig anschliessen und ablesen, was ein ideales Messgerät in einer Schaltung anzeigt."
    }
   ]
  },
@@ -296,6 +301,16 @@
     "id": "error",
     "en": "Find the wrong step in a student’s free-body diagram and equations.",
     "de": "Den falschen Schritt in den Kräften und Gleichungen einer Schülerin finden."
+   },
+   {
+    "id": "spring",
+    "en": "Draw the spring force where the spring is attached, back towards its relaxed length (a stretched spring pulls, a compressed one pushes), find it with F = k Δx and use it in Newton’s second law.",
+    "de": "Die Federkraft dort einzeichnen, wo die Feder befestigt ist, zurück zu ihrer entspannten Länge (eine gedehnte Feder zieht, eine gestauchte drückt), sie mit F = k Δx bestimmen und im Aktionsprinzip verwenden."
+   },
+   {
+    "id": "drag",
+    "en": "Draw air resistance against the velocity (not the acceleration), knowing that it grows with speed, and use it in Newton’s second law: at terminal velocity it balances the weight.",
+    "de": "Den Luftwiderstand gegen die Geschwindigkeit (nicht gegen die Beschleunigung) einzeichnen, im Wissen, dass er mit der Geschwindigkeit wächst, und ihn im Aktionsprinzip verwenden: Bei der Endgeschwindigkeit hält er der Gewichtskraft das Gleichgewicht."
    }
   ]
  },

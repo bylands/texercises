@@ -1,0 +1,26 @@
+\begin{abcliste}
+\abc Unpolarized light contains all directions of polarization; a polarizer lets through half of its intensity:
+\begin{align}
+ I_1 &= \IuF = \result{\IuP{0}{2}}
+\end{align}
+Behind it, the light is polarized along its axis. By Malus's law, a filter turned by $\theta$ against the polarization lets through $I = I_1\cos^2\theta$. The second filter is turned by \SI{90}{\degree}: $\cos^2\SI{90}{\degree} = 0$, $\result{\text{no light}}$ gets through.
+
+\abc The first filter again lets through $I_1 = \IuP{0}{2}$. The middle filter is turned by $\theta$ against it:
+\begin{align}
+ I_2 &= \IvF = \Iu\times\cos^2\left(\alO\right) = \Iv \approx \result{\IvP{0}{2}}
+\end{align}
+The light is now polarized at $\theta = \alO$; the last filter is at \SI{90}{\degree}, i.e.\ at $\SI{90}{\degree}-\theta$ to the light:
+\begin{align}
+ I_3 &= \IwF = \Iv\times\cos^2\left(\SI{60}{\degree}\right) = \Iw \approx \result{\IwP{0}{2}}
+\end{align}
+A filter put between crossed ones lets light through: it turns the polarization in two steps.
+
+\abc Behind the last filter
+\begin{equation}
+ I_3 = \frac{1}{2}I_0\cos^2\theta\,\cos^2\left(\SI{90}{\degree}-\theta\right) = \frac{1}{2}I_0\left(\cos\theta\sin\theta\right)^2 = \frac{1}{8}I_0\sin^2(2\theta)
+\end{equation}
+This is largest for $2\theta = \SI{90}{\degree}$, i.e.\ $\theta = \result{\SI{45}{\degree}}$, halfway between the crossed axes:
+\begin{align}
+ I_3 &= \ImxF = \result{\ImxP{0}{2}}
+\end{align}
+\end{abcliste}

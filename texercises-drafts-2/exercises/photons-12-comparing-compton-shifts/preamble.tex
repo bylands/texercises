@@ -1,0 +1,16 @@
+\NewQty{anga}{30}[\degree]
+\NewQty{angb}{60}[\degree]
+\NewQty{angc}{90}[\degree]
+\NewQty{angd}{150}[\degree]
+\NewQty{lx}{154}[\pico\m][e-12][\m]
+\NewQty{lgm}{5}[\pico\m][e-12][\m]
+
+\SolQty{lC}[\frac{h}{m_e c}]{\nchX/(\ncmeX*\nccX)}[\m]
+\SolQty{dla}[\lambda_C\left(1-\cos\theta\right)]{\lCX*(1-cosd(\angaX))}[\m]
+\SolQty{dlb}[\lambda_C\left(1-\cos\theta\right)]{\lCX*(1-cosd(\angbX))}[\m]
+\SolQty{dlc}[\lambda_C\left(1-\cos\theta\right)]{\lCX*(1-cosd(\angcX))}[\m]
+\SolQty{dld}[\lambda_C\left(1-\cos\theta\right)]{\lCX*(1-cosd(\angdX))}[\m]
+\SolQty{fx}[\frac{\Delta\lambda}{\lambda_X+\Delta\lambda}]{\dlcX/(\lxX+\dlcX)}
+\ConvTo{fxp}{100}{fx}{\percent}
+\SolQty{fg}[\frac{\Delta\lambda}{\lambda_\gamma+\Delta\lambda}]{\dlcX/(\lgmX+\dlcX)}
+\ConvTo{fgp}{100}{fg}{\percent}

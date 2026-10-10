@@ -1,0 +1,16 @@
+{
+  "title": "Kraftkonzepte – weitere Aufgaben aus learningphysics",
+  "description": "Weitere Aufgaben aus den Übungen der App Kraftkonzepte von learningphysics.ch, die bei der Überarbeitung wegfielen: Kugeln, die horizontal von einem Tisch rollen. Rechne mit g = 10 m/s².",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "horizontaler wurf",
+    "trägheit",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "force-concepts-01-vier-kugeln-vom-tisch"
+    }
+  ]
+}

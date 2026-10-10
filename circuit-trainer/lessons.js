@@ -1,6 +1,6 @@
-// The tutor's worked examples, from easy to hard. Each is solved along its path: frames of
-// "quantity:rule" steps (see pathSteps in generator.js; names with V for voltages), checked by
-// test/check-generator.js.
+// The tutor's worked examples, from easy to hard, then measuring with meters. Each is solved along
+// its path: frames of "quantity:rule" steps (see pathSteps in generator.js; names with V for
+// voltages), checked by test/check-generator.js.
 (function (root) {
   'use strict';
 
@@ -40,6 +40,14 @@
         de: 'Gruppen in Gruppen. Benenne jede Gruppe, teile Spannungen mit der Teilerregel auf und verfolge den Strom von Zweig zu Zweig.' },
       path: [['V1:vratio'], ['V234:sumV'], ['V2:eqV'], ['I2:ohm'], ['I1:ohm'], ['I:eqI', 'I234:eqI', 'I34:sumI'],
         ['I3:eqI', 'V3:ohm'], ['V34:eqV', 'V4:sumV'], ['R4:vratio']],
+    },
+    {
+      // meters: where an ammeter and a voltmeter go and what they show (meterTutorial in generator.js)
+      name: { en: 'Meters', de: 'Messgeräte' }, level: 'medium', seed: 10, meters: true,
+      practice: [{ types: ['meter:read'] }, { en: 'wrongly connected meters', de: 'falsch angeschlossene Messgeräte', types: ['meter:wrong'] }],
+      idea: { en: 'An ammeter goes in series, a voltmeter in parallel. Ideal meters change nothing, so they show currents and voltages you find with the rules. Connected the wrong way, a voltmeter blocks the current and an ammeter short-circuits a part.',
+        de: 'Ein Amperemeter kommt in Serie, ein Voltmeter parallel. Ideale Messgeräte verändern nichts, also zeigen sie Ströme und Spannungen, die du mit den Regeln findest. Falsch angeschlossen sperrt ein Voltmeter den Strom, und ein Amperemeter schliesst einen Teil kurz.' },
+      path: [['R23:invR'], ['V1:vdiv'], ['V23:sumV', 'V3:eqV'], ['I3:ohm']],
     },
   ];
 

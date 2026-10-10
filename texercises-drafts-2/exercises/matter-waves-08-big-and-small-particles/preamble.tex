@@ -1,0 +1,13 @@
+\NewQty{vel}{2.0e6}[\mps]
+\NewQty{mcu}{720}[\atomicmassunit]
+\ConvTo{mc}{\ncuX}{mcu}{\kg}
+\NewQty{vc}{200}[\mps]
+\NewQty{md}{1}[\micro\gram][e-9][\kg]
+\NewQty{vd}{1}[\milli\meter\per\second][e-3][\mps]
+
+\SolQty{pel}[m_e\,v]{\ncmeX*\velX}[\kgmps]
+\SolQty{pc}[m\,v]{\mcX*\vcX}[\kgmps]
+\SolQty{pd}[m\,v]{\mdX*\vdX}[\kgmps]
+\SolQty{lel}[\frac{h}{m_e\,v}]{\nchX/\pelX}[\m]
+\SolQty{lc}[\frac{h}{m\,v}]{\nchX/\pcX}[\m]
+\SolQty{ld}[\frac{h}{m\,v}]{\nchX/\pdX}[\m]

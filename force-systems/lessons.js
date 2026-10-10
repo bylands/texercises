@@ -48,6 +48,19 @@
       name: { en: 'Find the error', de: 'Finde den Fehler' },
       idea: { en: 'Check a student’s free-body diagram and equations step by step: a “force of motion”, a missing friction force or a rope force set equal to a weight.', de: 'Prüfe Kräfte und Gleichungen einer Schülerin Schritt für Schritt: eine „Bewegungskraft“, eine fehlende Reibungskraft oder eine Seilkraft gleich einer Gewichtskraft.' },
     },
+    // added later (springs and drag): after the examples above, so that saved progress keeps its places
+    {
+      scenario: 'spring-floor', p: { m: 2, k: 200, dx: 10, mu: 0.25, state: 'stretch' },
+      practice: [{ types: ['spring-floor'] }, { en: 'hanging from or resting on a spring', de: 'an einer Feder hängend oder auf einer Feder liegend', types: ['spring-hang'] }],
+      name: { en: 'Spring force', de: 'Federkraft' },
+      idea: { en: 'A spring acts where it is attached, back towards its relaxed length: stretched, it pulls; compressed, it pushes. Its force is F = k Δx, never along the stretch.', de: 'Eine Feder wirkt dort, wo sie befestigt ist, zurück zu ihrer entspannten Länge: gedehnt zieht sie, gestaucht drückt sie. Ihre Kraft ist F = k Δx, nie in Richtung der Dehnung.' },
+    },
+    {
+      scenario: 'drag-fall', p: { m: 80, phase: 'early', a: 4, D: 480, u: 30 },
+      practice: [{ types: ['drag-fall'] }, { en: 'a cyclist coasting', de: 'eine ausrollende Radfahrerin', types: ['drag-bike'] }],
+      name: { en: 'Air resistance', de: 'Luftwiderstand' },
+      idea: { en: 'Air resistance points against the velocity, not against the acceleration, and grows with speed: once it is as large as the weight, a falling body has reached its terminal velocity. There is no “force of motion”.', de: 'Der Luftwiderstand zeigt gegen die Geschwindigkeit, nicht gegen die Beschleunigung, und wächst mit der Geschwindigkeit: Sobald er so gross ist wie die Gewichtskraft, hat ein fallender Körper seine Endgeschwindigkeit erreicht. Eine „Bewegungskraft“ gibt es nicht.' },
+    },
   ];
 
   root.Lessons = { EXAMPLES };

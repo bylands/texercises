@@ -1,0 +1,31 @@
+{
+  "title": "Drehmoment – weitere Aufgaben aus learningphysics",
+  "description": "Weitere Aufgaben aus den Übungen der App Drehmoment von learningphysics.ch, die bei der Überarbeitung wegfielen: Brecheisen, Schubkarre, Seilwinde, Mobile, Kranausleger und Leiter. Rechne mit g = 10 m/s².",
+  "kind": "sheet",
+  "is_private": true,
+  "tags": [
+    "drehmoment",
+    "hebelgesetz",
+    "learningphysics"
+  ],
+  "items": [
+    {
+      "exercise": "torque-11-brecheisen"
+    },
+    {
+      "exercise": "torque-12-schubkarre"
+    },
+    {
+      "exercise": "torque-13-seilwinde"
+    },
+    {
+      "exercise": "torque-14-mobile"
+    },
+    {
+      "exercise": "torque-15-kranausleger"
+    },
+    {
+      "exercise": "torque-16-leiter"
+    }
+  ]
+}

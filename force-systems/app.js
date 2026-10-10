@@ -7,8 +7,8 @@
 
   // ---------------------------------------------------------------- interface texts
   const LEGEND = {
-    en: '<span class="k-g">weight</span>, <span class="k-n">normal force</span>, <span class="k-r">friction</span>, <span class="k-s">pull</span>, <span class="k-k">rope and contact forces</span>, <span class="k-acc">acceleration</span>',
-    de: '<span class="k-g">Gewichtskraft</span>, <span class="k-n">Normalkraft</span>, <span class="k-r">Reibung</span>, <span class="k-s">Zugkraft</span>, <span class="k-k">Seil- und Kontaktkräfte</span>, <span class="k-acc">Beschleunigung</span>',
+    en: '<span class="k-g">weight</span>, <span class="k-n">normal force</span>, <span class="k-r">friction</span>, <span class="k-s">pull</span>, <span class="k-k">rope and contact forces</span>, <span class="k-f">spring force</span>, <span class="k-d">air resistance</span>, <span class="k-acc">acceleration</span> and velocity (dashed)',
+    de: '<span class="k-g">Gewichtskraft</span>, <span class="k-n">Normalkraft</span>, <span class="k-r">Reibung</span>, <span class="k-s">Zugkraft</span>, <span class="k-k">Seil- und Kontaktkräfte</span>, <span class="k-f">Federkraft</span>, <span class="k-d">Luftwiderstand</span>, <span class="k-acc">Beschleunigung</span> und Geschwindigkeit (gestrichelt)',
   };
   const UI = {
     en: {
@@ -21,7 +21,7 @@
       forcesHead: '1 · Forces on each box', compsHead: (n) => `${n} · Components`, compsNote: 'Choose the right expression for each component; its value is then given.',
       eqsHead: (n) => `${n} · Equations`, eqsNote: 'Choose the right equation for each system and axis. The worked solution then solves them.',
       idFirst: 'First choose the right expression or equation for each part.',
-      forcesNote: (n) => (n > 1 ? 'Tick every force that acts on each box. Each force you tick appears in the drawing.' : 'Tick every force that acts on the box. Each force you tick appears in the drawing.'),
+      forcesNote: (n, who) => (n > 1 ? 'Tick every force that acts on each box. Each force you tick appears in the drawing.' : `Tick every force that acts on ${who}. Each force you tick appears in the drawing.`),
       tableOk: '✓ The forces are right.', tableBad: (n) => `✗ ${n === 1 ? 'One entry is' : `${n} entries are`} not right yet.`,
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
@@ -37,7 +37,7 @@
       forcesHead: '1 · Kräfte auf jede Kiste', compsHead: (n) => `${n} · Komponenten`, compsNote: 'Wähle für jede Komponente den richtigen Ausdruck; ihr Wert wird dann angegeben.',
       eqsHead: (n) => `${n} · Gleichungen`, eqsNote: 'Wähle für jedes System und jede Achse die richtige Gleichung. Die ausführliche Lösung löst sie dann auf.',
       idFirst: 'Wähle zuerst für jeden Teil den richtigen Ausdruck bzw. die richtige Gleichung.',
-      forcesNote: (n) => (n > 1 ? 'Kreuze jede Kraft an, die auf die jeweilige Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.' : 'Kreuze jede Kraft an, die auf die Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.'),
+      forcesNote: (n, who) => (n > 1 ? 'Kreuze jede Kraft an, die auf die jeweilige Kiste wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.' : `Kreuze jede Kraft an, die auf ${who} wirkt. Jede angekreuzte Kraft erscheint in der Zeichnung.`),
       tableOk: '✓ Die Kräfte stimmen.', tableBad: (n) => `✗ ${n === 1 ? 'Ein Feld stimmt' : `${n} Felder stimmen`} noch nicht.`,
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
@@ -138,7 +138,7 @@
     $('#figure').innerHTML = ex.forces ? ex.taskFigure(new Set()) : ex.taskFigure();
     $('#forces-part').hidden = !ex.forces; // find the error: no table of forces
     if (ex.forces) {
-      $('#forces-note').textContent = ui().forcesNote(ex.forces.boxes.length);
+      $('#forces-note').textContent = ui().forcesNote(ex.forces.boxes.length, ex.forces.boxes[0]);
       $('#ftable').innerHTML = forcesHtml();
       $('#ftable-fb').textContent = '';
       $('#ftable-fb').className = 'table-fb';

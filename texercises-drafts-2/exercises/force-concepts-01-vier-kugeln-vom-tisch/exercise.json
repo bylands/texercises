@@ -1,0 +1,19 @@
+{
+  "title": "Vier Kugeln vom Tisch",
+  "note": "aus learningphysics.ch (Üben)",
+  "language": "GER",
+  "type": 2,
+  "default_difficulty": 3,
+  "default_points": 0,
+  "tags": [
+    "fallzeit",
+    "horizontaler wurf",
+    "learningphysics",
+    "trägheit",
+    "unabhängigkeitsprinzip"
+  ],
+  "subbranches": [
+    "Projectile Motion"
+  ],
+  "youtube": ""
+}

@@ -7,7 +7,8 @@
 //   and each wrong one false,
 // - "find the error": one wrong step, and the check's questions: four options, one right,
 // - that texts, hints, solutions and drawings contain no undefined values.
-// It also checks the tutor's examples against the answers on the worksheet.
+// It also checks the tutor's examples against the answers on the worksheet, and that the check's
+// questions on springs and drag offer their misconceptions.
 'use strict';
 
 const load = typeof require === 'function'
@@ -45,12 +46,22 @@ const LAWS = {
   'incline-pull': (p, v) => [[v.N, p.m * g * cos(p.alpha)], [v.R, p.mu * v.N], [v.F - p.m * g * sin(p.alpha) - v.R, p.m * p.a], [v.res, p.m * p.a]],
   'incline-pulley': (p, v) => [[v.N, p.m1 * g * cos(p.alpha)], [v.R, p.mu * v.N], [v.S - p.m1 * g * sin(p.alpha) - v.R, p.m1 * v.a],
     [p.m2 * g - v.S, p.m2 * v.a], [v.res, (p.m1 + p.m2) * v.a]],
+  // springs (Δx in cm) and drag
+  'spring-hang': (p, v) => [[v.Fs, p.m * g], [v.Fs, (p.k * v.dx) / 100], [v.k, p.k]],
+  'spring-floor': (p, v) => [[v.Fs, (p.k * p.dx) / 100], [v.R, p.mu * p.m * g], [v.Fs - v.R, p.m * v.a]],
+  'drag-fall': (p, v) => (p.phase === 'terminal' ? [[v.D, p.m * g], [v.a, 0]]
+    : p.phase === 'early' ? [[p.m * g - p.D, p.m * v.a], [v.res, p.m * v.a], [p.D < p.m * g ? 1 : 0, 1]]
+      : [[p.D - p.m * g, p.m * v.a], [v.res, p.m * v.a], [p.D > p.m * g ? 1 : 0, 1]]),
+  'drag-bike': (p, v) => [[v.N, p.m * g], [p.D, p.m * v.a]],
 };
 // Quantities that must be positive (a box at rest or at constant speed may have a = 0).
 const POSITIVE = (ex) => ex.fields.filter((f) => !(f.key === 'a' && ex.p.a === 0) && !(f.key === 'res' && ex.p.a === 0));
 
 const bad = /undefined|NaN|Infinity|\[object/;
-function checkText(id, what, s) { if (typeof s !== 'string' || bad.test(s)) fail(`${id}: ${what} contains an undefined value: ${String(s).match(bad)}`); }
+function checkText(id, what, s) {
+  if (typeof s !== 'string' || bad.test(s)) fail(`${id}: ${what} contains an undefined value: ${String(s).match(bad)}`);
+  else if (/[^\\];\\Rightarrow|\\Rightarrow;/.test(s)) fail(`${id}: ${what}: a TeX space lost its backslash`);
+}
 
 function checkExercise(ex, id) {
   checked++;
@@ -69,13 +80,21 @@ function checkExercise(ex, id) {
   if (ex.scenario === 'rope-pair' && !t.table[1][ki('s')]) fail(`${id}: the pull does not act on the right box`);
   if (ex.scenario === 'rope-pair' && t.table[1][ki('r')] !== ex.p.mu2 > 0) fail(`${id}: friction on the right box with mu2 = ${ex.p.mu2}`);
   if (['atwood'].includes(ex.scenario) && t.table.some((r) => r[ki('n')] || r[ki('r')])) fail(`${id}: normal force or friction on a hanging box`);
+  // springs and drag: the spring force or drag acts, and no push or pull (a "force of motion")
+  if (/^(spring|drag)-/.test(ex.scenario)) {
+    const sp = /^spring/.test(ex.scenario);
+    if (!t.table[0][ki('f')] !== !sp || !t.table[0][ki('d')] !== sp) fail(`${id}: spring force or drag wrong in the table of forces`);
+    if (t.table[0][ki('s')] || t.table[0][ki('k')]) fail(`${id}: a push, pull or rope force in the table of forces`);
+    const N = ['spring-floor', 'drag-bike'].includes(ex.scenario);
+    if (!t.table[0][ki('n')] !== !N || !t.table[0][ki('r')] !== (ex.scenario !== 'spring-floor')) fail(`${id}: normal force or friction wrong in the table of forces`);
+  }
   t.boxes.forEach((b) => checkText(id, 'box name', b));
   // ticking draws the forces in, those that do not act too, without resizing the drawing
   const none = ex.taskFigure(new Set()), every = ex.taskFigure(new Set(t.boxes.flatMap((b, i) => t.kinds.map((k, j) => `${i}:${j}`))));
   checkText(id, 'task figure with all forces ticked', every);
   const vb = (svg) => svg.match(/viewBox="([^"]+)"/)[1];
   if (vb(none) !== vb(every)) fail(`${id}: ticking forces resizes the drawing: ${vb(none)} → ${vb(every)}`);
-  const drawn = (every.match(/class="seq force k-[gnrsk]/g) || []).length;
+  const drawn = (every.match(/class="seq force k-[gnrskfd]/g) || []).length;
   if (drawn < t.boxes.length * t.kinds.length) fail(`${id}: ${drawn} arrows for ${t.boxes.length * t.kinds.length} ticks`);
   checkText(id, 'title', ex.title);
   checkText(id, 'text', ex.text);
@@ -101,10 +120,14 @@ function equationValue(ex, html) {
     g, m: p.m, m1: p.m1, m2: p.m2, a: p.a != null ? p.a : v.a, F: p.F != null ? p.F : v.F, mu: p.mu,
     N: v.N != null ? v.N : p.m * g, R: v.R, R1: v.R1, R2: v.R2 || 0, S: v.S, K: v.K,
     SIN: Math.sin(rad), COS: Math.cos(rad), TAN: Math.tan(rad),
+    // springs (Δx in metres) and drag; F where there is no push or pull is a "force of motion"
+    // that does not exist: any value but zero
+    Fs: v.Fs, k: p.k, dx: (p.dx != null ? p.dx : v.dx) / 100, D: p.D != null ? p.D : v.D,
   };
-  let t = html;
-  [[FS.tex('R', 1), 'R1'], [FS.tex('R', 2), 'R2'], [FS.tex('N'), 'N'], [FS.tex('R'), 'R'], [FS.tex('S'), 'S'], [FS.tex('K'), 'K'], [FS.tex('mu'), 'mu'],
-    ['\\sin\\alpha', '*SIN'], ['\\cos\\alpha', '*COS'], ['\\tan\\alpha', '*TAN'], ['m_1', 'm1'], ['m_2', 'm2'], ['\\,', '*'], ['$', '']].forEach(([a, b]) => { t = t.split(a).join(b); });
+  if (vals.F == null) vals.F = 7;
+  let t = html.replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1)/($2)');
+  [[FS.tex('R', 1), 'R1'], [FS.tex('R', 2), 'R2'], [FS.tex('Fs'), 'Fs'], [FS.tex('D'), 'D'], [FS.tex('N'), 'N'], [FS.tex('R'), 'R'], [FS.tex('S'), 'S'], [FS.tex('K'), 'K'], [FS.tex('mu'), 'mu'],
+    ['\\Delta x', 'dx'], ['\\sin\\alpha', '*SIN'], ['\\cos\\alpha', '*COS'], ['\\tan\\alpha', '*TAN'], ['m_1', 'm1'], ['m_2', 'm2'], ['\\,', '*'], ['$', '']].forEach(([a, b]) => { t = t.split(a).join(b); });
   const [lhs, rhs] = t.split('=');
   const f = (e) => Function(...Object.keys(vals), `return ${e};`)(...Object.values(vals));
   return [f(lhs), f(rhs)];
@@ -200,6 +223,9 @@ const SHEET = [
   { R: 12, res: 28, a: 3.5, S: 26 },
   { res: 12, N: 35, R: 14, F: 46 },
   { N: 52, R: 21, res: 29, a: 2.1, S: 63 },
+  null, // find the error (see above)
+  { Fs: 20, R: 5, a: 7.5 }, // springs and drag: not on the worksheet
+  { res: 320, a: 4 },
 ];
 for (const lang of FS.LANGS) {
   FS.setLang(lang);
@@ -235,13 +261,22 @@ for (const lang of FS.LANGS) {
         if (q.options.length !== 4) fail(`${id}: ${q.options.length} options`);
         if (q.options.filter((x) => x.correct).length !== 1) fail(`${id}: not exactly one right option`);
         if (new Set(q.options.map((x) => x.html)).size !== q.options.length) fail(`${id}: equal options`);
-        q.options.forEach((x) => { if (x.flag && !(x.flag in CheckSource.concept) && !['dir', 'axis', 'noK', 'fric', 'other'].includes(x.flag)) fail(`${id}: unknown flag ${x.flag}`); });
+        q.options.forEach((x) => { if (x.flag && !(x.flag in CheckSource.concept) && !['dir', 'axis', 'noK', 'fric', 'other', 'unit'].includes(x.flag)) fail(`${id}: unknown flag ${x.flag}`); });
         [q.title, q.text, q.figure, q.ask, q.explain(), ...q.options.map((x) => x.html + (x.why || ''))].forEach((x, k) => checkText(id, `part ${k}`, x));
+        if (lang === 'de' && q.options.some((x) => /\b(upwards|downwards|to the (left|right)|backwards|forwards|weight)\b/.test(x.html + (x.why || '')))) fail(`${id}: English in a German option`);
       }
     });
   });
   Object.values(CheckSource.concept).forEach((c) => { if (!CheckSource.concepts()[c]) fail(`concept ${c} has no name`); });
 }
+// the new objectives show their misconceptions among the wrong options
+FS.setLang('en');
+const flagsOf = (kind) => new Set(Array.from({ length: 200 }, (_, k) => CheckSource.question(kind, k + 1).options.map((x) => x.flag)).flat());
+[['spring-dir', ['stretch', 'unit']], ['spring-law', ['stretch', 'hooke', 'noFric']], ['spring-forces', ['motion']],
+  ['drag-dir', ['accel', 'motion', 'terminal']], ['drag-law', ['accel', 'motion', 'terminal', 'noDrag']], ['drag-forces', ['motion', 'noDrag']]].forEach(([kind, want]) => {
+  const got = flagsOf(kind);
+  want.forEach((f) => { if (!got.has(f)) fail(`check ${kind}: no option with the misconception ${f}`); });
+});
 log(`${questions} check questions checked`);
 
 log(`${checked} exercises checked, ${Object.keys(seen).length} situations: ${JSON.stringify(seen)}`);

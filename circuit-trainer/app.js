@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const { generate, tutorial, fval, ftex } = window.Generator;
+  const { generate, tutorial, meters, meterTutorial, fval, ftex } = window.Generator;
   const { esc, fitText } = window.Circuit;
   const Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
@@ -16,6 +16,7 @@
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', results: 'Results',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       solNote: 'The diagram shows all currents (<span class="c-cur">blue</span>) and voltages (<span class="c-vol">red</span>) in the circuit.',
+      solNoteMeters: 'The diagram shows what the meters read.',
       levels: { easy: 'Easy', medium: 'Medium', hard: 'Hard', mixed: 'Mixed' },
       stars: (d) => `Difficulty: ${d} of 5`,
       score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
@@ -32,6 +33,7 @@
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', results: 'Resultate',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       solNote: 'Das Schaltbild zeigt alle Ströme (<span class="c-cur">blau</span>) und Spannungen (<span class="c-vol">rot</span>) in der Schaltung.',
+      solNoteMeters: 'Das Schaltbild zeigt, was die Messgeräte anzeigen.',
       levels: { easy: 'Einfach', medium: 'Mittel', hard: 'Schwierig', mixed: 'Gemischt' },
       stars: (d) => `Schwierigkeit: ${d} von 5`,
       score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
@@ -89,6 +91,7 @@
 
   function judge(x, e, tol) {
     if (Number.isNaN(x)) return { cls: 'bad', msg: ui().number };
+    if (e === 0) return Math.abs(x) < 1e-9 ? { cls: 'ok', msg: ui().correct } : { cls: 'bad', msg: ui().wrong }; // a meter that shows nothing
     const off = (y) => Math.abs(y - e) / Math.abs(e);
     if (off(x) <= tol) return { cls: 'ok', msg: ui().correct };
     if (off(-x) <= tol) return { cls: 'warn', msg: ui().sign };
@@ -114,9 +117,10 @@
     return d === 1 ? (root.t === 'S' ? 'series' : 'parallel') : 'mixed';
   }
   // An exercise of a practice type 'kind:level' (e.g. 'mixed:medium'): the first of that level,
-  // from the seed on, of that kind.
+  // from the seed on, of that kind; or 'meter:stage', an exercise on meters (meters in generator.js).
   function ofType(type, seed) {
     const [kind, lv] = type.split(':');
+    if (kind === 'meter') { const e = meters(lv, seed); e.ptype = type; return e; }
     for (let k = 0; ; k++) {
       const e = generate(lv, seed * 1000 + k);
       if (kindOf(e) === kind || k >= 5000) { e.ptype = type; return e; }
@@ -248,6 +252,7 @@
   }
 
   function showSolution() {
+    $('#solution .note').innerHTML = ex.meters ? ui().solNoteMeters : ui().solNote; // an exercise on meters shows their readings
     $('#sol-figure').innerHTML = ex.figure(true);
     $('#sol-steps').innerHTML = ex.solution.map((p) => `<p>${p}</p>`).join('');
     $('#sol-short').innerHTML = `${ui().results}: ${ex.results}`;
@@ -281,6 +286,9 @@
     { id: 'backwards', kinds: ['backwards:easy', 'backwards:medium'], tutor: 3, topic: 3,
       name: () => L('Find an unknown resistance from measured currents and voltages.',
         'Einen unbekannten Widerstand aus gemessenen Strömen und Spannungen bestimmen.') },
+    { id: 'meters', kinds: ['meter:place', 'meter:read', 'meter:wrong'], tutor: 5, topic: 5,
+      name: () => L('Place an ammeter (in series) and a voltmeter (in parallel) correctly and read what an ideal meter shows in a circuit.',
+        'Ein Amperemeter (in Serie) und ein Voltmeter (parallel) richtig anschliessen und ablesen, was ein ideales Messgerät in einer Schaltung anzeigt.') },
   ];
   const half = (f) => Number.isFinite(fval(f)) && Math.abs(2 * fval(f) - Math.round(2 * fval(f))) < 1e-9;
   // A circuit of a practice type and the unknown asked for: a resistance when working backwards,
@@ -296,14 +304,16 @@
     }
     return { e, f };
   }
-  function checkQuestion(type, seed) {
-    const { e, f } = checkCircuit(type, seed);
-    const c = e.circuit, node = c.nodes[Number(f.key.slice(1))], q = f.key[0];
-    const options = [{ value: f.value, correct: true }];
-    // options: positive multiples of 0.5, clearly different from each other
-    const fits = (x) => x > 0 && Math.abs(2 * x - Math.round(2 * x)) < 1e-9 && options.every((o) => Math.abs(o.value - x) > 0.01 * Math.max(o.value, x) + 1e-9);
-    const add = (value, flag, why) => { if (options.length < 4 && fits(value)) options.push({ value, flag, why }); };
-    if (q !== 'R' && node !== c.root) {
+  // Four options for the value of quantity q (V, I or R) of a node: the right one, then the
+  // candidates [value, flag, why] (0 only among these, for a meter that shows nothing), the values
+  // of the whole circuit and of the partner in a divider, the other values of the circuit and simple
+  // slips; positive multiples of 0.5, clearly different from each other, by size.
+  function numberOptions(c, node, q, value, cands = []) {
+    const options = [{ value, correct: true }];
+    const fits = (x) => x >= 0 && Math.abs(2 * x - Math.round(2 * x)) < 1e-9 && options.every((o) => Math.abs(o.value - x) > 0.01 * Math.max(o.value, x) + 1e-9);
+    const add = (v, flag, why) => { if (options.length < 4 && (v > 0 || (v === 0 && flag !== undefined)) && fits(v)) options.push({ value: v, flag, why }); };
+    for (const [v, flag, why] of cands) add(v, flag || null, why || null);
+    if (q !== 'R' && node && node !== c.root) {
       add(fval(c.root[q]), 'whole', q === 'V'
         ? L('That is the whole battery voltage: a part in series only gets its share.', 'Das ist die ganze Batteriespannung: Ein Teil in Serie bekommt nur seinen Anteil.')
         : L('That is the whole battery current: a branch in parallel only carries its share.', 'Das ist der ganze Batteriestrom: Ein paralleler Zweig führt nur seinen Anteil.'));
@@ -315,37 +325,125 @@
           'Das gehört zum anderen Teil: Beim Teiler bekommt der grössere Widerstand den grösseren Anteil (Spannungen in Serie) bzw. den kleineren (Ströme parallel).'));
       }
     }
-    for (const n of c.nodes) if (n !== node) add(fval(n[q]), null, null);
-    for (const x of [2 * f.value, f.value / 2, f.value + 1, f.value + 2, f.value - 1, 3 * f.value]) add(x, null, null);
+    for (const n of c.nodes) if (n !== node) add(fval(n[q]), undefined, null);
+    const base = value || 1;
+    for (const x of [2 * base, base / 2, base + 1, base + 2, base - 1, 3 * base, base + 3, base + 4]) add(x, undefined, null);
     // the options in a fixed order: by size
     options.sort((a, b) => a.value - b.value);
     const unitTex = { V: '\\mathrm{V}', I: '\\mathrm{mA}', R: '\\mathrm{k\\Omega}' }[q];
-    const num = (x) => String(parseFloat(x.toFixed(2)));
+    return options.map((o) => ({ html: `$${num(o.value)}\\,${unitTex}$`, correct: !!o.correct, flag: o.flag || null, why: o.why || null }));
+  }
+  const num = (x) => String(parseFloat(x.toFixed(2)));
+  function checkQuestion(type, seed) {
+    if (type.startsWith('meter:')) return meterQuestion(type, seed);
+    const { e, f } = checkCircuit(type, seed);
+    const c = e.circuit, node = c.nodes[Number(f.key.slice(1))], q = f.key[0];
     return {
       title: e.title,
       // only the quantity asked for: the exercise text lists all its unknowns
       text: `<p>${L('Apply the rules for series and parallel circuits.', 'Wende die Regeln für Serie- und Parallelschaltungen an.')}</p>`,
       figure: e.figure(false, f.key),
       ask: L(`Find $${f.sym}$.`, `Wie gross ist $${f.sym}$?`),
-      options: options.map((o) => ({ html: `$${num(o.value)}\\,${unitTex}$`, correct: !!o.correct, flag: o.flag, why: o.why })),
+      options: numberOptions(c, node, q, f.value),
       explain: () => `<div class="figs">${e.figure(true)}</div><div class="steps">${e.solution.map((p) => `<p>${p}</p>`).join('')}</div>`,
       key: `${e.id}|${f.key}`,
+    };
+  }
+
+  // Measuring with meters: where a meter goes (in words), what an ideal one shows, and what one
+  // connected the wrong way shows. Wrong options: the other way of connecting it (a voltmeter in
+  // series blocks the current, an ammeter in parallel short-circuits), and the reading of a meter
+  // in another place (the whole battery voltage or current, the partner's value).
+  function meterQuestion(kind, seed) {
+    const steps = (e) => `<div class="steps">${e.solution.map((p) => `<p>${p}</p>`).join('')}</div>`;
+    const Rn = (n) => `$R_{${n.idx}}$`;
+    if (kind === 'meter:place') {
+      const volt = seed % 2 === 1, q = volt ? 'V' : 'I';
+      // a resistor whose voltage is not the battery's, or whose current is not the battery's
+      let e, n;
+      for (let k = 0; k < 200; k++) {
+        e = meters('read', seed + 7919 * k);
+        const m = e.meters.find((x) => x.m === (volt ? 'V' : 'A'));
+        n = e.circuit.nodes[m.at];
+        if (n.t === 'R' && fval(n[q]) !== fval(e.circuit.root[q])) break;
+      }
+      const R = Rn(n), s = e.sym(q + n.id), val = `${num(fval(n[q]))}\\,\\mathrm{${volt ? 'V' : 'mA'}}`;
+      const across = { html: L(`across ${R}, in parallel: connected to its two ends`, `parallel zu ${R}: an seine beiden Enden angeschlossen`) };
+      const series = { html: L(`in series with ${R}, in its branch`, `in Serie zu ${R}, in dessen Zweig`) };
+      const mainLine = { html: L('in series with the battery, in the main line', 'in Serie zur Batterie, in der Hauptleitung') };
+      const battery = { html: L('across the battery, connected to its two terminals', 'parallel zur Batterie, an ihre beiden Pole angeschlossen') };
+      const options = volt ? [
+        { ...across, correct: true },
+        { ...series, flag: 'vseries', why: L(`In series, the voltmeter ($R_\\text{V} \\to \\infty$) blocks the current through ${R}; it does not show the voltage across ${R}.`, `In Serie sperrt das Voltmeter ($R_\\text{V} \\to \\infty$) den Strom durch ${R}; es zeigt nicht die Spannung an ${R}.`) },
+        { ...mainLine, flag: 'vseries', why: L('In the main line, the voltmeter blocks the current of the whole circuit and shows the battery voltage.', 'In der Hauptleitung sperrt das Voltmeter den Strom der ganzen Schaltung und zeigt die Batteriespannung.') },
+        { ...battery, flag: 'whole', why: L(`There it shows the battery voltage, not the share of it across ${R}.`, `Dort zeigt es die Batteriespannung, nicht deren Anteil an ${R}.`) },
+      ] : [
+        { ...series, correct: true },
+        { ...across, flag: 'aparallel', why: L(`Across ${R}, the ammeter ($R_\\text{A} \\approx 0$) short-circuits it: the current flows through the meter instead of ${R}.`, `Parallel zu ${R} schliesst das Amperemeter ($R_\\text{A} \\approx 0$) diesen kurz: Der Strom fliesst durchs Messgerät statt durch ${R}.`) },
+        { ...battery, flag: 'aparallel', why: L('Across the battery, the ammeter short-circuits it: a very large current flows.', 'Parallel zur Batterie schliesst das Amperemeter sie kurz: Es fliesst ein sehr grosser Strom.') },
+        { ...mainLine, flag: 'whole', why: L(`There it shows the whole battery current, not the part of it through ${R}.`, `Dort zeigt es den ganzen Batteriestrom, nicht den Teil davon durch ${R}.`) },
+      ];
+      const turn = seed % 4; // the options in an order of their own
+      return {
+        title: L('Where does the meter go?', 'Wo kommt das Messgerät hin?'),
+        text: `<p>${volt ? L(`With a voltmeter, you want to measure the voltage across ${R} (highlighted).`, `Mit einem Voltmeter willst du die Spannung an ${R} (hervorgehoben) messen.`)
+          : L(`With an ammeter, you want to measure the current through ${R} (highlighted).`, `Mit einem Amperemeter willst du den Strom durch ${R} (hervorgehoben) messen.`)}</p>`,
+        figure: e.plain(n.id),
+        ask: volt ? L('How do you connect the voltmeter?', 'Wie schliesst du das Voltmeter an?') : L('How do you connect the ammeter?', 'Wie schliesst du das Amperemeter an?'),
+        options: [...options.slice(turn), ...options.slice(0, turn)].map((o) => ({ correct: false, flag: null, why: null, ...o })),
+        explain: () => `<div class="figs">${e.figure(true)}</div><div class="steps"><p>${volt
+          ? L(`A voltmeter compares the two ends of a part: it goes across ${R}, in parallel, without opening the circuit. Its resistance $R_\\text{V} \\to \\infty$ lets (almost) no current through it, so it changes nothing. Here it shows $${s} = ${val}$.`,
+            `Ein Voltmeter vergleicht die beiden Enden eines Teils: Es wird parallel zu ${R} angeschlossen, ohne den Stromkreis aufzutrennen. Sein Widerstand $R_\\text{V} \\to \\infty$ lässt (fast) keinen Strom durch, also verändert es nichts. Hier zeigt es $${s} = ${val}$.`)
+          : L(`The current through ${R} has to flow through the ammeter: it goes in series with ${R}, in its branch. Its resistance $R_\\text{A} \\approx 0$ changes nothing. Here it shows $${s} = ${val}$.`,
+            `Der Strom durch ${R} muss durch das Amperemeter fliessen: Es kommt in Serie zu ${R}, in dessen Zweig. Sein Widerstand $R_\\text{A} \\approx 0$ verändert nichts. Hier zeigt es $${s} = ${val}$.`)}</p></div>`,
+        key: `place|${e.id}|${q}`,
+      };
+    }
+    const e = meters(kind === 'meter:wrong' ? 'wrong' : 'read', seed), c = e.circuit;
+    // the meter asked about: the voltmeter or the ammeter, where there are both
+    const m = e.meters.length > 1 && seed % 2 === 1 ? e.meters.find((x) => x.m === 'V') : e.meters.find((x) => x.m === 'A');
+    const q = m.m === 'V' ? 'V' : 'I', node = c.nodes[m.at];
+    let cands = [], target = node;
+    if (e.kind === 'vseries' && m.m === 'A') {
+      cands = [[fval(node.I), 'vseries', L(`That is the current without the voltmeter. In series in the main line, the voltmeter ($R_\\text{V} \\to \\infty$) blocks the current: the ammeter shows 0.`, `Das ist der Strom ohne Voltmeter. In Serie in der Hauptleitung sperrt das Voltmeter ($R_\\text{V} \\to \\infty$) den Strom: Das Amperemeter zeigt 0.`)],
+        [fval(c.root.I), 'vseries', L('That is the battery current without the voltmeter; but in series, the voltmeter blocks the current.', 'Das ist der Batteriestrom ohne Voltmeter; in Serie sperrt das Voltmeter aber den Strom.')]];
+      target = null;
+    } else if (e.kind === 'vseries') {
+      cands = [[0, 'vseries', L('No current flows, but there is a voltage: with none across the resistors, the whole battery voltage is across the voltmeter.', 'Es fliesst kein Strom, aber es gibt eine Spannung: An den Widerständen liegt keine, also liegt die ganze Batteriespannung am Voltmeter.')],
+        ...c.leaves.map((n) => [fval(n.V), 'vseries', L('That is the voltage across a resistor without the voltmeter; but in series, the voltmeter blocks the current, and no voltage is left across the resistors.', 'Das ist die Spannung an einem Widerstand ohne Voltmeter; in Serie sperrt das Voltmeter aber den Strom, und an den Widerständen bleibt keine Spannung.')])];
+      target = null;
+    } else if (e.kind === 'ashort') {
+      const k = e.shorted.k;
+      cands = [[fval(k.I), 'aparallel', L(`That is the current through ${Rn(k)} without the meter. Across ${Rn(k)}, the ammeter ($R_\\text{A} \\approx 0$) short-circuits it, so a larger current flows, all of it through the ammeter.`, `Das ist der Strom durch ${Rn(k)} ohne Messgerät. Parallel zu ${Rn(k)} schliesst das Amperemeter ($R_\\text{A} \\approx 0$) diesen kurz, also fliesst ein grösserer Strom, ganz durchs Amperemeter.`)],
+        [0, null, L(`The current does not avoid the ammeter: with $R_\\text{A} \\approx 0$, it takes the path through the ammeter rather than through ${Rn(k)}.`, `Der Strom meidet das Amperemeter nicht: Mit $R_\\text{A} \\approx 0$ nimmt er den Weg durchs Amperemeter statt durch ${Rn(k)}.`)]];
+      target = null;
+    }
+    return {
+      title: e.title,
+      text: `<p>${e.kind === 'read' ? L('The meters are ideal.', 'Die Messgeräte sind ideal.') : L('The meters are ideal. Look closely at how they are connected.', 'Die Messgeräte sind ideal. Schau genau, wie sie angeschlossen sind.')}</p>`,
+      figure: e.figure(false, m.m),
+      ask: m.m === 'V' ? L('What does the voltmeter show?', 'Was zeigt das Voltmeter an?') : L('What does the ammeter show?', 'Was zeigt das Amperemeter an?'),
+      options: numberOptions(c, target, q, m.value, cands),
+      explain: () => `<div class="figs">${e.figure(true)}</div>${steps(e)}`,
+      key: `${e.id}|${m.m}`,
     };
   }
   const checkSource = {
     id: 'rc',
     objectives: OBJECTIVES,
     question: checkQuestion,
-    concept: { whole: 'whole', ratio: 'ratio' },
+    concept: { whole: 'whole', ratio: 'ratio', vseries: 'vseries', aparallel: 'aparallel' },
     concepts: () => ({
       whole: L('giving one part the whole battery voltage or current', 'einem Teil die ganze Batteriespannung oder den ganzen Strom geben'),
       ratio: L('a divider the wrong way round', 'ein Teiler falsch herum'),
+      vseries: L('a voltmeter in series, as if it changed nothing (it blocks the current: R_V → ∞)', 'ein Voltmeter in Serie, als ob es nichts veränderte (es sperrt den Strom: R_V → ∞)'),
+      aparallel: L('an ammeter in parallel, as if it changed nothing (it short-circuits: R_A ≈ 0)', 'ein Amperemeter parallel, als ob es nichts veränderte (es schliesst kurz: R_A ≈ 0)'),
     }),
   };
 
   // ---------------------------------------------------------------- language
   const lessons = () => window.Lessons.EXAMPLES.map((e, i) => ({
-    name: e.name[Lang.get()], idea: e.idea[Lang.get()], also: topics.also(i), frames: () => tutorial(e.level, e.seed, e.path).frames,
+    name: e.name[Lang.get()], idea: e.idea[Lang.get()], also: topics.also(i), frames: () => (e.meters ? meterTutorial : tutorial)(e.level, e.seed, e.path).frames,
   }));
 
   function applyStatic() {
