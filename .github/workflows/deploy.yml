@@ -41,7 +41,7 @@ jobs:
   deploy:
     needs: test
     # not in forks: they have no deploy key
-    if: github.repository == 'bylands/texercises'
+    if: github.repository == 'bylands/texercises' || github.repository == 'bylands/learningphysics'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
