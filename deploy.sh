@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploys learningphysics.ch: every app, the privacy page, KaTeX, the hub page (index.html,
-# lang.js and objectives.json at the web root) and the admin panel's program (hub-admin/hubadmin.py, which nginx does
+# lang.js, objectives.json and the site's icons at the web root) and the admin panel's program (hub-admin/hubadmin.py, which nginx does
 # not serve; the service restarts by itself when it changes), with rsync. Only changed files are sent (by checksum) and nothing on
 # the server is deleted; the admin panel's data (hub-data/) is never touched.
 #   ./deploy.sh            deploy
@@ -49,7 +49,7 @@ for a in $APPS; do
   src=${a%%:*} dst=${a##*:}
   send "$src/" "$TARGET$dst/" | sed "s|^|$dst/|"
 done
-send hub/index.html hub/lang.js hub/objectives.json "$TARGET"
+send hub/index.html hub/lang.js hub/objectives.json hub/favicon.ico hub/favicon.svg hub/apple-touch-icon.png "$TARGET"
 send --include=hubadmin.py --exclude='*' hub-admin/ "${TARGET}hub-admin/" | sed "s|^|hub-admin/|"
 if [ -n "$OPENRSYNC" ] && [ -z "$DRY" ] && [[ "$TARGET" == *:/* ]]; then
   ssh "${TARGET%%:*}" "cd '${TARGET#*:}' && find . -path ./hub-data -prune -o -user \$(id -un) \( -type f ! -perm 664 -exec chmod 664 {} + -o -type d ! -perm 2775 -exec chmod 2775 {} + \)"

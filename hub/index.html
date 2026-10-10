@@ -8,7 +8,9 @@
     // a set of the teacher's (learningphysics.ch/name, see below): its apps only, once they are known
     if (/^\/[a-z0-9][a-z0-9-]{0,39}\/?$/.test(location.pathname) && !/^\/hub\/?$/.test(location.pathname)) document.documentElement.classList.add('set-page');
   </script>
-  <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"%3E%3Cstyle%3E.a%7Bstroke:%232b59c3%7D%40media %28prefers-color-scheme:dark%29%7B.a%7Bstroke:%237aa2ff%7D%7D%3C/style%3E%3Cpath class="a" d="M6 43Q13 6 31 13" fill="none" stroke-width="4.6" stroke-linecap="round" stroke-dasharray="0.1 8.2"/%3E%3Ccircle cx="37" cy="17" r="8.5" fill="%23ffc21a" stroke="%23e0a400" stroke-width="1.5"/%3E%3C/svg%3E'>
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <style>
     :root {
       --bg: #f6f5f1;
@@ -237,6 +239,9 @@
     .panel .what { width: 4.5rem; color: var(--muted); font-size: 0.9rem; }
     .panel .filter { flex: 1; }
     main.apps:not(.with-tags) .tags { display: none; }
+    .match { margin-left: auto; }
+    /* on a phone, the switch any/all before the long list of topics */
+    @media (max-width: 560px) { #topicrow .what { order: -2; } .match { order: -1; margin-left: 0; } }
     .none { color: var(--muted); margin-top: 0; margin-bottom: 20px; }
 
     /* the page of a set: no filters, and the cards only once the set is known */
@@ -353,7 +358,11 @@
     </div>
     <div id="panel" class="panel" hidden>
       <div class="row"><span class="what" data-i18n="mode">Mode</span><nav id="modefilter" class="filter" data-i18n-label="modefilter" aria-label="Filter by mode"></nav></div>
-      <div class="row" id="topicrow" hidden><span class="what" data-i18n="topic">Topic</span><nav id="filter" class="filter" data-i18n-label="filter" aria-label="Filter by topic"></nav></div>
+      <div class="row" id="topicrow" hidden><span class="what" data-i18n="topic">Topic</span><nav id="filter" class="filter" data-i18n-label="filter" aria-label="Filter by topic"></nav>
+        <div id="match" class="order match" role="radiogroup" data-i18n-label="match" aria-label="Show the apps with" hidden>
+          <label><input type="radio" name="match" value="any" checked><span data-i18n="any">any of them</span></label>
+          <label><input type="radio" name="match" value="all"><span data-i18n="every">all of them</span></label>
+        </div></div>
     </div>
   </div>
 
@@ -871,7 +880,8 @@
     // { order: [app], tags: { app: [key] }, labels: { key: { en, de } } }. Without it, the cards
     // stay as they are in this page. The filters by mode and by tag, and the tags on the cards, show
     // only while the filter icon is open. The chosen modes and tags are kept in the address
-    // (?mode=tutor,check&topic=key,key: the cards with any of the modes and any of the tags), so
+    // (?mode=tutor,check&topic=key,key: the cards with any of the modes and any of the tags; with
+    // &match=all, all of the tags), so
     // that a filtered page can be shared in either language; it then opens with the filters shown.
     // The search matches the name of an app or of one of its tags, in English or German. The order
     // is the standard one (the admin panel's) or, if chosen, the most recently used apps first
@@ -896,8 +906,8 @@
 
       // the German texts of the page; the English ones are those in it
       const UI = {
-        en: { tagline: 'Interactive exercises for physics lessons.', filter: 'Filter by topic', modefilter: 'Filter by mode', mode: 'Mode', topic: 'Topic', filters: 'Filters', search: 'Search the apps and topics', placeholder: 'Search apps or topics', none: 'No apps match.', order: 'Order of the apps', standard: 'Standard', recent: 'Recently used' },
-        de: { tagline: 'Interaktive Übungen für den Physikunterricht.', filter: 'Nach Thema filtern', modefilter: 'Nach Modus filtern', mode: 'Modus', topic: 'Thema', filters: 'Filter', search: 'Apps und Themen durchsuchen', placeholder: 'Apps oder Themen suchen', none: 'Keine passenden Apps.', order: 'Reihenfolge der Apps', standard: 'Standard', recent: 'Zuletzt verwendet' },
+        en: { tagline: 'Interactive exercises for physics lessons.', filter: 'Filter by topic', modefilter: 'Filter by mode', mode: 'Mode', topic: 'Topic', filters: 'Filters', search: 'Search the apps and topics', placeholder: 'Search apps or topics', none: 'No apps match.', order: 'Order of the apps', standard: 'Standard', recent: 'Recently used', match: 'Show the apps with', any: 'any of them', every: 'all of them' },
+        de: { tagline: 'Interaktive Übungen für den Physikunterricht.', filter: 'Nach Thema filtern', modefilter: 'Nach Modus filtern', mode: 'Modus', topic: 'Thema', filters: 'Filter', search: 'Apps und Themen durchsuchen', placeholder: 'Apps oder Themen suchen', none: 'Keine passenden Apps.', order: 'Reihenfolge der Apps', standard: 'Standard', recent: 'Zuletzt verwendet', match: 'Apps zeigen mit', any: 'einem davon', every: 'allen davon' },
       };
       const search = document.getElementById('search'), funnel = document.getElementById('funnel'), panel = document.getElementById('panel');
       const modeNav = document.getElementById('modefilter');
@@ -1026,6 +1036,9 @@
       const listOf = (name) => (new URLSearchParams(location.search).get(name) || '').split(',').filter(Boolean);
       listOf('mode').filter((m) => MODES[m]).forEach((m) => modesOn.add(m));
       listOf('topic').forEach((k) => topics.add(k)); // the tags not in /apps.json drop out in tags()
+      // with several topics chosen: the apps with any of them (the default) or with all of them
+      let matchAll = new URLSearchParams(location.search).get('match') === 'all';
+      document.getElementById('match').addEventListener('change', (evt) => { matchAll = evt.target.value === 'all'; show(); });
       const tagsOf = (c) => (cfg && Array.isArray(cfg.tags && cfg.tags[idOf(c)]) ? cfg.tags[idOf(c)].filter((k) => typeof k === 'string') : []);
       // a tag's name in the page's language (a tag without names is its own name)
       const nameOf = (k) => { const l = cfg.labels && cfg.labels[k]; return l ? (Lang.get() === 'de' && l.de) || l.en || k : k; };
@@ -1056,7 +1069,7 @@
       function show() {
         const words = fold(search.value).split(/\s+/).filter(Boolean);
         cards.forEach((c) => {
-          c.hidden = (cfg && topics.size > 0 && !tagsOf(c).some((k) => topics.has(k)))
+          c.hidden = (cfg && topics.size > 0 && !(matchAll ? [...topics].every((k) => tagsOf(c).includes(k)) : tagsOf(c).some((k) => topics.has(k))))
             || (modesOn.size > 0 && !modesOf(c).some((m) => modesOn.has(m)))
             || (words.length > 0 && !words.every((w) => namesOf(c).includes(w)));
         });
@@ -1065,12 +1078,15 @@
           const k = b.dataset[kind];
           b.setAttribute('aria-pressed', String(k ? on.has(k) : on.size === 0));
         }));
+        document.getElementById('match').hidden = topics.size < 2;
+        document.querySelector(`input[name="match"][value="${matchAll ? 'all' : 'any'}"]`).checked = true;
         const count = funnel.querySelector('.count'), n = (cfg ? topics.size : 0) + modesOn.size;
         count.hidden = !n;
         count.textContent = n;
         const url = new URL(location.href);
         if (modesOn.size) url.searchParams.set('mode', [...modesOn].join(',')); else url.searchParams.delete('mode');
         if (topics.size) url.searchParams.set('topic', [...topics].join(',')); else url.searchParams.delete('topic');
+        if (matchAll && topics.size > 1) url.searchParams.set('match', 'all'); else url.searchParams.delete('match');
         url.search = url.searchParams.toString().replace(/%2C/g, ','); // ?topic=a,b, readable
         history.replaceState(null, '', url);
       }
