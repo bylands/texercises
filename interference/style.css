@@ -1,0 +1,68 @@
+/* Interference and Diffraction: its colours, drawings and answer fields; the general look is in
+   ui.css (shared by the apps). */
+:root {
+  /* wave fronts blue, the path difference red, the laser light on the screen red */
+  --if-wave: #1f5fd6;
+  --if-ds: #c62828;
+  --if-light: #e0301e;
+  --if-screen: #1f2328;
+  --if-old: #8a9099;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --if-wave: #74a7ff;
+    --if-ds: #ff7b72;
+    --if-light: #ff5a47;
+    --if-screen: #0b0d10;
+    --if-old: #7d848c;
+  }
+}
+
+#prompt p { margin: 6px 0; }
+svg text { font-family: var(--serif); }
+
+/* the drawings (figures.js, on the shared figure kit) */
+svg.tb .if-front { fill: none; stroke: var(--if-wave); stroke-width: 2; stroke-linecap: round; }
+svg.tb .if-front.if-new { stroke-width: 2.4; }
+svg.tb .if-wavelet { fill: none; stroke: var(--if-wave); stroke-width: 1.1; stroke-dasharray: 4 3; opacity: 0.8; }
+svg.tb .if-dot { fill: var(--ink); }
+svg.tb .if-wall { fill: var(--tb-wall); stroke: var(--ink); stroke-width: 1.2; }
+svg.tb .if-arrowline { fill: none; stroke: var(--muted); stroke-width: 1.4; }
+svg.tb .if-arrow, svg.tb .if-arrowhead { fill: var(--muted); }
+svg.tb .if-vec path { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+svg.tb .if-vec polygon { fill: var(--muted); }
+svg.tb .if-ray { fill: none; stroke: var(--ink); stroke-width: 1.3; }
+svg.tb .if-thin { fill: none; stroke: var(--muted); stroke-width: 1; }
+svg.tb .if-thin.if-dash { stroke-dasharray: 3 3; }
+svg.tb .if-axis { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 4; }
+svg.tb .if-axis-solid { fill: none; stroke: var(--muted); stroke-width: 1.2; }
+svg.tb .if-ds { fill: none; stroke: var(--if-ds); stroke-width: 3.2; stroke-linecap: round; }
+svg.tb .if-dslabel { fill: var(--if-ds); font: 15px var(--serif); paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+svg.tb .if-label { fill: var(--ink); font: 14px var(--serif); text-anchor: middle; paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+svg.tb .if-screen-line { fill: none; stroke: var(--ink); stroke-width: 3; }
+svg.tb .if-speaker rect, svg.tb .if-speaker path { fill: var(--tb-metal1); stroke: var(--ink); stroke-width: 1.1; stroke-linejoin: round; }
+svg.tb .if-curve { fill: none; stroke: var(--if-wave); stroke-width: 2; stroke-linejoin: round; }
+svg.tb .if-curve.if-old { stroke: var(--if-old); stroke-width: 1.5; stroke-dasharray: 5 4; }
+svg.tb .if-screen { fill: var(--if-screen); }
+svg.tb .if-light { fill: var(--if-light); }
+
+.legend { margin: 2px 0 8px; }
+
+/* answers that are no numbers: a choice of words, statements (one below the other) or pictures */
+.field.choice { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.field.choice .what { margin-right: 4px; }
+.field.choice.wide { flex-direction: column; align-items: stretch; }
+/* every answer part on its own row of the grid of fields (ui.css) */
+.fields > .field.choice { grid-column: 1 / -1; }
+.choices { flex-wrap: wrap; }
+.choices.stack { flex-direction: column; align-items: stretch; }
+.choices.stack > label > span { border-left: 0; border-top: 1px solid var(--line); text-align: left; padding: 6px 12px; }
+.choices.stack > label:first-child > span { border-top: 0; }
+.choices.pics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; border: 0; background: none; }
+.choices.pics > label > span { display: block; border: 1px solid var(--line); border-radius: 8px; padding: 4px; }
+.choices.pics .fig svg { max-width: 100%; height: auto; }
+@media (max-width: 560px) { .choices.pics { grid-template-columns: minmax(0, 1fr); } }
+
+/* a result in the text of a step (in formulas, KaTeX marks it: see ui.css) */
+span.result { background: var(--ok-bg); border-radius: 3px; padding: 0.05em 0.25em; }
