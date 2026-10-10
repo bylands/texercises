@@ -574,36 +574,56 @@
   // ---------------------------------------------------------------- Lenz's rule
   const RIGHTHAND = () => L('A current that flows anticlockwise, seen from one side, makes that side a north pole: its field points towards you (right-hand rule).', 'Ein Strom, der von einer Seite gesehen im Gegenuhrzeigersinn fliesst, macht diese Seite zu einem Nordpol: Sein Feld zeigt auf dich zu (Rechte-Hand-Regel).');
   const LENZ = () => L("Lenz's rule: the induced current opposes the change that causes it.", 'Lenzsche Regel: Der induzierte Strom wirkt der Änderung entgegen, die ihn verursacht.');
+  // who moves: the magnet or the ring (towards or away from each other); with no relative motion,
+  // both at rest or both moved together
   function lenzMagnet(seed) {
     const r = rng(seed * 53 + 23), pole = r.pick(['N', 'S']), move = r.next() < 0.15 ? 'still' : r.pick(['toward', 'away']);
+    const who = move === 'still' ? r.pick(['rest', 'together']) : r.pick(['magnet', 'ring']);
     const poleName = (p) => (p === 'N' ? L('north pole', 'Nordpol') : L('south pole', 'Südpol'));
     const face = move === 'still' ? null : move === 'toward' ? pole : pole === 'N' ? 'S' : 'N';
-    const text = move === 'toward' ? L(`<p>A bar magnet is moved towards a metal ring, its ${poleName(pole)} first.</p>`, `<p>Ein Stabmagnet wird mit dem ${poleName(pole)} voran auf einen Metallring zu bewegt.</p>`)
-      : move === 'away' ? L(`<p>A bar magnet, its ${poleName(pole)} facing a metal ring, is pulled away from the ring.</p>`, `<p>Ein Stabmagnet, dessen ${poleName(pole)} zu einem Metallring zeigt, wird vom Ring weggezogen.</p>`)
-        : L(`<p>A bar magnet is held still in front of a metal ring, its ${poleName(pole)} facing the ring.</p>`, `<p>Ein Stabmagnet wird ruhig vor einen Metallring gehalten, mit dem ${poleName(pole)} zum Ring.</p>`);
-    const why = move === 'still' ? L('The magnet does not move: the flux through the ring does not change, so no current is induced, and there is no force.', 'Der Magnet bewegt sich nicht: Der Fluss durch den Ring ändert sich nicht, also wird kein Strom induziert, und es gibt keine Kraft.')
-      : move === 'toward' ? L(`The flux through the ring increases. ${LENZ()} The ring pushes the magnet back: its side facing the magnet becomes a ${poleName(face)}, like the magnet's pole. `, `Der Fluss durch den Ring nimmt zu. ${LENZ()} Der Ring stösst den Magneten ab: Seine Seite zum Magneten wird ein ${poleName(face)}, wie der Pol des Magneten. `)
-        : L(`The flux through the ring decreases. ${LENZ()} The ring holds the magnet back: its side facing the magnet becomes a ${poleName(face)}, opposite to the magnet's pole. `, `Der Fluss durch den Ring nimmt ab. ${LENZ()} Der Ring hält den Magneten zurück: Seine Seite zum Magneten wird ein ${poleName(face)}, entgegengesetzt zum Pol des Magneten. `);
+    const text = who === 'rest' ? L(`<p>A bar magnet is held still in front of a metal ring, its ${poleName(pole)} facing the ring.</p>`, `<p>Ein Stabmagnet wird ruhig vor einen Metallring gehalten, mit dem ${poleName(pole)} zum Ring.</p>`)
+      : who === 'together' ? L(`<p>A bar magnet and a metal ring in front of it, the magnet's ${poleName(pole)} facing the ring, are carried along together at the same speed.</p>`, `<p>Ein Stabmagnet und ein Metallring davor, der ${poleName(pole)} des Magneten zum Ring, werden zusammen mit gleicher Geschwindigkeit weitergetragen.</p>`)
+        : who === 'ring' ? (move === 'toward' ? L(`<p>A bar magnet is held still. A metal ring is moved towards its ${poleName(pole)}.</p>`, `<p>Ein Stabmagnet wird ruhig gehalten. Ein Metallring wird auf seinen ${poleName(pole)} zu bewegt.</p>`)
+          : L(`<p>A bar magnet is held still, its ${poleName(pole)} facing a metal ring. The ring is pulled away from the magnet.</p>`, `<p>Ein Stabmagnet wird ruhig gehalten, mit dem ${poleName(pole)} zu einem Metallring. Der Ring wird vom Magneten weggezogen.</p>`))
+          : move === 'toward' ? L(`<p>A bar magnet is moved towards a metal ring, its ${poleName(pole)} first.</p>`, `<p>Ein Stabmagnet wird mit dem ${poleName(pole)} voran auf einen Metallring zu bewegt.</p>`)
+            : L(`<p>A bar magnet, its ${poleName(pole)} facing a metal ring, is pulled away from the ring.</p>`, `<p>Ein Stabmagnet, dessen ${poleName(pole)} zu einem Metallring zeigt, wird vom Ring weggezogen.</p>`);
+    const byRing = who === 'ring';
+    const why = who === 'rest' ? L('The magnet does not move: the flux through the ring does not change, so no current is induced, and there is no force.', 'Der Magnet bewegt sich nicht: Der Fluss durch den Ring ändert sich nicht, also wird kein Strom induziert, und es gibt keine Kraft.')
+      : who === 'together' ? L('Magnet and ring move together, so the distance between them stays the same: the flux through the ring does not change, so no current is induced, and there is no force. Only motion of one relative to the other counts.', 'Magnet und Ring bewegen sich zusammen, der Abstand zwischen ihnen bleibt also gleich: Der Fluss durch den Ring ändert sich nicht, also wird kein Strom induziert, und es gibt keine Kraft. Es zählt nur die Bewegung des einen relativ zum anderen.')
+        : move === 'toward' ? L(`The flux through the ring increases. ${LENZ()} ${byRing ? 'The magnet pushes the approaching ring back: the side of the ring' : 'The ring pushes the magnet back: its side'} facing the magnet becomes a ${poleName(face)}, like the magnet's pole. `, `Der Fluss durch den Ring nimmt zu. ${LENZ()} ${byRing ? 'Ring und Magnet stossen sich ab, der Ring wird beim Annähern gebremst' : 'Der Ring stösst den Magneten ab'}: Seine Seite zum Magneten wird ein ${poleName(face)}, wie der Pol des Magneten. `)
+          : L(`The flux through the ring decreases. ${LENZ()} ${byRing ? 'The magnet holds the retreating ring back: the side of the ring' : 'The ring holds the magnet back: its side'} facing the magnet becomes a ${poleName(face)}, opposite to the magnet's pole. `, `Der Fluss durch den Ring nimmt ab. ${LENZ()} ${byRing ? 'Ring und Magnet ziehen sich an, der Ring wird beim Entfernen zurückgehalten' : 'Der Ring hält den Magneten zurück'}: Seine Seite zum Magneten wird ein ${poleName(face)}, entgegengesetzt zum Pol des Magneten. `);
     const dir = face === 'N' ? 'acw' : 'cw', full = move === 'still' ? why : why + RIGHTHAND();
     return {
-      kind: 'lenz', title: L('A magnet and a ring', 'Ein Magnet und ein Ring'), text, figs: '', pic: ['magnet', { pole, move }],
+      kind: 'lenz', title: L('A magnet and a ring', 'Ein Magnet und ein Ring'), text, figs: '', pic: ['magnet', { pole, move, who }],
       questions: [
         choice('face', L('(a) The side of the ring facing the magnet becomes', '(a) Die Seite des Rings zum Magneten wird'), words(r, [[L('a north pole', 'ein Nordpol'), face === 'N', why], [L('a south pole', 'ein Südpol'), face === 'S', why], [L('neither: no current flows', 'keines von beiden: Es fliesst kein Strom'), face === null, why]])),
         choice('force', L('(b) The ring is', '(b) Der Ring wird'), words(r, [[L('pushed away from the magnet', 'vom Magneten weggestossen'), move === 'toward', why], [L('pulled towards the magnet', 'zum Magneten hingezogen'), move === 'away', why], [L('neither pushed nor pulled', 'weder gestossen noch gezogen'), move === 'still', why]])),
         choice('dir', L('(c) Seen from the magnet, the current in the ring flows', '(c) Vom Magneten aus gesehen fliesst der Strom im Ring'), words(r, [[L('clockwise', 'im Uhrzeigersinn'), dir === 'cw' && face !== null, full], [L('anticlockwise', 'im Gegenuhrzeigersinn'), dir === 'acw' && face !== null, full], [L('not at all', 'gar nicht'), face === null, full]])),
       ],
-      hints: [L('Does the flux through the ring change? Does it increase or decrease?', 'Ändert sich der Fluss durch den Ring? Nimmt er zu oder ab?'), LENZ() + ' ' + L('An approaching magnet is pushed back, a retreating one held back.', 'Ein sich nähernder Magnet wird abgestossen, ein sich entfernender zurückgehalten.'), RIGHTHAND()],
-      solution: [full], p: { pole, move },
+      hints: [L('Does the flux through the ring change? Does it increase or decrease?', 'Ändert sich der Fluss durch den Ring? Nimmt er zu oder ab?'), LENZ() + ' ' + L('Magnet and ring that approach each other repel, ones that move apart attract; only their motion relative to each other counts.', 'Magnet und Ring, die sich einander nähern, stossen sich ab; solche, die sich voneinander entfernen, ziehen sich an. Es zählt nur ihre Bewegung relativ zueinander.'), RIGHTHAND()],
+      solution: [full], p: { pole, move, who },
     };
   }
+  // does the flux through the loop grow (field stronger, loop pushed into the field)?
+  const lenzGrows = (how) => how === 'up' || how === 'in';
   function lenzField(seed) {
-    const r = rng(seed * 59 + 29), into = r.next() < 0.5, how = r.pick(['up', 'down', 'out']);
-    const grows = how === 'up', indInto = grows ? !into : into, dir = indInto ? 'cw' : 'acw';
+    // how the flux changes: the field gets stronger (up) or weaker (down), or is switched off; the
+    // loop is pulled out of the field or pushed into it, or squeezed so that its area shrinks
+    const r = rng(seed * 59 + 29), into = r.next() < 0.5, how = r.pick(['up', 'down', 'out', 'in', 'shrink', 'off']);
+    const grows = lenzGrows(how), indInto = grows ? !into : into, dir = indInto ? 'cw' : 'acw';
     const fieldName = (inn) => (inn ? L('into the page', 'in die Seite hinein') : L('out of the page', 'aus der Seite heraus'));
     const text = how === 'out' ? L(`<p>A conducting loop lies in a magnetic field that points ${fieldName(into)}. The loop is pulled sideways out of the field.</p>`, `<p>Eine Leiterschleife liegt in einem Magnetfeld, das ${fieldName(into)} zeigt. Die Schleife wird seitlich aus dem Feld gezogen.</p>`)
+      : how === 'in' ? L(`<p>A conducting loop lies next to a region with a magnetic field that points ${fieldName(into)}. The loop is pushed sideways into the field.</p>`, `<p>Eine Leiterschleife liegt neben einem Gebiet mit einem Magnetfeld, das ${fieldName(into)} zeigt. Die Schleife wird seitlich ins Feld geschoben.</p>`)
+      : how === 'shrink' ? L(`<p>A loop of flexible wire lies in a magnetic field that points ${fieldName(into)}. The loop is squeezed together, so that its area gets smaller.</p>`, `<p>Eine Schleife aus biegsamem Draht liegt in einem Magnetfeld, das ${fieldName(into)} zeigt. Die Schleife wird zusammengedrückt, sodass ihre Fläche kleiner wird.</p>`)
+      : how === 'off' ? L(`<p>A conducting loop lies in a magnetic field that points ${fieldName(into)}. The field is switched off.</p>`, `<p>Eine Leiterschleife liegt in einem Magnetfeld, das ${fieldName(into)} zeigt. Das Feld wird ausgeschaltet.</p>`)
       : L(`<p>A conducting loop lies in a magnetic field that points ${fieldName(into)}. The field gets ${grows ? 'stronger' : 'weaker'}.</p>`, `<p>Eine Leiterschleife liegt in einem Magnetfeld, das ${fieldName(into)} zeigt. Das Feld wird ${grows ? 'stärker' : 'schwächer'}.</p>`);
-    const why = L(`The flux through the loop ${grows ? 'increases' : 'decreases'}. ${LENZ()} The induced current's own field inside the loop points ${grows ? 'against' : 'along'} the outer field: ${fieldName(indInto)}.`,
-      `Der Fluss durch die Schleife ${grows ? 'nimmt zu' : 'nimmt ab'}. ${LENZ()} Das eigene Feld des induzierten Stroms zeigt innerhalb der Schleife ${grows ? 'gegen' : 'in Richtung'} das äussere Feld: ${fieldName(indInto)}.`);
+    const cause = {
+      up: () => L('The field gets stronger, so', 'Das Feld wird stärker, also'), down: () => L('The field gets weaker, so', 'Das Feld wird schwächer, also'),
+      out: () => L('Less and less of the loop lies in the field, so', 'Immer weniger von der Schleife liegt im Feld, also'), in: () => L('More and more of the loop lies in the field, so', 'Immer mehr von der Schleife liegt im Feld, also'),
+      shrink: () => L('The area of the loop gets smaller, so', 'Die Fläche der Schleife wird kleiner, also'), off: () => L('The field drops to zero, so', 'Das Feld sinkt auf null, also'),
+    }[how]();
+    const why = L(`${cause} the flux through the loop ${grows ? 'increases' : 'decreases'}. ${LENZ()} The induced current's own field inside the loop points ${grows ? 'against' : 'along'} the outer field: ${fieldName(indInto)}.`,
+      `${cause} nimmt der Fluss durch die Schleife ${grows ? 'zu' : 'ab'}. ${LENZ()} Das eigene Feld des induzierten Stroms zeigt innerhalb der Schleife ${grows ? 'gegen' : 'in Richtung'} das äussere Feld: ${fieldName(indInto)}.`);
     const turn = L(` A current flowing ${dir === 'acw' ? 'anticlockwise' : 'clockwise'} (as seen in the figure) makes a field ${fieldName(indInto)} inside the loop (right-hand rule).`, ` Ein Strom im ${dir === 'acw' ? 'Gegenuhrzeigersinn' : 'Uhrzeigersinn'} (wie in der Abbildung gesehen) erzeugt innerhalb der Schleife ein Feld ${fieldName(indInto)} (Rechte-Hand-Regel).`);
     return {
       kind: 'lenz', title: L('The direction of the current', 'Die Richtung des Stroms'), text, figs: '', pic: ['field', { into, how }],
@@ -633,7 +653,7 @@
     return { ...f(seed), type, difficulty, id: `${type}-${seed}`, seed };
   }
 
-  const api = { TYPES: Object.keys(TYPES), make, describe, describeBack, lines, RULE, LAW, WHY, prompt, askGraph, given, pairFigure, one, placed, loopSetup, loopGraph, loopExplain, fmt, sgn, neg, Vi, PHI, DPHI, zeroOf, cap, when, endOf, LENZ, RIGHTHAND };
+  const api = { TYPES: Object.keys(TYPES), make, describe, describeBack, lines, RULE, LAW, WHY, prompt, askGraph, given, pairFigure, one, placed, loopSetup, loopGraph, loopExplain, fmt, sgn, neg, Vi, PHI, DPHI, zeroOf, cap, when, endOf, LENZ, RIGHTHAND, lenzGrows };
   root.IndEx = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

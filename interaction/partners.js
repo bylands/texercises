@@ -146,11 +146,267 @@
         ],
         effect: T('The hammer is stopped and the nail goes in: each force acts on its own body.', 'Der Hammer wird gebremst, und der Nagel geht hinein: Jede Kraft wirkt auf ihren eigenen Körper.'),
       },
+      moon: {
+        title: T('Earth and Moon', 'Erde und Mond'),
+        text: T('The Moon circles the Earth. The Earth has about 81 times the mass of the Moon.', 'Der Mond umkreist die Erde. Die Erde hat etwa die 81-fache Masse des Mondes.'),
+        force: T('the Earth pulls the Moon towards it', 'die Erde zieht den Mond an'),
+        partner: T('the Moon pulls the Earth towards it', 'der Mond zieht die Erde an'),
+        bodies: T('the Earth and the Moon', 'der Erde und dem Mond'),
+        draw: (f) => {
+          let g = D.rect(0, 0, 360, 190, 'space', 6) + `<path class="trace" d="M277 25 A200 200 0 0 1 277 165"/>`;
+          g += D.ball(90, 95, 34, 'obj earth') + D.ball(290, 95, 11, 'obj') + D.words(90, 150, T('Earth', 'Erde')) + D.words(304, 76, T('Moon', 'Mond'), 'start');
+          if (f.force) g += D.arrow(276, 95, 226, 95, 'f', '') + D.words(252, 118, T('on the Moon', 'auf den Mond'));
+          if (f.partner) g += D.arrow(128, 95, 178, 95, 'f', '', { cls: 'pair' }) + D.words(166, 80, T('on the Earth', 'auf die Erde'));
+          return D.svg(360, 190, g, T('The Moon circling the Earth', 'Der Mond umkreist die Erde'));
+        },
+        wrong: [
+          o(T('None: the Moon is far too light to pull on the Earth.', 'Keine: Der Mond ist viel zu leicht, um an der Erde zu ziehen.'), 'mass-wins',
+            T('Every force has a partner, whatever the masses: the Moon pulls the Earth just as hard. The Earth hardly moves only because its mass is so large.', 'Jede Kraft hat eine Gegenkraft, egal wie gross die Massen sind: Der Mond zieht genauso stark an der Erde. Die Erde bewegt sich kaum, nur weil ihre Masse so gross ist.')),
+          o(T('The Sun pulls the Moon towards it.', 'Die Sonne zieht den Mond an.'), 'pair-confusion',
+            T('That force also acts on the Moon. Partners act on two different bodies of one interaction: here the Earth and the Moon.', 'Diese Kraft wirkt auch auf den Mond. Kraft und Gegenkraft wirken auf die zwei verschiedenen Körper einer Wechselwirkung: hier die Erde und den Mond.')),
+          o(T('The Moon pushes the Earth away from it.', 'Der Mond stösst die Erde von sich weg.'), 'other',
+            T('Gravity always attracts, both ways: the Moon pulls the Earth towards it. The partner points opposite to the force because it acts on the other body.', 'Die Gravitation zieht immer an, in beide Richtungen: Der Mond zieht die Erde zu sich hin. Die Gegenkraft zeigt entgegengesetzt, weil sie auf den anderen Körper wirkt.')),
+        ],
+        size: T('How large is the pull of the Moon on the Earth, compared with the pull of the Earth on the Moon?', 'Wie gross ist die Kraft des Mondes auf die Erde, verglichen mit der Kraft der Erde auf den Mond?'),
+        sizes: [
+          o(T('About 81 times smaller, since the Moon has only 1/81 of the mass of the Earth.', 'Etwa 81-mal kleiner, weil der Mond nur 1/81 der Masse der Erde hat.'), 'mass-wins',
+            T('The pull depends on both masses together, and it is one interaction: the two forces are equally large. The Moon gets 81 times the acceleration of the Earth — from an equally large force.', 'Die Kraft hängt von beiden Massen zusammen ab, und es ist eine einzige Wechselwirkung: Die beiden Kräfte sind gleich gross. Der Mond bekommt die 81-fache Beschleunigung der Erde — durch eine gleich grosse Kraft.')),
+          o(T('Smaller, since the Moon is the one that goes round the Earth.', 'Kleiner, weil der Mond um die Erde kreist.'), 'active-wins',
+            T('How the bodies move does not matter: the two forces of an interaction are always equally large.', 'Wie sich die Körper bewegen, spielt keine Rolle: Die beiden Kräfte einer Wechselwirkung sind immer gleich gross.')),
+          o(T('Larger, since the Moon pulls up the tides on the Earth.', 'Grösser, weil der Mond auf der Erde die Gezeiten hervorruft.'), 'other',
+            T('The tides show that the Moon does pull on the Earth, but not that it pulls harder: the two forces of the interaction are equally large.', 'Die Gezeiten zeigen, dass der Mond an der Erde zieht, aber nicht, dass er stärker zieht: Die beiden Kräfte der Wechselwirkung sind gleich gross.')),
+        ],
+        effect: T('The Moon, being much lighter, circles the Earth; the Earth only wobbles a little.', 'Der Mond ist viel leichter und umkreist die Erde; die Erde schwankt nur ein wenig.'),
+      },
+      tennis: {
+        title: T('Racket and ball', 'Schläger und Ball'),
+        text: T('A tennis player hits a ball with her racket. The ball flies off fast.', 'Eine Tennisspielerin schlägt einen Ball mit ihrem Schläger. Der Ball fliegt schnell davon.'),
+        force: T('the racket pushes the ball forward', 'der Schläger drückt den Ball nach vorn'),
+        partner: T('the ball pushes the racket backward', 'der Ball drückt den Schläger nach hinten'),
+        bodies: T('the racket and the ball', 'dem Schläger und dem Ball'),
+        draw: (f) => {
+          let g = D.ground(0, 360, 200) + D.line(160, 118, 120, 178, 'body') + `<ellipse class="obj" cx="170" cy="92" rx="14" ry="28"/>` + D.ball(196, 92, 9, 'lit');
+          g += D.words(196, 70, T('ball', 'Ball')) + D.words(118, 194, T('racket', 'Schläger'), 'end');
+          if (f.force) g += D.arrow(206, 92, 256, 92, 'f', '') + D.words(264, 88, T('racket on ball', 'Schläger → Ball'), 'start');
+          if (f.partner) g += D.arrow(160, 100, 112, 100, 'f', '', { cls: 'pair' }) + D.words(108, 90, T('ball on racket', 'Ball → Schläger'), 'end');
+          return D.svg(360, 210, g, T('A racket hitting a tennis ball', 'Ein Schläger trifft einen Tennisball'));
+        },
+        wrong: [
+          o(T('None: the ball just flies off.', 'Keine: Der Ball fliegt einfach davon.'), 'obstacle',
+            T('The racket is slowed down on the ball, so something pushes it back: the ball. Every force has a partner of the same size.', 'Der Schläger wird am Ball gebremst, also drückt ihn etwas zurück: der Ball. Jede Kraft hat eine gleich grosse Gegenkraft.')),
+          o(T('The air pushes the ball backward.', 'Die Luft drückt den Ball nach hinten.'), 'pair-confusion',
+            T('That force also acts on the ball. Partners act on two different bodies: here the racket and the ball.', 'Diese Kraft wirkt auch auf den Ball. Kraft und Gegenkraft wirken auf zwei verschiedene Körper: hier den Schläger und den Ball.')),
+          o(T('The player’s hand pushes the racket forward.', 'Die Hand der Spielerin drückt den Schläger nach vorn.'), 'other',
+            T('That is an interaction between the hand and the racket. The partner of a force of the racket on the ball is a force of the ball on the racket.', 'Das ist eine Wechselwirkung zwischen Hand und Schläger. Die Gegenkraft zu einer Kraft des Schlägers auf den Ball ist eine Kraft des Balls auf den Schläger.')),
+        ],
+        size: T('How hard does the ball push on the racket, compared with the push of the racket on the ball?', 'Wie stark drückt der Ball auf den Schläger, verglichen mit der Kraft des Schlägers auf den Ball?'),
+        sizes: [
+          o(T('Less hard, since the racket is the one that strikes.', 'Weniger stark, weil der Schläger zuschlägt.'), 'active-wins',
+            T('Who strikes does not matter: the push between racket and ball is one interaction, and its two forces are equally large.', 'Wer zuschlägt, spielt keine Rolle: Das Drücken zwischen Schläger und Ball ist eine einzige Wechselwirkung, und ihre beiden Kräfte sind gleich gross.')),
+          o(T('Far less hard, since the ball is so light.', 'Viel weniger stark, weil der Ball so leicht ist.'), 'mass-wins',
+            T('The mass decides how much the force changes the velocity, not how large the force is. The light ball flies off fast, the racket is only slowed a little — with equal forces.', 'Die Masse bestimmt, wie stark die Kraft die Geschwindigkeit ändert, nicht wie gross die Kraft ist. Der leichte Ball fliegt schnell davon, der Schläger wird nur wenig gebremst — bei gleich grossen Kräften.')),
+          o(T('Less hard, otherwise the ball would not fly off.', 'Weniger stark, sonst würde der Ball nicht davonfliegen.'), 'other',
+            T('Whether the ball flies off depends on the forces on the ball, not on its push on the racket, which acts on another body.', 'Ob der Ball davonfliegt, hängt von den Kräften auf den Ball ab, nicht von seiner Kraft auf den Schläger, die auf einen anderen Körper wirkt.')),
+        ],
+        effect: T('The light ball flies off fast; the racket, held by the player, is only slowed a little.', 'Der leichte Ball fliegt schnell davon; der Schläger, den die Spielerin festhält, wird nur wenig gebremst.'),
+      },
+      clip: {
+        title: T('Magnet and paper clip', 'Magnet und Büroklammer'),
+        text: T('A strong bar magnet is held above a paper clip. The clip jumps up towards the magnet.', 'Ein starker Stabmagnet wird über eine Büroklammer gehalten. Die Klammer springt nach oben zum Magneten.'),
+        force: T('the magnet pulls the clip up', 'der Magnet zieht die Klammer nach oben'),
+        partner: T('the clip pulls the magnet down', 'die Klammer zieht den Magneten nach unten'),
+        bodies: T('the magnet and the clip', 'dem Magneten und der Klammer'),
+        draw: (f) => {
+          let g = D.ground(60, 300, 190) + D.rect(168, 16, 24, 40, 'mag-s', 1) + D.rect(168, 56, 24, 40, 'mag-n', 1) + D.text(180, 41, 'S', 'lbl small') + D.text(180, 81, 'N', 'lbl small');
+          g += D.rect(173, 134, 14, 32, 'thin', 6) + D.rect(176, 140, 8, 20, 'thin', 4) + D.words(152, 158, T('clip', 'Klammer'), 'end') + D.arrow(244, 178, 244, 140, 'm', '', { head: 7 });
+          if (f.force) g += D.arrow(196, 150, 196, 112, 'f', '') + D.words(204, 124, T('magnet on clip', 'Magnet → Klammer'), 'start');
+          if (f.partner) g += D.arrow(160, 66, 160, 112, 'f', '', { cls: 'pair' }) + D.words(152, 100, T('clip on magnet', 'Klammer → Magnet'), 'end');
+          return D.svg(360, 200, g, T('A bar magnet above a paper clip', 'Ein Stabmagnet über einer Büroklammer'));
+        },
+        wrong: [
+          o(T('None: the clip is not a magnet, so it cannot pull.', 'Keine: Die Klammer ist kein Magnet, also kann sie nicht ziehen.'), 'other',
+            T('The magnet magnetises the iron clip, and the two pull on each other: the clip pulls the magnet down just as hard. Every force has a partner.', 'Der Magnet magnetisiert die eiserne Klammer, und die beiden ziehen sich gegenseitig an: Die Klammer zieht den Magneten genauso stark nach unten. Jede Kraft hat eine Gegenkraft.')),
+          o(T('The Earth pulls the clip down (its weight).', 'Die Erde zieht die Klammer nach unten (ihre Gewichtskraft).'), 'pair-confusion',
+            T('That force also acts on the clip, and it is of a different kind. Partners act on two different bodies and are of the same kind: here the magnetic pull of the clip on the magnet.', 'Diese Kraft wirkt auch auf die Klammer, und sie ist von anderer Art. Kraft und Gegenkraft wirken auf zwei verschiedene Körper und sind von derselben Art: hier die magnetische Kraft der Klammer auf den Magneten.')),
+          o(T('The hand pushes the magnet up.', 'Die Hand drückt den Magneten nach oben.'), 'other',
+            T('That is an interaction between the hand and the magnet. The partner of a force of the magnet on the clip is a force of the clip on the magnet.', 'Das ist eine Wechselwirkung zwischen Hand und Magnet. Die Gegenkraft zu einer Kraft des Magneten auf die Klammer ist eine Kraft der Klammer auf den Magneten.')),
+        ],
+        size: T('How hard does the clip pull on the magnet, compared with the pull of the magnet on the clip?', 'Wie stark zieht die Klammer am Magneten, verglichen mit der Kraft des Magneten auf die Klammer?'),
+        sizes: [
+          o(T('Much less hard, since the magnet is so much stronger.', 'Viel weniger stark, weil der Magnet so viel stärker ist.'), 'mass-wins',
+            T('The pull depends on the magnet and the clip together, and it is one interaction: its two forces are equally large, however strong the magnet.', 'Die Kraft hängt vom Magneten und der Klammer zusammen ab, und es ist eine einzige Wechselwirkung: Ihre beiden Kräfte sind gleich gross, egal wie stark der Magnet ist.')),
+          o(T('Less hard, since the magnet does the pulling and the clip is only pulled.', 'Weniger stark, weil der Magnet zieht und die Klammer nur gezogen wird.'), 'active-wins',
+            T('Neither body “does” the pulling alone: the magnetic pull is one interaction between the two, and both forces are equally large.', 'Keiner der beiden Körper „zieht“ allein: Die magnetische Anziehung ist eine Wechselwirkung zwischen beiden, und beide Kräfte sind gleich gross.')),
+          o(T('Less hard, otherwise the clip would not rise.', 'Weniger stark, sonst würde die Klammer nicht steigen.'), 'other',
+            T('Whether the clip rises depends on the forces on the clip (the magnet and the Earth), not on its pull on the magnet, which acts on another body.', 'Ob die Klammer steigt, hängt von den Kräften auf die Klammer ab (Magnet und Erde), nicht von ihrer Kraft auf den Magneten, die auf einen anderen Körper wirkt.')),
+        ],
+        effect: T('The light clip jumps up to the magnet; the hand that holds the magnet hardly feels the extra pull.', 'Die leichte Klammer springt zum Magneten hoch; die Hand, die den Magneten hält, spürt den zusätzlichen Zug kaum.'),
+      },
+      skater: {
+        title: T('Skater and wall', 'Eisläuferin und Bande'),
+        text: T('A skater stands on the ice next to the wall of the rink and pushes herself off it. She glides away from the wall.', 'Eine Eisläuferin steht auf dem Eis neben der Bande und stösst sich davon ab. Sie gleitet von der Bande weg.'),
+        force: T('the skater pushes the wall to the right', 'die Eisläuferin drückt die Bande nach rechts'),
+        partner: T('the wall pushes the skater to the left', 'die Bande drückt die Eisläuferin nach links'),
+        bodies: T('the skater and the wall', 'der Eisläuferin und der Bande'),
+        draw: (f) => {
+          let g = D.rect(0, 170, 360, 12, 'ice', 0) + D.line(0, 170, 230, 170, 'gline') + D.ground(230, 360, 170) + D.rect(230, 40, 20, 130, 'solid', 0) + D.person(190, 168, 110, 1, 'push', true);
+          g += D.words(240, 32, T('wall', 'Bande'));
+          if (f.force) g += D.arrow(234, 96, 278, 96, 'f', '') + D.words(256, 84, T('skater on wall', 'Läuferin → Bande'), 'start');
+          if (f.partner) g += D.arrow(226, 112, 140, 112, 'f', '', { cls: 'pair' }) + D.words(134, 116, T('wall on skater', 'Bande → Läuferin'), 'end');
+          return D.svg(360, 196, g, T('A skater pushing herself off the wall of the rink', 'Eine Eisläuferin stösst sich von der Bande ab'));
+        },
+        wrong: [
+          o(T('None: a wall cannot push, it is only in the way.', 'Keine: Eine Bande kann nicht drücken, sie ist nur im Weg.'), 'obstacle',
+            T('The wall is pressed together a tiny bit and pushes back like a stiff spring. That push is what sends the skater gliding off.', 'Die Bande wird ein klein wenig zusammengedrückt und drückt zurück wie eine steife Feder. Genau diese Kraft lässt die Eisläuferin davongleiten.')),
+          o(T('The ground pushes the wall to the left (it holds the wall in place).', 'Der Boden drückt die Bande nach links (er hält sie fest).'), 'pair-confusion',
+            T('That force also acts on the wall: it balances the skater’s push, but it is not its partner. Partners act on two different bodies — here the skater and the wall.', 'Diese Kraft wirkt auch auf die Bande: Sie hält der Kraft der Eisläuferin das Gleichgewicht, ist aber nicht ihre Gegenkraft. Kraft und Gegenkraft wirken auf zwei verschiedene Körper — hier die Eisläuferin und die Bande.')),
+          o(T('The ice pushes the skater up.', 'Das Eis drückt die Eisläuferin nach oben.'), 'other',
+            T('That is an interaction between the ice and the skater. The partner of a force of the skater on the wall is a force of the wall on the skater.', 'Das ist eine Wechselwirkung zwischen dem Eis und der Eisläuferin. Die Gegenkraft zu einer Kraft der Eisläuferin auf die Bande ist eine Kraft der Bande auf die Eisläuferin.')),
+        ],
+        size: T('How hard does the wall push on the skater, compared with her push on the wall?', 'Wie stark drückt die Bande auf die Eisläuferin, verglichen mit ihrer Kraft auf die Bande?'),
+        sizes: [
+          o(T('Less hard, since the skater does the pushing.', 'Weniger stark, weil die Eisläuferin drückt.'), 'active-wins',
+            T('Who pushes does not matter: the push between skater and wall is one interaction, and its two forces are equally large.', 'Wer drückt, spielt keine Rolle: Das Drücken zwischen Eisläuferin und Bande ist eine einzige Wechselwirkung, und ihre beiden Kräfte sind gleich gross.')),
+          o(T('Not at all, since the wall does not move.', 'Gar nicht, weil sich die Bande nicht bewegt.'), 'obstacle',
+            T('The wall does not move because the ground holds it, but it still pushes back: without that push, the skater would not glide off.', 'Die Bande bewegt sich nicht, weil der Boden sie festhält, aber sie drückt trotzdem zurück: Ohne diese Kraft würde die Eisläuferin nicht davongleiten.')),
+          o(T('Harder, since the wall is much heavier than the skater.', 'Stärker, weil die Bande viel schwerer ist als die Eisläuferin.'), 'mass-wins',
+            T('The masses decide the effects, not the forces: the two forces of an interaction are always equally large.', 'Die Massen bestimmen die Wirkungen, nicht die Kräfte: Die beiden Kräfte einer Wechselwirkung sind immer gleich gross.')),
+        ],
+        effect: T('The skater glides off to the left; the wall, held by the ground, does not move.', 'Die Eisläuferin gleitet nach links davon; die Bande, die der Boden festhält, bewegt sich nicht.'),
+      },
+      cart: {
+        title: T('Child and cart', 'Kind und Leiterwagen'),
+        text: T('A child pulls a cart across the playground by its handle; the cart gets faster.', 'Ein Kind zieht einen Leiterwagen an der Deichsel über den Pausenplatz; der Wagen wird schneller.'),
+        force: T('the child pulls the cart forward', 'das Kind zieht den Wagen nach vorn'),
+        partner: T('the cart pulls the child backward', 'der Wagen zieht das Kind nach hinten'),
+        bodies: T('the child and the cart', 'dem Kind und dem Wagen'),
+        draw: (f) => {
+          let g = D.ground(0, 360, 180) + D.rect(50, 128, 110, 34, 'obj', 2) + D.ball(75, 168, 11, 'wheel') + D.ball(135, 168, 11, 'wheel');
+          g += D.line(160, 140, 226, 106, 'cable') + D.person(258, 178, 104, -1, 'hold') + D.arrow(30, 40, 80, 40, 'm', '', { head: 7 }) + D.words(88, 44, T('speeding up', 'wird schneller'), 'start');
+          if (f.force) g += D.arrow(110, 120, 156, 120, 'f', '') + D.words(104, 116, T('child on cart', 'Kind → Wagen'), 'end');
+          if (f.partner) g += D.arrow(226, 96, 182, 96, 'f', '', { cls: 'pair' }) + D.words(176, 92, T('cart on child', 'Wagen → Kind'), 'end');
+          return D.svg(360, 196, g, T('A child pulling a cart', 'Ein Kind zieht einen Leiterwagen'));
+        },
+        wrong: [
+          o(T('None: the cart only follows; it does not pull.', 'Keine: Der Wagen folgt nur; er zieht nicht.'), 'obstacle',
+            T('The handle is stretched a tiny bit and the cart pulls back on the child: the child feels it in the arm. Every force has a partner.', 'Die Deichsel wird ein klein wenig gedehnt, und der Wagen zieht am Kind zurück: Das Kind spürt es im Arm. Jede Kraft hat eine Gegenkraft.')),
+          o(T('The ground pushes the cart backward (friction).', 'Der Boden drückt den Wagen nach hinten (Reibung).'), 'pair-confusion',
+            T('That force also acts on the cart. Partners act on two different bodies: here the child and the cart.', 'Diese Kraft wirkt auch auf den Wagen. Kraft und Gegenkraft wirken auf zwei verschiedene Körper: hier das Kind und den Wagen.')),
+          o(T('The ground pushes the child’s feet forward.', 'Der Boden drückt die Füsse des Kindes nach vorn.'), 'other',
+            T('That is an interaction between the ground and the child. The partner of a force of the child on the cart is a force of the cart on the child.', 'Das ist eine Wechselwirkung zwischen Boden und Kind. Die Gegenkraft zu einer Kraft des Kindes auf den Wagen ist eine Kraft des Wagens auf das Kind.')),
+        ],
+        size: T('How hard does the cart pull on the child, compared with the pull of the child on the cart?', 'Wie stark zieht der Wagen am Kind, verglichen mit der Kraft des Kindes auf den Wagen?'),
+        sizes: [
+          o(T('Less hard, otherwise the child could not get the cart moving.', 'Weniger stark, sonst könnte das Kind den Wagen nicht in Bewegung bringen.'), 'other',
+            T('Whether the cart speeds up depends on the forces on the cart (the child and the ground), not on its pull on the child, which acts on another body.', 'Ob der Wagen schneller wird, hängt von den Kräften auf den Wagen ab (Kind und Boden), nicht von seiner Kraft auf das Kind, die auf einen anderen Körper wirkt.')),
+          o(T('Less hard, since the child does the pulling.', 'Weniger stark, weil das Kind zieht.'), 'active-wins',
+            T('Who pulls does not matter: the pull between child and cart is one interaction, and its two forces are equally large.', 'Wer zieht, spielt keine Rolle: Das Ziehen zwischen Kind und Wagen ist eine einzige Wechselwirkung, und ihre beiden Kräfte sind gleich gross.')),
+          o(T('Harder, since the loaded cart is heavier than the child.', 'Stärker, weil der beladene Wagen schwerer ist als das Kind.'), 'mass-wins',
+            T('The masses decide the effects, not the forces: the two forces of an interaction are always equally large.', 'Die Massen bestimmen die Wirkungen, nicht die Kräfte: Die beiden Kräfte einer Wechselwirkung sind immer gleich gross.')),
+        ],
+        effect: T('The cart speeds up, because the child pulls it harder than the ground holds it back; the child speeds up, because the ground pushes the feet forward harder than the cart pulls back.', 'Der Wagen wird schneller, weil das Kind stärker zieht, als der Boden ihn bremst; das Kind wird schneller, weil der Boden seine Füsse stärker nach vorn drückt, als der Wagen zurückzieht.'),
+      },
+      spheres: {
+        title: T('Two charged spheres', 'Zwei geladene Kugeln'),
+        text: T('Two small spheres of equal mass hang from threads. The left one carries three times the charge of the right one, of the same sign, and they push each other apart.', 'Zwei kleine Kugeln gleicher Masse hängen an Fäden. Die linke trägt die dreifache Ladung der rechten, mit gleichem Vorzeichen, und sie stossen sich gegenseitig ab.'),
+        force: T('the left sphere pushes the right sphere to the right', 'die linke Kugel stösst die rechte nach rechts'),
+        partner: T('the right sphere pushes the left sphere to the left', 'die rechte Kugel stösst die linke nach links'),
+        bodies: T('the two spheres', 'den beiden Kugeln'),
+        draw: (f) => {
+          let g = D.ceiling(100, 260, 20) + D.line(180, 20, 140, 132, 'cable') + D.line(180, 20, 220, 132, 'cable');
+          g += D.ball(140, 140, 13, 'obj') + D.text(140, 145, '3+', 'lbl small') + D.ball(220, 140, 13, 'obj') + D.text(220, 145, '+', 'lbl small');
+          if (f.force) g += D.arrow(236, 140, 284, 140, 'f', '') + D.words(262, 170, T('on the right sphere', 'auf die rechte Kugel'));
+          if (f.partner) g += D.arrow(124, 140, 76, 140, 'f', '', { cls: 'pair' }) + D.words(98, 170, T('on the left sphere', 'auf die linke Kugel'));
+          return D.svg(360, 184, g, T('Two charged spheres hanging from threads', 'Zwei geladene Kugeln an Fäden'));
+        },
+        wrong: [
+          o(T('The thread pulls the right sphere up and to the left.', 'Der Faden zieht die rechte Kugel nach oben und nach links.'), 'pair-confusion',
+            T('That force also acts on the right sphere. Partners act on two different bodies of one interaction: here the two spheres.', 'Diese Kraft wirkt auch auf die rechte Kugel. Kraft und Gegenkraft wirken auf die zwei verschiedenen Körper einer Wechselwirkung: hier die beiden Kugeln.')),
+          o(T('None: the right sphere’s charge is too small to push the left one.', 'Keine: Die Ladung der rechten Kugel ist zu klein, um die linke zu stossen.'), 'mass-wins',
+            T('Every force has a partner, whatever the charges: the right sphere pushes the left one just as hard.', 'Jede Kraft hat eine Gegenkraft, egal wie gross die Ladungen sind: Die rechte Kugel stösst die linke genauso stark.')),
+          o(T('The right sphere pulls the left sphere towards it.', 'Die rechte Kugel zieht die linke zu sich hin.'), 'other',
+            T('Charges of the same sign repel each other, both ways: the right sphere pushes the left one away. The partner points opposite to the force because it acts on the other body.', 'Ladungen mit gleichem Vorzeichen stossen sich gegenseitig ab: Die rechte Kugel stösst die linke weg. Die Gegenkraft zeigt entgegengesetzt, weil sie auf den anderen Körper wirkt.')),
+        ],
+        size: T('How large is the push of the right sphere on the left one, compared with the push of the left sphere on the right one?', 'Wie gross ist die Kraft der rechten Kugel auf die linke, verglichen mit der Kraft der linken Kugel auf die rechte?'),
+        sizes: [
+          o(T('A third as large, since the right sphere has only a third of the charge.', 'Ein Drittel so gross, weil die rechte Kugel nur einen Drittel der Ladung hat.'), 'mass-wins',
+            T('The push depends on both charges together, and it is one interaction: the two forces are equally large, whatever the charges.', 'Die Kraft hängt von beiden Ladungen zusammen ab, und es ist eine einzige Wechselwirkung: Die beiden Kräfte sind gleich gross, egal wie gross die Ladungen sind.')),
+          o(T('Smaller, since the left sphere does the pushing with its larger charge.', 'Kleiner, weil die linke Kugel mit ihrer grösseren Ladung stösst.'), 'active-wins',
+            T('Neither sphere “does” the pushing alone: the repulsion is one interaction between the two, and both forces are equally large.', 'Keine der beiden Kugeln stösst allein: Die Abstossung ist eine Wechselwirkung zwischen beiden, und beide Kräfte sind gleich gross.')),
+          o(T('Larger, since the right sphere, with its small charge, is easier to push.', 'Grösser, weil die rechte Kugel mit ihrer kleinen Ladung leichter zu stossen ist.'), 'other',
+            T('How easily a sphere is pushed aside depends on its mass, not on its charge, and it does not change the size of the forces: the two are equally large.', 'Wie leicht eine Kugel zur Seite gestossen wird, hängt von ihrer Masse ab, nicht von ihrer Ladung, und es ändert die Grösse der Kräfte nicht: Die beiden sind gleich gross.')),
+        ],
+        effect: T('With equal masses, the two spheres swing out equally far: equal forces, whatever the charges.', 'Bei gleichen Massen schwingen die beiden Kugeln gleich weit aus: gleiche Kräfte, egal wie gross die Ladungen sind.'),
+      },
+      jump: {
+        title: T('Jumping up', 'Hochspringen'),
+        text: T('A girl jumps straight up. While she pushes off, the floor pushes her up harder than her weight, and she speeds up.', 'Ein Mädchen springt senkrecht hoch. Während es sich abstösst, drückt der Boden es stärker nach oben, als seine Gewichtskraft beträgt, und es wird schneller.'),
+        force: T('the floor pushes the girl up', 'der Boden drückt das Mädchen nach oben'),
+        partner: T('the girl pushes the floor down', 'das Mädchen drückt den Boden nach unten'),
+        bodies: T('the floor and the girl', 'dem Boden und dem Mädchen'),
+        draw: (f) => {
+          let g = D.ground(40, 320, 180) + D.person(170, 178, 110, 1, 'down') + D.arrow(300, 110, 300, 64, 'v', 'v');
+          if (f.force) g += D.arrow(200, 178, 200, 132, 'f', '') + D.words(208, 146, T('floor on girl', 'Boden → Mädchen'), 'start');
+          if (f.partner) g += D.arrow(140, 184, 140, 226, 'f', '', { cls: 'pair' }) + D.words(132, 214, T('girl on floor', 'Mädchen → Boden'), 'end');
+          return D.svg(360, 236, g, T('A girl jumping up from the floor', 'Ein Mädchen springt vom Boden hoch'));
+        },
+        wrong: [
+          o(T('The Earth pulls the girl down (her weight).', 'Die Erde zieht das Mädchen nach unten (seine Gewichtskraft).'), 'pair-confusion',
+            T('That force also acts on the girl, and it is even smaller than the push of the floor while she pushes off. Partners act on two different bodies — here the floor and the girl.', 'Diese Kraft wirkt auch auf das Mädchen, und sie ist beim Abstossen sogar kleiner als die Kraft des Bodens. Kraft und Gegenkraft wirken auf zwei verschiedene Körper — hier den Boden und das Mädchen.')),
+          o(T('None: the floor only stays where it is.', 'Keine: Der Boden bleibt einfach, wo er ist.'), 'obstacle',
+            T('The girl presses the floor together a tiny bit; it pushes back like a stiff spring. Every force has a partner of the same size.', 'Das Mädchen drückt den Boden ein klein wenig zusammen; er drückt zurück wie eine steife Feder. Jede Kraft hat eine gleich grosse Gegenkraft.')),
+          o(T('The girl pulls the Earth up.', 'Das Mädchen zieht die Erde nach oben.'), 'other',
+            T('That is the partner of her weight, an interaction between the Earth and the girl. The partner of a push of the floor on the girl is a push of the girl on the floor.', 'Das ist die Gegenkraft zu ihrer Gewichtskraft, eine Wechselwirkung zwischen der Erde und dem Mädchen. Die Gegenkraft zu einer Kraft des Bodens auf das Mädchen ist eine Kraft des Mädchens auf den Boden.')),
+        ],
+        size: T('How hard does the girl push the floor down, compared with the push of the floor on her?', 'Wie stark drückt das Mädchen auf den Boden, verglichen mit der Kraft des Bodens auf das Mädchen?'),
+        sizes: [
+          o(T('Less hard, otherwise she could not take off.', 'Weniger stark, sonst könnte es nicht abspringen.'), 'other',
+            T('Whether she takes off depends on the forces on her (the floor and the Earth), not on her push on the floor, which acts on another body.', 'Ob es abspringt, hängt von den Kräften auf das Mädchen ab (Boden und Erde), nicht von seiner Kraft auf den Boden, die auf einen anderen Körper wirkt.')),
+          o(T('Harder, since she is the one who pushes off.', 'Stärker, weil das Mädchen sich abstösst.'), 'active-wins',
+            T('Who pushes does not matter: the push between the girl and the floor is one interaction, and its two forces are equally large.', 'Wer drückt, spielt keine Rolle: Das Drücken zwischen Mädchen und Boden ist eine einzige Wechselwirkung, und ihre beiden Kräfte sind gleich gross.')),
+          o(T('Less hard, since she is so much lighter than the floor and the Earth below it.', 'Weniger stark, weil das Mädchen so viel leichter ist als der Boden und die Erde darunter.'), 'mass-wins',
+            T('The masses decide the effects, not the forces: the two forces of an interaction are always equally large.', 'Die Massen bestimmen die Wirkungen, nicht die Kräfte: Die beiden Kräfte einer Wechselwirkung sind immer gleich gross.')),
+        ],
+        effect: T('The floor pushes her up harder than the Earth pulls her down, so she speeds up and leaves the floor; the floor, fixed to the Earth, does not noticeably move.', 'Der Boden drückt das Mädchen stärker nach oben, als die Erde es nach unten zieht, also wird es schneller und hebt ab; der Boden, fest mit der Erde verbunden, bewegt sich nicht spürbar.'),
+      },
+      bird: {
+        title: T('A hovering bird', 'Ein schwebender Vogel'),
+        text: T('A hummingbird hovers in front of a flower. With its wings it pushes air down.', 'Ein Kolibri schwebt vor einer Blüte. Mit seinen Flügeln drückt er Luft nach unten.'),
+        force: T('the air pushes the bird up', 'die Luft drückt den Vogel nach oben'),
+        partner: T('the bird pushes the air down', 'der Vogel drückt die Luft nach unten'),
+        bodies: T('the air and the bird', 'der Luft und dem Vogel'),
+        draw: (f) => {
+          let g = `<path class="trace" d="M160 128 v44 M180 132 v44 M200 128 v44"/>` + `<ellipse class="obj" cx="180" cy="100" rx="24" ry="10"/>` + D.ball(206, 92, 7, 'obj') + D.line(213, 92, 236, 96, 'ln');
+          g += `<polygon class="obj" points="172,94 150,58 192,92"/>` + `<polygon class="obj" points="176,108 150,128 190,106"/>`;
+          if (f.force) g += D.arrow(126, 104, 126, 60, 'f', '') + D.words(118, 74, T('air on bird', 'Luft → Vogel'), 'end');
+          if (f.partner) g += D.arrow(226, 128, 226, 172, 'f', '', { cls: 'pair' }) + D.words(234, 160, T('bird on air', 'Vogel → Luft'), 'start');
+          return D.svg(360, 190, g, T('A hummingbird hovering in the air', 'Ein Kolibri schwebt in der Luft'));
+        },
+        wrong: [
+          o(T('The Earth pulls the bird down (its weight).', 'Die Erde zieht den Vogel nach unten (seine Gewichtskraft).'), 'pair-confusion',
+            T('That force also acts on the bird: it balances the push of the air, but it is not its partner. Partners act on two different bodies — here the air and the bird.', 'Diese Kraft wirkt auch auf den Vogel: Sie hält der Kraft der Luft das Gleichgewicht, ist aber nicht ihre Gegenkraft. Kraft und Gegenkraft wirken auf zwei verschiedene Körper — hier die Luft und den Vogel.')),
+          o(T('None: the air just gives way.', 'Keine: Die Luft weicht einfach aus.'), 'obstacle',
+            T('The air gives way because the bird pushes it down — and the air pushes the bird up just as hard. Every force has a partner.', 'Die Luft weicht aus, weil der Vogel sie nach unten drückt — und die Luft drückt den Vogel genauso stark nach oben. Jede Kraft hat eine Gegenkraft.')),
+          o(T('The bird pulls the Earth up.', 'Der Vogel zieht die Erde nach oben.'), 'other',
+            T('That is the partner of its weight, an interaction between the Earth and the bird. The partner of a force of the air on the bird is a force of the bird on the air.', 'Das ist die Gegenkraft zu seiner Gewichtskraft, eine Wechselwirkung zwischen der Erde und dem Vogel. Die Gegenkraft zu einer Kraft der Luft auf den Vogel ist eine Kraft des Vogels auf die Luft.')),
+        ],
+        size: T('How hard does the bird push the air down, compared with the push of the air on the bird?', 'Wie stark drückt der Vogel die Luft nach unten, verglichen mit der Kraft der Luft auf den Vogel?'),
+        sizes: [
+          o(T('Far less hard, since air is so light.', 'Viel weniger stark, weil Luft so leicht ist.'), 'mass-wins',
+            T('The mass decides how much the force changes the velocity, not how large the force is: the two forces of an interaction are always equally large.', 'Die Masse bestimmt, wie stark die Kraft die Geschwindigkeit ändert, nicht wie gross die Kraft ist: Die beiden Kräfte einer Wechselwirkung sind immer gleich gross.')),
+          o(T('Harder, since the bird beats its wings and the air does nothing.', 'Stärker, weil der Vogel mit den Flügeln schlägt und die Luft nichts tut.'), 'active-wins',
+            T('Who moves does not matter: the push between wings and air is one interaction, and its two forces are equally large.', 'Wer sich bewegt, spielt keine Rolle: Das Drücken zwischen Flügeln und Luft ist eine einzige Wechselwirkung, und ihre beiden Kräfte sind gleich gross.')),
+          o(T('Less hard, otherwise the bird could not stay up.', 'Weniger stark, sonst könnte der Vogel nicht oben bleiben.'), 'other',
+            T('Whether the bird stays up depends on the forces on the bird (the air and the Earth), not on its push on the air, which acts on another body.', 'Ob der Vogel oben bleibt, hängt von den Kräften auf den Vogel ab (Luft und Erde), nicht von seiner Kraft auf die Luft, die auf einen anderen Körper wirkt.')),
+        ],
+        effect: T('The air is pushed down and streams away below the bird; the bird is held up: each force acts on its own body.', 'Die Luft wird nach unten gedrückt und strömt unter dem Vogel weg; der Vogel wird oben gehalten: Jede Kraft wirkt auf ihren eigenen Körper.'),
+      },
     };
   }
+  const PARTNER_SCENES = ['mosquito', 'electron', 'dancer', 'hammer', 'moon', 'tennis', 'clip', 'skater', 'cart', 'spheres', 'jump', 'bird'];
 
   function partner(r, p) {
-    const key = p.scene || r.pick(['mosquito', 'electron', 'dancer', 'hammer']), sc = partnerScenes()[key];
+    const key = p.scene || r.pick(PARTNER_SCENES), sc = partnerScenes()[key];
     const figure = (f = {}) => sc.draw(f);
     const right = T(`Right: the force is an interaction between ${sc.bodies}; its partner is the force with the two bodies swapped.`, `Richtig: Die Kraft ist eine Wechselwirkung zwischen ${sc.bodies}; ihre Gegenkraft ist die Kraft mit den beiden Körpern vertauscht.`);
     const equal = `${T('Right.', 'Richtig.')} ${third()} ${sc.effect}`;
