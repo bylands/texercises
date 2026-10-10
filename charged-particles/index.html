@@ -3,27 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Point Charges</title>
-  <link rel="stylesheet" href="/katex/katex.min.css">
+  <title>Charged Particles in Fields</title>
   <link rel="stylesheet" href="ui.css">
   <link rel="stylesheet" href="style.css">
-  <script defer src="/katex/katex.min.js"></script>
-  <script defer src="/katex/contrib/auto-render.min.js"></script>
   <script defer src="lang.js"></script>
   <script defer src="sets.js"></script>
   <script defer src="fit.js"></script>
   <script defer src="sign.js"></script>
-  <script defer src="core.js"></script>
-  <script defer src="draw.js"></script>
-  <script defer src="scenarios.js"></script>
   <script defer src="generator.js"></script>
-  <script defer src="lessons.js"></script>
+  <script defer src="plot.js"></script>
+  <script defer src="exercises.js"></script>
   <script defer src="tutor.js"></script>
   <script defer src="check.js"></script>
   <script defer src="practice.js"></script>
-  <script defer src="artkit.js"></script>
   <script defer src="topics.js"></script>
-  <script defer src="check-src.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -31,7 +24,7 @@
     <div class="wrap">
       <div class="brand">
         <a class="home" href="/">Learning Physics</a><span class="sep" aria-hidden="true">/</span>
-        <h1 data-i18n="title">Point Charges</h1>
+        <h1 data-i18n="title">Charged Particles in Fields</h1>
       </div>
       <div class="top-right">
         <p id="score" class="score"></p>
@@ -58,7 +51,7 @@
       <div id="examples" class="levels examples" role="radiogroup" data-i18n-label="example" aria-label="Example"></div>
       <h2 id="t-title"></h2>
       <p id="t-idea" class="note"></p>
-      <div id="t-figure" class="figs"></div>
+      <div id="t-figure"></div>
       <div class="progress" aria-hidden="true"><div id="t-bar"></div></div>
       <div id="t-text" class="steps tutor-text" aria-live="polite"></div>
       <div class="actions tutor-nav">
@@ -66,23 +59,21 @@
         <span id="t-count" class="note"></span>
         <button type="button" id="t-next" class="primary">Next →</button>
       </div>
-      <p class="note" data-i18n-html="tutorNote"></p>
+      <p class="note" data-i18n="tutorNote"></p>
     </section>
 
     <section id="task" class="card practice" hidden>
       <h2 id="title"></h2>
       <div id="prompt"></div>
       <div id="figure" class="figs"></div>
-
       <form id="answers" novalidate>
-
-        <div id="fields" class="fields"></div>
+        <div id="fields"></div>
         <div class="actions">
           <button type="submit" id="check" class="primary">Check</button>
           <button type="button" id="hint">Hint</button>
           <button type="button" id="reveal" data-i18n="reveal">Show solution</button>
         </div>
-        <p id="reveal-note" class="note" data-i18n="revealNote">The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.</p>
+        <p id="reveal-note" class="note"></p>
         <p id="status" class="status" aria-live="polite"></p>
       </form>
     </section>
@@ -96,9 +87,7 @@
       <h3 data-i18n="solution">Solution</h3>
       <div id="sol-figure" class="figs"></div>
       <div id="sol-steps" class="steps"></div>
-      <p id="sol-short" class="short"></p>
     </section>
-
   </main>
 
   <footer class="wrap foot">

@@ -56,6 +56,7 @@
     N: [1, 'N', '\\mathrm{N}'], mN: [1e-3, 'mN', '\\mathrm{mN}'], 'μN': [1e-6, 'μN', '\\mu\\mathrm{N}'],
     C: [1, 'C', '\\mathrm{C}'], 'μC': [1e-6, 'μC', '\\mu\\mathrm{C}'], nC: [1e-9, 'nC', '\\mathrm{nC}'],
     m: [1, 'm', '\\mathrm{m}'], cm: [1e-2, 'cm', '\\mathrm{cm}'], mm: [1e-3, 'mm', '\\mathrm{mm}'],
+    'N/C': [1, 'N/C', '\\mathrm{N/C}'],
     kg: [1, 'kg', '\\mathrm{kg}'], 'm/s²': [1, 'm/s²', '\\mathrm{m/s^2}'], deg: [1, '°', '^\\circ'], '': [1, '', ''],
   };
   const inUnit = (x, u) => x / UNITS[u][0];

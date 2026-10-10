@@ -1,16 +1,16 @@
 (function () {
   'use strict';
 
-  const C = window.Charges, X = window.FieldEx, Figs = window.FieldFigures;
-  const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const C = window.Charges, X = window.FieldEx;
+  const Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Electric Field', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
-      tutor: 'Tutor', practice: 'Practice', real: 'Problems', arcade: 'Arcade', new: 'New exercise', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
-      tutorNote: 'Use the arrow keys ← → to step through. Blue: field lines and field, red: force.',
+      title: 'Field Lines and Equipotentials', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
+      tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
+      tutorNote: 'Use the arrow keys ← → to step through. Blue: field lines and field, orange: equipotential lines, red: force.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', option: (k) => `Option ${k}`,
       revealNote: (n) => `The solution unlocks once you have solved the exercise, used all hints or made ${n} attempts.`,
       stars: (d) => `Difficulty: ${d} of 5`, score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
@@ -20,9 +20,9 @@
       correct: 'Correct', notThis: 'Not this one: check your reasoning, or take a hint.', notAll: 'Not all the answers that fit are chosen yet.', stmtsWrong: (n) => (n === 1 ? 'One statement is judged wrong.' : `${n} statements are judged wrong.`), missed: 'This one fits too:', shown: 'The right answers are marked.',
     },
     de: {
-      title: 'Elektrisches Feld', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
-      tutor: 'Tutor', practice: 'Üben', real: 'Praxisaufgaben', arcade: 'Arcade', new: 'Neue Aufgabe', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
-      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Blau: Feldlinien und Feld, rot: Kraft.',
+      title: 'Feldlinien und Äquipotentiallinien', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
+      tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
+      tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Blau: Feldlinien und Feld, orange: Äquipotentiallinien, rot: Kraft.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', option: (k) => `Antwort ${k}`,
       revealNote: (n) => `Die Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder ${n} Versuche gemacht hast.`,
       stars: (d) => `Schwierigkeit: ${d} von 5`, score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
@@ -34,12 +34,11 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null, problems = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
   function stored(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; } }
   function store(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable */ } }
   function showScore() { const s = stored('ef-score', { solved: 0, clean: 0 }); $('#score').textContent = s.solved ? ui().score(s.solved, s.clean) : ''; }
   const starsOf = (d) => `<span class="stars" role="img" aria-label="${ui().stars(d)}" title="${ui().stars(d)}">${'★'.repeat(d)}${'☆'.repeat(5 - d)}</span>`;
-  const pic = (e) => (e.pic ? Figs[e.pic[0]](e.pic[1]) : '');
 
   // ---------------------------------------------------------------- questions
   // tiles: directions or names (one, or all that fit); pick: drawings; choice: a row of options;
@@ -117,15 +116,15 @@
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null };
     if (location.hash !== `#${ex.id}`) history.replaceState(null, '', `#${ex.id}`);
     render();
-    if (ex.real == null) topics.shown(ex);
+    topics.shown(ex);
   }
   const fresh = () => open(topics.next(ex));
-  const again = (e) => (e.real != null ? problems.parse(e.id) : topics.parse(e.id) || X.make(e.type, e.seed));
+  const again = (e) => topics.parse(e.id) || X.make(e.type, e.seed);
 
   function render() {
     $('#title').innerHTML = `${ex.title} ${starsOf(ex.difficulty)}`;
     $('#prompt').innerHTML = ex.text;
-    $('#figure').innerHTML = pic(ex) + (ex.figs || '');
+    $('#figure').innerHTML = ex.figs || '';
     $('#fields').innerHTML = ex.questions.map(questionHtml).join('');
     $('#hint-list').innerHTML = '';
     $('#hints').hidden = true;
@@ -142,7 +141,7 @@
     $('#reveal').title = canReveal() ? '' : ui().unlocks(maxTries());
     $('#reveal-note').textContent = ui().revealNote(maxTries());
     $('#reveal-note').hidden = canReveal() || st.revealed;
-    $('#check').textContent = st.solved ? (ex.real != null ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     $('#check').disabled = st.revealed && !st.solved;
@@ -156,7 +155,7 @@
   }
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (ex.real != null) problems.next(); else fresh(); return; }
+    if (st.solved) { fresh(); return; }
     if (st.revealed) return;
     const r = feedback();
     st.checked = true;
@@ -174,8 +173,7 @@
     st.solved = true;
     Practice.markSolved(PRACTICE, ex.id);
     finish();
-    st.advance = ex.real != null ? '' : topics.solved(st, ex);
-    if (ex.real != null) problems.solved(ex);
+    st.advance = topics.solved(st, ex);
     document.querySelectorAll('#fields input').forEach((x) => { x.disabled = true; });
     showStatus('ok');
   }
@@ -213,99 +211,138 @@
   }
 
   // ---------------------------------------------------------------- tutor
+  // Worked examples: how to sketch field lines step by step, how to read a diagram, the dipole in a
+  // uniform field, equipotentials, and checking a student's sketch.
   const frame = (title, text, figure) => ({ text: `<p class="step-rule">${title}</p>${text}`, figure: `<div class="figs">${figure}</div>` });
-  const fig = (html) => `<div class="fig">${html}</div>`;
-  const BOX = X.BOX, one = (q) => ({ kind: 'points', charges: [{ q, x: 0, y: 0 }] }), two = (a, b) => X.pts2([[a, -1], [b, 1]]);
+  const fig = (html) => `<div class="fig">${html}</div>`, half = (html) => `<div class="fig half">${html}</div>`;
+  const BOX = X.BOX, uni = (E) => ({ kind: 'uniform', E });
+  // a dipole on a rod at the angle a (degrees) in a field to the right, with the forces on its ends
+  const dipole = (a, o = {}) => {
+    const p = [Math.cos((a * Math.PI) / 180), Math.sin((a * Math.PI) / 180)], h = 0.7;
+    return C.fig(uni([1, 0]), { box: BOX, lines: true, rods: [[-h * p[0], -h * p[1], h * p[0], h * p[1]]], parts: [{ x: h * p[0], y: h * p[1], q: 1 }, { x: -h * p[0], y: -h * p[1], q: -1 }],
+      vecs: o.forces === false ? [] : [{ x: h * p[0], y: h * p[1], dx: 46, dy: 0, cls: 'v-force', name: 'F⃗' }, { x: -h * p[0], y: -h * p[1], dx: -46, dy: 0, cls: 'v-force', name: 'F⃗' }], small: o.small });
+  };
+  // the stubs of the field lines next to the charges (the first step of a sketch)
+  const stubs = (c, lns) => lns.flatMap((ln) => {
+    const at = (p) => c.charges.some((ch) => Math.hypot(p[0] - ch.x, p[1] - ch.y) < 0.3);
+    return [at(ln[0]) ? ln.slice(0, 24) : null, at(ln[ln.length - 1]) ? ln.slice(-24) : null].filter(Boolean);
+  });
   const LESSONS = [
-    { topic: 0, stage: 0, name: () => L('Field and force', 'Feld und Kraft'), idea: () => L('The field at a point is the force per charge, <span class="vec"><i>E</i></span> = <span class="vec"><i>F</i></span>/q: it belongs to the point, not to the test charge.', 'Das Feld in einem Punkt ist die Kraft pro Ladung, <span class="vec"><i>E</i></span> = <span class="vec"><i>F</i></span>/q: Es gehört zum Punkt, nicht zur Probeladung.'),
-      frames: () => [
-        frame(L('The field', 'Das Feld'), `<p>${L('A charge changes the space around it: another charge placed anywhere near it feels a force. The force on a small test charge q at a point P is proportional to q, so the ratio <span class="vec"><i>E</i></span> = <span class="vec"><i>F</i></span>/q depends only on the point: the electric field there.', 'Eine Ladung verändert den Raum um sich: Eine andere Ladung irgendwo in ihrer Nähe spürt eine Kraft. Die Kraft auf eine kleine Probeladung q in einem Punkt P ist proportional zu q, also hängt das Verhältnis <span class="vec"><i>E</i></span> = <span class="vec"><i>F</i></span>/q nur vom Punkt ab: das elektrische Feld dort.')}</p>`,
-          fig(C.fig(one(2), { box: BOX, lines: true, labels: ['+2'], parts: [{ x: 1.6, y: 0.9, q: 1, r: 8 }], vecs: [{ x: 1.6, y: 0.9, dx: 52, dy: 30, cls: 'v-force', name: 'F⃗' }] }))),
-        frame(L('A negative test charge', 'Eine negative Probeladung'), `<p>${X.RULE()} ${L('The field at P is the same; the force on a negative test charge points the other way.', 'Das Feld in P ist dasselbe; die Kraft auf eine negative Probeladung zeigt in die andere Richtung.')}</p>`,
-          fig(C.fig(one(2), { box: BOX, lines: true, labels: ['+2'], parts: [{ x: 1.6, y: 0.9, q: -1, r: 8 }], vecs: [{ x: 1.6, y: 0.9, dx: -52, dy: -30, cls: 'v-force', name: 'F⃗' }] }))),
-        frame(L('Units', 'Einheiten'), `<p>${L('The field is measured in N/C, which is the same as V/m. A field of 1000 N/C pushes a charge of 1 µC with 1 mN.', 'Das Feld wird in N/C gemessen, was dasselbe ist wie V/m. Ein Feld von 1000 N/C drückt eine Ladung von 1 µC mit 1 mN.')}</p>`,
-          fig(C.fig({ kind: 'uniform', E: [1, 0] }, { box: BOX, lines: true, parts: [{ x: 0, y: 0, q: 1 }], vecs: [{ x: 0, y: 0, dx: 70, dy: 0, cls: 'v-force', name: 'F⃗' }] }))),
-      ] },
-    { topic: 1, stage: 0, name: () => L('Field lines', 'Feldlinien'), idea: () => L('Field lines show the direction of the field; their density shows its strength.', 'Feldlinien zeigen die Richtung des Feldes; ihre Dichte zeigt seine Stärke.'),
-      frames: () => [
-        frame(L('A single charge', 'Eine einzelne Ladung'), `<p>${L('Field lines run along the field: each is tangent to the field vector at every point. From a positive charge they run straight outwards, evenly spread; further out they are farther apart: the field is weaker there.', 'Feldlinien verlaufen längs des Feldes: Jede ist in jedem Punkt tangential zum Feldvektor. Von einer positiven Ladung laufen sie gerade nach aussen, gleichmässig verteilt; weiter aussen liegen sie weiter auseinander: Dort ist das Feld schwächer.')}</p>`, fig(C.fig(one(1), { box: BOX, lines: true }))),
-        frame(L('Opposite charges', 'Entgegengesetzte Ladungen'), `<p>${L('Lines start at the positive charge and end at the negative one. They never cross: at each point, the fields of both charges add up to one field with one direction.', 'Linien beginnen bei der positiven Ladung und enden bei der negativen. Sie kreuzen sich nie: In jedem Punkt addieren sich die Felder beider Ladungen zu einem Feld mit einer Richtung.')}</p>`, fig(C.fig(two(1, -1), { box: BOX, lines: true }))),
-        frame(L('Like charges', 'Gleichnamige Ladungen'), `<p>${L('Between two positive charges the lines push apart; halfway between them the field is zero.', 'Zwischen zwei positiven Ladungen weichen sich die Linien aus; in der Mitte zwischen ihnen ist das Feld null.')}</p>`, fig(C.fig(two(1, 1), { box: BOX, lines: true }))),
-        frame(L('Unequal charges', 'Ungleiche Ladungen'), `<p>${L('Near +2q, its field dominates; some of its lines end at −q, the others go off to infinity: from far away, the pair looks like a single charge +q. In space, the number of lines at a charge is proportional to its size. A drawing shows only the lines in one plane, about √2 times as many at +2q as at −q, so you cannot read off the ratio of the charges by counting.', 'In der Nähe von +2q überwiegt ihr Feld; einige ihrer Linien enden bei −q, die anderen gehen ins Unendliche: Von weitem sieht das Paar aus wie eine einzelne Ladung +q. Im Raum ist die Zahl der Linien bei einer Ladung proportional zu ihrem Betrag. Eine Zeichnung zeigt nur die Linien in einer Ebene, bei +2q etwa √2-mal so viele wie bei −q; das Verhältnis der Ladungen lässt sich also nicht durch Abzählen bestimmen.')}</p>`, fig(C.fig(two(2, -1), { box: BOX, lines: true, labels: ['+2', '−'] }))),
-        frame(L('Conductors', 'Leiter'), `<p>${L('In a metal, the free charges move until the field inside is zero. Field lines end on its surface, at right angles.', 'In einem Metall bewegen sich die freien Ladungen, bis das Feld im Innern null ist. Feldlinien enden auf seiner Oberfläche, senkrecht.')}</p>`, fig(C.fig({ kind: 'cylinder', a: 0.8, E0: 1 }, { box: [-3, 3, -2, 2], lines: true, lineOpts: { count: 13 } }))),
-      ] },
-    { topic: 2, stage: 0, name: () => L('Fields add up', 'Felder addieren sich'), idea: () => L('The field of several charges is the vector sum of their fields.', 'Das Feld mehrerer Ladungen ist die Vektorsumme ihrer Felder.'),
+    { topic: 0, stage: 0, name: () => L('Sketching field lines', 'Feldlinien skizzieren'), idea: () => L('Start at the charges, connect from + to −, never cross; then check the symmetry and the density.', 'Bei den Ladungen beginnen, von + nach − verbinden, nie kreuzen; dann Symmetrie und Dichte prüfen.'),
       frames: () => {
-        const c = { kind: 'points', charges: [{ q: 1, x: -1, y: 1 }, { q: -1, x: 1, y: 1 }] };
+        const c = X.pts2([[2, -1], [-1, 1]]), lns = C.lines(c, BOX), labels = ['+2', '−'];
         return [
-          frame(L('Two fields at a point', 'Zwei Felder in einem Punkt'), `<p>${L('At P, the field of A (+) points away from A, that of B (−) towards B. Both are equally strong (same charge, same distance): their sum points to the right.', 'In P zeigt das Feld von A (+) von A weg, das von B (−) zu B hin. Beide sind gleich stark (gleiche Ladung, gleicher Abstand): Ihre Summe zeigt nach rechts.')}</p>`,
-            fig(C.fig(c, { box: [-3, 3, -1.8, 1.8], grid: true, names: [{ x: -1, y: 1, name: 'A' }, { x: 1, y: 1, name: 'B' }], points: [{ x: 0, y: 0, name: 'P' }], vecs: [{ x: 0, y: 0, dx: 40, dy: -40, cls: 'v-part' }, { x: 0, y: 0, dx: 40, dy: 40, cls: 'v-part' }, { x: 0, y: 0, dx: 80, dy: 0, cls: 'v-field', name: 'E⃗' }] }))),
-          frame(L('Where the field is zero', 'Wo das Feld null ist'), `<p>${L('Between two charges of the same sign, the fields point opposite ways and cancel at one point, closer to the smaller charge: there k·|q₁|/r₁² = k·|q₂|/r₂². Between opposite charges they point the same way; they can cancel only outside, beyond the smaller charge.', 'Zwischen zwei Ladungen gleichen Vorzeichens zeigen die Felder in entgegengesetzte Richtungen und heben sich in einem Punkt auf, näher bei der kleineren Ladung: Dort ist k·|q₁|/r₁² = k·|q₂|/r₂². Zwischen entgegengesetzten Ladungen zeigen sie in dieselbe Richtung; sie können sich nur ausserhalb aufheben, jenseits der kleineren Ladung.')}</p>`,
-            fig(C.fig(X.pts2([[1, -1.5], [4, 1.5]]), { box: BOX, lines: true, lineOpts: { per: 5 }, labels: ['+', '+4'], points: [{ x: -0.5, y: 0, name: 'E = 0' }] }))),
+          frame(L('Step 1: next to each charge', 'Schritt 1: neben jeder Ladung'), `<p>${L('Sketch the field lines of +2q and −q. Close to a charge its own field wins: the lines are straight and radial, evenly spread, out of the positive charge and into the negative one. In a drawing +2q gets about √2 times as many lines as −q (a drawing is a section through space).', 'Skizziere die Feldlinien von +2q und −q. Nahe bei einer Ladung überwiegt ihr eigenes Feld: Die Linien sind gerade und radial, gleichmässig verteilt, aus der positiven Ladung heraus und in die negative hinein. In einer Zeichnung bekommt +2q etwa √2-mal so viele Linien wie −q (eine Zeichnung ist ein Schnitt durch den Raum).')}</p>`,
+            fig(C.fig(c, { box: BOX, given: stubs(c, lns), labels }))),
+          frame(L('Step 2: connect from + to −', 'Schritt 2: von + nach − verbinden'), `<p>${L('Join the lines that leave +2q to those that arrive at −q, bending round smoothly. They never cross: at each point the fields of both charges add up to one field with one direction.', 'Verbinde die Linien, die +2q verlassen, mit denen, die bei −q ankommen, in sanften Bögen. Sie kreuzen sich nie: In jedem Punkt addieren sich die Felder beider Ladungen zu einem Feld mit einer Richtung.')}</p>`,
+            fig(C.fig(c, { box: BOX, given: lns, labels }))),
+          frame(L('Step 3: far away', 'Schritt 3: weit weg'), `<p>${L('−q cannot take all the lines of +2q: the others go off to infinity. From far away the pair looks like a single charge +q, its lines radial again.', '−q kann nicht alle Linien von +2q aufnehmen: Die übrigen gehen ins Unendliche. Von weitem sieht das Paar aus wie eine einzelne Ladung +q, ihre Linien wieder radial.')}</p>`,
+            fig(C.fig(c, { box: [-6, 6, -4.4, 4.4], lines: true, lineOpts: { per: 8 }, labels }))),
+          frame(L('Step 4: check', 'Schritt 4: prüfen'), `<p>${L('From + to −, no crossings, densest near the charges and between them, where the field is strongest. Do not count lines to compare the charges: in a drawing they do not grow in proportion to the charge.', 'Von + nach −, keine Kreuzungen, am dichtesten nahe bei den Ladungen und zwischen ihnen, wo das Feld am stärksten ist. Zähle keine Linien, um die Ladungen zu vergleichen: In einer Zeichnung wachsen sie nicht proportional zur Ladung.')}</p>`,
+            fig(C.fig(c, { box: BOX, given: lns, labels }))),
+          frame(L('A long charged wire', 'Ein langer geladener Draht'), `<p>${L('Every piece of a long wire looks the same: the lines leave it at right angles, all along it. Seen from the side they look parallel, but round the wire they spread out like spokes (end-on, right): at twice the distance the field is half as strong, E ∝ 1/r.', 'Jedes Stück eines langen Drahts sieht gleich aus: Die Linien verlassen ihn senkrecht, überall entlang. Von der Seite sehen sie parallel aus, aber um den Draht herum laufen sie wie Speichen auseinander (von vorn, rechts): Im doppelten Abstand ist das Feld halb so stark, E ∝ 1/r.')}</p>`,
+            half(C.fig(uni([0, 1]), { box: BOX, given: [...X.XS.map((x) => [[x, 0.15], [x, 2.7]]), ...X.XS.map((x) => [[x, -0.15], [x, -2.7]])], ...X.wire(1), small: true })) + half(C.fig({ kind: 'points', charges: [{ q: 1, x: 0, y: 0 }] }, { box: BOX, lines: true, lineOpts: { per: 12 }, small: true }))),
+          frame(L('A plate capacitor', 'Ein Plattenkondensator'), `<p>${L('The charge is spread evenly over the plates: between them the lines are parallel and evenly spaced, from + to −, a uniform field. Only at the edges do they bulge out; outside, the fields of the two plates cancel: (almost) no field. Not lines from the middles of the plates, as from two point charges.', 'Die Ladung ist gleichmässig über die Platten verteilt: Dazwischen sind die Linien parallel und gleich dicht, von + nach −, ein homogenes Feld. Nur an den Rändern wölben sie sich nach aussen; ausserhalb heben sich die Felder der beiden Platten auf: (fast) kein Feld. Nicht Linien aus den Mitten der Platten wie bei zwei Punktladungen.')}</p>`,
+            fig(C.fig(X.CAP(1), { box: BOX, given: X.capLines(X.CAP(1)) }))),
         ];
       } },
-    { topic: 3, stage: 0, name: () => L('Comparing fields', 'Felder vergleichen'), idea: () => L('What the field depends on, and how: compare with factors instead of calculating.', 'Wovon das Feld abhängt, und wie: mit Faktoren vergleichen statt rechnen.'),
+    { topic: 1, stage: 0, name: () => L('Reading a field-line diagram', 'Ein Feldliniendiagramm lesen'), idea: () => L('The arrows give the signs and the direction, the density gives the strength.', 'Die Pfeile geben die Vorzeichen und die Richtung, die Dichte gibt die Stärke.'),
+      frames: () => {
+        const c = X.pts2([[2, -1], [-1, 1]]), lns = C.lines(c, BOX, { per: 6 }), P = [[0, 0], [-2.4, 0.4], [0, 1.6], [1.6, 1.2]], pn = ['P', 'Q', 'R', 'S'];
+        const points = P.map(([x, y], i) => ({ x, y, name: pn[i] })), f = C.field(c, ...P[2]), n = Math.hypot(...f);
+        const base = { box: BOX, given: lns, unknown: true, points };
+        return [
+          frame(L('The signs', 'Die Vorzeichen'), `<p>${L('The signs of A and B are hidden. The arrows leave A and run into B: A is positive, B negative.', 'Die Vorzeichen von A und B sind verdeckt. Die Pfeile verlassen A und laufen in B hinein: A ist positiv, B negativ.')}</p>`, fig(C.fig(c, base))),
+          frame(L('The direction at a point', 'Die Richtung in einem Punkt'), `<p>${L('The field at R points along the field line through R (its tangent), the way the arrows point. No line passes exactly through R? Follow the lines next to it.', 'Das Feld in R zeigt längs der Feldlinie durch R (ihrer Tangente), so wie die Pfeile zeigen. Geht keine Linie genau durch R? Folge den Linien daneben.')}</p>`,
+            fig(C.fig(c, { ...base, vecs: [{ x: P[2][0], y: P[2][1], dx: (46 * f[0]) / n, dy: (46 * f[1]) / n, cls: 'v-field', name: 'E⃗' }] }))),
+          frame(L('The strength', 'Die Stärke'), `<p>${L('Compare how close together the lines are: densest at P, between the charges (both fields point the same way there); sparse at Q and S, far out. The field is strongest at P.', 'Vergleiche, wie dicht die Linien liegen: am dichtesten bei P, zwischen den Ladungen (beide Felder zeigen dort in dieselbe Richtung); spärlich bei Q und S, weit draussen. Das Feld ist bei P am stärksten.')}</p>`, fig(C.fig(c, base))),
+          frame(L('Between the lines', 'Zwischen den Linien'), `<p>${L('The field is everywhere, not only on the drawn lines: a drawing shows just a few of them. At a point between two lines the field is as strong as the density of the lines around it shows.', 'Das Feld ist überall, nicht nur auf den gezeichneten Linien: Eine Zeichnung zeigt nur einige von ihnen. In einem Punkt zwischen zwei Linien ist das Feld so stark, wie die Dichte der Linien um ihn zeigt.')}</p>`, fig(C.fig(c, base))),
+        ];
+      } },
+    { topic: 2, stage: 0, name: () => L('A dipole in a uniform field', 'Ein Dipol im homogenen Feld'), idea: () => L('In a uniform field a dipole is not pulled, but it turns: M = q·E·d·sin φ.', 'In einem homogenen Feld wird ein Dipol nicht gezogen, aber er dreht sich: M = q·E·d·sin φ.'),
       frames: () => [
-        frame(L('A point charge', 'Eine Punktladung'), `<p>${L('E = k·Q/r²: twice the charge, twice the field; twice the distance, a quarter of the field.', 'E = k·Q/r²: doppelte Ladung, doppeltes Feld; doppelter Abstand, ein Viertel des Feldes.')}</p>`, fig(C.fig(one(1), { box: BOX, lines: true }))),
-        frame(L('A wire and a large plate', 'Ein Draht und eine grosse Platte'), `<p>${L('A long wire: E = λ/(2π·ε₀·r), twice the distance, half the field. A large plate: E = σ/(2ε₀), the same at every distance (as long as the plate is large compared with the distance).', 'Ein langer Draht: E = λ/(2π·ε₀·r), doppelter Abstand, halbes Feld. Eine grosse Platte: E = σ/(2ε₀), bei jedem Abstand gleich (solange die Platte gross ist im Vergleich zum Abstand).')}</p>`, fig(C.fig({ kind: 'uniform', E: [0, 1] }, { box: BOX, lines: true }))),
-        frame(L('A capacitor, disconnected', 'Ein Kondensator, getrennt'), `<p>${L('Between two plates with charges ±Q the fields of both plates add up; outside they cancel. Once the capacitor is disconnected from the source, its charge stays: E = Q/(ε₀·A) = σ/ε₀. Pulling the plates apart does not change the field; twice the area, half the field.', 'Zwischen zwei Platten mit den Ladungen ±Q addieren sich die Felder beider Platten; aussen heben sie sich auf. Ist der Kondensator von der Quelle getrennt, bleibt seine Ladung: E = Q/(ε₀·A) = σ/ε₀. Die Platten auseinanderzuziehen ändert das Feld nicht; doppelte Fläche, halbes Feld.')}</p>`, fig(C.fig({ kind: 'plates', h: 0.8, w: 1.8, q: 1 }, { box: BOX, lines: true }))),
-        frame(L('A capacitor, connected', 'Ein Kondensator, angeschlossen'), `<p>${L('Connected to a source, the voltage stays: E = U/d. Twice the distance, half the field; the area does not matter.', 'An einer Quelle angeschlossen bleibt die Spannung: E = U/d. Doppelter Abstand, halbes Feld; die Fläche spielt keine Rolle.')}</p>`, fig(C.fig({ kind: 'plates', h: 0.8, w: 1.8, q: 1 }, { box: BOX, lines: true }))),
-      ] },
-    { topic: 4, stage: 0, name: () => L('Dipoles', 'Dipole'), idea: () => L('In a uniform field a dipole turns but is not pulled; in a non-uniform field it is pulled too.', 'In einem homogenen Feld dreht sich ein Dipol, wird aber nicht gezogen; in einem inhomogenen Feld wird er auch gezogen.'),
-      frames: () => [
-        frame(L('In a uniform field', 'Im homogenen Feld'), `<p>${L('The forces on the two ends are equal and opposite: no net force. But they do not act along one line: they turn the dipole until its + end points along the field.', 'Die Kräfte auf die beiden Enden sind gleich und entgegengesetzt: keine Gesamtkraft. Aber sie wirken nicht auf einer Geraden: Sie drehen den Dipol, bis sein +-Ende in Feldrichtung zeigt.')}</p>`,
-          fig(C.fig({ kind: 'uniform', E: [1, 0] }, { box: BOX, lines: true, rods: [[-0.5, -0.5, 0.5, 0.5]], parts: [{ x: 0.5, y: 0.5, q: 1 }, { x: -0.5, y: -0.5, q: -1 }], vecs: [{ x: 0.5, y: 0.5, dx: 50, dy: 0, cls: 'v-force', name: 'F⃗' }, { x: -0.5, y: -0.5, dx: -50, dy: 0, cls: 'v-force', name: 'F⃗' }] }))),
-        frame(L('Near a charge', 'Nahe einer Ladung'), `<p>${L('In the field of a point charge, the nearer end is in the stronger field: if it is the end of opposite sign, the dipole is attracted. A free dipole always ends up attracted: that is why a charged rod picks up scraps of paper, and why a charged rod bends a thin jet of water.', 'Im Feld einer Punktladung ist das nähere Ende im stärkeren Feld: Ist es das Ende mit entgegengesetztem Vorzeichen, wird der Dipol angezogen. Ein freier Dipol wird am Ende immer angezogen: Darum hebt ein geladener Stab Papierschnipsel auf, und darum lenkt er einen dünnen Wasserstrahl ab.')}</p>`,
+        frame(L('The forces on the ends', 'Die Kräfte auf die Enden'), `<p>${L('<span class="vec"><i>F</i></span> = q·<span class="vec"><i>E</i></span>: on the + end along the field, on the − end against it. In a uniform field both are equally strong: the net force is zero, the dipole is not pulled either way.', '<span class="vec"><i>F</i></span> = q·<span class="vec"><i>E</i></span>: auf das +-Ende in Feldrichtung, auf das −-Ende entgegen. In einem homogenen Feld sind beide gleich stark: Die Gesamtkraft ist null, der Dipol wird in keine Richtung gezogen.')}</p>`, fig(dipole(45))),
+        frame(L('The torque', 'Das Drehmoment'), `<p>${L('But the two forces do not act along one line: they turn the dipole, here clockwise, until its + end points along the field.', 'Aber die beiden Kräfte wirken nicht auf einer Geraden: Sie drehen den Dipol, hier im Uhrzeigersinn, bis sein +-Ende in Feldrichtung zeigt.')}</p>`, fig(dipole(45))),
+        frame(L('Equilibrium', 'Gleichgewicht'), `<p>${L('Along the field (left) the forces act along the rod: no torque, and nudged a little, the dipole turns back: a stable equilibrium. Against the field (right) there is no torque either, but the slightest nudge turns it round: unstable.', 'In Feldrichtung (links) wirken die Kräfte längs des Stabs: kein Drehmoment, und ein wenig ausgelenkt, dreht der Dipol zurück: ein stabiles Gleichgewicht. Gegen das Feld (rechts) gibt es auch kein Drehmoment, aber der kleinste Stoss dreht ihn um: labil.')}</p>`, half(dipole(0, { small: true })) + half(dipole(180, { small: true, forces: false }))),
+        frame(L('How large is the torque?', 'Wie gross ist das Drehmoment?'), `<p>${L('Each end feels q·E; the lever arm of the pair is the distance between the two lines of action, d·sin φ (φ between the rod and the field). So M = q·E·d·sin φ: largest at 90°, zero along the field.', 'Jedes Ende spürt q·E; der Hebelarm des Paars ist der Abstand der beiden Wirkungslinien, d·sin φ (φ zwischen Stab und Feld). Also M = q·E·d·sin φ: am grössten bei 90°, null in Feldrichtung.')}</p><p>${L('Compared with this dipole at 90°: twice the charge, half the field, at 30° instead: ×2 · ×1/2 · ×1/2 (sin 30° = 1/2) = ×1/2.', 'Verglichen mit diesem Dipol bei 90°: doppelte Ladung, halbes Feld, dafür bei 30°: ×2 · ×1/2 · ×1/2 (sin 30° = 1/2) = ×1/2.')}</p>`, fig(dipole(90))),
+        frame(L('Near a charge', 'Nahe einer Ladung'), `<p>${L('In the field of a point charge, the nearer end is in the stronger field (denser lines): if it is the end of opposite sign, the dipole is attracted. A free dipole first turns, then is always attracted: that is why a charged rod picks up scraps of paper.', 'Im Feld einer Punktladung ist das nähere Ende im stärkeren Feld (dichtere Linien): Ist es das Ende mit entgegengesetztem Vorzeichen, wird der Dipol angezogen. Ein freier Dipol dreht sich zuerst und wird dann immer angezogen: Darum hebt ein geladener Stab Papierschnipsel auf.')}</p>`,
           fig(C.fig({ kind: 'points', charges: [{ q: 2, x: -1.8, y: 0 }] }, { box: BOX, lines: true, lineOpts: { per: 6 }, labels: ['+2'], rods: [[0.3, 0, 1.5, 0]], parts: [{ x: 0.3, y: 0, q: -1 }, { x: 1.5, y: 0, q: 1 }] }))),
       ] },
-    { topic: 5, stage: 0, name: () => L('Charges in a uniform field', 'Ladungen im homogenen Feld'), idea: () => L('A constant force: a charge flying across a capacitor moves on a parabola, like a ball thrown horizontally.', 'Eine konstante Kraft: Eine Ladung, die quer durch einen Kondensator fliegt, bewegt sich auf einer Parabel, wie ein waagrecht geworfener Ball.'),
-      frames: () => [
-        frame(L('A parabola', 'Eine Parabel'), `<p>${L('Between the plates the force q·E is the same everywhere. Along the plates the speed stays the same, across them the charge accelerates evenly with a = q·E/m: a parabola, towards the negative plate for a positive charge. The deflection is y = q·E·L²/(2·m·v²).', 'Zwischen den Platten ist die Kraft q·E überall gleich. Längs der Platten bleibt die Geschwindigkeit gleich, quer dazu wird die Ladung gleichmässig mit a = q·E/m beschleunigt: eine Parabel, zur negativen Platte für eine positive Ladung. Die Ablenkung ist y = q·E·L²/(2·m·v²).')}</p>`,
-          fig(C.capFig({ top: 1, q: 1, field: true, pts: (() => { const o = [[0, 0]]; for (let x = 0; x <= 1.0001; x += 0.02) o.push([x, x < 0.09 ? 0 : -0.85 * ((x - 0.09) / 0.91) ** 2]); return o; })() }))),
-        frame(L("Millikan's oil drop", 'Millikans Öltröpfchen'), `<p>${L('A tiny charged oil drop hovers between two plates when the electric force balances its weight: q·U/d = m·g. Millikan found that the charge is always a whole number of elementary charges, e = 1.602 · 10⁻¹⁹ C.', 'Ein winziges geladenes Öltröpfchen schwebt zwischen zwei Platten, wenn die elektrische Kraft seinem Gewicht das Gleichgewicht hält: q·U/d = m·g. Millikan fand, dass die Ladung immer ein ganzzahliges Vielfaches der Elementarladung e = 1.602 · 10⁻¹⁹ C ist.')}</p>`,
-          fig(C.capFig({ top: 1, q: -1, field: true, sym: '·' }))),
-        frame(L('Comparing deflections', 'Ablenkungen vergleichen'), `<p>${L('The deflection is y = |q|·U·L²/(2·m·d·v²). To compare two experiments, take the factor of each quantity: an alpha particle has twice the charge and four times the mass of a proton, so at the same speed it is deflected half as far. Twice as fast: a quarter of the deflection.', 'Die Ablenkung ist y = |q|·U·L²/(2·m·d·v²). Um zwei Versuche zu vergleichen, nimm den Faktor jeder Grösse: Ein Alphateilchen hat die doppelte Ladung und die vierfache Masse eines Protons, wird also bei gleicher Geschwindigkeit halb so weit abgelenkt. Doppelt so schnell: ein Viertel der Ablenkung.')}</p>`,
-          fig(C.capFig({ top: 1, q: 1, sym: 'α', field: true, pts: (() => { const o = [[0, 0]]; for (let x = 0; x <= 1.0001; x += 0.02) o.push([x, x < 0.09 ? 0 : -0.42 * ((x - 0.09) / 0.91) ** 2]); return o; })() }))),
-      ] },
+    { topic: 3, stage: 0, name: () => L('Equipotential lines', 'Äquipotentiallinien'), idea: () => L('Sketch the field lines first, then the equipotentials across them at right angles.', 'Zuerst die Feldlinien skizzieren, dann die Äquipotentiallinien senkrecht dazu.'),
+      frames: () => {
+        const xs = [-2, -1, 0, 1, 2], tops = xs.map((x, i) => ({ x, label: `${400 - 100 * i} V` }));
+        return [
+          frame(L('At right angles', 'Senkrecht'), `<p>${L('Along an equipotential line the potential is the same: moving a charge along it takes no work, so the field has no part along it. Equipotential lines cross the field lines at right angles: around a point charge, circles.', 'Längs einer Äquipotentiallinie ist das Potential gleich: Eine Ladung längs ihr zu bewegen, braucht keine Arbeit, also hat das Feld keinen Anteil längs ihr. Äquipotentiallinien kreuzen die Feldlinien senkrecht: um eine Punktladung Kreise.')}</p>`,
+            fig(C.fig(X.EQ.point.c, { box: BOX, lines: true, equi: X.EQ.point.lv }))),
+          frame(L('The spacing', 'Die Abstände'), `<p>${L('For equal steps of potential the circles get farther apart outwards (V = k·Q/r): where the field is stronger, the same step takes a shorter distance. Close equipotentials, like dense field lines, mean a strong field.', 'Für gleiche Potentialschritte liegen die Kreise nach aussen immer weiter auseinander (V = k·Q/r): Wo das Feld stärker ist, braucht derselbe Schritt eine kürzere Strecke. Dichte Äquipotentiallinien bedeuten wie dichte Feldlinien ein starkes Feld.')}</p>`,
+            fig(C.fig(X.EQ.point.c, { box: BOX, equi: X.EQ.point.lv }))),
+          frame(L('A plate capacitor', 'Ein Plattenkondensator'), `<p>${L('Between the plates the field lines are parallel: the equipotentials are straight lines parallel to the plates, evenly spaced (a uniform field).', 'Zwischen den Platten sind die Feldlinien parallel: Die Äquipotentiallinien sind Geraden parallel zu den Platten, in gleichen Abständen (ein homogenes Feld).')}</p>`,
+            fig(C.fig(X.CAP(1), { box: BOX, given: X.capEqui(X.CAP(1)), equiLines: true, extra: X.capLines(X.CAP(1)) }))),
+          frame(L('Two charges', 'Zwei Ladungen'), `<p>${L('Sketch the field lines first, then draw the equipotentials across them at right angles: small circles round each charge, wider loops further out. Halfway between + and − the equipotential is a straight line (V = 0).', 'Skizziere zuerst die Feldlinien, dann zeichne die Äquipotentiallinien senkrecht dazu: kleine Kreise um jede Ladung, weitere Schleifen weiter aussen. In der Mitte zwischen + und − ist die Äquipotentiallinie eine Gerade (V = 0).')}</p>`,
+            fig(C.fig(X.EQ.dipole.c, { box: BOX, lines: true, equi: X.EQ.dipole.lv }))),
+          frame(L('From equipotentials to field lines', 'Von Äquipotentiallinien zu Feldlinien'), `<p>${L('Given the equipotentials, draw the field lines at right angles to them, pointing from high to low potential: here to the right.', 'Sind die Äquipotentiallinien gegeben, zeichne die Feldlinien senkrecht dazu, von hohem zu tiefem Potential: hier nach rechts.')}</p>`,
+            fig(C.fig(uni([1, 0]), { box: BOX, given: xs.map((x) => [[x, -3], [x, 3]]), equiLines: true, extra: [-1.6, -0.8, 0, 0.8, 1.6].map((y) => [[-3, y], [3, y]]), tops }))),
+        ];
+      } },
+    { topic: 4, stage: 0, name: () => L('Find the error', 'Finde den Fehler'), idea: () => L('Check a sketch feature by feature: start and end, arrows, crossings, the angle of the equipotentials.', 'Eine Skizze Merkmal für Merkmal prüfen: Anfang und Ende, Pfeile, Kreuzungen, der Winkel der Äquipotentiallinien.'),
+      frames: () => {
+        const wrong = X.sketch('like', 'cross', false), right = X.sketch('like', null, false), cap = X.sketch('plates', 'equi', false);
+        return [
+          frame(L('The sketch', 'Die Skizze'), `<p>${L('A student sketched the field lines and equipotentials of two equal positive charges. One feature is wrong: check them one at a time.', 'Eine Schülerin hat die Feldlinien und Äquipotentiallinien zweier gleicher positiver Ladungen skizziert. Ein Merkmal ist falsch: Prüfe sie einzeln.')}</p>`, fig(C.fig(wrong.c, wrong.o))),
+          frame(L('Start, end and arrows', 'Anfang, Ende und Pfeile'), `<p>${L('The lines start at the positive charges and run outwards, out of the picture; the arrows point away from +. That is right.', 'Die Linien beginnen bei den positiven Ladungen und laufen nach aussen, aus dem Bild; die Pfeile zeigen von + weg. Das stimmt.')}</p>`, fig(C.fig(wrong.c, wrong.o))),
+          frame(L('Crossings', 'Kreuzungen'), `<p>${L('In the middle the lines of the left charge cross those of the right one: wrong. The student drew the lines of each charge on its own. But at each point the two fields add up to one field with one direction: the lines of the pair bend away from each other and never cross.', 'In der Mitte kreuzen die Linien der linken Ladung die der rechten: falsch. Die Schülerin hat die Linien jeder Ladung für sich gezeichnet. Aber in jedem Punkt addieren sich die beiden Felder zu einem Feld mit einer Richtung: Die Linien des Paars weichen sich aus und kreuzen sich nie.')}</p>`, fig(C.fig(right.c, right.o))),
+          frame(L('The equipotentials', 'Die Äquipotentiallinien'), `<p>${L('Another student’s sketch of a capacitor: here the orange lines run along the field lines, from plate to plate. Wrong: equipotential lines cross the field lines at right angles, so between the plates they are parallel to the plates.', 'Die Skizze eines Kondensators einer anderen Schülerin: Hier verlaufen die orangen Linien längs der Feldlinien, von Platte zu Platte. Falsch: Äquipotentiallinien kreuzen die Feldlinien senkrecht, zwischen den Platten sind sie also parallel zu den Platten.')}</p>`, fig(C.fig(cap.c, cap.o))),
+        ];
+      } },
   ];
   const stage = (name, types) => ({ name, types });
   const TOPICS = [
-    { name: () => L('Field and force', 'Feld und Kraft'), example: () => 0, stages: [stage(() => L('direction', 'Richtung'), ['force-dir']), stage(() => L('numbers', 'Zahlen'), ['force-num'])] },
-    { name: () => L('Field lines', 'Feldlinien'), example: () => 1, stages: [stage(() => L('which diagram', 'welches Diagramm'), ['lines-pick']), stage(() => L('reading a diagram', 'ein Diagramm lesen'), ['lines-read']), stage(() => L('conductors', 'Leiter'), ['conductor'])] },
-    { name: () => L('Fields add up', 'Felder addieren sich'), example: () => 2, stages: [stage(() => L('at a point', 'in einem Punkt'), ['superpose']), stage(() => L('where it is zero', 'wo es null ist'), ['zero'])] },
-    { name: () => L('Comparing fields', 'Felder vergleichen'), example: () => 3, stages: [stage(() => L('factors', 'Faktoren'), ['factor']), stage(() => L('two capacitors', 'zwei Kondensatoren'), ['plates-compare'])] },
-    { name: () => L('Dipoles', 'Dipole'), example: () => 4, stages: [stage(() => L('uniform field', 'homogenes Feld'), ['dipole-uniform']), stage(() => L('near a charge', 'nahe einer Ladung'), ['dipole-point'])] },
-    { name: () => L('Charges in a uniform field', 'Ladungen im homogenen Feld'), example: () => 5, stages: [stage(() => L('the path', 'die Bahn'), ['deflect-path']), stage(() => L("Millikan's drop", 'Millikans Tröpfchen'), ['millikan']), stage(() => L('two deflections', 'zwei Ablenkungen'), ['deflect-compare'])] },
-    { name: () => L('True or false', 'Richtig oder falsch'), example: () => 1, stages: [stage(() => L('statements', 'Aussagen'), ['stmts'])] },
+    { name: () => L('Sketching field lines', 'Feldlinien skizzieren'), example: () => 0, stages: [stage(() => L('point charges', 'Punktladungen'), ['lines-pick']), stage(() => L('a charged wire', 'ein geladener Draht'), ['lines-wire']), stage(() => L('a plate capacitor', 'ein Plattenkondensator'), ['lines-cap'])] },
+    { name: () => L('Reading field lines', 'Feldlinien lesen'), example: () => 1, stages: [stage(null, ['lines-read'])] },
+    { name: () => L('Dipoles', 'Dipole'), example: () => 2, stages: [stage(() => L('uniform field', 'homogenes Feld'), ['dipole-uniform']), stage(() => L('the torque', 'das Drehmoment'), ['dipole-torque']), stage(() => L('near a charge', 'nahe einer Ladung'), ['dipole-point'])] },
+    { name: () => L('Equipotential lines', 'Äquipotentiallinien'), example: () => 3, stages: [stage(() => L('which diagram', 'welches Diagramm'), ['equi-pick']), stage(() => L('field lines from them', 'Feldlinien daraus'), ['lines-equi'])] },
+    { name: () => L('Find the error', 'Finde den Fehler'), example: () => 4, stages: [stage(null, ['error'])] },
+    { name: () => L('True or false', 'Richtig oder falsch'), example: () => 0, stages: [stage(() => L('statements', 'Aussagen'), ['stmts'])] },
   ];
   const lessons = () => LESSONS.map((l) => ({ name: l.name(), idea: l.idea(), frames: l.frames, also: topics.also(l.topic) }));
 
-  // ---------------------------------------------------------------- arcade
-  const KINDS = [['force-dir', 1], ['factor', 2], ['lines-pick', 2], ['deflect-path', 2], ['dipole-uniform', 2], ['conductor', 2], ['force-num', 2],
-    ['superpose', 3], ['zero', 3], ['lines-read', 3], ['plates-compare', 3], ['millikan', 3], ['dipole-point', 4], ['deflect-compare', 3]];
-  const CONCEPT = { sign: 'sign', perp: 'perp', none: 'none', some: 'none', bent: 'none', straight: 'none', reverse: 'lines', separate: 'lines', swap: 'lines', equal: 'lines',
-    plate: 'conductor', away: 'conductor', flow: 'conductor', through: 'conductor', inside: 'conductor', largest: 'sum', miss: 'sum', linear: 'square', circle: 'parabola', half: 'cap', same: 'eq', prefix: 'eq', noHalf: 'parabola' };
-  function arcadeQuestion(kind, seed) {
-    const e = X.make(kind, seed), qs = e.questions.filter((q) => q.type !== 'multi' && !q.multi), q = qs[seed % qs.length];
+  // ---------------------------------------------------------------- check
+  // The learning objectives (check.js), each with the exercise types it is asked about, its worked
+  // example and its practice topic. A question of the check is one question of an exercise with
+  // four options (for the wire and the capacitor: the diagram); the tags of the wrong options are
+  // the flags of the check.
+  const OBJECTIVES = [
+    { id: 'sketch', kinds: ['lines-pick', 'lines-wire', 'lines-cap'], tutor: 0, topic: 0,
+      name: () => L('Sketch the field lines of point charges, of a charged wire and of a plate capacitor (a uniform field).', 'Die Feldlinien von Punktladungen, eines geladenen Drahts und eines Plattenkondensators (ein homogenes Feld) skizzieren.') },
+    { id: 'read', kinds: ['lines-read'], tutor: 1, topic: 1,
+      name: () => L('Read the direction and the relative strength of a field from its field lines.', 'Die Richtung und die relative Stärke eines Feldes aus seinen Feldlinien ablesen.') },
+    { id: 'dipole', kinds: ['dipole-uniform', 'dipole-torque'], tutor: 2, topic: 2,
+      name: () => L('Determine the force and the torque on a dipole in a uniform field.', 'Die Kraft und das Drehmoment auf einen Dipol in einem homogenen Feld bestimmen.') },
+    { id: 'equi', kinds: ['equi-pick', 'lines-equi'], tutor: 3, topic: 3,
+      name: () => L('Sketch equipotential lines at right angles to the field lines.', 'Äquipotentiallinien senkrecht zu den Feldlinien skizzieren.') },
+    { id: 'error', kinds: ['error'], tutor: 4, topic: 4,
+      name: () => L('Find the error in a sketch of field lines and equipotentials: lines that cross, or equipotentials not at right angles to the field lines.', 'Den Fehler in einer Skizze von Feldlinien und Äquipotentiallinien finden: Linien, die sich kreuzen, oder Äquipotentiallinien, die nicht senkrecht zu den Feldlinien stehen.') },
+  ];
+  const ASK = { 'lines-wire': 'd', 'lines-cap': 'd' };
+  function checkQuestion(kind, seed) {
+    const e = X.make(kind, seed), qs = e.questions.filter((q) => q.type !== 'multi' && q.options.length === 4 && (!ASK[kind] || q.key === ASK[kind])), q = qs[seed % qs.length];
     return {
       title: e.title, text: e.text, figure: `<div class="figs">${e.figs || ''}</div>`, ask: q.label.replace(/^\([a-d]\) /, ''),
       options: q.options.map((o) => ({ html: o.html || o.label, correct: o.ok, flag: o.ok ? null : o.tag || 'other', why: o.why })),
       explain: () => `${e.solFig || ''}<div class="steps">${e.solution.map((s) => `<p>${s}</p>`).join('')}</div>`,
     };
   }
-  const arcadeSource = {
-    id: 'ef', kinds: KINDS.map(([id, difficulty]) => ({ id, difficulty })), question: arcadeQuestion, concept: CONCEPT,
+  const CONCEPT = { reverse: 'direction', sign: 'direction', against: 'direction', separate: 'cross', swap: 'direction', parallel: 'shape', point: 'shape', outside: 'shape', flat: 'shape', square: 'shape', nearplate: 'shape',
+    perp: 'tangent', density: 'density', force: 'netforce', torque: 'torque', angle: 'torque', lines: 'perp', along: 'perp', slant: 'perp', even: 'spacing', bunched: 'spacing', up: 'downhill' };
+  const checkSource = {
+    id: 'ef', objectives: OBJECTIVES, question: checkQuestion, concept: CONCEPT,
     concepts: () => ({
-      sign: L('the force on a negative charge', 'die Kraft auf eine negative Ladung'), perp: L('the force along the field', 'die Kraft längs des Feldes'), none: L('when there is a force', 'wann es eine Kraft gibt'),
-      lines: L('the rules of field lines', 'die Regeln der Feldlinien'), conductor: L('conductors', 'Leiter'), sum: L('adding fields as vectors', 'Felder als Vektoren addieren'),
-      square: L('the square of the distance', 'das Quadrat des Abstands'), parabola: L('a parabola in a uniform field', 'eine Parabel im homogenen Feld'), cap: L('the field of a capacitor', 'das Feld eines Kondensators'), eq: L('E = F/q', 'E = F/q'),
+      direction: L('the direction of field lines (from + to −)', 'die Richtung der Feldlinien (von + nach −)'), cross: L('field lines that cross', 'Feldlinien, die sich kreuzen'),
+      shape: L('the field of a wire or a capacitor', 'das Feld eines Drahts oder eines Kondensators'), tangent: L('the field along the field line', 'das Feld längs der Feldlinie'),
+      density: L('the strength from the density of the lines', 'die Stärke aus der Dichte der Linien'), netforce: L('the net force on a dipole', 'die Gesamtkraft auf einen Dipol'),
+      torque: L('the torque on a dipole', 'das Drehmoment auf einen Dipol'), perp: L('equipotentials at right angles to the field lines', 'Äquipotentiallinien senkrecht zu den Feldlinien'),
+      spacing: L('the spacing of equipotentials', 'die Abstände der Äquipotentiallinien'), downhill: L('the field from high to low potential', 'das Feld von hohem zu tiefem Potential'),
     }),
-    intro: () => ({
-      tag: L('Field lines, forces, superposition and capacitors: answer as many questions as you can in <b>5 minutes</b>.', 'Feldlinien, Kräfte, Überlagerung und Kondensatoren: Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich.'),
-      rule: L('Questions get harder as you go. Choose one of the answers: click it or press its number.', 'Die Fragen werden nach und nach schwieriger. Wähle eine der Antworten: Klicke sie an oder drücke ihre Nummer.'),
-      example: L('field lines that cross', 'Feldlinien, die sich kreuzen'),
-    }),
-    hero: () => `<div class="figs"><div class="fig">${C.fig(two(1, -1), { box: BOX, lines: true })}</div></div><p class="ar-law"><span class="vec"><i>E</i></span> = <span class="vec"><i>F</i></span>/q</p>`,
   };
 
   // ---------------------------------------------------------------- language and modes
@@ -313,7 +350,6 @@
     document.title = ui().title;
     Lang.apply(ui());
     if (topics) topics.relabel();
-    if (problems) problems.menu();
   }
   function switchLang() {
     applyStatic();
@@ -333,38 +369,32 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('ef-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); });
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
   function practise() {
     setMode('practice');
-    if (ex && ex.real == null) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
   }
-  function realMode() {
-    setMode('real');
-    if (problems.is(ex)) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
-  }
-  function play() { setMode('arcade'); arcade.show(); if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade'); }
+  function checkMode() { setMode('check'); checker.show(); if (location.hash !== '#check') history.replaceState(null, '', '#check'); }
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     const m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= LESSONS.length) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
-    const re = problems.parse(h);
-    if (re) { setMode('real'); if (!ex || ex.id !== h) open(re); problems.menu(); return true; }
     const te = topics.parse(h);
     if (te) { setMode('practice'); if (!ex || ex.id !== h) open(te); return true; }
     const d = h.match(/^([a-z0-9]+(?:-[a-z0-9]+)*)-(\d+)$/);
@@ -374,7 +404,7 @@
 
   function init() {
     Lang.init();
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     topics = window.Topics.create({
       app: PRACTICE,
       topics: TOPICS.map((t) => ({ name: t.name, stages: t.stages, example: (s) => ({ i: t.example(s), name: () => LESSONS[t.example(s)].name() }) })),
@@ -383,10 +413,6 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.FieldProblems.PROBLEMS, make: window.FieldProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
     applyStatic();
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
@@ -403,14 +429,18 @@
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);
     tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(LESSONS[i].topic, LESSONS[i].stage); setMode('practice'); fresh(); } });
-    arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
+    checker = Check.create(checkSource, {
+      math: () => {}, markScrollable: () => {}, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (t) => { topics.go(t); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     const last = stored('ef-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

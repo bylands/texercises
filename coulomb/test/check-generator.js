@@ -2,15 +2,17 @@
 // For many seeds per situation and both languages it checks
 // - the answers against the laws, worked out independently here: Coulomb's law, forces added as
 //   vectors, the point of zero force (a test charge there feels nothing), the direction of the net
-//   force on a charge moved by a tiny step (stable or unstable),
-// - that wrong-idea values differ from the right ones, and every arcade question has four options,
+//   force on a charge moved by a tiny step (stable or unstable), the field as force per charge and
+//   the fields of several charges added,
+// - that wrong-idea values differ from the right ones, and every check question (of each kind of
+//   each objective) has four options, one of them right,
 // - that texts, hints, solutions and drawings contain no undefined values,
 // - the tutor's examples against the worksheet "Force Vectors" (ranking C > A > B; the charge in
-//   B moved to the right is pulled further away), and the problems.
+//   B moved to the right is pulled further away).
 'use strict';
 
-require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../generator.js'); require('../lessons.js'); require('../realproblems.js');
-const { CL, Coulomb, Lessons, CoulombProblems, Lang } = globalThis;
+require('../lang.js'); require('../core.js'); require('../draw.js'); require('../scenarios.js'); require('../generator.js'); require('../lessons.js'); require('../check-src.js');
+const { CL, Coulomb, Lessons, CheckSource, Lang } = globalThis;
 const k = 9e9;
 
 let failures = 0, checked = 0;
@@ -24,8 +26,10 @@ const si = (f) => f.value * CL.UNITS[f.unit][0];
 
 const LAWS = {
   pair: (p, ex) => { if (!close(si(val(ex, 'F')), (k * Math.abs(p.q1 * p.q2)) / p.r ** 2, 1e-9)) fail('pair F'); if (val(ex, 'kind').value !== (p.q1 * p.q2 < 0 ? 'attract' : 'repel')) fail('pair kind'); },
-  'pair-r': (p, ex) => { const F = (k * Math.abs(p.q1 * p.q2)) / p.r ** 2; if (!close(si(val(ex, 'r')), Math.sqrt((k * Math.abs(p.q1 * p.q2)) / F), 1e-9)) fail('pair-r'); },
-  'pair-q': (p, ex) => { if (!close(si(val(ex, 'q2')), Math.abs(p.q2), 1e-9) || val(ex, 'sign').value !== (p.q2 > 0 ? '+' : '-')) fail('pair-q'); },
+  'pair-dir': (p, ex) => {
+    const F = net(p.qb, p.b, [{ q: p.qa, p: p.a }]);
+    if (val(ex, 'dB').value !== dirOf(F) || val(ex, 'dA').value !== dirOf([-F[0], -F[1]]) || val(ex, 'size').value !== 'eq') fail(`pair-dir ${JSON.stringify(p)}`);
+  },
   factor: (p, ex) => { if (!close(val(ex, 'f').value, (p.a * p.b) / p.n ** 2)) fail('factor'); },
   'factor-mix': (p, ex) => { const f = (p.a * p.b) / p.n ** 2; if (!close(val(ex, 'f').value, f) || !close(si(val(ex, 'F2')), f * p.F)) fail('factor-mix'); },
   'factor-find': (p, ex) => { const n = val(ex, 'n').value; if (!close(1 / n ** 2, p.m)) fail('factor-find'); },
@@ -37,7 +41,7 @@ const LAWS = {
     const rk = val(ex, 'rk').value;
     p.keys.forEach((key, i) => { const want = 1 + F.filter((x) => x > F[i] + 1e-9).length; if (rk['ABCD'[i]] !== want) fail(`rank ${key}`); });
   },
-  right: (p, ex) => { const F = net(p.t, [0, 0], [{ q: p.q1, p: [p.x1, 0] }, { q: p.q2, p: [0, p.y2] }]); if (!close(si(val(ex, 'F')), Math.hypot(...F), 1e-9)) fail('right F'); if (!close(val(ex, 'alpha').value, (Math.atan2(Math.abs(F[1]), Math.abs(F[0])) * 180) / Math.PI, 1e-9)) fail('right alpha'); if (val(ex, 'dir').value !== dirOf([Math.sign(F[0]), Math.sign(F[1])])) fail('right dir'); },
+  right: (p, ex) => { const F = net(p.t, [0, 0], [{ q: p.q1, p: [p.x1, 0] }, { q: p.q2, p: [0, p.y2] }]); if (!close(si(val(ex, 'F')), Math.hypot(...F), 1e-9)) fail('right F'); if (val(ex, 'dir').value !== dirOf([Math.sign(F[0]), Math.sign(F[1])])) fail('right dir'); },
   zero: (p, ex) => {
     const x = si(val(ex, 'x')), region = val(ex, 'region').value, a = Math.abs(p.q1), b = Math.abs(p.q2);
     const pos = region === 'between' ? x : region === 'left' ? -x : p.d + x;
@@ -50,6 +54,20 @@ const LAWS = {
     if (val(ex, 'd').value !== dirOf(F)) fail(`nudge dir ${val(ex, 'd').value} ≠ ${dirOf(F)}`);
     const back = F[0] * moved[0] + F[1] * moved[1] < 0;
     if (val(ex, 'stab').value !== (back ? 'back' : 'away')) fail('nudge stability');
+  },
+  // the force on q1 is q1 E, on q2 then q2 E, against the field if q2 < 0
+  'field-force': (p, ex) => {
+    const E = si(val(ex, 'E')), F2 = si(val(ex, 'F2'));
+    if (!close(E * p.q1, p.q1 * p.E, 1e-9) || !close(F2, Math.abs(p.q2) * E, 1e-9)) fail(`field-force ${JSON.stringify(p)}`);
+    const u = CL.DIRVEC[p.d], d = dirOf([Math.sign(p.q2) * u[0], Math.sign(p.q2) * u[1]]);
+    if (val(ex, 'dir').value !== d) fail(`field-force dir ${val(ex, 'dir').value} ≠ ${d}`);
+  },
+  // the net field at P: the force on a test charge +1 there; on a negative charge the other way
+  'field-sum': (p, ex) => {
+    const E = net(1, [0, 0], p.ch.map((x) => ({ q: x.s, p: x.c })));
+    if (val(ex, 'E').value !== dirOf(E) || val(ex, 'F').value !== dirOf([-E[0], -E[1]])) fail(`field-sum ${JSON.stringify(p)}: ${val(ex, 'E').value} ≠ ${dirOf(E)}`);
+    const a = Math.atan2(E[1], E[0]) * 4 / Math.PI;
+    if (Math.abs(a - Math.round(a)) > 1e-6) fail('field-sum: not one of the eight directions');
   },
 };
 LAWS['line-mid'] = LAWS['line-end'];
@@ -98,20 +116,29 @@ for (const lang of ['en', 'de']) {
   if (!(rk.C === 1 && rk.A === 2 && rk.B === 3)) fail(`worksheet ranking: ${JSON.stringify(rk)} (C > A > B)`);
   const nb = lesson('nudge-along');
   if (val(nb, 'd').value !== 'E' || val(nb, 'stab').value !== 'away') fail('worksheet: the charge in B moved to the right is pulled further to the right');
-  if (!close(si(val(lesson('pair'), 'F')), 0.6, 1e-9)) fail('example 1: 0.6 N');
+  const pd = lesson('pair-dir');
+  if (val(pd, 'dB').value !== 'SW' || val(pd, 'dA').value !== 'NE') fail('example 1: B pulled towards A, A towards B');
+  const ff = lesson('field-force');
+  if (!close(si(val(ff, 'E')), 3000, 1e-9) || !close(si(val(ff, 'F2')), 12e-6, 1e-9) || val(ff, 'dir').value !== 'W') fail('example 9: 3000 N/C, 12 μN to the left');
 
-  // the problems
-  CoulombProblems.PROBLEMS.forEach((pb, i) => {
-    for (let seed = 1; seed <= 30; seed++) {
-      const ex = CoulombProblems.realOf(i, seed), id = `${lang}/${pb.id}/${seed}`;
-      checked++;
-      ex.fields.forEach((f) => { if (f.type === 'num' && !(Number.isFinite(f.value) && f.value > 0)) fail(`${id}: ${f.key} = ${f.value}`); });
-      [ex.title, ex.text, ex.results, ...ex.hints, ...ex.solution, ex.solutionFigure()].forEach((s, j) => checkText(id, `text ${j}`, s));
-    }
+  // the check: every kind of every objective gives questions with four different options, one right
+  const kinds = new Set();
+  CheckSource.objectives.forEach((o) => {
+    if (!o.name() || !o.kinds.length || o.tutor == null || !Lessons.EXAMPLES[o.tutor] || !Lessons.EXAMPLES[o.topic]) fail(`objective ${o.id}`);
+    o.kinds.forEach((kind) => {
+      if (kinds.has(kind)) fail(`kind ${kind} in two objectives`);
+      kinds.add(kind);
+      for (let seed = 1; seed <= 80; seed++) {
+        const qn = CheckSource.question(kind, seed), id = `${lang}/check ${kind}/${seed}`;
+        checked++;
+        const html = qn.options.map((x) => x.html);
+        if (qn.options.length !== 4 || qn.options.filter((x) => x.correct).length !== 1 || new Set(html).size !== 4) fail(`${id}: ${html.join(' | ')}`);
+        [qn.title, qn.text, qn.ask, qn.figure, qn.explain(), ...html].forEach((s, i) => checkText(id, `part ${i}`, s));
+        qn.options.forEach((x) => { if (x.flag && !CheckSource.concept[x.flag] && !['prefix'].includes(x.flag)) fail(`${id}: flag ${x.flag} without a concept`); });
+        Object.values(CheckSource.concept).forEach((c) => { if (!CheckSource.concepts()[c]) fail(`concept ${c} without a name`); });
+      }
+    });
   });
 }
-const h = CoulombProblems.realOf(0, 1);
-if (h.p.n === 1 && !close(si(val(h, 'F')), 8.2e-8, 0.01)) fail(`hydrogen: ${si(val(h, 'F'))} N, not 8.2·10⁻⁸ N`);
-
 console.log(failures ? `${failures} failures in ${checked} exercises` : `All checks passed (${checked} exercises).`);
 process.exit(failures ? 1 : 0);

@@ -3,8 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Electric Field</title>
-  <!-- KaTeX's fonts: the arcade is set in KaTeX_Main -->
+  <title>Field Lines and Equipotentials</title>
   <link rel="stylesheet" href="/katex/katex.min.css">
   <link rel="stylesheet" href="ui.css">
   <link rel="stylesheet" href="style.css">
@@ -14,13 +13,9 @@
   <script defer src="sign.js"></script>
   <script defer src="elec.js"></script>
   <script defer src="charges.js"></script>
-  <script defer src="figkit.js"></script>
-  <script defer src="figures.js"></script>
   <script defer src="exercises.js"></script>
-  <script defer src="realproblems.js"></script>
-  <script defer src="problems.js"></script>
   <script defer src="tutor.js"></script>
-  <script defer src="arcade.js"></script>
+  <script defer src="check.js"></script>
   <script defer src="practice.js"></script>
   <script defer src="topics.js"></script>
   <script defer src="app.js"></script>
@@ -30,7 +25,7 @@
     <div class="wrap">
       <div class="brand">
         <a class="home" href="/">Learning Physics</a><span class="sep" aria-hidden="true">/</span>
-        <h1 data-i18n="title">Electric Field</h1>
+        <h1 data-i18n="title">Field Lines and Equipotentials</h1>
       </div>
       <div class="top-right">
         <p id="score" class="score"></p>
@@ -47,12 +42,9 @@
       <div id="modes" class="levels" role="radiogroup" data-i18n-label="mode" aria-label="Mode">
         <label><input type="radio" name="mode" value="tutor" checked><span data-i18n="tutor">Tutor</span></label>
         <label><input type="radio" name="mode" value="practice"><span data-i18n="practice">Practice</span></label>
-        <label><input type="radio" name="mode" value="real"><span data-i18n="real">Problems</span></label>
-        <label><input type="radio" name="mode" value="arcade"><span data-i18n="arcade">Arcade</span></label>
+        <label><input type="radio" name="mode" value="check"><span data-i18n="checkMode">Check</span></label>
       </div>
       <div id="levels" class="levels practice" role="radiogroup" data-i18n-label="difficulty" aria-label="Difficulty" hidden></div>
-      <label class="topic-pick real" hidden><span data-i18n="problem">Problem</span><select id="real-pick"></select></label>
-      <button id="real-new" type="button" class="real" data-i18n="newNumbers" hidden>New numbers</button>
       <button id="new" type="button" class="new-btn practice" data-i18n="new" hidden>New exercise</button>
     </div>
 
@@ -71,7 +63,7 @@
       <p class="note" data-i18n="tutorNote"></p>
     </section>
 
-    <section id="task" class="card practice real" hidden>
+    <section id="task" class="card practice" hidden>
       <h2 id="title"></h2>
       <div id="prompt"></div>
       <div id="figure" class="figs"></div>

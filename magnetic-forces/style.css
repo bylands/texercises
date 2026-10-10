@@ -1,4 +1,4 @@
-/* Magnetic Forces: its colours, the drawings of charges, wires, fields and paths, the options; the
+/* Magnetic Forces and Fields of Currents: its colours, the drawings of charges, wires, field lines and coils, the options; the
    general look is in ui.css (shared by the apps). Velocity and current blue, field green, force red. */
 :root {
   --mf-v: #1f5fc4; --mf-b: #1f7a3e; --mf-f: #c62828; --mf-e: #b8860b; --mf-traj: #8e44ad;
@@ -48,14 +48,13 @@ svg.mf .c-vel { fill: var(--mf-v); }
 svg.mf .c-force { fill: var(--mf-f); }
 svg.mf .c-field { fill: var(--mf-b); }
 svg.mf .c-efield { fill: var(--mf-e); }
-svg.mf .traj { fill: none; stroke: var(--mf-traj); stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
-svg.mf .traj-head { fill: var(--mf-traj); }
-svg.mf .traj.back { opacity: 0.35; stroke-width: 2; }
-svg.mf .cyl { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.7; }
-svg.mf .dimline { stroke: var(--muted); stroke-width: 1.2; fill: none; }
-svg.mf .lbl.small { font-size: 13px; }
-svg.mf .track { fill: none; stroke: var(--ink); stroke-width: 1.8; }
-svg.mf .plate { fill: var(--muted); }
+svg.mf .fl { fill: none; stroke: var(--mf-b); stroke-width: 1.4; stroke-linejoin: round; }
+svg.mf .coil-cut { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 3 4; }
+svg.mf .magnet { fill: none; stroke: var(--ink); stroke-width: 1.4; }
+svg.mf .pole-n { fill: var(--mf-pos); }
+svg.mf .pole-s { fill: var(--mf-neg); }
+svg.mf .pole { fill: var(--ink); font: 700 17px system-ui, sans-serif; }
+svg.mf .coil { stroke: #b5651d; stroke-width: 5; stroke-linecap: round; }
 
 /* direction tiles: one, or all that fit */
 .ask { font-weight: 600; margin: 12px 0 6px; }
@@ -69,6 +68,8 @@ svg.mf .plate { fill: var(--muted); }
 .tile.ok { border-color: var(--ok); background: var(--ok-bg); }
 .tile.bad { border-color: var(--bad); background: var(--bad-bg); }
 .tile.miss { border-color: var(--ok); border-style: dashed; }
+.tiles.wide { grid-template-columns: minmax(0, 1fr); }
+.step-opt { display: block; padding: 4px 0; }
 .dtile { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .dtile svg.icon { width: 40px; height: 40px; flex: none; }
 .qfb { color: var(--bad); margin: 0 0 12px; padding-left: 1.2em; }
@@ -112,27 +113,11 @@ svg.mf .plate { fill: var(--muted); }
 .stmts .fb { display: block; font-size: 0.9rem; margin: 4px 0 0 26px; }
 .stmts .fb:empty { display: none; }
 
-/* the pictures of the problems */
-svg.tb .mf-fieldline { fill: none; stroke: var(--mf-b); stroke-width: 1.2; opacity: 0.7; }
-svg.tb .mf-traj { fill: none; stroke: var(--mf-traj); stroke-width: 2; }
-svg.tb .mf-traj2 { fill: none; stroke: var(--mf-f); stroke-width: 2; }
-svg.tb .mf-glow { fill: none; stroke: #4fbf6f; stroke-width: 6; opacity: 0.6; stroke-linecap: round; }
-svg.tb .mf-arrow line { stroke: var(--motion); stroke-width: 2; }
-svg.tb .mf-arrow polygon { fill: var(--motion); }
-svg.tb .mf-region { fill: var(--mf-region); stroke: var(--mf-b); stroke-dasharray: 5 4; }
-svg.tb .mf-coil { fill: none; stroke: #b5651d; stroke-width: 6; opacity: 0.8; }
-svg.tb .mf-beam { fill: none; stroke: #4fa8e0; stroke-width: 3; }
-svg.tb .mf-track { fill: none; stroke: var(--ink); stroke-width: 1.6; }
-svg.tb .mf-cable { fill: #555c63; stroke: var(--ink); stroke-width: 1.2; }
-
-/* arcade: manim's colours */
-#arcade { --mf-v: #58c4dd; --mf-b: #83c167; --mf-f: #fc6255; --mf-traj: #c59df5; --mf-pos: #7a3e37; --mf-neg: #34507a; --mf-neu: #444; --mf-region: rgba(131, 193, 103, 0.08); }
-#arcade svg.mf .bg { fill: #000; }
-#arcade svg.mf .lbl { stroke: #000; }
-#arcade .ar-opt .val svg.mf:not(.icon) { width: 100%; max-width: 260px; }
-#arcade .ar-opt .val svg.icon { width: 48px; height: 48px; }
-#arcade .ar-opt .dtile { justify-content: center; }
-.ar-hero .figs .fig svg { width: 320px; }
+/* the check: drawings as options */
+.ck-opt .val svg.mf:not(.icon) { width: 100%; max-width: 260px; }
+.ck-opt .val svg.icon { width: 44px; height: 44px; }
+.ck-opt .val .dtile { justify-content: center; }
+.ck-opt .step-opt { font-size: 0.95rem; text-align: left; }
 
 /* the nudge after a wrong check of statements */
 .stmts-fb { color: var(--bad); font-size: 0.9rem; margin: 4px 0 0; }

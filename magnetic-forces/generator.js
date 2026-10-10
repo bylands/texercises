@@ -8,11 +8,11 @@
 //   force(q, v, B)       the direction of q · v × B, or null (no force)
 //   wireField(d, r)      the direction of the field of a long straight wire along d at r from it
 //                        (r measured from the wire, perpendicular to it), or null
-//   chargeField(q, v, r) the direction of the field of a moving charge at r from it, or null
 //   fitting(missing, q, a, F)  the candidates (CANDS) for the missing B (a = v) or v (a = B)
 //                        that give a force along F: often more than one
-//   path(o)              a trajectory in the page plane by numerical integration (RK4)
-//   PARTICLES            electron, proton, deuteron, alpha particle: mass and charge
+//   planeField(wires, x, y)   the field in the page of currents perpendicular to it (a wire seen
+//                        end-on, a loop or a solenoid in cross-section)
+//   fieldLine(wires, x, y, box)  the field line through (x, y): { pts, closed }
 (function (root) {
   'use strict';
 
@@ -59,39 +59,46 @@
     const rp = perp(d, r);
     return len(rp) < 1e-9 ? null : unit(cross(d, rp));
   }
-  function chargeField(q, v, r) {
-    if (!q || !v) return null;
-    const b = unit(scale(cross(v, r), Math.sign(q)));
-    return b;
-  }
   function fitting(missing, q, a, F) {
     return CANDS.filter((c) => (missing === 'B' ? same(force(q, a, c), F) : same(force(q, c, a), F)));
   }
 
-  // ---------------------------------------------------------------- trajectories
-  // A charge (q/m = k) starting at (x0, y0) with velocity (vx, vy), in a field Bz(x, y) (out of the
-  // page positive); n steps of dt. Returns the points [x, y]. o.inside(x, y): where the field is (else 0).
-  function path(o) {
-    const Bz = (x, y) => (o.inside && !o.inside(x, y) ? 0 : o.Bz(x, y));
-    const acc = (s) => { const b = Bz(s[0], s[1]) * o.k; return [s[2], s[3], s[3] * b, -s[2] * b]; };
-    let s = [o.x0, o.y0, o.vx, o.vy];
-    const pts = [[s[0], s[1]]], dt = o.dt;
-    for (let i = 0; i < o.n; i++) {
-      const k1 = acc(s), k2 = acc(s.map((x, j) => x + (dt / 2) * k1[j])), k3 = acc(s.map((x, j) => x + (dt / 2) * k2[j])), k4 = acc(s.map((x, j) => x + dt * k3[j]));
-      s = s.map((x, j) => x + (dt / 6) * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j]));
-      pts.push([s[0], s[1]]);
-      if (o.stop && o.stop(s[0], s[1])) break;
-    }
-    return pts;
+  // ---------------------------------------------------------------- field lines in the page
+  // The field of long straight currents perpendicular to the page, wires: [{ x, y, s }] (s = +1
+  // out of the page ⊙, −1 into it ⊗): each circles its wire anticlockwise for ⊙ (grip rule), as
+  // 1/r. A loop seen in cross-section is two wires, a solenoid two rows, a bar magnet like a
+  // solenoid (its north pole where the field leaves the coil).
+  function planeField(wires, x, y) {
+    let bx = 0, by = 0;
+    for (const w of wires) { const dx = x - w.x, dy = y - w.y, r2 = dx * dx + dy * dy || 1e-12; bx -= (w.s * dy) / r2; by += (w.s * dx) / r2; }
+    return [bx, by];
+  }
+  // A field line through (x0, y0), along the field: points [x, y], closed or ended where it leaves
+  // the box [x0, x1, y0, y1] (then traced back from the start as well).
+  function fieldLine(wires, x0, y0, box, h = 0.03, n = 4000) {
+    const step = (p, sg) => {
+      const f = (q) => { const b = planeField(wires, q[0], q[1]), l = Math.hypot(b[0], b[1]) || 1; return [(sg * b[0]) / l, (sg * b[1]) / l]; };
+      const k1 = f(p), k2 = f([p[0] + (h / 2) * k1[0], p[1] + (h / 2) * k1[1]]);
+      return [p[0] + h * k2[0], p[1] + h * k2[1]];
+    };
+    const out = (p) => p[0] < box[0] || p[0] > box[1] || p[1] < box[2] || p[1] > box[3];
+    const run = (sg) => {
+      const pts = [[x0, y0]];
+      for (let i = 0, len = 0; i < n; i++) {
+        const p = step(pts[pts.length - 1], sg);
+        pts.push(p);
+        len += h;
+        if (len > 0.5 && Math.hypot(p[0] - x0, p[1] - y0) < 1.5 * h) return { pts: [...pts, [x0, y0]], closed: true };
+        if (out(p)) return { pts, closed: false };
+      }
+      return { pts, closed: false };
+    };
+    const fwd = run(1);
+    if (fwd.closed) return fwd;
+    return { pts: [...run(-1).pts.slice(1).reverse(), ...fwd.pts], closed: false };
   }
 
-  // ---------------------------------------------------------------- particles
-  const E = 1.602e-19, U = 1.661e-27;
-  const PARTICLES = {
-    electron: { m: 9.109e-31, q: -E }, proton: { m: 1.673e-27, q: E }, deuteron: { m: 3.344e-27, q: E }, alpha: { m: 6.645e-27, q: 2 * E },
-  };
-
-  const api = { rng, AXES, PLANE8, CANDS, len, unit, cross, dot, same, key, fromKey, force, wireField, chargeField, fitting, path, PARTICLES, E, U };
+  const api = { rng, AXES, PLANE8, CANDS, len, unit, cross, dot, same, key, fromKey, force, wireField, fitting, planeField, fieldLine };
   root.Magnet = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,4 +1,4 @@
-/* Coulomb Force: its colours, drawings and answer fields; the general look is in ui.css (shared by the apps). */
+/* Point Charges: its colours, drawings and answer fields; the general look is in ui.css (shared by the apps). */
 :root {
   --f-force: #c0392b;
   --f-g: #a8650a;
@@ -136,9 +136,6 @@ svg .k-move { color: var(--muted); }
 .ranks select { font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); }
 .field.ok .ranks select { border-color: var(--ok); }
 .field.bad .ranks select { border-color: var(--bad); }
-
-/* arcade: manim's colours */
-#arcade { --f-force: #fc6255; --pos: #fc6255; --neg: #83c167; --k1: #fc6255; --k2: #58c4dd; --k3: #f0ac5f; --knet: #c59ee6; --plate: rgba(88, 196, 221, 0.1); --beam: #141414; --gridline: #1c1c1c; }
 
 /* a result in the text of a step (in formulas, KaTeX marks it: see ui.css) */
 span.result { background: var(--ok-bg); border-radius: 3px; padding: 0.05em 0.25em; }

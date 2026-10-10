@@ -1,15 +1,15 @@
 (function () {
   'use strict';
 
-  const C = window.Charges, X = window.PotEx, Figs = window.PotFigures;
-  const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const C = window.Charges, X = window.PotEx;
+  const Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
       title: 'Electric Potential', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
-      tutor: 'Tutor', practice: 'Practice', real: 'Problems', arcade: 'Arcade', new: 'New exercise', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem',
+      tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
       tutorNote: 'Use the arrow keys ← → to step through. Blue: field lines, orange: equipotential lines, red: force.',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', option: (k) => `Option ${k}`,
       revealNote: (n) => `The solution unlocks once you have solved the exercise, used all hints or made ${n} attempts.`,
@@ -21,7 +21,7 @@
     },
     de: {
       title: 'Elektrisches Potential', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
-      tutor: 'Tutor', practice: 'Üben', real: 'Praxisaufgaben', arcade: 'Arcade', new: 'Neue Aufgabe', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe',
+      tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Blau: Feldlinien, orange: Äquipotentiallinien, rot: Kraft.',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', option: (k) => `Antwort ${k}`,
       revealNote: (n) => `Die Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder ${n} Versuche gemacht hast.`,
@@ -34,12 +34,11 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null, problems = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
   function stored(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; } }
   function store(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable */ } }
   function showScore() { const s = stored('ep-score', { solved: 0, clean: 0 }); $('#score').textContent = s.solved ? ui().score(s.solved, s.clean) : ''; }
   const starsOf = (d) => `<span class="stars" role="img" aria-label="${ui().stars(d)}" title="${ui().stars(d)}">${'★'.repeat(d)}${'☆'.repeat(5 - d)}</span>`;
-  const pic = (e) => (e.pic ? Figs[e.pic[0]](e.pic[1]) : '');
 
   // ---------------------------------------------------------------- questions
   // tiles: directions or names (one, or all that fit); pick: drawings; choice: a row of options;
@@ -117,15 +116,15 @@
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null };
     if (location.hash !== `#${ex.id}`) history.replaceState(null, '', `#${ex.id}`);
     render();
-    if (ex.real == null) topics.shown(ex);
+    topics.shown(ex);
   }
   const fresh = () => open(topics.next(ex));
-  const again = (e) => (e.real != null ? problems.parse(e.id) : topics.parse(e.id) || X.make(e.type, e.seed));
+  const again = (e) => topics.parse(e.id) || X.make(e.type, e.seed);
 
   function render() {
     $('#title').innerHTML = `${ex.title} ${starsOf(ex.difficulty)}`;
     $('#prompt').innerHTML = ex.text;
-    $('#figure').innerHTML = pic(ex) + (ex.figs || '');
+    $('#figure').innerHTML = ex.figs || '';
     $('#fields').innerHTML = ex.questions.map(questionHtml).join('');
     $('#hint-list').innerHTML = '';
     $('#hints').hidden = true;
@@ -142,7 +141,7 @@
     $('#reveal').title = canReveal() ? '' : ui().unlocks(maxTries());
     $('#reveal-note').textContent = ui().revealNote(maxTries());
     $('#reveal-note').hidden = canReveal() || st.revealed;
-    $('#check').textContent = st.solved ? (ex.real != null ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
     $('#check').disabled = st.revealed && !st.solved;
@@ -156,7 +155,7 @@
   }
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (ex.real != null) problems.next(); else fresh(); return; }
+    if (st.solved) { fresh(); return; }
     if (st.revealed) return;
     const r = feedback();
     st.checked = true;
@@ -174,8 +173,7 @@
     st.solved = true;
     Practice.markSolved(PRACTICE, ex.id);
     finish();
-    st.advance = ex.real != null ? '' : topics.solved(st, ex);
-    if (ex.real != null) problems.solved(ex);
+    st.advance = topics.solved(st, ex);
     document.querySelectorAll('#fields input').forEach((x) => { x.disabled = true; });
     showStatus('ok');
   }
@@ -213,93 +211,80 @@
   }
 
   // ---------------------------------------------------------------- tutor
+  // Worked examples, one per learning objective: the steps in order, and the wrong idea each step
+  // avoids. Blue: field lines, orange: equipotentials, red: force.
   const frame = (title, text, figure) => ({ text: `<p class="step-rule">${title}</p>${text}`, figure: `<div class="figs">${figure}</div>` });
   const fig = (html) => `<div class="fig">${html}</div>`;
   const BOX = [-3, 3, -2.2, 2.2], xs = [-2, -1, 0, 1, 2];
+  // vertical equipotentials at 400 V … 0 V, the field to the right, with more (points, parts, vecs)
+  const ladder = (o = {}) => C.fig({ kind: 'uniform', E: [1, 0] }, { box: [-3, 3, -1.6, 1.6], given: xs.map((x) => [[x, -3], [x, 3]]), equiLines: true, tops: xs.map((x, i) => ({ x, label: `${400 - 100 * i} V` })), ...o });
+  const ONE = { kind: 'points', charges: [{ q: 1, x: 0, y: 0 }] }, NEG = { kind: 'points', charges: [{ q: -1, x: 0, y: 0 }] }, LV = [0.4, 0.6, 0.9, 1.4, 2.4];
+  const signTable = () => `<table class="cmp"><thead><tr><th></th><th>ΔV > 0</th><th>ΔV < 0</th></tr></thead><tbody><tr><th>q > 0</th><td>${L('gains', 'gewinnt')}</td><td>${L('loses', 'verliert')}</td></tr><tr><th>q < 0</th><td>${L('loses', 'verliert')}</td><td>${L('gains', 'gewinnt')}</td></tr></tbody></table>`;
   const LESSONS = [
-    { topic: 0, stage: 0, name: () => L('Potential and voltage', 'Potential und Spannung'), idea: () => L('The potential is the potential energy per charge; a voltage is a difference of potentials.', 'Das Potential ist die potentielle Energie pro Ladung; eine Spannung ist eine Potentialdifferenz.'),
+    { topic: 0, stage: 0, name: () => L('Potential, energy, voltage', 'Potential, Energie, Spannung'), idea: () => L('The potential belongs to a point, the potential energy to a charge at a point, the voltage to two points.', 'Das Potential gehört zu einem Punkt, die potentielle Energie zu einer Ladung in einem Punkt, die Spannung zu zwei Punkten.'),
       frames: () => [
-        frame(L('Energy in a field', 'Energie im Feld'), `<p>${L('Like a mass in the gravitational field, a charge in an electric field has a potential energy that depends on where it is. Moving it, the field does work: W = −ΔE_pot, whatever the path.', 'Wie eine Masse im Schwerefeld hat eine Ladung im elektrischen Feld eine potentielle Energie, die davon abhängt, wo sie ist. Bewegt man sie, verrichtet das Feld Arbeit: W = −ΔE_pot, unabhängig vom Weg.')}</p>`,
-          fig(C.fig({ kind: 'uniform', E: [1, 0] }, { box: BOX, lines: true, parts: [{ x: -1.5, y: 0, q: 1 }], vecs: [{ x: -1.5, y: 0, dx: 60, dy: 0, cls: 'v-force', name: 'F⃗' }] }))),
-        frame(L('Potential', 'Potential'), `<p>${L('The potential energy is proportional to the charge: V = E_pot/q depends only on the point, the potential (in volts, 1 V = 1 J/C). The voltage between two points is the difference of their potentials. The lines of equal potential here are vertical; the potential falls along the field.', 'Die potentielle Energie ist proportional zur Ladung: V = E_pot/q hängt nur vom Punkt ab, das Potential (in Volt, 1 V = 1 J/C). Die Spannung zwischen zwei Punkten ist die Differenz ihrer Potentiale. Die Linien gleichen Potentials sind hier senkrecht; in Feldrichtung fällt das Potential.')}</p>`,
-          fig(C.fig({ kind: 'uniform', E: [1, 0] }, { box: BOX, given: xs.map((x) => [[x, -3], [x, 3]]), equiLines: true, extra: [-1.2, 0, 1.2].map((y) => [[-3, y], [3, y]]), tops: xs.map((x, i) => ({ x, label: `${400 - 100 * i} V` })) }))),
-        frame(L('Work and energy', 'Arbeit und Energie'), `<p>${X.RULE()} ${L('An electron (q = −e) moved from 100 V to 300 V: W = −e·(100 V − 300 V) = +200 eV: it gains 200 eV of kinetic energy.', 'Ein Elektron (q = −e) von 100 V nach 300 V: W = −e·(100 V − 300 V) = +200 eV: Es gewinnt 200 eV kinetische Energie.')} ${X.DOWNHILL()}</p>`,
-          fig(C.fig({ kind: 'uniform', E: [1, 0] }, { box: BOX, given: xs.map((x) => [[x, -3], [x, 3]]), equiLines: true, tops: xs.map((x, i) => ({ x, label: `${400 - 100 * i} V` })), parts: [{ x: 1, y: 0, q: -1, sym: 'e⁻' }], vecs: [{ x: 1, y: 0, dx: -76, dy: 0, cls: 'v-force', name: 'F⃗' }] }))),
+        frame(L('The task', 'Die Aufgabe'), `<p>${L('The equipotential lines are labelled with their potentials. A charge q = +2 nC sits at P. Find (a) the potential at P, (b) the potential energy of the charge at P, (c) the voltage between P and Q. First decide which of the three quantities each question asks for.', 'Die Äquipotentiallinien sind mit ihren Potentialen beschriftet. Eine Ladung q = +2 nC sitzt in P. Gesucht sind (a) das Potential in P, (b) die potentielle Energie der Ladung in P, (c) die Spannung zwischen P und Q. Entscheide zuerst, nach welcher der drei Grössen jede Frage fragt.')}</p>`,
+          fig(ladder({ parts: [{ x: -1, y: 0.5, q: 1 }], names: [{ x: -1, y: 0.5, name: 'P' }], points: [{ x: 1, y: -0.6, name: 'Q' }] }))),
+        frame(L('(a) The potential: a property of the point', '(a) Das Potential: eine Eigenschaft des Punktes'), `<p>${L('Read it off: V_P = 300 V. It is the same whatever charge sits at P, or none at all. Replacing the charge by −4 nC does not change it.', 'Ablesen: V_P = 300 V. Es ist dasselbe, welche Ladung auch in P sitzt, oder gar keine. Ersetzt man die Ladung durch −4 nC, ändert es sich nicht.')}</p>`,
+          fig(ladder({ points: [{ x: -1, y: 0.5, name: 'P' }, { x: 1, y: -0.6, name: 'Q' }] }))),
+        frame(L('(b) The potential energy: charge times potential', '(b) Die potentielle Energie: Ladung mal Potential'), `<p>${L('E_pot = q·V_P = 2 nC · 300 V = 600 nJ. This one depends on the charge: −4 nC at P would have E_pot = −4 nC · 300 V = −1200 nJ, at the same potential of 300 V.', 'E_pot = q·V_P = 2 nC · 300 V = 600 nJ. Diese Grösse hängt von der Ladung ab: −4 nC in P hätte E_pot = −4 nC · 300 V = −1200 nJ, beim selben Potential von 300 V.')}</p>`,
+          fig(ladder({ parts: [{ x: -1, y: 0.5, q: 1 }], names: [{ x: -1, y: 0.5, name: 'P' }], points: [{ x: 1, y: -0.6, name: 'Q' }] }))),
+        frame(L('(c) The voltage: a difference of two potentials', '(c) Die Spannung: eine Differenz zweier Potentiale'), `<p>${L('U = V_P − V_Q = 300 V − 100 V = 200 V. Not 300 V: that is the potential at P alone. Moving the zero of the potential changes V_P and V_Q, but not their difference; and the voltage does not depend on the charge either.', 'U = V_P − V_Q = 300 V − 100 V = 200 V. Nicht 300 V: Das ist das Potential in P allein. Verschiebt man den Nullpunkt des Potentials, ändern sich V_P und V_Q, aber nicht ihre Differenz; und auch die Spannung hängt nicht von der Ladung ab.')}</p>`,
+          fig(ladder({ points: [{ x: -1, y: 0.5, name: 'P' }, { x: 1, y: -0.6, name: 'Q' }] }))),
       ] },
-    { topic: 1, stage: 0, name: () => L('The uniform field', 'Das homogene Feld'), idea: () => L('In a uniform field the potential changes evenly along the field lines: |ΔV| = E·d, d along the lines.', 'Im homogenen Feld ändert sich das Potential längs der Feldlinien gleichmässig: |ΔV| = E·d, d längs der Linien.'),
+    { topic: 1, stage: 0, name: () => L('ΔV = E·d in a uniform field', 'ΔV = E·d im homogenen Feld'), idea: () => L('In a uniform field the potential changes evenly along the field lines: |ΔV| = E·d, with d measured along the lines.', 'Im homogenen Feld ändert sich das Potential längs der Feldlinien gleichmässig: |ΔV| = E·d, mit d längs der Linien gemessen.'),
       frames: () => [
-        frame(L('Along the field lines', 'Längs der Feldlinien'), `<p>${L('Between A and B, only the distance along the field lines counts: moving across them, the potential stays the same. Here A and B are 2 cm apart along the field: with E = 500 V/m, V_B − V_A = −500 V/m · 2 cm = −10 V.', 'Zwischen A und B zählt nur der Abstand längs der Feldlinien: Quer dazu bleibt das Potential gleich. Hier liegen A und B längs des Feldes 2 cm auseinander: Mit E = 500 V/m ist V_B − V_A = −500 V/m · 2 cm = −10 V.')}</p>`,
+        frame(L('The task', 'Die Aufgabe'), `<p>${L('A uniform field of 500 V/m points to the right; the grid spacing is 1 cm. Find V_B − V_A.', 'Ein homogenes Feld von 500 V/m zeigt nach rechts; der Gitterabstand ist 1 cm. Gesucht ist V_B − V_A.')}</p>`,
           fig(C.fig({ kind: 'uniform', E: [1, 0] }, { box: [-3, 3, -1.6, 1.6], lines: true, lineOpts: { gap: 1 }, grid: true, points: [{ x: -1, y: 1, name: 'A' }, { x: 1, y: -1, name: 'B' }] }))),
-        frame(L('V(x) and E(x)', 'V(x) und E(x)'), `<p>${L('The field is the slope of the potential, with the opposite sign: E = −dV/dx. Where V falls by 2 V per mm, E = +2 kV/m; where V is constant, E = 0. Going back, V changes by minus the area under E(x).', 'Das Feld ist die Steigung des Potentials, mit umgekehrtem Vorzeichen: E = −dV/dx. Wo V um 2 V pro mm fällt, ist E = +2 kV/m; wo V konstant ist, ist E = 0. Zurück ändert sich V um minus die Fläche unter E(x).')}</p>`,
+        frame(L('Step 1: the distance along the field lines', 'Schritt 1: der Abstand längs der Feldlinien'), `<p>${L('Only the distance along the field lines counts: d = 2 cm. Not the straight distance AB (about 2.8 cm): moving across the field lines, along an equipotential, the potential stays the same.', 'Nur der Abstand längs der Feldlinien zählt: d = 2 cm. Nicht der direkte Abstand AB (etwa 2.8 cm): Quer zu den Feldlinien, längs einer Äquipotentiallinie, bleibt das Potential gleich.')}</p>`,
+          fig(C.fig({ kind: 'uniform', E: [1, 0] }, { box: [-3, 3, -1.6, 1.6], lines: true, lineOpts: { gap: 1 }, grid: true, vlines: [-1, 1], points: [{ x: -1, y: 1, name: 'A' }, { x: 1, y: -1, name: 'B' }] }))),
+        frame(L('Step 2: size and sign', 'Schritt 2: Betrag und Vorzeichen'), `<p>${L('The size: |ΔV| = E·d = 500 V/m · 0.02 m = 10 V. The sign: the potential falls in the direction of the field, and B lies further along it. So V_B − V_A = −10 V.', 'Der Betrag: |ΔV| = E·d = 500 V/m · 0.02 m = 10 V. Das Vorzeichen: Das Potential fällt in Feldrichtung, und B liegt weiter in Feldrichtung. Also V_B − V_A = −10 V.')}</p>`,
+          fig(C.fig({ kind: 'uniform', E: [1, 0] }, { box: [-3, 3, -1.6, 1.6], lines: true, lineOpts: { gap: 1 }, grid: true, vlines: [-1, 1], points: [{ x: -1, y: 1, name: 'A' }, { x: 1, y: -1, name: 'B' }], tops: [{ x: -1, label: 'V_A' }, { x: 1, label: 'V_A − 10 V' }] }))),
+        frame(L('Backwards: E from the potential', 'Rückwärts: E aus dem Potential'), `<p>${L('E = ΔV/d works both ways. On a graph V(x), the field is the slope with the opposite sign, E = −ΔV/Δx: where V falls by 2 V per mm, E = +2 kV/m; where V is constant, E = 0; where V rises by 1 V per mm, E = −1 kV/m.', 'E = ΔV/d gilt in beide Richtungen. Auf einem Graphen V(x) ist das Feld die Steigung mit umgekehrtem Vorzeichen, E = −ΔV/Δx: Wo V um 2 V pro mm fällt, ist E = +2 kV/m; wo V konstant ist, ist E = 0; wo V um 1 V pro mm steigt, ist E = −1 kV/m.')}</p>`,
           `<div class="fig">${X.vGraph((x) => (x < 2 ? 6 - 2 * x : x < 5 ? 2 : 2 + (x - 5)), [0, 2, 5, 8])}</div><div class="fig">${X.eGraph((x) => (x < 2 ? 2 : x < 5 ? 0 : -1), [0, 2, 5, 8])}</div>`),
       ] },
-    { topic: 2, stage: 0, name: () => L('Equipotentials', 'Äquipotentiallinien'), idea: () => L('Lines of equal potential cross the field lines at right angles.', 'Linien gleichen Potentials kreuzen die Feldlinien senkrecht.'),
+    { topic: 2, stage: 0, name: () => L('The potential of point charges', 'Das Potential von Punktladungen'), idea: () => L('V = k·Q/r: the sign of Q, and a size falling with 1/r; the potentials of several charges add as numbers.', 'V = k·Q/r: das Vorzeichen von Q, und ein Betrag, der mit 1/r abnimmt; die Potentiale mehrerer Ladungen addieren sich als Zahlen.'),
       frames: () => [
-        frame(L('A point charge', 'Eine Punktladung'), `<p>${L('Around a point charge the equipotentials are circles. For equal steps of potential (V = k·Q/r) they get farther apart outwards, where the field is weaker.', 'Um eine Punktladung sind die Äquipotentiallinien Kreise. Für gleiche Potentialschritte (V = k·Q/r) liegen sie nach aussen immer weiter auseinander, wo das Feld schwächer ist.')}</p>`, fig(C.fig(X.EQ.point.c, { box: BOX, equi: X.EQ.point.lv, lines: true }))),
-        frame(L('A dipole', 'Ein Dipol'), `<p>${L('Around a positive and a negative charge: the field lines (blue) run from + to −, the equipotentials (orange) cross them at right angles. Halfway between, V = 0.', 'Um eine positive und eine negative Ladung: Die Feldlinien (blau) laufen von + nach −, die Äquipotentiallinien (orange) kreuzen sie senkrecht. In der Mitte ist V = 0.')}</p>`, fig(C.fig(X.EQ.dipole.c, { box: BOX, equi: X.EQ.dipole.lv, lines: true }))),
-        frame(L('Two equal charges', 'Zwei gleiche Ladungen'), `<p>${L('Around two equal positive charges the equipotentials first surround each charge, then both together.', 'Um zwei gleiche positive Ladungen umschliessen die Äquipotentiallinien zuerst jede Ladung, dann beide zusammen.')}</p>`, fig(C.fig(X.EQ.like.c, { box: BOX, equi: X.EQ.like.lv, lines: true }))),
-      ] },
-    { topic: 3, stage: 0, name: () => L('Potential of point charges', 'Potential von Punktladungen'), idea: () => L('V = k·Q/r; the potentials of several charges add as numbers, not as vectors.', 'V = k·Q/r; die Potentiale mehrerer Ladungen addieren sich als Zahlen, nicht als Vektoren.'),
-      frames: () => [
-        frame(L('V = k·Q/r', 'V = k·Q/r'), `<p>${L('With the zero far away, the potential of a point charge is V = k·Q/r: positive around a positive charge, negative around a negative one, falling with 1/r (more slowly than the field, 1/r²).', 'Mit dem Nullpunkt weit weg ist das Potential einer Punktladung V = k·Q/r: positiv um eine positive Ladung, negativ um eine negative, abnehmend mit 1/r (langsamer als das Feld, 1/r²).')}</p>`, fig(C.fig(X.EQ.point.c, { box: BOX, equi: X.EQ.point.lv }))),
+        frame(L('The sign comes from Q', 'Das Vorzeichen kommt von Q'), `<p>${L('With the zero far away, V = k·Q/r. Around a positive charge the potential is positive everywhere and highest near the charge.', 'Mit dem Nullpunkt weit weg ist V = k·Q/r. Um eine positive Ladung ist das Potential überall positiv und nahe bei der Ladung am höchsten.')}</p>`, fig(C.fig(ONE, { box: BOX, equi: LV }))),
+        frame(L('A negative charge', 'Eine negative Ladung'), `<p>${L('Q = −q; A is at the distance r, B at 3r. With V₀ = k·q/r: V_A = −V₀, V_B = −V₀/3 (a third: 1/r, not 1/r² as for the field). So V_B − V_A = +2/3·V₀: moving away from a negative charge, the potential rises towards zero.', 'Q = −q; A liegt im Abstand r, B im Abstand 3r. Mit V₀ = k·q/r: V_A = −V₀, V_B = −V₀/3 (ein Drittel: 1/r, nicht 1/r² wie beim Feld). Also V_B − V_A = +2/3·V₀: Weg von einer negativen Ladung steigt das Potential gegen null.')}</p>`,
+          fig(C.fig(NEG, { box: BOX, equi: LV.map((v) => -v), points: [{ x: 0.7, y: 0, name: 'A' }, { x: 2.1, y: 0, name: 'B' }] }))),
         frame(L('Numbers, not vectors', 'Zahlen, keine Vektoren'), `<p>${L('At the centre of four equal positive charges on a square, the four fields cancel (vectors), but the potentials add up: V = 4·k·q/r > 0. With +q, −q, +q, −q in turn, both the field and the potential are zero.', 'Im Mittelpunkt von vier gleichen positiven Ladungen auf einem Quadrat heben sich die vier Felder auf (Vektoren), aber die Potentiale addieren sich: V = 4·k·q/r > 0. Mit +q, −q, +q, −q abwechselnd sind Feld und Potential beide null.')}</p>`,
           fig(C.fig({ kind: 'points', charges: [[1, 1], [-1, 1], [-1, -1], [1, -1]].map(([x, y]) => ({ q: 1, x, y })) }, { box: BOX, equi: [1.5, 2, 2.5, 3, 4], points: [{ x: 0, y: 0, name: 'M' }] }))),
         frame(L('In units of V₀', 'In Einheiten von V₀'), `<p>${L('Without a calculator, count in units: with V₀ = k·q/r, a charge +q at the distance r gives +V₀, a charge −2q at the distance 2r gives −2/2·V₀ = −V₀. At P between them: V = +V₀ − V₀ = 0, although the field there is not zero.', 'Ohne Taschenrechner zählt man in Einheiten: Mit V₀ = k·q/r gibt eine Ladung +q im Abstand r den Beitrag +V₀, eine Ladung −2q im Abstand 2r den Beitrag −2/2·V₀ = −V₀. In P dazwischen: V = +V₀ − V₀ = 0, obwohl das Feld dort nicht null ist.')}</p>`,
           fig(C.fig({ kind: 'points', charges: [{ q: 1, x: -1, y: 0 }, { q: -2, x: 2, y: 0 }] }, { box: BOX, lines: true, labels: ['+', '−2'], points: [{ x: 0, y: 0, name: 'P' }] }))),
       ] },
-    { topic: 4, stage: 0, name: () => L('Acceleration voltage', 'Beschleunigungsspannung'), idea: () => L('Through a voltage U, a charge gains |q|·U of kinetic energy: in eV, simply the charge in e times U in V.', 'Mit einer Spannung U gewinnt eine Ladung |q|·U kinetische Energie: in eV einfach die Ladung in e mal U in V.'),
+    { topic: 3, stage: 0, name: () => L('Gaining or losing potential energy', 'Potentielle Energie gewinnen oder verlieren'), idea: () => L('ΔE_pot = q·ΔV: the signs of q and of ΔV decide.', 'ΔE_pot = q·ΔV: Die Vorzeichen von q und von ΔV entscheiden.'),
       frames: () => [
-        frame(L('Energy and speed', 'Energie und Geschwindigkeit'), `<p>${L('A charge accelerated from rest through U gains E_kin = |q|·U, whatever the path. Then ½·m·v² = |q|·U gives v = √(2·|q|·U/m): twice the voltage, √2 times the speed.', 'Eine aus der Ruhe mit U beschleunigte Ladung gewinnt E_kin = |q|·U, unabhängig vom Weg. Dann gibt ½·m·v² = |q|·U die Geschwindigkeit v = √(2·|q|·U/m): doppelte Spannung, √2-fache Geschwindigkeit.')}</p>`,
-          fig(C.fig({ kind: 'uniform', E: [1, 0] }, { box: [-3, 3, -1.6, 1.6], lines: true, rods: [[-2.6, -1.5, -2.6, 1.5], [2.6, -1.5, 2.6, 1.5]], parts: [{ x: -2.2, y: 0, q: 1, sym: 'p' }], tops: [{ x: -2.6, label: 'U' }, { x: 2.6, label: '0 V' }] }))),
-        frame(L('The electronvolt', 'Das Elektronvolt'), `<p>${L('1 eV is the energy of one elementary charge moved through 1 V: 1 eV = 1.602 · 10⁻¹⁹ J. A “30 MeV Pb²⁺ ion” has gone through 15 MV. Masses too can be given in eV/c²: electron 511 keV/c², proton 938 MeV/c², 1 u = 931.5 MeV/c².', '1 eV ist die Energie einer Elementarladung, die 1 V durchläuft: 1 eV = 1.602 · 10⁻¹⁹ J. Ein «30-MeV-Pb²⁺-Ion» hat 15 MV durchlaufen. Auch Massen kann man in eV/c² angeben: Elektron 511 keV/c², Proton 938 MeV/c², 1 u = 931.5 MeV/c².')}</p>`, ''),
-        frame(L('Relativistic particles', 'Relativistische Teilchen'), `<p>${L('½·m·v² holds only while the kinetic energy is small compared with the rest energy E₀ = m·c². An electron through 1 MV (1 MeV, twice its 511 keV) is relativistic: it does not move faster than light, as the classical formula would say.', '½·m·v² gilt nur, solange die kinetische Energie klein ist gegen die Ruheenergie E₀ = m·c². Ein Elektron nach 1 MV (1 MeV, doppelt so viel wie seine 511 keV) ist relativistisch: Es bewegt sich nicht schneller als Licht, wie die klassische Formel sagen würde.')}</p>`, ''),
-      ] },
-    { topic: 5, stage: 0, name: () => L('Energy conservation', 'Energieerhaltung'), idea: () => L('Kinetic plus potential energy stays the same: E_kin + q·V = constant.', 'Kinetische plus potentielle Energie bleibt gleich: E_kin + q·V = konstant.'),
-      frames: () => [
-        frame(L('Closest approach', 'Kleinster Abstand'), `<p>${L('An alpha particle flying straight at a nucleus is slowed down by the repulsion. At the closest point it stops for a moment: all its kinetic energy has become potential energy, E_kin = k·q·Q/r_min. Rutherford found nuclei this way.', 'Ein Alphateilchen, das geradewegs auf einen Kern zufliegt, wird von der Abstossung abgebremst. Im nächsten Punkt hält es kurz an: Seine ganze kinetische Energie ist potentielle Energie geworden, E_kin = k·q·Q/r_min. So fand Rutherford die Atomkerne.')}</p>`,
-          fig(C.fig({ kind: 'points', charges: [{ q: 3, x: 1.5, y: 0 }] }, { box: BOX, equi: [1.2, 1.6, 2.2, 3.2, 5], labels: ['+Ze'], parts: [{ x: -1.8, y: 0, q: 1, sym: 'α' }], vecs: [{ x: -1.8, y: 0, dx: 50, dy: 0, cls: 'v-vel', name: 'v' }] }))),
-        frame(L('Comparing experiments', 'Versuche vergleichen'), `<p>${L('From E_kin = k·q·Q/r_min: r_min = k·q·Q/E_kin. Twice the energy, half the closest distance; an alpha particle (2e) with the same energy as a proton stops twice as far away. The mass does not matter here, only the energy. A particle repelled from a sphere gains |q|·V with V = k·Q/R; its speed grows with the square root of the energy: v = √(2·E_kin/m).', 'Aus E_kin = k·q·Q/r_min folgt r_min = k·q·Q/E_kin. Doppelte Energie, halber kleinster Abstand; ein Alphateilchen (2e) mit derselben Energie wie ein Proton hält doppelt so weit weg an. Die Masse spielt hier keine Rolle, nur die Energie. Ein von einer Kugel abgestossenes Teilchen gewinnt |q|·V mit V = k·Q/R; seine Geschwindigkeit wächst mit der Wurzel aus der Energie: v = √(2·E_kin/m).')}</p>`,
-          fig(C.fig({ kind: 'points', charges: [{ q: 3, x: 1.5, y: 0 }] }, { box: BOX, equi: [1.2, 1.6, 2.2, 3.2, 5], labels: ['+Ze'], parts: [{ x: -1.8, y: 0.7, q: 1, sym: 'α' }, { x: -1.8, y: -0.7, q: 1, sym: 'p' }] }))),
+        frame(L('The task', 'Die Aufgabe'), `<p>${L('An electron moves from A (100 V) to B (300 V). Does its potential energy increase or decrease, and by how much?', 'Ein Elektron bewegt sich von A (100 V) nach B (300 V). Nimmt seine potentielle Energie zu oder ab, und um wie viel?')}</p>`,
+          fig(ladder({ parts: [{ x: 1, y: 0.4, q: -1, sym: 'e⁻' }], names: [{ x: 1, y: 0.4, name: 'A' }], points: [{ x: -1, y: -0.6, name: 'B' }] }))),
+        frame(L('Step 1: ΔV, then the sign of q', 'Schritt 1: ΔV, dann das Vorzeichen von q'), `<p>${L('ΔV = V_B − V_A = 300 V − 100 V = +200 V. Then ΔE_pot = q·ΔV = (−e)·(+200 V) = −200 eV: the potential energy decreases by 200 eV, although the potential rises.', 'ΔV = V_B − V_A = 300 V − 100 V = +200 V. Dann ΔE_pot = q·ΔV = (−e)·(+200 V) = −200 eV: Die potentielle Energie nimmt um 200 eV ab, obwohl das Potential steigt.')}</p>`,
+          fig(ladder({ parts: [{ x: 1, y: 0.4, q: -1, sym: 'e⁻' }], names: [{ x: 1, y: 0.4, name: 'A' }], points: [{ x: -1, y: -0.6, name: 'B' }] }))),
+        frame(L('The four cases', 'Die vier Fälle'), `<p>${L('“Higher potential, higher potential energy” holds only for positive charges. A negative charge loses potential energy where the potential rises:', '«Höheres Potential, höhere potentielle Energie» gilt nur für positive Ladungen. Eine negative Ladung verliert potentielle Energie, wo das Potential steigt:')}</p>${signTable()}`, ''),
+        frame(L('Left to itself', 'Sich selbst überlassen'), `<p>${X.DOWNHILL()} ${L('The electron at A is pulled towards higher potential: the force points against the field. On its way to B it gains 200 eV of kinetic energy.', 'Das Elektron in A wird zu höherem Potential gezogen: Die Kraft zeigt gegen das Feld. Auf dem Weg nach B gewinnt es 200 eV kinetische Energie.')}</p>`,
+          fig(ladder({ parts: [{ x: 1, y: 0, q: -1, sym: 'e⁻' }], vecs: [{ x: 1, y: 0, dx: -76, dy: 0, cls: 'v-force', name: 'F⃗' }] }))),
       ] },
   ];
   const stage = (name, types) => ({ name, types });
   const TOPICS = [
-    { name: () => L('Potential and energy', 'Potential und Energie'), example: () => 0, stages: [stage(() => L('which way', 'welche Richtung'), ['which-way']), stage(() => L('at points', 'in Punkten'), ['points-v'])] },
+    { name: () => L('Potential and energy', 'Potential und Energie'), example: () => 0, stages: [stage(() => L('which quantity', 'welche Grösse'), ['which-qty']), stage(() => L('at points', 'in Punkten'), ['points-v'])] },
     { name: () => L('The uniform field', 'Das homogene Feld'), example: () => 1, stages: [stage(() => L('along the field', 'längs des Feldes'), ['uniform-d']), stage(() => L('V → E', 'V → E'), ['v2e']), stage(() => L('E → V', 'E → V'), ['e2v'])] },
-    { name: () => L('Equipotentials', 'Äquipotentiallinien'), example: () => 2, stages: [stage(() => L('which diagram', 'welches Diagramm'), ['equi-pick']), stage(() => L('field lines', 'Feldlinien'), ['lines-equi'])] },
-    { name: () => L('Point charges', 'Punktladungen'), example: () => 3, stages: [stage(() => L('scalar, not vector', 'Skalar, kein Vektor'), ['scalar']), stage(() => L('in units of V₀', 'in Einheiten von V₀'), ['point-v'])] },
-    { name: () => L('Acceleration voltage', 'Beschleunigungsspannung'), example: () => 4, stages: [stage(() => L('electronvolt', 'Elektronvolt'), ['ev']), stage(() => L('stopping', 'abbremsen'), ['stop']), stage(() => L('speed', 'Geschwindigkeit'), ['accel']), stage(() => L('comparing', 'vergleichen'), ['accel-compare'])] },
-    { name: () => L('Energy conservation', 'Energieerhaltung'), example: () => 5, stages: [stage(() => L('closest approach', 'kleinster Abstand'), ['closest']), stage(() => L('repelled', 'abgestossen'), ['repel'])] },
+    { name: () => L('Point charges', 'Punktladungen'), example: () => 2, stages: [stage(() => L('in units of V₀', 'in Einheiten von V₀'), ['point-v']), stage(() => L('scalar, not vector', 'Skalar, kein Vektor'), ['scalar'])] },
+    { name: () => L('Gain or lose', 'Gewinnen oder verlieren'), example: () => 3, stages: [stage(() => L('which way', 'welche Richtung'), ['which-way']), stage(() => L('potential energy', 'potentielle Energie'), ['gain-lose'])] },
     { name: () => L('True or false', 'Richtig oder falsch'), example: () => 0, stages: [stage(() => L('statements', 'Aussagen'), ['stmts'])] },
   ];
   const lessons = () => LESSONS.map((l) => ({ name: l.name(), idea: l.idea(), frames: l.frames, also: topics.also(l.topic) }));
 
-  // ---------------------------------------------------------------- arcade
-  const KINDS = [['which-way', 1], ['ev', 2], ['stop', 2], ['uniform-d', 2], ['equi-pick', 2], ['lines-equi', 2], ['v2e', 2], ['points-v', 2],
-    ['scalar', 3], ['point-v', 3], ['accel', 3], ['accel-compare', 3], ['e2v', 3], ['closest', 3], ['repel', 3]];
-  const CONCEPT = { sign: 'sign', straight: 'along', across: 'along', even: 'equi', lines: 'equi', turned: 'equi', swap: 'equi', up: 'equi', along: 'equi', copy: 'slope', steep: 'slope',
-    z: 'charge', two: 'formula', field: 'vr', abs: 'scalar', one: 'scalar', half: 'charge', prefix: 'units' };
-  function arcadeQuestion(kind, seed) {
-    const e = X.make(kind, seed), qs = e.questions.filter((q) => q.type !== 'multi' && !q.multi), q = qs[seed % qs.length];
-    return {
-      title: e.title, text: e.text, figure: `<div class="figs">${e.figs || ''}</div>`, ask: q.label.replace(/^\([a-d]\) /, ''),
-      options: q.options.map((o) => ({ html: o.html || o.label, correct: o.ok, flag: o.ok ? null : o.tag || 'other', why: o.why })),
-      explain: () => `${e.solFig || ''}<div class="steps">${e.solution.map((s) => (s.startsWith('<ul') || s.includes('<ul>') ? s : `<p>${s}</p>`)).join('')}</div>`,
-    };
-  }
-  const arcadeSource = {
-    id: 'ep', kinds: KINDS.map(([id, difficulty]) => ({ id, difficulty })), question: arcadeQuestion, concept: CONCEPT,
+  // ---------------------------------------------------------------- check
+  // The learning objectives and their questions are in exercises.js (OBJECTIVES, question).
+  const checkSource = {
+    id: 'ep', objectives: X.OBJECTIVES, question: X.question, concept: X.CONCEPT,
     concepts: () => ({
-      sign: L('the sign of the charge and of ΔV', 'das Vorzeichen der Ladung und von ΔV'), along: L('the distance along the field lines', 'der Abstand längs der Feldlinien'), equi: L('equipotentials and field lines', 'Äquipotential- und Feldlinien'),
-      slope: L('E as the slope of V', 'E als Steigung von V'), charge: L('the charge in e', 'die Ladung in e'), formula: L('v = √(2qU/m)', 'v = √(2qU/m)'), vr: L('V = kQ/r, not kQ/r²', 'V = kQ/r, nicht kQ/r²'),
-      scalar: L('potentials add as numbers', 'Potentiale addieren sich als Zahlen'), units: L('units and prefixes', 'Einheiten und Vorsätze'),
+      sign: L('the sign of the charge and of ΔV', 'das Vorzeichen der Ladung und von ΔV'), along: L('the distance along the field lines', 'der Abstand längs der Feldlinien'),
+      slope: L('E as the slope of V', 'E als Steigung von V'), charge: L('the charge in e', 'die Ladung in e'), vr: L('V = kQ/r, not kQ/r²', 'V = kQ/r, nicht kQ/r²'),
+      scalar: L('potentials add as numbers', 'Potentiale addieren sich als Zahlen'),
+      perq: L('only the potential energy depends on the charge, not the potential', 'nur die potentielle Energie hängt von der Ladung ab, nicht das Potential'),
+      diff: L('the potential at a point and the voltage between two points', 'das Potential in einem Punkt und die Spannung zwischen zwei Punkten'),
     }),
-    intro: () => ({
-      tag: L('Potentials, voltages, equipotentials and accelerated particles: answer as many questions as you can in <b>5 minutes</b>.', 'Potentiale, Spannungen, Äquipotentiallinien und beschleunigte Teilchen: Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich.'),
-      rule: L('Questions get harder as you go. Choose one of the answers: click it or press its number.', 'Die Fragen werden nach und nach schwieriger. Wähle eine der Antworten: Klicke sie an oder drücke ihre Nummer.'),
-      example: L('the straight distance in a uniform field', 'der direkte Abstand im homogenen Feld'),
-    }),
-    hero: () => `<div class="figs"><div class="fig">${C.fig(X.EQ.dipole.c, { box: BOX, equi: X.EQ.dipole.lv, lines: true })}</div></div><p class="ar-law">W = q·(V<sub>A</sub> − V<sub>B</sub>)</p>`,
   };
 
   // ---------------------------------------------------------------- language and modes
@@ -307,7 +292,6 @@
     document.title = ui().title;
     Lang.apply(ui());
     if (topics) topics.relabel();
-    if (problems) problems.menu();
   }
   function switchLang() {
     applyStatic();
@@ -327,38 +311,38 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
+  // Practice: exercises by topic; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('ep-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); });
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
   }
   function practise() {
     setMode('practice');
-    if (ex && ex.real == null) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
   }
-  function realMode() {
-    setMode('real');
-    if (problems.is(ex)) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
-  function play() { setMode('arcade'); arcade.show(); if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade'); }
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     const m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= LESSONS.length) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
-    const re = problems.parse(h);
-    if (re) { setMode('real'); if (!ex || ex.id !== h) open(re); problems.menu(); return true; }
     const te = topics.parse(h);
     if (te) { setMode('practice'); if (!ex || ex.id !== h) open(te); return true; }
     const d = h.match(/^([a-z0-9]+(?:-[a-z0-9]+)*)-(\d+)$/);
@@ -368,7 +352,7 @@
 
   function init() {
     Lang.init();
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     topics = window.Topics.create({
       app: PRACTICE,
       topics: TOPICS.map((t) => ({ name: t.name, stages: t.stages, example: (s) => ({ i: t.example(s), name: () => LESSONS[t.example(s)].name() }) })),
@@ -377,10 +361,6 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.PotProblems.PROBLEMS, make: window.PotProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
     applyStatic();
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
@@ -396,15 +376,21 @@
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);
+    const practiseTopic = (t) => { topics.go(t); setMode('practice'); fresh(); };
     tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(LESSONS[i].topic, LESSONS[i].stage); setMode('practice'); fresh(); } });
-    arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
+    checker = Check.create(checkSource, {
+      math: () => {}, markScrollable: () => {}, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: practiseTopic,
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
+    // the problems of earlier versions are gone: practice instead; the arcade is now the check
     const last = stored('ep-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
