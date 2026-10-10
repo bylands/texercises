@@ -247,7 +247,8 @@
       if (k >= 0) { evt.preventDefault(); answer(k); }
     });
     $('#ck-sum-list').addEventListener('toggle', (evt) => {
-      const det = evt.target;
+      const det = evt.target; // a question's own <details> (its text may hold others)
+      if (!det.classList.contains('ck-item')) return;
       if (det.open && !det.querySelector('.ck-explain').childElementCount) explain(det);
     }, true);
     startPage();

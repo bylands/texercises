@@ -1,4 +1,4 @@
-// Verifies the wave crests (generator.js, plot.js, realproblems.js): run with
+// Verifies the wave crests (generator.js, plot.js): run with
 // `node wave-propagation/test/check-generator.js`. It checks that
 // - the physics holds: a crest moves unchanged at v; at a fixed end the rope stays at 0, at a free
 //   end it moves twice as far; after a reflection the crest is the mirror image (upside down at a
@@ -7,13 +7,12 @@
 //   option, options that differ (also as drawings), a reason for each wrong one, complete texts,
 //   and drawings and animation frames that render,
 // - how the rope moves: a point said to move up is higher a moment later,
-// - a drawing exercise has whole heights at its grid lines, and the problems are sound.
+// - a drawing exercise has whole heights at its grid lines.
 'use strict';
 
 const Lang = require('../lang.js');
 const W = require('../generator.js');
 const P = require('../plot.js');
-const R = require('../realproblems.js');
 
 let failures = 0;
 const fail = (msg) => { failures++; if (failures < 30) console.error('  FAIL ' + msg); };
@@ -87,28 +86,5 @@ for (const lang of ['en', 'de']) {
 }
 console.log(`exercises: ${n}`);
 
-// ---------------------------------------------------------------- problems
-for (const lang of ['en', 'de']) {
-  Lang.set(lang, true);
-  R.PROBLEMS.forEach((pb, i) => {
-    for (let seed = 1; seed <= 80; seed++) {
-      const e = R.realOf(i, seed), tag = `${lang} ${pb.id}-${seed}`;
-      for (const q of e.questions) {
-        if (q.options.filter((o) => o.ok).length !== 1) fail(`${tag}: ${q.key} has not one right option`);
-        if (q.options.some((o) => !o.ok && !o.why)) fail(`${tag}: ${q.key}: a wrong option without a reason`);
-        if (q.type === 'pick' && new Set(q.options.map((o) => W.sig(o.fig))).size !== q.options.length) fail(`${tag}: two diagrams look the same`);
-      }
-      if (bad(e.text + e.hints.join('') + e.solution.join('') + JSON.stringify(e.questions.map((q) => q.options.map((o) => [o.label || '', o.why || '']))))) fail(`${tag}: texts`);
-      if (e.fig && /NaN|undefined/.test(P.graph(e.fig))) fail(`${tag}: figure`);
-      if (pb.id === 'slinky') {
-        const a = e.solAnim, tm = a.t1 / 2;
-        let m = 0;
-        for (let x = 0; x <= 8; x += 0.05) m = Math.max(m, Math.abs(W.y(a.sc, x, tm)));
-        if (m > 1e-9) fail(`${tag}: the slinky is not straight at full overlap`);
-      }
-    }
-  });
-}
-console.log(`problems: ${R.PROBLEMS.length}`);
 if (failures) { console.error(`\n${failures} failures`); process.exit(1); }
 console.log('Wave propagation OK');

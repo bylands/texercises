@@ -1,14 +1,14 @@
 (function () {
   'use strict';
 
-  const W = window.Waves, P = window.WavePlot, Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const W = window.Waves, P = window.WavePlot, Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
 
   // ---------------------------------------------------------------- interface texts
   const UI = {
     en: {
-      title: 'Wave Propagation', mode: 'Mode', example: 'Example', tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', real: 'Problems', problem: 'Problem', newNumbers: 'New numbers', nextProblem: 'Next problem', new: 'New exercise', difficulty: 'Difficulty',
+      title: 'Wave Propagation', mode: 'Mode', example: 'Example', tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise', difficulty: 'Difficulty',
       check: 'Check', reveal: 'Show solution', hints: 'Hints', solution: 'Solution', clear: 'Clear drawing',
       revealNote: 'The worked solution unlocks once you have solved the exercise, used all hints or made three attempts.',
       stars: (d) => `Difficulty: ${d} of 5`, score: (s, c) => `Solved: ${s} · first try without hints: ${c}`,
@@ -20,7 +20,7 @@
       given: 'Given', animLead: 'The animation shows how the rope got there; ▶ plays it again.', animNote: 'The animation shows how the rope got there and stops at the state given. With ▶ or the slider you can move the crests on yourself (two crests running towards each other one by one). The time is not shown, and only the crests themselves are drawn (an incoming crest also behind the end, in the shaded part), not the rope they make together: that appears once you have solved the exercise. The faded line is the rope in the state given.',
     },
     de: {
-      title: 'Wellenausbreitung', mode: 'Modus', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', real: 'Praxisaufgaben', problem: 'Aufgabe', newNumbers: 'Neue Zahlen', nextProblem: 'Nächste Aufgabe', new: 'Neue Aufgabe', difficulty: 'Schwierigkeit',
+      title: 'Wellenausbreitung', mode: 'Modus', example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe', difficulty: 'Schwierigkeit',
       check: 'Prüfen', reveal: 'Lösung zeigen', hints: 'Tipps', solution: 'Lösung', clear: 'Zeichnung löschen',
       revealNote: 'Die ausführliche Lösung wird freigeschaltet, sobald du die Aufgabe gelöst, alle Tipps genutzt oder drei Versuche gemacht hast.',
       stars: (d) => `Schwierigkeit: ${d} von 5`, score: (s, c) => `Gelöst: ${s} · beim ersten Versuch ohne Tipps: ${c}`,
@@ -34,7 +34,7 @@
   };
   const ui = () => UI[Lang.get()];
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null, problems = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
   function stored(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; } catch (e) { return fallback; } }
   function store(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable */ } }
   function showScore() { const s = stored('wav-score', { solved: 0, clean: 0 }); $('#score').textContent = s.solved ? ui().score(s.solved, s.clean) : ''; }
@@ -174,7 +174,7 @@
   }
 
   // ---------------------------------------------------------------- exercises
-  const PRACTICE = 'wav', typeOf = (e) => (e.real != null ? `real-${e.problem}` : e.type);
+  const PRACTICE = 'wav', typeOf = (e) => e.type;
   const finish = () => { if (ex && st) Practice.finish(PRACTICE, typeOf(ex), st); };
   function open(exercise) {
     finish();
@@ -182,17 +182,16 @@
     st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null, values: ex.xs ? ex.xs.map(() => 0) : null, wrong: null };
     if (location.hash !== `#${ex.id}`) history.replaceState(null, '', `#${ex.id}`);
     render();
-    if (ex.real == null) topics.shown(ex);
+    topics.shown(ex);
   }
   const fresh = () => open(topics.next(ex));
-  const again = (e) => (e.real != null ? problems.parse(e.id) : topics.parse(e.id));
+  const again = (e) => topics.parse(e.id);
 
   function render() {
     stopAnims();
-    $('#title').innerHTML = `${ex.real != null ? ex.title : TITLE[ex.kind]()} ${starsOf(ex.difficulty)}`;
-    $('#prompt').innerHTML = ex.real != null ? ex.text : `<p>${ex.text}</p>`;
-    const pic = ex.real != null && window.WaveFigures ? window.WaveFigures[ex.pic]() : '';
-    $('#figure').innerHTML = pic + (ex.fig ? given(ex) : '');
+    $('#title').innerHTML = `${TITLE[ex.kind]()} ${starsOf(ex.difficulty)}`;
+    $('#prompt').innerHTML = `<p>${ex.text}</p>`;
+    $('#figure').innerHTML = ex.fig ? given(ex) : '';
     $('#anim-note').hidden = !ex.anim;
     $('#anim-note').textContent = ex.kind === 'medium' ? ui().animLead : ui().animNote;
     mountAnims($('#figure'));
@@ -215,7 +214,7 @@
     $('#reveal').disabled = !canReveal() || st.revealed;
     $('#reveal').title = canReveal() ? '' : ui().unlocks(MAX_TRIES);
     $('#reveal-note').hidden = canReveal() || st.revealed;
-    $('#check').textContent = st.solved ? (ex.real != null ? ui().nextProblem : ui().new) : ui().check;
+    $('#check').textContent = st.solved ? ui().new : ui().check;
     $('#check').classList.toggle('primary', !st.solved);
     $('#check').classList.toggle('new-btn', st.solved);
   }
@@ -229,7 +228,7 @@
   }
   function check(evt) {
     evt.preventDefault();
-    if (st.solved) { if (ex.real != null) problems.next(); else fresh(); return; }
+    if (st.solved) { fresh(); return; } // the button reads New exercise
     const r = feedback();
     st.checked = true;
     if (r === null) { showStatus('fill'); return; }
@@ -248,8 +247,7 @@
     st.solved = true;
     Practice.markSolved(PRACTICE, ex.id);
     finish();
-    st.advance = ex.real != null ? '' : topics.solved(st, ex);
-    if (ex.real != null) problems.solved(ex);
+    st.advance = topics.solved(st, ex);
     redrawAnims();
     showStatus('ok');
   }
@@ -364,37 +362,46 @@
     { name: () => L('Reflection with overlap', 'Reflexion mit Überlagerung'), example: 4, stages: [{ name: () => L('straight crests', 'gerade Buckel'), types: ['reflsum-lin'] }, { name: () => L('smooth crests', 'runde Buckel'), types: ['reflsum-smooth'] }, { name: () => L('draw it', 'zeichnen'), types: ['draw-reflsum'] }] },
   ];
 
-  // ---------------------------------------------------------------- arcade
-  // Four options: diagrams, or values; how the rope moves as "which point moves up".
+  // ---------------------------------------------------------------- check
+  // The learning objectives (check.js), each with the exercise types it is asked about, its worked
+  // example and its practice topic. Four options: diagrams, or values; how the rope moves as
+  // "which point moves up". The wrong options carry the typical wrong idea behind them (FLAG).
+  const OBJECTIVES = [
+    { id: 'medium', kinds: ['move-lin', 'medium-lin', 'yt-lin'], tutor: 0, topic: 0,
+      name: () => L('Tell the motion of the wave from the motion of the rope: where a crest is later, how a point of the rope moves, and its y(t) graph.',
+        'Die Bewegung der Welle von der Bewegung des Seils unterscheiden: wo ein Buckel später ist, wie sich ein Punkt des Seils bewegt, und sein y(t)-Bild.') },
+    { id: 'reflect', kinds: ['refl-fixed', 'refl-free', 'mirror-lin'], tutor: 3, topic: 5,
+      name: () => L('Predict the crest reflected at a fixed end (upside down) and at a free end (upright).',
+        'Den an einem festen Ende (umgedreht) und an einem losen Ende (aufrecht) reflektierten Buckel vorhersagen.') },
+    { id: 'superpose', kinds: ['sup-lin', 'sup-smooth'], tutor: 2, topic: 4,
+      name: () => L('Add the displacements of two overlapping crests point by point.',
+        'Die Auslenkungen zweier sich überlagernder Buckel Punkt für Punkt addieren.') },
+  ];
   const FLAG = { dist: 'distance', dir: 'direction', turn: 'turn', flip: 'flip', copy: 'yt', back: 'yt', dur: 'yt', time: 'distance', max: 'sum', apart: 'sum', sign: 'reflection', order: 'reflection', cut: 'sum', single: 'reflection', inverse: 'formula', total: 'formula' };
-  const KINDS = [['move-lin', 1], ['move-smooth', 2], ['yt-lin', 2], ['medium-lin', 2], ['speed-x', 2], ['speed-len', 2], ['refl-fixed', 3], ['refl-free', 3], ['sup-lin', 3], ['mirror-lin', 3], ['speed-t', 3], ['ty-lin', 4], ['end-lin', 4], ['sup-smooth', 4], ['reflsum-lin', 5], ['refl-smooth', 5]];
-  function arcadeQuestion(kind, seed) {
+  // two crests subtracted instead of added: the sum, not a reflection
+  const flagOf = (e, tag) => (e.kind === 'sup' && tag === 'sign' ? 'sum' : FLAG[tag] || 'other');
+  function checkQuestion(kind, seed) {
     const e = W.generate(kind, seed);
     const figure = `<div class="figs">${graphs(e.fig)}</div>`, explain = () => `<div class="figs">${e.solFig ? graphs(e.solFig) : ''}</div>${e.solution.map((s) => `<p>${s}</p>`).join('')}`;
     if (e.kind === 'medium') {
+      // four marked points, one of them the only one that moves as asked
       const moves = e.questions.map((q) => q.options.find((o) => o.ok).label), want = moves.find((m) => moves.filter((x) => x === m).length === 1);
-      if (!want) return arcadeQuestion(kind, seed + 1);
+      if (!want || e.questions.length !== 4) return checkQuestion(kind, seed + 1);
       return { title: TITLE.medium(), text: `<p>${e.text}</p>`, figure, ask: L(`Which point ${want}?`, `Welcher Punkt ${want}?`), options: e.questions.map((q) => ({ html: q.label, correct: q.options.find((o) => o.ok).label === want, flag: 'medium', why: q.options.find((o) => o.ok).why })), explain };
     }
     const q = e.questions[0];
-    if (q.type === 'pick') return { title: TITLE[e.kind](), text: `<p>${e.text}</p>`, figure, ask: L('Which diagram is right?', 'Welches Diagramm stimmt?'), options: q.options.map((o) => ({ html: P.graph(o.fig, { small: true }), correct: o.ok, flag: FLAG[o.tag] || 'other', why: o.why })), explain };
-    return { title: TITLE[e.kind](), text: `<p>${e.text}</p>`, figure, ask: q.label, options: q.options.map((o) => ({ html: o.label, correct: o.ok, flag: FLAG[o.tag] || 'other', why: o.why })), explain };
+    if (q.type === 'pick') return { title: TITLE[e.kind](), text: `<p>${e.text}</p>`, figure, ask: L('Which diagram is right?', 'Welches Diagramm stimmt?'), options: q.options.map((o) => ({ html: P.graph(o.fig, { small: true }), correct: o.ok, flag: flagOf(e, o.tag), why: o.why })), explain };
+    return { title: TITLE[e.kind](), text: `<p>${e.text}</p>`, figure, ask: q.label, options: q.options.map((o) => ({ html: o.label, correct: o.ok, flag: flagOf(e, o.tag), why: o.why })), explain };
   }
-  const arcadeSource = {
+  const checkSource = {
     id: 'wav',
-    kinds: KINDS.map(([id, d]) => ({ id, difficulty: d })),
-    question: arcadeQuestion,
+    objectives: OBJECTIVES,
+    question: checkQuestion,
     concept: { distance: 'distance', direction: 'direction', turn: 'turn', yt: 'yt', sum: 'sum', reflection: 'reflection', medium: 'medium' },
     concepts: () => ({
       distance: L('the distance v·t', 'die Strecke v·t'), direction: L('the direction of the crest', 'die Richtung des Buckels'), turn: L('a crest that turns round', 'einen Buckel, der sich umdreht'),
       yt: L('the y(t) graph not reversed', 'das y(t)-Bild nicht seitenverkehrt'), sum: L('the overlap not added', 'die Überlagerung nicht addiert'), reflection: L('the reflection wrong way up or not reversed', 'die Reflexion falsch herum oder nicht seitenverkehrt'), medium: L('how the rope moves', 'wie sich das Seil bewegt'),
     }),
-    intro: () => ({
-      tag: L('Crests on a rope: how they travel, add up and are reflected. As many as you can in <b>5 minutes</b>.', 'Buckel auf einem Seil: wie sie laufen, sich überlagern und reflektiert werden. So viele wie möglich in <b>5 Minuten</b>.'),
-      rule: L('Questions get harder as you go. Choose one of four answers, or press 1–4.', 'Die Fragen werden nach und nach schwieriger. Wähle eine von vier Antworten oder drücke 1–4.'),
-      example: L('a reflection at a fixed end drawn upright', 'eine Reflexion an einem festen Ende aufrecht gezeichnet'),
-    }),
-    hero: () => `<div class="figs"><div class="fig">${P.graph(W.snap((x) => W.ev(WS(), x, 0), { hi: 5, end: { x: 5, type: 'free' }, arrows: [W.arrowOf(WS(), 0)] }))}</div></div>`,
   };
 
   // ---------------------------------------------------------------- language and modes
@@ -402,7 +409,6 @@
     document.title = ui().title;
     Lang.apply(ui());
     if (topics) topics.relabel();
-    if (problems) problems.menu();
   }
   function switchLang() {
     applyStatic();
@@ -422,7 +428,7 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
   const lessons = () => EXAMPLES.map((e) => ({ name: e.name(), idea: e.idea(), frames: e.frames, also: topics.also(e.topic) }));
 
@@ -430,32 +436,26 @@
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('wav-mode', m);
-    document.querySelectorAll('.practice, .real').forEach((el) => { el.hidden = !el.classList.contains(m); });
+    document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
-    if (m !== 'practice' && m !== 'real') { $('#hints').hidden = true; $('#solution').hidden = true; stopAnims(); }
-    if (m !== 'arcade') arcade.stop();
+    $('#ck').hidden = m !== 'check';
+    if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; stopAnims(); }
   }
   function practise() {
     setMode('practice');
-    if (ex && ex.real == null) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
+    if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
   }
-  function realMode() {
-    setMode('real');
-    if (problems.is(ex)) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else problems.resume();
-  }
-  function play() { setMode('arcade'); arcade.show(); if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade'); }
+  function checkMode() { setMode('check'); checker.show(); if (location.hash !== '#check') history.replaceState(null, '', '#check'); }
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     const m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= EXAMPLES.length) {
       setMode('tutor');
       if (tutor.current() !== Number(m[1]) - 1 || !tutor.shown()) tutor.open(Number(m[1]) - 1);
       return true;
     }
-    const re = problems.parse(h);
-    if (re) { setMode('real'); if (!ex || ex.id !== h) open(re); problems.menu(); return true; }
     const te = topics.parse(h);
     if (te) { setMode('practice'); if (!ex || ex.id !== h) open(te); return true; }
     return false;
@@ -463,7 +463,7 @@
 
   function init() {
     Lang.init();
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     topics = window.Topics.create({
       app: PRACTICE,
       topics: TOPICS.map((t) => ({ name: t.name, stages: t.stages, example: { i: t.example, name: () => EXAMPLES[t.example].name() } })),
@@ -472,10 +472,6 @@
       tutor: (i) => { setMode('tutor'); tutor.open(i); },
     });
     topics.mount($('#levels'));
-    problems = window.Problems.create({
-      app: PRACTICE, problems: window.WaveProblems.PROBLEMS, make: window.WaveProblems.realOf,
-      open, current: () => ex, pick: $('#real-pick'), renew: $('#real-new'),
-    });
     applyStatic();
     Lang.wire(switchLang);
     $('#new').addEventListener('click', fresh);
@@ -493,14 +489,18 @@
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);
     tutor = window.createTutor(lessons(), { after: () => { stopAnims(); mountAnims($('#tutor')); }, done: practise, practise: (i) => { topics.go(EXAMPLES[i].topic); setMode('practice'); fresh(); } });
-    arcade = Arcade.create(arcadeSource, { math: () => {}, markScrollable: () => {}, stored, store });
+    checker = Check.create(checkSource, {
+      math: () => {}, markScrollable: () => {}, stored, store,
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else if (mode() === 'real') realMode(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     const last = stored('wav-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else if (last === 'real') realMode(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

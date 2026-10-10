@@ -34,6 +34,7 @@
   const Vi = () => L('<i>V</i><sub>ind</sub>', '<i>U</i><sub>ind</sub>');
   const r1 = (x) => Math.round(x * 10) / 10;
   const r2 = (x) => Math.round(x * 100) / 100;
+  const r4 = (x) => Math.round(x * 1e4) / 1e4; // lengths and speeds in m from cm
   const fmt = (x) => dec(r2(x));
   const sgn = (x) => num(r2(x));
   const neg = (x) => (x === 0 ? 0 : -x);
@@ -484,8 +485,8 @@
     return [
       L(`The flux is ${PHI} = <i>B</i> · <i>A</i>, with <i>A</i> the part of the loop inside the field. The front edge reaches the field after ${fmt(L0.d)} cm / ${fmt(L0.v)} cm/s = ${fmt(L0.t0)} s.`,
         `Der Fluss ist ${PHI} = <i>B</i> · <i>A</i>, mit <i>A</i> dem Teil der Schleife im Feld. Die vordere Kante erreicht das Feld nach ${fmt(L0.d)} cm / ${fmt(L0.v)} cm/s = ${fmt(L0.t0)} s.`),
-      L(`Then the area in the field grows by <i>s</i> · <i>v</i> each second, so the flux rises at <i>B</i> · <i>s</i> · <i>v</i> = ${fmt(L0.B)} T · ${fmt(L0.s / 100)} m · ${fmt(L0.v / 100)} m/s = ${fmt(L0.V)} mWb/s, and ${Vi()} = −${fmt(L0.V)} mV. This lasts ${fmt(L0.m)} s, until ${wide ? 'the whole loop is in the field' : 'the loop covers the whole field region'}: then ${PHI} = ${fmt(Phi)} mWb.`,
-        `Dann wächst die Fläche im Feld jede Sekunde um <i>s</i> · <i>v</i>, also steigt der Fluss mit <i>B</i> · <i>s</i> · <i>v</i> = ${fmt(L0.B)} T · ${fmt(L0.s / 100)} m · ${fmt(L0.v / 100)} m/s = ${fmt(L0.V)} mWb/s, und ${Vi()} = −${fmt(L0.V)} mV. Das dauert ${fmt(L0.m)} s, bis ${wide ? 'die ganze Schleife im Feld ist' : 'die Schleife das ganze Feldgebiet überdeckt'}: dann ist ${PHI} = ${fmt(Phi)} mWb.`),
+      L(`Then the area in the field grows by <i>s</i> · <i>v</i> each second, so the flux rises at <i>B</i> · <i>s</i> · <i>v</i> = ${fmt(L0.B)} T · ${dec(r4(L0.s / 100))} m · ${dec(r4(L0.v / 100))} m/s = ${fmt(L0.V)} mWb/s, and ${Vi()} = −${fmt(L0.V)} mV. This lasts ${fmt(L0.m)} s, until ${wide ? 'the whole loop is in the field' : 'the loop covers the whole field region'}: then ${PHI} = ${fmt(Phi)} mWb.`,
+        `Dann wächst die Fläche im Feld jede Sekunde um <i>s</i> · <i>v</i>, also steigt der Fluss mit <i>B</i> · <i>s</i> · <i>v</i> = ${fmt(L0.B)} T · ${dec(r4(L0.s / 100))} m · ${dec(r4(L0.v / 100))} m/s = ${fmt(L0.V)} mWb/s, und ${Vi()} = −${fmt(L0.V)} mV. Das dauert ${fmt(L0.m)} s, bis ${wide ? 'die ganze Schleife im Feld ist' : 'die Schleife das ganze Feldgebiet überdeckt'}: dann ist ${PHI} = ${fmt(Phi)} mWb.`),
       L(`For the next ${fmt(L0.t2 - L0.t1)} s, the area in the field does not change: ${PHI} is constant and ${Vi()} = 0. Then the loop ${wide ? 'leaves the field' : 'moves on'}, and the flux falls back to 0 in ${fmt(L0.m)} s: ${Vi()} = +${fmt(L0.V)} mV.`,
         `Während der nächsten ${fmt(L0.t2 - L0.t1)} s ändert sich die Fläche im Feld nicht: ${PHI} ist konstant und ${Vi()} = 0. Dann ${wide ? 'verlässt die Schleife das Feld' : 'bewegt sich die Schleife weiter'}, und der Fluss sinkt in ${fmt(L0.m)} s auf 0: ${Vi()} = +${fmt(L0.V)} mV.`),
     ];

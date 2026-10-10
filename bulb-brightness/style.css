@@ -80,20 +80,20 @@ svg .note.v { fill: var(--vnote); font: italic 600 14px var(--serif); }
 .k-strong { background: var(--zone-strong); border: 1px solid var(--zone-strong-line); border-radius: 3px; padding: 0 3px; }
 .k-light { background: var(--zone-light); border: 1px dashed var(--zone-light-line); border-radius: 3px; padding: 0 3px; }
 
-/* arcade: lit bulbs in manim's yellow */
-#arcade { --glow: #ffff00; --vnote: #58c4dd; --asked: #58c4dd; }
+/* check: lit bulbs in manim's yellow */
+#ck { --glow: #ffff00; --vnote: #58c4dd; --asked: #58c4dd; }
 /* the bulb the question is about, in manim's blue */
-#arcade svg .bulb.asked, #arcade svg .w.asked { stroke: var(--asked); stroke-width: 2.6; }
-#arcade svg .lbl.asked { fill: var(--asked); font-weight: 700; }
-#arcade .fig.ref svg { width: 160px; }
-#arcade .ar-opt { font-size: 1.15rem; }
+#ck svg .bulb.asked, #ck svg .w.asked { stroke: var(--asked); stroke-width: 2.6; }
+#ck svg .lbl.asked { fill: var(--asked); font-weight: 700; }
+#ck .fig.ref svg { width: 160px; }
+#ck .ck-opt { font-size: 1.15rem; }
 
-/* the introductions (practice and arcade): a plain paragraph on wide screens; on small screens one
+/* the introductions (practice): a plain paragraph on wide screens; on small screens one
    line to open, and while folded the reference circuit is hidden too (class folded, app.js) */
 details.intro > summary { display: none; }
 details.intro > p { margin: 0 0 4px; }
 @media (max-width: 640px) {
   details.intro > summary { display: list-item; cursor: pointer; color: var(--accent); margin: 2px 0 6px; }
-  #task.folded .fig.ref, #ar-play.folded #ar-figure .fig.ref { display: none; }
+  #task.folded .fig.ref { display: none; }
 }
 .field .name sub, .steps sub, #hint-list sub { font-style: normal; }

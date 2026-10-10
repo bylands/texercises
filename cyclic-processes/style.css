@@ -77,10 +77,9 @@ table.states { border-collapse: collapse; margin: 6px auto; font-variant-numeric
 table.states th, table.states td { border: 1px solid var(--line); padding: 5px 14px; text-align: center; }
 table.states thead th { font-weight: 600; }
 
-/* arcade: manim's colours */
-#arcade { --cy: #58c4dd; --gdot: #444; }
-#arcade .desc { font-size: 0.95rem; }
-#arcade .ar-opt .val svg.pv { width: 100%; max-width: 260px; }
+/* check: diagrams as options */
+#ck .desc { font-size: 0.95rem; }
+#ck .ck-opt .val svg.pv { width: 100%; max-width: 260px; }
 
 /* the nudge after a wrong check of statements */
 .stmts-fb { color: var(--bad); font-size: 0.9rem; margin: 4px 0 0; }

@@ -3,7 +3,7 @@
 
   const { ANSWERS, generate, make, diagnose, sameSpot, bulbsIn, canon: canonOf, ftext, cmp, isExact, isZero, ONE } = window.Bulbs;
   const { circuit } = window.Draw;
-  const Lang = window.Lang, Arcade = window.Arcade, L = Lang.L;
+  const Lang = window.Lang, Check = window.Check, L = Lang.L;
   const $ = (sel) => document.querySelector(sel);
   const MAX_TRIES = 3;
   const GLOW = { brighter: 0.95, equal: 0.5, dimmer: 0.22, off: 0 };
@@ -12,7 +12,7 @@
   const UI = {
     en: {
       title: 'Bulb Brightness', mode: 'Mode', difficulty: 'Difficulty', example: 'Example',
-      tutor: 'Tutor', practice: 'Practice', arcade: 'Arcade', new: 'New exercise',
+      tutor: 'Tutor', practice: 'Practice', checkMode: 'Check', new: 'New exercise',
       tutorNote: 'Use the arrow keys ← → to step through. In the diagram, the <span class="k-light">dashed box</span> marks the part whose voltage is being shared, the <span class="k-strong">highlights</span> mark the parts it is shared among, and each part shows its voltage as soon as it is known.',
       task: 'How bright are the bulbs?',
       introShow: 'Instructions',
@@ -32,7 +32,7 @@
     },
     de: {
       title: 'Helligkeit von Lampen', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
-      tutor: 'Tutor', practice: 'Üben', arcade: 'Arcade', new: 'Neue Aufgabe',
+      tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. Im Schaltbild markiert der <span class="k-light">gestrichelte Rahmen</span> den Teil, dessen Spannung aufgeteilt wird, die <span class="k-strong">Hervorhebungen</span> markieren die Teile, auf die sie aufgeteilt wird, und jeder Teil zeigt seine Spannung, sobald sie bekannt ist.',
       task: 'Wie hell leuchten die Lampen?',
       introShow: 'Anleitung',
@@ -54,17 +54,16 @@
   const ui = () => UI[Lang.get()];
   const WORDS = () => ({ brighter: L('brighter', 'heller'), equal: L('equally bright', 'gleich hell'), dimmer: L('less bright', 'weniger hell'), off: L('off', 'aus') });
 
-  let ex = null, st = null, tutor = null, arcade = null, topics = null;
+  let ex = null, st = null, tutor = null, checker = null, topics = null;
 
   // ---------------------------------------------------------------- folded introductions
   const SMALL = window.matchMedia('(max-width: 640px)');
   function syncFold() {
     document.querySelectorAll('details.intro').forEach((d) => {
-      const box = d.closest('#task, #ar-play');
+      const box = d.closest('#task');
       if (box) box.classList.toggle('folded', !d.open);
     });
   }
-  const introHtml = () => `<details class="intro"${SMALL.matches ? '' : ' open'}><summary>${ui().introShow}</summary><p>${ui().taskText}</p></details>`;
 
   // ---------------------------------------------------------------- persistence
   function stored(key, fallback) {
@@ -201,12 +200,12 @@
       `<p>${PACK_TEXT[ex.packKey]()}</p><ul>${ex.bulbs.map((b) => `<li>${explain(b)}</li>`).join('')}</ul>`;
   }
 
-  // What a wrong answer suggests, by misconception (see diagnose() in generator.js).
-  function why(code, b) {
+  // What a wrong answer suggests, by misconception (see diagnose() in generator.js). nudge: a hint
+  // that does not give the brightness away, while the exercise is open (not in the check).
+  function why(code, b, nudge = !!st && !st.solved && !st.revealed) {
     const exact = (c) => isExact(c.iv) && isExact(b.iv) && cmp(c.iv.lo, b.iv.lo) === 0;
     const same = ex.bulbs.find((c) => c !== b && (exact(c) || sameSpot(ex, b, c)));
-    // while the exercise is open: a nudge that does not give the brightness away
-    if (!st.solved && !st.revealed) {
+    if (nudge) {
       const nudge = {
         short: L(`Follow the wires around ${it(b.name)}: does the current have to pass through it?`, `Verfolge die Drähte um ${it(b.name)}: Muss der Strom durch sie hindurch?`),
         reversed: L('Look at the batteries: are they all connected the same way round?', 'Schau die Batterien an: Sind alle gleich herum angeschlossen?'),
@@ -239,8 +238,8 @@
   // ---------------------------------------------------------------- rendering
   const ref = (glow) => circuit({ t: 'L', i: 0 }, { t: 'B', dir: 1 }, () => ({ label: svgName('L0'), glow }));
   // `glows[i]` is the answer shown for bulb i (none: unlit).
-  // asked: the name of a bulb to mark (the one an arcade question is about)
-  const taskOf = (e, glows, asked) => circuit(clone(e.load), clone(e.pack), (i) => ({ label: svgName(e.bulbs[i].name), glow: GLOW[glows[i]] || 0, asked: e.bulbs[i].name === asked }));
+  // asked: the names of the bulbs to mark (the ones a check question is about)
+  const taskOf = (e, glows, asked = []) => circuit(clone(e.load), clone(e.pack), (i) => ({ label: svgName(e.bulbs[i].name), glow: GLOW[glows[i]] || 0, asked: asked.includes(e.bulbs[i].name) }));
   const drawAnswers = () => { $('#figure').innerHTML = taskOf(ex, answers()); };
   const starsOf = (d) => `<span class="stars" role="img" aria-label="${ui().stars(d)}" title="${ui().stars(d)}">${'★'.repeat(d)}${'☆'.repeat(5 - d)}</span>`;
 
@@ -514,18 +513,36 @@
   }
   const lessons = () => LESSONS.map((l, i) => ({ name: l.name(), idea: l.idea(), also: topics.also(i), frames: () => lesson(l) }));
 
-  // ---------------------------------------------------------------- arcade
-  // Each question asks how bright one bulb is; the four options are the four answers. A wrong
-  // option stems from a misconception when that misconception predicts it for this bulb.
-  function arcadeQuestion(kind, seed) {
-    // easy gives difficulty 1 only, medium mostly 2, hard has the widest choice from 3 on
-    const d = Number(kind.slice(1)), lv = d === 1 ? 'easy' : d === 2 ? 'medium' : 'hard';
-    let e = null;
-    for (let k = 0; k < 300; k++) {
-      e = generate(lv, seed + k);
-      if (e.difficulty === d) break;
-    }
-    // the bulb most worth asking about: one a misconception gets wrong, if there is one
+  // ---------------------------------------------------------------- check
+  // The learning objectives (check.js), each with the question kinds it is asked about, its worked
+  // example and its practice topic (LESSONS). A kind is a practice type ('mixed:hard'): how bright
+  // one bulb is compared with the reference bulb; or 'pair:' and a practice type: how bright one
+  // bulb is compared with another one in series with it, on the other side of a bulb or a group.
+  const OBJECTIVES = [
+    { id: 'current', kinds: ['pair:series:easy', 'pair:mixed:hard', 'pair:bridged:hard'], tutor: 0, topic: 0,
+      name: () => L('Explain that the current is the same before and after a bulb or a group of bulbs: it is not used up.',
+        'Erklären, dass der Strom vor und nach einer Lampe oder einer Gruppe von Lampen gleich gross ist: Er wird nicht verbraucht.') },
+    { id: 'power', kinds: ['mixed:medium', 'mixed:hard', 'reversed:medium'], tutor: 2, topic: 2,
+      name: () => L('Rank the brightness of bulbs by their power ΔV · I.', 'Die Helligkeit von Lampen nach ihrer Leistung ΔU · I ordnen.') },
+    { id: 'change', kinds: ['series:easy', 'parallel:easy', 'bridged:medium'], tutor: 3, topic: 3,
+      name: () => L('Predict how the brightness changes when a bulb is added, removed or short-circuited, in series or in parallel.',
+        'Vorhersagen, wie sich die Helligkeit ändert, wenn eine Lampe in Serie oder parallel dazukommt, wegfällt oder überbrückt wird.') },
+  ];
+
+  // Two bulbs in the same chain, in identical positions, with current through them (generator.js
+  // sameSpot): [b, c], preferring two with a bulb or a group between them.
+  function pairOf(e) {
+    if (isZero(e.E)) return null;
+    const pairs = e.bulbs.flatMap((b, i) => e.bulbs.slice(i + 1).filter((c) => !b.shorted && b.steps.length &&
+      b.steps[b.steps.length - 1].kind === 'series' && sameSpot(e, b, c)).map((c) => [b, c]));
+    const at = (x) => e.bulbs.indexOf(x);
+    return pairs.find(([b, c]) => at(c) - at(b) > 1) || pairs[0] || null;
+  }
+
+  // The bulb most worth asking about: one a misconception gets wrong, if there is one. Wrong
+  // options stem from a misconception when that misconception predicts them for this bulb.
+  function bulbQuestion(type, seed) {
+    const e = ofType(type, seed);
     const r = (seed * 2654435761 >>> 0) / 4294967296;
     const tricky = e.bulbs.filter((b) => b.shorted || (e.reversed && b.models.forward !== b.answer) || b.models.fixedCurrent !== b.answer);
     const pool = tricky.length ? tricky : e.bulbs, b = pool[Math.floor(r * pool.length)];
@@ -533,39 +550,53 @@
     return withEx(e, () => ({
       title: ui().task,
       key: `${e.packKey} ${canonOf(e.load)}`, // the same circuit counts as a repeat, whichever bulb is asked
-      text: introHtml(),
-      figure: `<figure class="fig ref">${ref(GLOW.equal)}<figcaption>${ui().reference}</figcaption></figure><figure class="fig">${taskOf(e, [], b.name)}</figure>`,
+      // a plain paragraph: the check's list of questions catches the toggling of any <details> in it
+      text: `<p>${ui().taskText}</p>`,
+      figure: `<figure class="fig ref">${ref(GLOW.equal)}<figcaption>${ui().reference}</figcaption></figure><figure class="fig">${taskOf(e, [], [b.name])}</figure>`,
       ask: L(`How bright is ${it(b.name)} compared with the reference bulb?`, `Wie hell leuchtet ${it(b.name)} im Vergleich zur Vergleichslampe?`),
       options: ANSWERS.map((a) => {
         const flag = a === b.answer ? null : flagOf(a);
-        return { html: WORDS()[a], correct: a === b.answer, flag, why: flag ? why(flag, b) : why('other', b) };
+        return { html: WORDS()[a], correct: a === b.answer, flag, why: why(flag || 'other', b, false) };
       }),
       explain: () => withEx(e, () => `<div class="figs"><figure class="fig ref">${ref(GLOW.equal)}<figcaption>${ui().reference}</figcaption></figure>` +
-        `<figure class="fig">${taskOf(e, e.bulbs.map((x) => x.answer), b.name)}</figure></div><div class="steps">${solution()}</div>`),
+        `<figure class="fig">${taskOf(e, e.bulbs.map((x) => x.answer), [b.name])}</figure></div><div class="steps">${solution()}</div>`),
     }));
   }
-  const arcadeSource = {
+
+  // Two bulbs in series, on either side of a bulb or a group: equally bright. Brighter or less
+  // bright is what a current used up along the way would give (whichever way it flows).
+  function pairQuestion(type, seed) {
+    let e = null, p = null;
+    for (let k = 0; k < 200 && !p; k++) { e = ofType(type, seed + 7919 * k); p = pairOf(e); }
+    const [b, c] = p;
+    return withEx(e, () => ({
+      title: L('Two bulbs in series', 'Zwei Lampen in Serie'),
+      key: `pair ${e.packKey} ${canonOf(e.load)}`,
+      text: `<p>${L('All batteries are identical, and so are all bulbs.', 'Alle Batterien sind gleich, ebenso alle Lampen.')}</p>`,
+      figure: `<figure class="fig">${taskOf(e, [], [b.name, c.name])}</figure>`,
+      ask: L(`How bright is ${it(c.name)} compared with ${it(b.name)}?`, `Wie hell leuchtet ${it(c.name)} im Vergleich zu ${it(b.name)}?`),
+      options: ANSWERS.map((a) => {
+        const flag = a === 'brighter' || a === 'dimmer' ? 'used' : null;
+        return { html: WORDS()[a], correct: a === 'equal', flag, why: why('same', c, false) };
+      }),
+      explain: () => withEx(e, () => `<div class="figs"><figure class="fig">${taskOf(e, e.bulbs.map((x) => x.answer), [b.name, c.name])}</figure></div>` +
+        `<p>${L(`${it(b.name)} and ${it(c.name)} are in series: the same current flows through both of them, before and after the parts between them. The current is not used up on the way; what the bulbs turn into light and heat is energy, at the rate <i>P</i> = Δ<i>V</i> · <i>I</i>. Identical bulbs with the same current get the same voltage, so they have the same power: they are <b>equally bright</b>.`,
+          `${it(b.name)} und ${it(c.name)} sind in Serie: Durch beide fliesst derselbe Strom, vor und nach den Teilen dazwischen. Der Strom wird unterwegs nicht verbraucht; was die Lampen in Licht und Wärme umwandeln, ist Energie, mit der Leistung <i>P</i> = Δ<i>U</i> · <i>I</i>. Gleiche Lampen mit demselben Strom bekommen dieselbe Spannung, haben also dieselbe Leistung: Sie leuchten <b>gleich hell</b>.`)}</p>` +
+        `<div class="steps">${solution()}</div>`),
+    }));
+  }
+
+  const checkSource = {
     id: 'bb',
-    kinds: [1, 2, 3, 4, 5].map((d) => ({ id: `d${d}`, difficulty: d })),
-    question: arcadeQuestion,
-    concept: { short: 'short', reversed: 'reversed', fixedCurrent: 'current' },
+    objectives: OBJECTIVES,
+    question: (kind, seed) => (kind.startsWith('pair:') ? pairQuestion(kind.slice(5), seed) : bulbQuestion(kind, seed)),
+    concept: { short: 'short', reversed: 'reversed', fixedCurrent: 'current', used: 'used' },
     concepts: () => ({
       short: L('a bridged bulb still lights', 'eine überbrückte Lampe leuchtet noch'),
       reversed: L('a reversed battery ignored', 'eine verkehrte Batterie übersehen'),
       current: L('the battery as a source of fixed current', 'die Batterie als Quelle eines festen Stroms'),
+      used: L('the current used up along the circuit', 'der Strom wird im Stromkreis verbraucht'),
     }),
-    intro: () => ({
-      tag: L('How bright is the bulb? Answer as many questions as you can in <b>5 minutes</b>.', 'Wie hell leuchtet die Lampe? Beantworte in <b>5 Minuten</b> so viele Fragen wie möglich.'),
-      rule: L('Questions get harder as you go. Compare the bulb with the reference bulb on one battery: brighter, equally bright, less bright, or off? Click an answer or press 1–4.',
-        'Die Fragen werden nach und nach schwieriger. Vergleiche die Lampe mit der Vergleichslampe an einer Batterie: heller, gleich hell, weniger hell oder aus? Klicke eine Antwort an oder drücke 1–4.'),
-      example: L('a bridged bulb that still lights', 'eine überbrückte Lampe, die noch leuchtet'),
-    }),
-    // a lit circuit (the third worked example), and what makes a bulb bright
-    hero: () => {
-      const e = make('S2', Ser(Lb(), Par(Lb(), Lb())), 'hero', 'hero');
-      return `<div class="figs"><figure class="fig">${larger(taskOf(e, e.bulbs.map((b) => b.answer)), 1.4)}</figure></div>` +
-        `<p class="ar-law"><i>P</i> = ${L('<i>V</i>', '<i>U</i>')} · <i>I</i></p>`;
-    },
   };
 
   // ---------------------------------------------------------------- language
@@ -593,35 +624,35 @@
       updateButtons();
     }
     tutor.relabel(lessons());
-    arcade.relabel();
+    checker.relabel();
   }
 
   // ---------------------------------------------------------------- modes
-  // Practice: random exercises; tutor: worked examples; arcade: a timed game (arcade.js). Hints
-  // and solution belong to practice. Leaving the arcade ends a running game.
+  // Practice: random exercises; tutor: worked examples; check: a short test on the learning
+  // objectives (check.js). Hints and solution belong to practice.
   const mode = () => (document.querySelector('input[name="mode"]:checked') || {}).value || 'practice';
   function setMode(m) {
     document.querySelector(`input[name="mode"][value="${m}"]`).checked = true;
     store('bb-mode', m);
     document.querySelectorAll('.practice').forEach((el) => { el.hidden = m !== 'practice'; });
     $('#tutor').hidden = m !== 'tutor';
-    $('#arcade').hidden = m !== 'arcade';
+    $('#ck').hidden = m !== 'check';
     if (m !== 'practice') { $('#hints').hidden = true; $('#solution').hidden = true; }
-    if (m !== 'arcade') arcade.stop();
   }
   function practise() {
     setMode('practice');
     if (ex) { history.replaceState(null, '', `#${ex.id}`); $('#hints').hidden = !st.hints; $('#solution').hidden = !st.revealed; } else fresh();
   }
-  function play() {
-    setMode('arcade');
-    arcade.show();
-    if (location.hash !== '#arcade') history.replaceState(null, '', '#arcade');
+  function checkMode() {
+    setMode('check');
+    checker.show();
+    if (location.hash !== '#check') history.replaceState(null, '', '#check');
   }
 
   function fromHash() {
     const h = location.hash.slice(1);
-    if (h === 'arcade') { if ($('#arcade').hidden) play(); return true; }
+    // the arcade of earlier versions is now the check
+    if (h === 'check' || h === 'arcade') { if ($('#ck').hidden) checkMode(); return true; }
     let m = h.match(/^tutor-(\d+)$/);
     if (m && Number(m[1]) >= 1 && Number(m[1]) <= tutor.count) {
       setMode('tutor');
@@ -644,13 +675,13 @@
   // ---------------------------------------------------------------- init
   function init() {
     Lang.init(); // see lang.js
-    // The introductions (practice and arcade) are open on wide screens and folded on small ones,
+    // The introductions (practice) are open on wide screens and folded on small ones,
     // until opened there; a folded one also hides the reference circuit (class folded, style.css).
     SMALL.addEventListener('change', () => { document.querySelectorAll('details.intro').forEach((d) => { d.open = !SMALL.matches; }); syncFold(); });
     document.addEventListener('toggle', (evt) => { if (evt.target.matches && evt.target.matches('details.intro')) syncFold(); }, true);
     $('#intro').open = !SMALL.matches;
     syncFold();
-    document.querySelector('main').insertAdjacentHTML('beforeend', Arcade.HTML);
+    document.querySelector('main').insertAdjacentHTML('beforeend', Check.HTML);
     applyStatic();
     Lang.wire(switchLang);
     topics = window.Topics.create({
@@ -668,15 +699,19 @@
     $('#fields').addEventListener('change', drawAnswers);
     window.addEventListener('hashchange', fromHash);
     tutor = window.createTutor(lessons(), { done: practise, practise: (i) => { topics.go(i); setMode('practice'); fresh(); } });
-    arcade = Arcade.create(arcadeSource, { math: syncFold, markScrollable: () => {}, stored, store }); // math: runs after each question is shown
+    checker = Check.create(checkSource, {
+      math: () => {}, markScrollable: () => {}, stored, store, // no formulas to typeset
+      tutor: (i) => { setMode('tutor'); tutor.open(i); },
+      practise: (i) => { topics.go(i); setMode('practice'); fresh(); },
+    });
     $('#modes').addEventListener('change', () => {
-      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'arcade') play(); else practise();
+      if (mode() === 'tutor') { setMode('tutor'); tutor.open(tutor.current()); } else if (mode() === 'check') checkMode(); else practise();
     });
     showScore();
     if (fromHash()) return;
     // First visit: start with the first worked example.
     const last = stored('bb-mode', 'tutor');
-    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'arcade') play(); else { setMode('practice'); fresh(); }
+    if (last === 'tutor') { setMode('tutor'); tutor.open(0); } else if (last === 'check' || last === 'arcade') checkMode(); else { setMode('practice'); fresh(); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

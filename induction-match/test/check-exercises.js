@@ -1,6 +1,6 @@
-// Verifies the exercises with texts (exercises.js), the problems (realproblems.js) and the
-// pictures (figures.js): run with `node induction-match/test/check-exercises.js`. For many seeds
-// of every type, in both languages, it checks that
+// Verifies the exercises with texts (exercises.js) and the pictures (figures.js): run with
+// `node induction-match/test/check-exercises.js`. For many seeds of every type, in both languages,
+// it checks that
 // - every question has exactly one right option (graphs or values), distinct options, and a reason
 //   for each wrong one; statements are a mix of right and wrong, each with a reason; a drawing's
 //   target lies on its axis and on whole values,
@@ -14,7 +14,6 @@
 const Lang = require('../lang.js');
 const I = require('../generator.js');
 const X = require('../exercises.js');
-const R = require('../realproblems.js');
 const F = require('../figures.js');
 
 let failures = 0;
@@ -100,15 +99,7 @@ for (const lang of ['en', 'de']) {
       }
     }
   }
-  // the problems
-  R.PROBLEMS.forEach((p, i) => {
-    for (let seed = 1; seed <= 40; seed++) {
-      const e = R.realOf(i, seed), tag = `real ${p.id} ${seed} ${lang}`;
-      if (bad(json(e)) || bad(F[e.pic[0]](e.pic[1]))) fail(`${tag}: undefined or NaN`);
-      checkQuestions(tag, e);
-    }
-  });
 }
-console.log(`${X.TYPES.length} types × ${SEEDS} seeds and ${R.PROBLEMS.length} problems, in both languages`);
+console.log(`${X.TYPES.length} types × ${SEEDS} seeds, in both languages`);
 if (failures) { console.error(`${failures} failures`); process.exit(1); }
 console.log('all checks passed');

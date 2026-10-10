@@ -66,10 +66,5 @@ table.compare { border-collapse: collapse; margin: 10px 0; font-variant-numeric:
 table.compare th, table.compare td { border-bottom: 1px solid var(--line); padding: 4px 12px; text-align: right; }
 table.compare th:first-child { text-align: left; font-weight: 600; }
 
-/* arcade: currents and voltages in manim's colours */
-#arcade { --cur: #58c4dd; --vol: #fc6255; --ask: #ffff00; }
-/* the quantity the question asks for, in manim's yellow */
-#arcade svg text.ask { fill: var(--ask); font-weight: 700; }
-#arcade svg .cur.ask, #arcade svg .vol.ask { stroke: var(--ask); stroke-width: 2.4; }
-#arcade svg .cur-h.ask, #arcade svg .vol-h.ask { fill: var(--ask); }
-#arcade svg .note { fill: #ffff00; }
+/* check: the current the question asks for, bold */
+#ck svg text.ask { font-weight: 700; font-size: 16px; }

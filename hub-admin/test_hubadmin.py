@@ -41,7 +41,7 @@ class Unit(unittest.TestCase):
         self.assertEqual(names["coe"], "Energy Conservation")
         self.assertEqual(names["bulb-brightness"], "Bulb Brightness")
         modes = {a["id"]: a["modes"] for a in apps}
-        self.assertEqual(modes["bulb-brightness"], ["tutor", "practice", "arcade"])
+        self.assertEqual(modes["bulb-brightness"], ["tutor", "practice", "check"])
         self.assertEqual(modes["coe"], ["tutor", "practice", "real", "arcade"])
         starters = {a["id"]: a.get("tags") for a in apps}
         self.assertEqual(starters["photons"][:2], [{"en": "Quantum physics", "de": "Quantenphysik"}, {"en": "Light", "de": "Licht"}])
