@@ -135,7 +135,7 @@
     s += `<circle class="meter" cx="170" cy="170" r="13"/><text class="lbl small" x="170" y="175" text-anchor="middle">A</text>`;
     s += `<line class="wire" x1="150" y1="170" x2="157" y2="170"/><line class="wire" x1="183" y1="170" x2="190" y2="170"/>`;
     if (o.counter) s += '<line class="batt" x1="216" y1="160" x2="216" y2="180"/><line class="batt thick" x1="224" y1="164" x2="224" y2="176"/><rect class="gap" x="217" y="166" width="6" height="8"/>' + `<text class="lbl small" x="220" y="198" text-anchor="middle">${it('U')}</text>`;
-    s += `<text class="lbl small" x="48" y="128" text-anchor="middle">${L('cathode', 'Kathode')}</text><text class="lbl small" x="246" y="44">${L('anode', 'Anode')}</text>`;
+    s += `<text class="lbl small" x="48" y="128" text-anchor="middle">${L('cathode', 'Kathode')}</text><text class="lbl small" x="226" y="38" text-anchor="middle">${L('anode', 'Anode')}</text>`;
     return `<svg class="ph cell" viewBox="0 0 300 206" width="300" role="img" aria-label="${L('A photocell: light falls on the cathode and releases electrons, which fly to the anode', 'Eine Fotozelle: Licht fällt auf die Kathode und löst Elektronen aus, die zur Anode fliegen')}">${s}</svg>`;
   }
 

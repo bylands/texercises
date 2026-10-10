@@ -99,11 +99,12 @@
           [pz.obs(), true],
           ...r.shuffle(FILLERS).slice(0, 3).map(([t, why]) => [t(), false, why(), 'wave']),
         ])),
-        choice('why', L(`(b) ${pz.obs()} How do photons explain it?`, `(b) ${pz.obs()} Wie erklären Photonen das?`), opts(r, [
+        // (b) names the answer of (a): it is shown once (a) is right
+        { ...choice('why', L(`(b) ${pz.obs()} How do photons explain it?`, `(b) ${pz.obs()} Wie erklären Photonen das?`), opts(r, [
           [pz.photon(), true],
           [pz.wave(), false, waveWhy, 'wave'],
           ...pz.wrong.map(([t, tag]) => [t(), false, tag === 'intensity' ? WHY.bright() : L('The work function is a property of the metal: the light does not change it.', 'Die Austrittsarbeit ist eine Eigenschaft des Metalls: Das Licht ändert sie nicht.'), tag]),
-        ])),
+        ])), after: 'obs' },
       ],
       hints: [
         L('Ask for each observation: would a brighter wave, or a longer wait, change it? If the wave model says yes and the experiment says no, the wave model cannot explain it.', 'Frage dich bei jeder Beobachtung: Würde eine stärkere Welle oder längeres Warten etwas daran ändern? Sagt das Wellenmodell ja und das Experiment nein, kann das Wellenmodell sie nicht erklären.'),
