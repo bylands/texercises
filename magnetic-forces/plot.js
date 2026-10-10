@@ -5,7 +5,8 @@
 //                    lines or a grid of ⊙ / ⊗), items: [{ kind: 'particle', q, at, sym (a named
 //                    particle's symbol, drawn instead of its sign) } | { kind: 'piece'
 //                    (a short wire), d, at } | { kind: 'wire' (a long wire through at), d, at, name }],
-//                    vecs: [{ of (item index), kind: 'v' | 'I' | 'F' | 'B', dir, unknown, name, len (px) }],
+//                    vecs: [{ of (item index), kind: 'v' | 'I' | 'F' | 'B', dir, unknown, name, len (px),
+//                    beside (the name beside the arrow, not beyond its tip) }],
 //                    points: [{ at, name }],
 //                    links: [[i, j]] (a coil seen edge-on from item i to item j, turning about
 //                    its middle) }
@@ -110,7 +111,10 @@
         return;
       }
       const l = Math.hypot(v.dir[0], v.dir[1]), ux = v.dir[0] / l, uy = -v.dir[1] / l, r0 = ends[v.of] + 3, L0 = v.len || (v.kind === 'F' ? 66 : 74);
-      s += arrow(x + ux * r0, y + uy * r0, x + ux * (r0 + L0), y + uy * (r0 + L0), cls) + txt(x + ux * (r0 + L0 + 14) - uy * 8, y + uy * (r0 + L0 + 14) + ux * 8 + 5, name, `lbl c-${v.kind === 'F' ? 'force' : v.kind === 'B' ? 'field' : 'vel'}`);
+      const lc = `lbl c-${v.kind === 'F' ? 'force' : v.kind === 'B' ? 'field' : 'vel'}`;
+      s += arrow(x + ux * r0, y + uy * r0, x + ux * (r0 + L0), y + uy * (r0 + L0), cls) + (v.beside
+        ? txt(x + ux * (r0 + L0 / 2) + 10, y + uy * (r0 + L0 / 2) + 5, name, lc, 'start')
+        : txt(x + ux * (r0 + L0 + 14) - uy * 8, y + uy * (r0 + L0 + 14) + ux * 8 + 5, name, lc));
     });
     return svg(W, H, s, o.label || L('A drawing of the situation', 'Eine Zeichnung der Situation'));
   }
@@ -181,7 +185,116 @@
     return svg(W, H, s, o.label || L('Field lines', 'Feldlinien'), o.small ? 'small' : '');
   }
 
-  const api = { icon, scene, linesFig, arrow, dotCross };
+  // ---------------------------------------------------------------- a coil in 3D
+  // The rectangular coil of scene's links (a coil seen edge-on) in an oblique view: x to the right
+  // and y up as in the drawing along the axis, the axis z (out of the page there) drawn receding
+  // at the angle beta, shortened by k. So x and y keep their lengths and angles: the front end of
+  // the coil is the drawing along the axis, and a turn anticlockwise there is anticlockwise here.
+  // The coil sits between the poles N and S of a magnet, its field along ±x.
+  // o = { phi (the angle of the coil to the field, degrees, side 1 at the angle phi from +x),
+  //       s (the current in side 1: along +z for 1, the other way for -1), bx (the field ±x),
+  //       forces (the forces on the two long sides), turn (+1 anticlockwise, -1 clockwise seen
+  //       from the eye, 0 none), beta (35 or 145: by default the one further from phi, so that
+  //       the coil is not seen edge-on) }
+  function coil3d(o) {
+    const a = 0.95, h = 3, k = 0.55, S = 56, X0 = 2.45, BW = 0.45, Y0 = 1.15, Z0 = 0.8;
+    const far = (b) => { const d = (((o.phi - b) % 180) + 180) % 180; return Math.min(d, 180 - d); };
+    const beta = o.beta || (far(145) >= far(35) ? 145 : 35), cb = Math.cos((beta * Math.PI) / 180), sb = Math.sin((beta * Math.PI) / 180);
+    const u = [Math.cos((o.phi * Math.PI) / 180), Math.sin((o.phi * Math.PI) / 180)];
+    const PX = (p) => (p[0] - k * p[2] * cb) * S, PY = (p) => -(p[1] - k * p[2] * sb) * S;
+    // the size: the magnet, the axis with the eye, the coil turned any way with its forces
+    const ze = h / 2 + 1.25, zt = -h / 2 - 2, rt = 0.33, ext = [];
+    for (const x of [-X0 - BW, X0 + BW]) for (const y of [-Y0, Y0]) for (const z of [-Z0, Z0]) ext.push([x, y, z]);
+    for (let t = 0; t < 360; t += 15) {
+      const c = Math.cos((t * Math.PI) / 180), sn = Math.sin((t * Math.PI) / 180);
+      ext.push([a * c, a * sn, h / 2], [a * c, a * sn, -h / 2], [rt * c, rt * sn, zt]);
+    }
+    ext.push([0, 0, ze + 0.3], [a, a + 0.95, 0], [-a, -a - 0.95, 0]);
+    const xs = ext.map(PX), ys = ext.map(PY), x0 = Math.min(...xs) - 14, y0 = Math.min(...ys) - 22;
+    const W = Math.round(Math.max(...xs) + 14 - x0), H = Math.round(Math.max(...ys) + 14 - y0);
+    const X = (p) => PX(p) - x0, Y = (p) => PY(p) - y0, pt = (p) => `${f1(X(p))},${f1(Y(p))}`;
+    const poly = (ps, cls) => `<polygon class="${cls}" points="${ps.map(pt).join(' ')}"/>`;
+    const line = (p, q, cls) => `<line class="${cls}" x1="${f1(X(p))}" y1="${f1(Y(p))}" x2="${f1(X(q))}" y2="${f1(Y(q))}"/>`;
+    // the screen direction of a direction in space, and the depth (larger: nearer the eye)
+    const dirS = (d) => { const x = d[0] - k * d[2] * cb, y = -(d[1] - k * d[2] * sb), l = Math.hypot(x, y); return [x / l, y / l]; };
+    const depth = (p) => p[0] * k * cb + p[1] * k * sb + p[2];
+    let s = `<rect class="bg" x="0" y="0" width="${W}" height="${H}"/>`;
+    // the poles: the field runs from N to S; of each block its front, its top and the side towards the eye
+    for (const side of [-1, 1]) {
+      const xa = side * X0, xb = side * (X0 + BW), xl = Math.min(xa, xb), xr = Math.max(xa, xb), xs2 = cb > 0 ? xr : xl, north = side === -o.bx;
+      const cls = `pole3 ${north ? 'pole-n' : 'pole-s'}`;
+      s += poly([[xs2, -Y0, -Z0], [xs2, Y0, -Z0], [xs2, Y0, Z0], [xs2, -Y0, Z0]], cls) + poly([[xs2, -Y0, -Z0], [xs2, Y0, -Z0], [xs2, Y0, Z0], [xs2, -Y0, Z0]], 'shade2');
+      s += poly([[xl, Y0, -Z0], [xr, Y0, -Z0], [xr, Y0, Z0], [xl, Y0, Z0]], cls) + poly([[xl, Y0, -Z0], [xr, Y0, -Z0], [xr, Y0, Z0], [xl, Y0, Z0]], 'shade1');
+      s += poly([[xl, -Y0, Z0], [xr, -Y0, Z0], [xr, Y0, Z0], [xl, Y0, Z0]], cls);
+      s += txt(X([(xl + xr) / 2, 0, Z0]), Y([(xl + xr) / 2, 0, Z0]) + 6, north ? 'N' : 'S', 'pole');
+    }
+    // the field: lines from N to S, above and below the coil
+    const gap = 0.3, fx = X0 - gap, bd = dirS([o.bx, 0, 0]);
+    for (const y of [-1, 1]) {
+      for (const z of [-0.55, 0.55]) {
+        s += line([-fx, y, z], [fx, y, z], 'v-field faint3');
+        for (const x of [-1.45, 1.45]) { const p = [x, y, z]; s += head(X(p) + 6 * bd[0], Y(p) + 6 * bd[1], bd[0], bd[1], 'v-field-head', 9, 4); }
+      }
+    }
+    // its name at an arrow head away from the forces and the turn, wherever they point (so that
+    // its place does not tell them)
+    const busy = [[0, 0, zt]];
+    for (const side of [1, -1]) for (const up of [1, -1]) busy.push([side * a * u[0], side * a * u[1] + up * 0.95, 0], [side * a * u[0], side * a * u[1] + up * 0.5, 0]);
+    const spots = [];
+    for (const [y, z] of [[1, -0.55], [-1, 0.55]]) for (const x of [-1.45, 1.45]) spots.push([X([x, y, z]) + 2, Y([x, y, z]) + (y > 0 ? -9 : 19)]);
+    const room = (q) => Math.min(...busy.map((b) => Math.hypot(X(b) + 12 - q[0], Y(b) - q[1])));
+    const bs = spots.reduce((m, q) => (room(q) > room(m) + 0.5 ? q : m));
+    s += txt(bs[0], bs[1], '<tspan class="it">B</tspan>', 'lbl c-field');
+    // the coil: its plane faintly, the axis (dashed), then the four sides from the back to the front
+    const C = (side, z) => [side * a * u[0], side * a * u[1], z];
+    s += poly([C(1, -h / 2), C(1, h / 2), C(-1, h / 2), C(-1, -h / 2)], 'coil-face');
+    s += line([0, 0, zt - 0.15], [0, 0, h / 2 + 0.45], 'axis3');
+    const zs = o.s * h / 2; // the current: along side 1 to z = zs, across, back along side 2
+    const sides = [[C(1, -zs), C(1, zs)], [C(1, zs), C(-1, zs)], [C(-1, zs), C(-1, -zs)], [C(-1, -zs), C(1, -zs)]];
+    sides.slice().sort((p, q) => depth(p[0]) + depth(p[1]) - depth(q[0]) - depth(q[1])).forEach(([p, q]) => {
+      // the arrow of a long side off its middle, where its force starts
+      const f = p[2] === q[2] ? 0.5 : 0.78, m = [0, 1, 2].map((i) => p[i] + f * (q[i] - p[i])), d = dirS([q[0] - p[0], q[1] - p[1], q[2] - p[2]]);
+      s += line(p, q, 'coil coil3') + head(X(m) + 7 * d[0], Y(m) + 7 * d[1], d[0], d[1], 'v-wire-head', 12, 5.5);
+    });
+    // the sides 1 and 2, named at their front ends as in the drawing along the axis
+    const front = dirS([0, 0, 1]);
+    for (const side of [1, -1]) {
+      const p = C(side, h / 2), o2 = dirS([side * u[0], side * u[1], 0]);
+      s += txt(X(p) + 12 * o2[0] + 6 * front[0], Y(p) + 12 * o2[1] + 6 * front[1] + 5, side > 0 ? '1' : '2', 'lbl');
+    }
+    // the forces on the long sides: F = I·L × B, along +y on side 1 for s·bx > 0
+    if (o.forces) {
+      const fy = o.s * o.bx;
+      // forces that point at each other along one line (the coil across the field): shorter, named beside
+      const meet = fy * u[1] < 0 && Math.abs(u[0]) < 0.3;
+      for (const side of [1, -1]) {
+        const p = C(side, 0), q = [p[0], p[1] + side * fy * (meet ? 0.6 : 0.95), 0], F = '<tspan class="it">F</tspan>';
+        const out = X([0, 0, zt]) < X([0, 0, 0]) ? 1 : -1; // the name on the side away from the turn
+        s += arrow(X(p), Y(p) - (side * fy > 0 ? 4 : -4), X(q), Y(q), 'v-force') + (meet
+          ? txt((X(p) + X(q)) / 2 - 9, (Y(p) + Y(q)) / 2 + 5, F, 'lbl c-force', 'end')
+          : txt(X(q) + out * 11, Y(q) + (side * fy > 0 ? 8 : 4), F, 'lbl c-force', out > 0 ? 'start' : 'end'));
+      }
+    }
+    // the eye on the axis, looking along it at the coil as in the drawing along the axis
+    {
+      const E = [0, 0, ze], d = dirS([0, 0, -1]), n = [-d[1], d[0]], ex = X(E), ey = Y(E);
+      s += arrow(X([0, 0, ze - 0.35]), Y([0, 0, ze - 0.35]), X([0, 0, h / 2 + 0.5]), Y([0, 0, h / 2 + 0.5]), 'view', 1.6);
+      s += `<path class="eye" d="M${f1(ex - 12 * d[0])} ${f1(ey - 12 * d[1])} Q${f1(ex + 10 * n[0])} ${f1(ey + 10 * n[1])} ${f1(ex + 12 * d[0])} ${f1(ey + 12 * d[1])} Q${f1(ex - 10 * n[0])} ${f1(ey - 10 * n[1])} ${f1(ex - 12 * d[0])} ${f1(ey - 12 * d[1])} Z"/>` +
+        `<circle class="pupil" cx="${f1(ex + 3 * d[0])}" cy="${f1(ey + 3 * d[1])}" r="3.4"/>`;
+    }
+    // the sense of rotation: an arc about the axis well behind the coil, clear of the forces (a circle about the axis keeps its shape)
+    if (o.turn) {
+      // open towards the back, so that its ends stay clear of the coil and the forces
+      const bk = dirS([0, 0, -1]), g = (Math.atan2(-bk[1], bk[0]) * 180) / Math.PI, e0 = g + 65, e1 = g + 295;
+      const c = [0, 0, zt], r = rt * S, cx = X(c), cy = Y(c), t0 = o.turn > 0 ? e0 : e1, t1 = o.turn > 0 ? e1 : e0;
+      const P = (t) => [cx + r * Math.cos((t * Math.PI) / 180), cy - r * Math.sin((t * Math.PI) / 180)];
+      const p0 = P(t0), p1 = P(t1 - o.turn * 14), tip = P(t1), tg = [tip[0] - p1[0], tip[1] - p1[1]], tl = Math.hypot(tg[0], tg[1]);
+      s += `<path class="turn" d="M${f1(p0[0])} ${f1(p0[1])} A${f1(r)} ${f1(r)} 0 1 ${o.turn > 0 ? 0 : 1} ${f1(p1[0])} ${f1(p1[1])}"/>` + head(tip[0], tip[1], tg[0] / tl, tg[1] / tl, 'turn-head', 10, 5);
+    }
+    return svg(W, H, s, o.label || L('The coil in 3D between the poles of a magnet', 'Die Spule räumlich zwischen den Polen eines Magneten'), 'coil3d');
+  }
+
+  const api = { icon, scene, linesFig, arrow, dotCross, coil3d };
   root.MagPlot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

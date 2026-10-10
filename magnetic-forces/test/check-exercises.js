@@ -111,6 +111,65 @@ for (const lang of ['en', 'de']) {
     }
   }
 }
+// the field-lines stages: at least 10 different exercises each (by their visible text), and the
+// field at the point of (b) worked out independently from the currents in the page (a magnet like
+// its solenoid; the axis turned up the page when vertical)
+{
+  const strip = (h) => String(h).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const STAGES = [['lines-wire', 'lines-loop'], ['lines-solenoid', 'lines-magnet']];
+  const rows = (s) => [-1.5, -1, -0.5, 0, 0.5, 1, 1.5].flatMap((x) => [{ x, y: 0.7, s }, { x, y: -0.7, s: -s }]);
+  const WIRES = { wire: (s) => [{ x: 0, y: 0, s }], loop: (s) => [{ x: 0, y: 0.85, s }, { x: 0, y: -0.85, s: -s }], solenoid: rows, magnet: rows };
+  const POINT = {
+    wire: { up: [0, 1], down: [0, -1], right: [1, 0], left: [-1, 0] },
+    loop: { mid: [0, 0], axis: [2.5, 0], side: [0, 1.15] }, solenoid: { mid: [0, 0], axis: [2.3, 0], side: [0, 0.95] },
+    magnet: { mid: [0, 0], side: [0, 0.95] },
+  };
+  for (const lang of ['en', 'de']) {
+    Lang.set(lang, true);
+    for (const types of STAGES) {
+      const seen = new Set();
+      for (const type of types) {
+        for (let seed = 1; seed <= 300; seed++) {
+          const e = X.make(type, seed), tag = `${type} ${seed} ${lang}`, qb = e.questions.find((q) => q.key === 'B');
+          seen.add(strip(e.text + e.questions.map((q) => q.label).join('|')));
+          if (/[$_]/.test(strip(e.text + qb.label + qb.options.map((o) => o.html + o.why).join(' ') + e.solution.join(' ')))) fail(`${tag}: a raw $ or _ in the text`);
+          if (qb.options.length !== 4 || qb.options.filter((o) => o.ok).length !== 1) fail(`${tag}: the field at the point not four options with one right`);
+          if (lang === 'de') continue;
+          const { src, s, vertical, at } = e.p;
+          // the magnet's poles: N at +x for s = +1 (beyond either pole on the axis, the field
+          // points along the field inside); otherwise the field of the currents there
+          let b;
+          if (src === 'magnet' && (at === 'N' || at === 'S')) b = [s, 0];
+          else { const [px, py] = POINT[src][at], f = M.planeField(WIRES[src](s), px, py); b = Math.abs(f[0]) > Math.abs(f[1]) ? [Math.sign(f[0]), 0] : [0, Math.sign(f[1])]; }
+          if (vertical) b = [-b[1], b[0]];
+          if (!qb.options.find((o) => o.ok).html.includes(`<span>${X.dirName([b[0] || 0, b[1] || 0, 0])}</span>`)) fail(`${tag}: the field at ${at} is not ${X.dirName([b[0] || 0, b[1] || 0, 0])}`);
+        }
+      }
+      if (seen.size < 10) fail(`stage ${types.join('+')} ${lang}: only ${seen.size} different exercises`);
+    }
+  }
+}
+
+// the coil in 3D next to the drawing along the axis: drawn for every coil exercise; the task shows
+// neither the forces nor the sense of rotation (both are asked), the solution shows the forces
+// (F = I·L × B: up on side 1 for a current out of the page and a field to the right) and the turn
+// in the sense of the torque (none where there is no torque)
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  for (let seed = 1; seed <= 300; seed++) {
+    const e = X.make('coil', seed), tag = `coil ${seed} ${lang} 3D`, { s: cur, bx, phi } = e.p;
+    const d3 = (html) => (html.match(/<svg class="mf coil3d"[^]*?<\/svg>/) || [''])[0], task = d3(e.figs), sol = d3(e.solFig);
+    if (!task || !sol) { fail(`${tag}: no 3D drawing`); continue; }
+    if (bad(e.figs + e.solFig)) fail(`${tag}: undefined or NaN in the drawings`);
+    if ((e.figs.match(/<figcaption>/g) || []).length !== 2) fail(`${tag}: not two captioned drawings`);
+    if (/v-force|class="turn/.test(e.figs)) fail(`${tag}: the task drawing gives away the forces or the turn`);
+    const f = [...sol.matchAll(/<line class="v-force"[^>]*y1="([-\d.]+)"[^>]*y2="([-\d.]+)"/g)].map((m) => Number(m[2]) - Number(m[1]));
+    if (f.length !== 2 || Math.sign(f[0]) !== -Math.sign(cur * bx) || Math.sign(f[1]) !== Math.sign(cur * bx)) fail(`${tag}: the forces on the sides ${f}`);
+    const tz = cur * bx * Math.cos((phi * Math.PI) / 180), arc = sol.match(/class="turn" d="M[^"]* 0 1 ([01]) /);
+    if (Math.abs(tz) < 1e-9 ? arc : !arc || arc[1] !== (tz > 0 ? '0' : '1')) fail(`${tag}: the turn does not follow the torque ${tz}`);
+  }
+}
+
 // the check: every kind of every objective, both languages
 let asked = 0;
 for (const lang of ['en', 'de']) {
