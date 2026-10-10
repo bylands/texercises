@@ -653,7 +653,7 @@
         <p>Hand rules for charges and currents, forces between currents, circles and helices of charged particles, and the velocity selector.</p>
       </div>
     </a>
-    <a class="app" href="/em-waves/" data-modes="tutor practice real arcade" data-tags="Light|Licht; Waves|Wellen">
+    <a class="app" href="/em-waves/" data-modes="tutor practice real arcade" data-tags="Light|Licht; Waves|Wellen; Concepts|Konzepte; Calculations|Berechnungen">
       <svg viewBox="0 0 240 150" role="img" aria-label="An electromagnetic wave: the electric and the magnetic field oscillate in phase, perpendicular to each other and to the direction of travel">
         <path class="axis" d="M14 80 H222 M214 74 L222 80 L214 86"/>
         <path class="force" d="M24 80.0 L28 71.3 L32 62.9 L36 55.3 L40 48.8 L44 43.6 L48 40.1 L52 38.2 L56 38.2 L60 40.1 L64 43.6 L68 48.8 L72 55.3 L76 62.9 L80 71.3 L84 80.0 L88 88.7 L92 97.1 L96 104.7 L100 111.2 L104 116.4 L108 119.9 L112 121.8 L116 121.8 L120 119.9 L124 116.4 L128 111.2 L132 104.7 L136 97.1 L140 88.7 L144 80.0 L148 71.3 L152 62.9 L156 55.3 L160 48.8 L164 43.6 L168 40.1 L172 38.2 L176 38.2 L180 40.1 L184 43.6 L188 48.8 L192 55.3 L196 62.9 L200 71.3 L204 80.0" stroke-linejoin="round"/>
@@ -667,7 +667,7 @@
         <p>The spectrum and c = λ·f, light in matter, the LC circuit, the fields E and B, intensity, polarizers, antennas and standing waves.</p>
       </div>
     </a>
-    <a class="app" href="/photons/" data-modes="tutor practice real arcade" data-tags="Quantum physics|Quantenphysik; Light|Licht">
+    <a class="app" href="/photons/" data-modes="tutor practice real arcade" data-tags="Quantum physics|Quantenphysik; Light|Licht; Concepts|Konzepte; Calculations|Berechnungen">
       <svg viewBox="0 0 240 150" role="img" aria-label="A photon hits a metal plate and knocks out an electron">
         <path class="axis" d="M150 20 V130"/>
         <path class="curve" d="M20 60 q6 -10 12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0" fill="none"/>
@@ -684,7 +684,7 @@
         <p>Photon energy and momentum, the photoelectric effect and the measurement of h, X-ray spectra and the Compton effect.</p>
       </div>
     </a>
-    <a class="app" href="/matter-waves/" data-modes="tutor practice real arcade" data-tags="Quantum physics|Quantenphysik; Waves|Wellen">
+    <a class="app" href="/matter-waves/" data-modes="tutor practice real arcade" data-tags="Quantum physics|Quantenphysik; Waves|Wellen; Concepts|Konzepte; Calculations|Berechnungen">
       <svg viewBox="0 0 240 150" role="img" aria-label="Electrons pass a double slit one at a time and build up interference fringes on a screen">
         <path class="curve" d="M18 75 q5 -10 10 0 t10 0 t10 0 t10 0 t10 0 t10 0" fill="none"/>
         <path class="axis" d="M90 20 V66 M90 72 V78 M90 84 V130"/>
@@ -908,7 +908,7 @@
       window.addEventListener('pageshow', (evt) => { if (evt.persisted) arrange(); }); // back from an app
 
       // an app /apps.json does not know yet (not in its order) shows the starter tags of its card,
-      // data-tags="Light|Licht; Waves|Wellen" (English|German), until the admin panel saves: a tag
+      // data-tags="Light|Licht; Waves|Wellen; Concepts|Konzepte; Calculations|Berechnungen" (English|German), until the admin panel saves: a tag
       // of the same English name is that tag (see hub-admin/hubadmin.py, normalize)
       function starters(c) {
         const order = Array.isArray(c.order) ? c.order : [];
