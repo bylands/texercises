@@ -43,6 +43,10 @@ class Unit(unittest.TestCase):
         modes = {a["id"]: a["modes"] for a in apps}
         self.assertEqual(modes["bulb-brightness"], ["tutor", "practice", "arcade"])
         self.assertEqual(modes["coe"], ["tutor", "practice", "real", "arcade"])
+        starters = {a["id"]: a.get("tags") for a in apps}
+        self.assertEqual(starters["photons"], [{"en": "Quantum physics", "de": "Quantenphysik"}, {"en": "Light", "de": "Licht"}])
+        self.assertIsNone(starters["coe"])
+        self.assertEqual(H.starter_tags(" Light | Licht ;; Waves ; |x"), [{"en": "Light", "de": "Licht"}, {"en": "Waves", "de": "Waves"}])
 
     def test_set_names(self):
         ids = ["coe", "torque"]
@@ -118,6 +122,17 @@ class Unit(unittest.TestCase):
         self.assertEqual(len(many["labels"]), H.MAX_TAGS)  # the names of dropped tags go too
         self.assertEqual(len(H.clean_tag("x" * 100)), H.MAX_TAG_LEN)
         self.assertEqual(H.slug("Kräfte & Bewegung"), "kraefte-bewegung")
+
+    def test_starter_tags(self):
+        # a new app gets the starter tags of its card; one of the same English name is that tag
+        ids = ["a", "b", "new"]
+        starters = {"new": [{"en": "light", "de": "Licht!"}, {"en": "Quantum physics", "de": "Quantenphysik"}], "a": [{"en": "Waves", "de": "Wellen"}]}
+        cfg = H.normalize({"order": ["a", "b"], "tags": {"b": ["l"]}, "labels": {"l": {"en": "Light", "de": "Licht"}}}, ids, starters)
+        self.assertEqual(cfg["tags"], {"b": ["l"], "new": ["l", "quantum-physics"]})  # a is known: no starters
+        self.assertEqual(cfg["labels"], {"l": {"en": "Light", "de": "Licht"}, "quantum-physics": {"en": "Quantum physics", "de": "Quantenphysik"}})
+        # once the app is known (the admin panel saved it), its tags are its own, even none
+        cfg = H.normalize({"order": ["a", "b", "new"], "tags": {}}, ids, starters)
+        self.assertEqual(cfg["tags"], {})
         self.assertTrue(H.slug("…").startswith("tag-"))
 
     def test_write(self):
