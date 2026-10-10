@@ -575,10 +575,11 @@
     const cands = angleCands(p), right = cands.find((c) => c.right), d = p.b * Math.sin(rad(p.alpha));
     return {
       key: 'd', fig: 'arm', baseVal: p.b, fn: 'sin',
-      what: L('Which of the segments drawn in dashed is the lever arm $d$ of F about D?', 'Welche der gestrichelt eingezeichneten Strecken ist der Hebelarm $d$ von F bezüglich D?'),
-      options: cands.map((c) => ({ html: segName(c.n), right: !!c.right, flag: c.flag, why: c.why })),
-      value: L(`Right: ${segName(right.n)} runs from D to the line of action and meets it at a right angle. `, `Richtig: ${segName(right.n)} führt von D zur Wirkungslinie und trifft sie rechtwinklig. `) +
-        `$d = b\\sin\\alpha = ${tq(p.b, 'cm')}\\cdot\\sin${Math.round(p.alpha * 10) / 10}^\\circ = ${tq(d, 'cm')}$`,
+      what: L('Which of the segments drawn in dashed is the lever arm $d$ of F about D? Their lengths are given.', 'Welche der gestrichelt eingezeichneten Strecken ist der Hebelarm $d$ von F bezüglich D? Ihre Längen sind angegeben.'),
+      // each with its length, so that no trigonometry is needed
+      options: cands.map((c) => ({ html: `${segName(c.n)}: ${cm(Math.round(Math.hypot(c.ends[1][0] - c.ends[0][0], c.ends[1][1] - c.ends[0][1]) * 10) / 10)}`, right: !!c.right, flag: c.flag, why: c.why })),
+      value: L(`Right: ${segName(right.n)} runs from D to the line of action and meets it at a right angle. So the lever arm is `, `Richtig: ${segName(right.n)} führt von D zur Wirkungslinie und trifft sie rechtwinklig. Der Hebelarm ist also `) +
+        `$d = ${tq(d, 'cm')}$`,
     };
   }
   // The candidates: dashed segments, each with its number in a small disc along it, placed away
@@ -612,7 +613,8 @@
       // practice: the student picks the lever arm among segments drawn in (cands); they need room
       if (o.pyth) {
         const px = BEAM_PX / len, sn = Math.sin(rad(alpha)), cs = Math.abs(Math.cos(rad(alpha)));
-        return b * px >= 150 && b * sn * px >= 40 && (b - a) * sn * px >= 26 && b * cs * px >= 26 ? { m, len, a, b, alpha, cands: true } : null;
+        const p = { m, len, a, b, alpha, cands: true }, lens = angleCands(p).map((c) => Math.round(Math.hypot(c.ends[1][0] - c.ends[0][0], c.ends[1][1] - c.ends[0][1]) * 10));
+        return b * px >= 150 && b * sn * px >= 40 && (b - a) * sn * px >= 26 && b * cs * px >= 26 && new Set(lens).size === 4 ? p : null; // four different lengths
       }
       return { m, len, a, b, alpha };
     },
@@ -674,12 +676,17 @@
       L(`Balance: m g · a = F · sin α · b, so F = m g a / (b sin α).${p.alpha === 90 ? '' : ''}`, 'Gleichgewicht: m g · a = F · sin α · b, also F = m g a / (b sin α).'),
     ],
     steps(p, v) {
+      const d = p.b * Math.sin(rad(p.alpha));
       return [
         step(L('Torque of the weight', 'Drehmoment der Gewichtskraft'),
           `<p>${L(`The weight acts at the middle, ${cm(p.a)} from D, and turns the beam counterclockwise:`, `Die Gewichtskraft greift in der Mitte an, ${cm(p.a)} von D entfernt, und dreht den Balken im Gegenuhrzeigersinn:`)}</p>$$M_\\mathrm{G} = m\\,g\\,a = ${tq(p.m, 'kg')}\\cdot ${tq(G, 'N')}/\\mathrm{kg}\\cdot ${tq(p.a / 100, 'm')} = ${tq(p.m * G * p.a / 100, 'Nm')}$$`, ['G']),
-        step(L('Torque of the rope', 'Drehmoment der Seilkraft'),
+        p.cands ? step(L('Torque of the rope', 'Drehmoment der Seilkraft'),
+          `<p>${L(`The lever arm of F is the segment from D perpendicular to the line of action, $d = ${tq(d, 'cm')}$. It turns the beam clockwise:`, `Der Hebelarm von F ist die Strecke von D senkrecht zur Wirkungslinie, $d = ${tq(d, 'cm')}$. Sie dreht den Balken im Uhrzeigersinn:`)}</p>$$M_F = F\\cdot d$$`, ['G', 'arm'])
+        : step(L('Torque of the rope', 'Drehmoment der Seilkraft'),
           `<p>${L('Only the component of F perpendicular to the beam turns it (the other pulls along the beam, through D):', 'Nur die Komponente von F senkrecht zum Balken dreht ihn (die andere zieht entlang des Balkens, durch D):')}</p>$$F_\\perp = F\\sin\\alpha,\\qquad M_F = F\\sin\\alpha\\cdot b$$<p>${L('It turns the beam clockwise.', 'Sie dreht den Balken im Uhrzeigersinn.')}</p>`, ['G', 'perp'], ['perp']),
-        step(L('Balance', 'Gleichgewicht'),
+        p.cands ? step(L('Balance', 'Gleichgewicht'),
+          `$$F\\cdot d = m\\,g\\,a\\;\\Rightarrow\\; F = \\frac{m\\,g\\,a}{d} = \\frac{${tq(p.m * G, 'N')}\\cdot ${tq(p.a, 'cm')}}{${tq(d, 'cm')}} = ${res(v.F, 'N', 1)}$$`, ['G', 'arm'], [])
+        : step(L('Balance', 'Gleichgewicht'),
           `$$F\\sin\\alpha\\cdot b = m\\,g\\,a\\;\\Rightarrow\\; F = \\frac{m\\,g\\,a}{b\\,\\sin\\alpha} = \\frac{${tq(p.m * G, 'N')}\\cdot ${tq(p.a, 'cm')}}{${tq(p.b, 'cm')}\\cdot\\sin${tq(p.alpha, 'deg', 1)}} = ${res(v.F, 'N', 1)}$$`, ['G', 'perp'], []),
       ];
     },

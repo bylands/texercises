@@ -121,6 +121,13 @@ for (const lang of ['en', 'de']) {
         if (c.options) {
           if (c.options.filter((o) => o.right).length !== 1) fail(`${id}: ${c.key} has not exactly one right option`);
           if (c.options.some((o) => !o.right && !o.why)) fail(`${id}: ${c.key} has a wrong option without an explanation`);
+          // the lever arm among segments: each with its length, all different (no trigonometry needed)
+          if (s.id === 'angle') {
+            const lens = c.options.map((o) => (o.html.match(/: ([\d.]+)\s*cm/) || [])[1]);
+            if (lens.some((x) => !x) || new Set(lens).size !== 4) fail(`${id}: segment lengths ${lens}`);
+            const d = ex.p.b * Math.sin((ex.p.alpha * Math.PI) / 180);
+            if (Math.abs(Number(lens[c.options.findIndex((o) => o.right)]) - d) > 0.051) fail(`${id}: the right segment is not ${d} cm long`);
+          }
           return;
         }
         if (c.baseVal == null) return;
