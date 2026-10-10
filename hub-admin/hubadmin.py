@@ -106,7 +106,7 @@ class _Cards(HTMLParser):
             m = re.fullmatch(r"/([a-z0-9-]+)/?", a.get("href") or "")
             if m:
                 modes = [x for x in MODES if x in (a.get("data-modes") or "").split()]
-                self.apps.append({"id": m.group(1), "name": m.group(1), "modes": modes})
+                self.apps.append({"id": m.group(1), "name": m.group(1), "modes": modes, "tags": starter_tags(a.get("data-tags"))})
                 self._in_card = True
         elif tag == "h2" and self._in_card:
             self._in_h2 = True
@@ -123,12 +123,24 @@ class _Cards(HTMLParser):
             self.apps[-1]["name"] += data
 
 
+def starter_tags(attr: Optional[str]) -> List[Dict[str, str]]:
+    """The tags a new app's card suggests, data-tags="Light|Licht; Waves|Wellen" (English|German;
+    without German, the English name): [{"en": ..., "de": ...}]."""
+    out = []
+    for part in (attr or "").split(";"):
+        en, _, de = part.partition("|")
+        en, de = clean_tag(en), clean_tag(de)
+        if en:
+            out.append({"en": en, "de": de or en})
+    return out[:MAX_TAGS]
+
+
 def hub_apps(hub_html: str) -> List[Dict[str, object]]:
-    """[{id, name, modes}] of the hub page's cards, in their order on the page (modes: those of
-    its data-modes, in the order of MODES)."""
+    """[{id, name, modes, tags?}] of the hub page's cards, in their order on the page (modes: those
+    of its data-modes, in the order of MODES; tags: the starter tags of its data-tags, if any)."""
     p = _Cards()
     p.feed(hub_html)
-    return [{"id": a["id"], "name": a["name"].strip() or a["id"], "modes": a["modes"]} for a in p.apps]
+    return [{"id": a["id"], "name": a["name"].strip() or a["id"], "modes": a["modes"], **({"tags": a["tags"]} if a["tags"] else {})} for a in p.apps]
 
 
 # ---------------------------------------------------------------------- the configuration
@@ -150,13 +162,15 @@ def slug(name: str) -> str:
     return s or "tag-" + hashlib.sha1(name.encode()).hexdigest()[:6]
 
 
-def normalize(config: object, app_ids: List[str]) -> Dict[str, object]:
+def normalize(config: object, app_ids: List[str], starters: Optional[Dict[str, List[Dict[str, str]]]] = None) -> Dict[str, object]:
     """A valid configuration for the given apps: every app once in the order (those the config
     leaves out at the end, in the hub's order); for each app the keys of its tags, distinct and at
     most MAX_TAGS; and for each tag in use its names, {"en": ..., "de": ...} (German as English if
     missing). A tag given as plain text (no key) becomes a tag of that name in both languages; two
     tags with the same English name are one. Unknown apps, unused tags and anything malformed are
-    dropped."""
+    dropped. starters: the starter tags of the apps ({id: [{"en", "de"}]}, from their cards), for an
+    app the config does not know yet (not in its order): a tag of the same English name is that
+    tag, else a new one; once the admin panel saves, the app is known and its tags are its own."""
     config = config if isinstance(config, dict) else {}
     order_in = config.get("order") if isinstance(config.get("order"), list) else []
     order = [a for i, a in enumerate(order_in) if a in app_ids and a not in order_in[:i]]
@@ -168,6 +182,8 @@ def normalize(config: object, app_ids: List[str]) -> Dict[str, object]:
 
     def tag(raw: object) -> Optional[str]:
         lab = labels_in.get(raw) if isinstance(raw, str) and KEY.fullmatch(raw) else None
+        if isinstance(raw, dict):  # a starter tag
+            lab, raw = raw, slug(clean_tag(raw.get("en")))
         if isinstance(lab, dict) and clean_tag(lab.get("en")):
             key, en = raw, clean_tag(lab.get("en"))
             de = clean_tag(lab.get("de")) or en
@@ -188,6 +204,8 @@ def normalize(config: object, app_ids: List[str]) -> Dict[str, object]:
     tags: Dict[str, List[str]] = {}
     for app in order:
         raw = tags_in.get(app) if isinstance(tags_in.get(app), list) else []
+        if app not in order_in and not raw and starters:
+            raw = starters.get(app) or []
         keys: List[str] = []
         for t in raw:
             k = tag(t)
@@ -351,7 +369,7 @@ class Admin:
 
     def current(self) -> Dict[str, object]:
         apps = self.apps()
-        cfg = normalize(read_config(self.config), [a["id"] for a in apps])
+        cfg = normalize(read_config(self.config), [a["id"] for a in apps], {a["id"]: a["tags"] for a in apps if a.get("tags")})
         return {"apps": apps, **cfg}
 
     def save(self, data: object) -> Dict[str, object]:
