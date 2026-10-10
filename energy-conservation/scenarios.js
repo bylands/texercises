@@ -1088,15 +1088,26 @@
     f: () => (V) => 4 * V.h + 2 * V.s,
     tex: () => '4\\,h + 2\\,s',
     insert: (p) => `4\\cdot ${tq(p.V.h, 'm')} + 2\\cdot ${tq(p.V.s, 'm')}`,
+    // wrong ideas, not only with the factors 2 and 4: the energy linear in the compression (2),
+    // the elastic energy added beyond s instead of all of it (3), the compression left out of one
+    // fall or both (4 h, 4 h + 3 s, 4 h − 2 s, 4 h + 4 s), or both mistakes at once (2 h + 2 s)
     traps: () => [
       { flag: 'square', f: (V) => 2 * V.h, tex: '2\\,h' },
       { flag: 'extra', f: (V) => 4 * V.h, tex: '4\\,h' },
+      { flag: 'diff', f: (V) => 3 * V.h + V.s, tex: '3\\,h + s' },
+      { flag: 'old', f: (V) => 4 * V.h + 3 * V.s, tex: '4\\,h + 3\\,s' },
+      { flag: 'first', f: (V) => 4 * V.h - 2 * V.s, tex: '4\\,h - 2\\,s' },
       { flag: 'extra', f: (V) => 4 * V.h + 4 * V.s, tex: '4\\,h + 4\\,s' },
+      { flag: 'both', f: (V) => 2 * V.h + 2 * V.s, tex: '2\\,h + 2\\,s' },
       { flag: 'square', f: (V) => 2 * V.h + V.s, tex: '2\\,h + s' },
     ],
     why: {
       square: () => L('The elastic energy grows with the square of the compression: twice the compression needs four times the energy.', 'Die Spannenergie wächst mit dem Quadrat der Stauchung: Doppelte Stauchung braucht vierfache Energie.'),
       extra: () => L("Count the fall correctly: the ball drops by h' + 2s the second time, and by h + s the first time.", "Zähle den Fall richtig: Beim zweiten Mal sinkt der Ball um h' + 2s, beim ersten Mal um h + s."),
+      diff: () => L('The spring is compressed from relaxed to 2s: it stores ½ k (2s)² = 4 · ½ k s², not only the 3 · ½ k s² added beyond s.', 'Die Feder wird von entspannt bis 2s gestaucht: Sie speichert ½ k (2s)² = 4 · ½ k s², nicht nur die 3 · ½ k s², die über s hinaus dazukommen.'),
+      old: () => L("In the second drop the ball sinks by 2s while it compresses the spring, not by s: it falls h' + 2s in all.", "Beim zweiten Versuch sinkt der Ball um 2s, während er die Feder staucht, nicht um s: Er fällt insgesamt h' + 2s."),
+      first: () => L('In the first drop the ball also sinks by s while it compresses the spring: it falls h + s, not h.', 'Auch beim ersten Versuch sinkt der Ball um s, während er die Feder staucht: Er fällt h + s, nicht h.'),
+      both: () => L("Two slips: the energy grows with the square of the compression (four times, not twice), and the ball falls h' + 2s, not h'.", "Zwei Fehler: Die Energie wächst mit dem Quadrat der Stauchung (vierfach, nicht doppelt), und der Ball fällt h' + 2s, nicht h'."),
     },
     states: (p) => { const { m, hp, s, k } = p.V; return [{ pot: m * G * (hp + 2 * s) }, { el: 0.5 * k * sq(2 * s) }]; },
     energies: () => [{ pot: pot("(h' + 2\\,s)") }, { el: el('(2\\,s)') }],

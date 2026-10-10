@@ -57,6 +57,8 @@
       // with numbers, a wrong idea that gives nearly the right value cannot be told apart
       const v = t.f(p.V);
       if (!formal && Number.isFinite(v) && Math.abs(v - f(p.V)) <= 0.03 * f(p.V)) continue;
+      // nor two wrong ideas that give nearly the same value (the first explains it)
+      if (!formal && Number.isFinite(v) && traps.some((u) => Math.abs(v - u.value) <= 0.03 * Math.abs(u.value))) continue;
       traps.push({ ...t, value: v, why: why(t.flag) });
     }
     const value = f(p.V), answer = scn.tex(p, true), sym = T(want.key);
