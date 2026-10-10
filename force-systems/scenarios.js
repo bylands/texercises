@@ -157,6 +157,7 @@
       const p = o.nice ? { m, F, alpha, ref, nice: true } : { m, F, alpha, ref };
       const up = F * (ref === 'v' ? cosOf(p) : sinOf(p));
       if (up > 0.8 * m * G || F * Math.min(sinOf(p), cosOf(p)) < 1.5 || (o.nice && F < 0.4 * m * G)) return null; // (practice: a pull large enough to draw its components)
+      if (o.nice && F * (ref === 'v' ? sinOf(p) : cosOf(p)) > m * G - up) return null; // static friction at most the normal force (μ ≤ 1)
       return p;
     },
     solve(p) {
