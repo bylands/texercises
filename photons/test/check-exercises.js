@@ -11,7 +11,11 @@
 //   every work function and stopping voltage at most two decimals,
 // - the check: every objective has kinds, a worked example and a practice topic; every kind gives
 //   four different options, exactly one right, a reason for every wrong one with a misconception
-//   flag the check knows (or none); a whole check (check.js) plans the right number of questions.
+//   flag the check knows (or none); a whole check (check.js) plans the right number of questions,
+// - questions that wait for another (after) wait for an earlier one; Einstein's equation (b), (c)
+//   wait for (a), the U₀(f) line (e) for (d),
+// - the symbols f₀, λ₀ in English and f_G, λ_G in German, everywhere (practice, tutor, check),
+// - the spectrum: the labels of the marks under the scale, apart from each other and the captions.
 'use strict';
 
 global.window = globalThis;
@@ -115,6 +119,65 @@ for (const lang of ['en', 'de']) {
   });
   // the worked examples
   A.LESSONS.forEach((l, k) => { for (const fr of l.frames()) if (bad(fr.text + fr.figure) || htmlInSvg(fr.figure)) fail(`tutor ${k + 1} ${lang}: undefined or NaN`); });
+}
+// questions that wait for another (after: key): the key is an earlier question of the same exercise;
+// Einstein's equation shows (b) and (c) only once (a) is right, since they give it away
+for (const type of X.TYPES) {
+  for (let seed = 1; seed <= SEEDS; seed++) {
+    const e = X.make(type, seed), tag = `${type} ${seed}`;
+    e.questions.forEach((q, k) => { if (q.after && !e.questions.slice(0, k).some((p) => p.key === q.after)) fail(`${tag} ${q.key}: waits for ${q.after}, which is not an earlier question`); });
+    if (type === 'photo-calc' && (e.questions[0].key !== 'out' || e.questions[0].after || e.questions.slice(1).some((q) => q.after !== 'out') || e.questions.length < 2)) fail(`${tag}: (b) and (c) must wait for (a)`);
+    if (type === 'photo-line' && e.questions.find((q) => q.key === 'metal').after !== 'slope') fail(`${tag}: (e) must wait for (d)`);
+    if (type === 'model' && e.questions[1].after !== 'obs') fail(`${tag}: (b) must wait for (a)`);
+  }
+}
+// the threshold frequency and the cut-off wavelength: f₀, λ₀ in English, f_G, λ_G in German
+{
+  const EN_NOT = /f_G|λ_G|<i>[fλ]<\/i><sub>G<\/sub>|font-style="italic">[fλ]<\/tspan><tspan font-size="72%" dy="4">G</;
+  const DE_NOT = /f₀|λ₀|<i>[fλ]<\/i><sub>0<\/sub>|font-style="italic">[fλ]<\/tspan><tspan font-size="72%" dy="4">0</;
+  for (const lang of ['en', 'de']) {
+    Lang.set(lang, true);
+    const not = lang === 'en' ? EN_NOT : DE_NOT;
+    const all = [];
+    for (const type of X.TYPES) for (let seed = 1; seed <= 40; seed++) all.push(json(X.make(type, seed)));
+    A.LESSONS.forEach((l) => { all.push(l.name(), l.idea()); for (const fr of l.frames()) all.push(fr.text + fr.figure); });
+    A.OBJECTIVES.forEach((o) => { all.push(o.name()); for (const kind of o.kinds) { const q = A.checkQuestion(kind, 3); all.push(json(q), q.explain()); } });
+    all.push(json(A.concepts()));
+    const hit = all.find((t) => not.test(t));
+    if (hit) fail(`${lang}: the wrong symbol for f₀/λ₀: …${hit.slice(Math.max(0, hit.search(not) - 60), hit.search(not) + 40)}…`);
+    // and the right one is used
+    if (!all.some((t) => (lang === 'en' ? /<sub>0<\/sub>|f₀/ : /<sub>G<\/sub>|f_G/).test(t) && /Grenz|threshold/.test(t))) fail(`${lang}: the threshold frequency symbol is missing`);
+  }
+}
+// the spectrum: the labels of the marks lie in a row of their own under the scale, apart from each
+// other and within the drawing (widths estimated: 13 px bold, 0.6 em a character)
+{
+  const lists = [];
+  for (const lang of ['en', 'de']) {
+    Lang.set(lang, true);
+    for (const type of ['energy', 'rank']) for (let seed = 1; seed <= SEEDS; seed++) lists.push(X.make(type, seed).figs);
+    A.LESSONS.forEach((l) => { for (const fr of l.frames()) lists.push(fr.figure); });
+  }
+  lists.push(G.bar([{ nm: 400, label: '3.10 eV' }, { nm: 413, label: '3.00 eV' }, { nm: 420, label: '2.95 eV' }]), G.bar([{ nm: 100, label: '12.40 eV' }, { nm: 1000, label: '1.24 eV' }]));
+  let bars = 0;
+  for (const html of lists) {
+    for (const svg of String(html).match(/<svg class="ph bar"[\s\S]*?<\/svg>/g) || []) {
+      bars++;
+      const W = Number(svg.match(/viewBox="0 0 (\d+)/)[1]);
+      const labels = [...svg.matchAll(/<text class="lbl small strong" x="([\d.]+)" y="([\d.]+)" text-anchor="middle">([^<]*)<\/text>/g)].map((m) => ({ x: Number(m[1]), y: Number(m[2]), w: m[3].length * 13 * 0.6 }));
+      const ticks = [...svg.matchAll(/<text class="tick"[^>]* y="([\d.]+)"/g)].map((m) => Number(m[1]));
+      const caps = [...svg.matchAll(/<text class="lbl small" x="[\d.]+" y="([\d.]+)"/g)].map((m) => Number(m[1])).filter((y) => y > 30);
+      const arrows = [...svg.matchAll(/class="mark-arrow" d="M([\d.]+) ([\d.]+)/g)].map((m) => Number(m[2]));
+      for (const l of labels) {
+        if (l.y - 10 < Math.max(...ticks) + 4 || arrows.some((y) => l.y - 10 < y + 8)) fail(`spectrum: a label on top of the scale or an arrow (${l.y})`);
+        if (caps.some((y) => Math.abs(y - l.y) < 14)) fail('spectrum: a label on top of the captions');
+        if (l.x - l.w / 2 < 0 || l.x + l.w / 2 > W) fail(`spectrum: a label outside the drawing (${l.x})`);
+      }
+      if (arrows.some((y) => y < Math.max(...ticks) + 3)) fail('spectrum: an arrow on top of the numbers of the scale');
+      labels.sort((a, b) => a.x - b.x).forEach((l, k) => { if (k && l.x - l.w / 2 < labels[k - 1].x + labels[k - 1].w / 2 + 2) fail(`spectrum: two labels overlap (${labels[k - 1].x}, ${l.x})`); });
+    }
+  }
+  if (bars < 100) fail(`spectrum: only ${bars} drawings checked`);
 }
 // a whole check: the plan of check.js gives every objective its share of questions
 {

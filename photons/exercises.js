@@ -18,7 +18,7 @@
 //   energy, rank                  photon energy, and brightness (photons per second) against it
 //   photo-calc                    Einstein's equation h·f = W + E_kin,max and the stopping voltage
 //   photo-curve                   the current of a photocell against the voltage
-//   photo-line                    the stopping voltage against the frequency: f_G, λ_G, W and h/e
+//   photo-line                    the stopping voltage against the frequency: f₀, λ₀ (German f_G, λ_G), W and h/e
 (function (root) {
   'use strict';
 
@@ -194,7 +194,7 @@
       const table = `<table class="data"><tr><th></th><th>${L('source', 'Quelle')}</th><th>${lam}</th><th>${i('P')}</th></tr>${srcs.map((s, k) => `<tr><td><b>${tag[k]}</b></td><td>${nameOf(s)}</td><td>${s.nm} nm</td><td>${s.mW} mW</td></tr>`).join('')}</table>`;
       const qE = srcs.map((s, k) => [tag[k], k === iE, k === iP ? L('The power is the energy per second, not the energy of one photon. That depends only on the wavelength.', 'Die Leistung ist die Energie pro Sekunde, nicht die Energie eines Photons. Diese hängt nur von der Wellenlänge ab.') : WHY.inverse(), k === iP ? 'intensity' : 'inverse']);
       qE.push([L('all the same', 'alle gleich'), false, L('Photons of different wavelengths carry different energies.', 'Photonen verschiedener Wellenlänge tragen verschiedene Energien.'), 'other']);
-      const qN = srcs.map((s, k) => [tag[k], k === iN, k === iE ? L('Its photons carry the most energy each: the same power needs fewer of them.', 'Seine Photonen tragen je am meisten Energie: Für dieselbe Leistung braucht es weniger davon.') : L('Photons per second = power / photon energy: both matter.', 'Photonen pro Sekunde = Leistung / Photonenenergie: Beides zählt.'), k === iE ? 'inverse' : 'other']);
+      const qN = srcs.map((s, k) => [tag[k], k === iN, k === iE ? L('Energetic photons: the same power needs fewer of them. Compare P·λ, not the power alone.', 'Energiereiche Photonen: Für dieselbe Leistung braucht es weniger davon. Vergleiche P·λ, nicht nur die Leistung.') : L('Photons per second = power / photon energy: both matter.', 'Photonen pro Sekunde = Leistung / Photonenenergie: Beides zählt.'), k === iE ? 'inverse' : 'other']);
       return {
         title: L('Energetic photons or many photons?', 'Energiereiche Photonen oder viele Photonen?'),
         text: `<p>${L('Three light sources:', 'Drei Lichtquellen:')}</p>${table}`,
@@ -230,18 +230,20 @@
         [L('only after the light has shone for a while', 'erst nachdem das Licht eine Weile geschienen hat'), false, L('An electron cannot collect the energy of several photons: one photon is enough at once, or never.', 'Ein Elektron kann die Energie mehrerer Photonen nicht sammeln: Ein Photon genügt sofort, oder nie.'), 'wave'],
       ], true));
       const qs = [qOut];
+      // (b) and (c) give (a) away (a kinetic energy to work out, or what would release electrons):
+      // they are shown once (a) is right
       if (out) {
-        qs.push(numQ('ek', L('(b) the kinetic energy of the fastest electrons', '(b) die kinetische Energie der schnellsten Elektronen'), `${Ek}${sb(',max')}`, 'eV', ek, { tol: 0.02, abs: 0.012, wrong: [{ value: eV, tag: 'noW', why: WHY.noW() }, { value: eV + m.W, tag: 'addW', why: WHY.addW() }] }));
-        qs.push(numQ('U0', L('(c) the stopping voltage', '(c) die Gegenspannung'), U0, 'V', ek, { tol: 0.02, abs: 0.012, wrong: [{ value: eV, tag: 'noW', why: WHY.noW() }, { value: eV + m.W, tag: 'addW', why: WHY.addW() }] }));
+        qs.push({ ...numQ('ek', L('(b) the kinetic energy of the fastest electrons', '(b) die kinetische Energie der schnellsten Elektronen'), `${Ek}${sb(',max')}`, 'eV', ek, { tol: 0.02, abs: 0.012, wrong: [{ value: eV, tag: 'noW', why: WHY.noW() }, { value: eV + m.W, tag: 'addW', why: WHY.addW() }] }), after: 'out' });
+        qs.push({ ...numQ('U0', L('(c) the stopping voltage', '(c) die Gegenspannung'), U0, 'V', ek, { tol: 0.02, abs: 0.012, wrong: [{ value: eV, tag: 'noW', why: WHY.noW() }, { value: eV + m.W, tag: 'addW', why: WHY.addW() }] }), after: 'out' });
       } else {
         const shorter = li.f14 ? L('light of a higher frequency', 'Licht höherer Frequenz') : L('light of a shorter wavelength', 'Licht kürzerer Wellenlänge');
         const longer = li.f14 ? L('light of a lower frequency', 'Licht tieferer Frequenz') : L('light of a longer wavelength', 'Licht längerer Wellenlänge');
-        qs.push(choice('light', L('(b) What would release electrons from this cathode?', '(b) Womit liessen sich aus dieser Kathode Elektronen auslösen?'), opts(r, [
+        qs.push({ ...choice('light', L('(b) What would release electrons from this cathode?', '(b) Womit liessen sich aus dieser Kathode Elektronen auslösen?'), opts(r, [
           [shorter, true],
           [L('brighter light of the same colour', 'helleres Licht derselben Farbe'), false, WHY.bright(), 'intensity'],
           [L('the same light, shone for longer', 'dasselbe Licht, länger eingestrahlt'), false, L('An electron cannot collect the energy of several photons: one photon must be enough.', 'Ein Elektron kann die Energie mehrerer Photonen nicht sammeln: Ein Photon muss genügen.'), 'wave'],
           [longer, false, WHY.inverse(), 'inverse'],
-        ])));
+        ])), after: 'out' });
       }
       return {
         title: L('Einstein’s equation', 'Einsteins Gleichung'),
@@ -259,7 +261,7 @@
           out ? L(`(a) ${e2(eV)} eV > ${m.W} eV: <b>yes</b>. (b) What is left after the work function: ${Ek}${sb(',max')} = ${h}·${f} − ${W} = ${e2(eV)} eV − ${m.W} eV = <b>${e2(ek)} eV</b>.`, `(a) ${e2(eV)} eV > ${m.W} eV: <b>ja</b>. (b) Was nach der Austrittsarbeit übrig bleibt: ${Ek}${sb(',max')} = ${h}·${f} − ${W} = ${e2(eV)} eV − ${m.W} eV = <b>${e2(ek)} eV</b>.`)
             : L(`(a) ${e2(eV)} eV < ${m.W} eV: one photon does not have enough energy, so <b>no</b> electrons are released, however bright the light.`, `(a) ${e2(eV)} eV < ${m.W} eV: Ein Photon hat nicht genug Energie, also werden <b>keine</b> Elektronen ausgelöst, wie hell das Licht auch ist.`),
           out ? L(`(c) ${i('e')}·${U0} = ${Ek}${sb(',max')}, so ${U0} = <b>${e2(ek)} V</b>: an energy of ${e2(ek)} eV is stopped by ${e2(ek)} V.`, `(c) ${i('e')}·${U0} = ${Ek}${sb(',max')}, also ${U0} = <b>${e2(ek)} V</b>: Eine Energie von ${e2(ek)} eV wird von ${e2(ek)} V gestoppt.`)
-            : L(`(b) The photons must carry at least ${m.W} eV each: <b>${li.f14 ? 'light of a higher frequency' : 'light of a shorter wavelength'}</b>, below ${lam}${sb('G')} = 1240 eV·nm / ${m.W} eV ≈ ${Math.round(HC / m.W / 10) * 10} nm. Brighter light or a longer wait does not help.`, `(b) Die Photonen müssen je mindestens ${m.W} eV tragen: <b>${li.f14 ? 'Licht höherer Frequenz' : 'Licht kürzerer Wellenlänge'}</b>, unter ${lam}${sb('G')} = 1240 eV·nm / ${m.W} eV ≈ ${Math.round(HC / m.W / 10) * 10} nm. Helleres Licht oder längeres Warten hilft nicht.`),
+            : L(`(b) The photons must carry at least ${m.W} eV each: <b>${li.f14 ? 'light of a higher frequency' : 'light of a shorter wavelength'}</b>, below ${lam}${sb('0')} = 1240 eV·nm / ${m.W} eV ≈ ${Math.round(HC / m.W / 10) * 10} nm. Brighter light or a longer wait does not help.`, `(b) Die Photonen müssen je mindestens ${m.W} eV tragen: <b>${li.f14 ? 'Licht höherer Frequenz' : 'Licht kürzerer Wellenlänge'}</b>, unter ${lam}${sb('G')} = 1240 eV·nm / ${m.W} eV ≈ ${Math.round(HC / m.W / 10) * 10} nm. Helleres Licht oder längeres Warten hilft nicht.`),
         ],
         solFig: fig(G.bars(eV, m.W)),
         p: { m: m.id, nm: Math.round(li.nm) },
@@ -334,14 +336,14 @@
 
   // ---------------------------------------------------------------- the U₀(f) graph
   // The stopping voltage against the frequency: U₀ = (h/e)·f − W/e, a straight line of slope
-  // h/e = 0.414 V per 10¹⁴ Hz. Threshold frequencies with a round cut-off wavelength (λ_G = c/f_G)
-  // and a work function W = h·f_G that is easy to work out.
+  // h/e = 0.414 V per 10¹⁴ Hz. Threshold frequencies with a round cut-off wavelength (λ₀ = c/f₀; in German λ_G, f_G)
+  // and a work function W = h·f₀ that is easy to work out.
   const LINE_FG = [5, 6, 7.5, 10];
   function photoLine(seed) {
     const r = rng(seed * 59 + 23);
     const fg = LINE_FG[seed % LINE_FG.length], slope = P.hEV * 1e14, Wm = slope * fg, lg = 3000 / fg;
     const pts = [1, 2, 3.5, 5].map((d) => [fg + d, P.round(slope * d, 3)]);
-    const line = { slope, icept: -Wm }, fG = `${i('f')}${sb('G')}`, lG = `${lam}${sb('G')}`;
+    const line = { slope, icept: -Wm }, fG = `${i('f')}${sb(L('0', 'G'))}`, lG = `${lam}${sb(L('0', 'G'))}`;
     const larger = r.next() < 0.5;
     return {
       title: L('The stopping voltage against the frequency', 'Die Gegenspannung gegen die Frequenz'),
@@ -357,12 +359,13 @@
           [L('e/h, the same for every metal', 'e/h, für jedes Metall gleich'), false, L('e·U₀ = h·f − W, so U₀ = (h/e)·f − W/e: the slope is h/e.', 'e·U₀ = h·f − W, also U₀ = (h/e)·f − W/e: Die Steigung ist h/e.'), 'slope'],
           [L('larger, the brighter the light', 'umso grösser, je heller das Licht'), false, L('The brightness changes the current, not the stopping voltage: it does not appear in U₀ = (h/e)·f − W/e.', 'Die Helligkeit ändert den Strom, nicht die Gegenspannung: Sie kommt in U₀ = (h/e)·f − W/e nicht vor.'), 'intensity'],
         ])),
-        choice('metal', L(`(e) The cathode is replaced by one with a ${larger ? 'larger' : 'smaller'} work function. Its line is`, `(e) Die Kathode wird durch eine mit ${larger ? 'grösserer' : 'kleinerer'} Austrittsarbeit ersetzt. Ihre Gerade ist`), opts(r, [
-          [L('parallel to this one, shifted to higher frequencies', 'parallel zu dieser, zu höheren Frequenzen verschoben'), larger, L('f_G = W/h: a smaller work function means a lower threshold frequency.', 'f_G = W/h: Eine kleinere Austrittsarbeit bedeutet eine tiefere Grenzfrequenz.'), 'threshold'],
-          [L('parallel to this one, shifted to lower frequencies', 'parallel zu dieser, zu tieferen Frequenzen verschoben'), !larger, L('f_G = W/h: a larger work function means a higher threshold frequency.', 'f_G = W/h: Eine grössere Austrittsarbeit bedeutet eine höhere Grenzfrequenz.'), 'threshold'],
-          [L('steeper, from the same threshold frequency', 'steiler, ab derselben Grenzfrequenz'), false, L('The slope is h/e for every metal; the threshold frequency f_G = W/h changes.', 'Die Steigung ist für jedes Metall h/e; die Grenzfrequenz f_G = W/h ändert sich.'), 'slope'],
-          [L('flatter, from the same threshold frequency', 'flacher, ab derselben Grenzfrequenz'), false, L('The slope is h/e for every metal; the threshold frequency f_G = W/h changes.', 'Die Steigung ist für jedes Metall h/e; die Grenzfrequenz f_G = W/h ändert sich.'), 'slope'],
-        ], true)),
+        // (e): its explanations name the answer of (d), the slope h/e for every metal; shown once (d) is right
+        { ...choice('metal', L(`(e) The cathode is replaced by one with a ${larger ? 'larger' : 'smaller'} work function. Its line is`, `(e) Die Kathode wird durch eine mit ${larger ? 'grösserer' : 'kleinerer'} Austrittsarbeit ersetzt. Ihre Gerade ist`), opts(r, [
+          [L('parallel to this one, shifted to higher frequencies', 'parallel zu dieser, zu höheren Frequenzen verschoben'), larger, L('f₀ = W/h: a smaller work function means a lower threshold frequency.', 'f_G = W/h: Eine kleinere Austrittsarbeit bedeutet eine tiefere Grenzfrequenz.'), 'threshold'],
+          [L('parallel to this one, shifted to lower frequencies', 'parallel zu dieser, zu tieferen Frequenzen verschoben'), !larger, L('f₀ = W/h: a larger work function means a higher threshold frequency.', 'f_G = W/h: Eine grössere Austrittsarbeit bedeutet eine höhere Grenzfrequenz.'), 'threshold'],
+          [L('steeper, from the same threshold frequency', 'steiler, ab derselben Grenzfrequenz'), false, L('The slope is h/e for every metal; the threshold frequency f₀ = W/h changes.', 'Die Steigung ist für jedes Metall h/e; die Grenzfrequenz f_G = W/h ändert sich.'), 'slope'],
+          [L('flatter, from the same threshold frequency', 'flacher, ab derselben Grenzfrequenz'), false, L('The slope is h/e for every metal; the threshold frequency f₀ = W/h changes.', 'Die Steigung ist für jedes Metall h/e; die Grenzfrequenz f_G = W/h ändert sich.'), 'slope'],
+        ], true)), after: 'slope' },
       ],
       hints: [
         L(`Einstein: ${i('e')}·${U0} = ${h}·${f} − ${W}, so ${U0} = (${h}/${i('e')})·${f} − ${W}/${i('e')}: a straight line.`, `Einstein: ${i('e')}·${U0} = ${h}·${f} − ${W}, also ${U0} = (${h}/${i('e')})·${f} − ${W}/${i('e')}: eine Gerade.`),
@@ -392,7 +395,7 @@
     [() => L('Light of higher frequency releases faster electrons.', 'Licht höherer Frequenz löst schnellere Elektronen aus.'), true, () => L('E_kin,max = h·f − W grows with f.', 'E_kin,max = h·f − W wächst mit f.')],
     [() => L('The kinetic energy of the fastest electrons is proportional to the frequency.', 'Die kinetische Energie der schnellsten Elektronen ist proportional zur Frequenz.'), false, () => L('E_kin,max = h·f − W: a straight line, but not through the origin.', 'E_kin,max = h·f − W: eine Gerade, aber nicht durch den Ursprung.')],
     [() => L('The slope of the U₀(f) line is the same for every metal.', 'Die Steigung der U₀(f)-Geraden ist für jedes Metall gleich.'), true, () => L('The slope is h/e; only the threshold frequency differs.', 'Die Steigung ist h/e; nur die Grenzfrequenz ist verschieden.')],
-    [() => L('A metal with a larger work function has a higher threshold frequency.', 'Ein Metall mit grösserer Austrittsarbeit hat eine höhere Grenzfrequenz.'), true, () => L('f_G = W/h.', 'f_G = W/h.')],
+    [() => L('A metal with a larger work function has a higher threshold frequency.', 'Ein Metall mit grösserer Austrittsarbeit hat eine höhere Grenzfrequenz.'), true, () => L('f₀ = W/h.', 'f_G = W/h.')],
     [() => L('A photon of blue light has more energy than a photon of red light.', 'Ein Photon blauen Lichts hat mehr Energie als ein Photon roten Lichts.'), true, () => L('Blue light has the shorter wavelength, the higher frequency.', 'Blaues Licht hat die kürzere Wellenlänge, die höhere Frequenz.')],
     [() => L('A 100 W infrared lamp emits more energetic photons than a 1 mW UV LED.', 'Eine 100-W-Infrarotlampe sendet energiereichere Photonen aus als eine 1-mW-UV-LED.'), false, () => L('The power counts the photons, not their energy: UV photons carry more energy each.', 'Die Leistung zählt die Photonen, nicht ihre Energie: UV-Photonen tragen je mehr Energie.')],
     [() => L('One electron takes up the energy of exactly one photon.', 'Ein Elektron nimmt die Energie von genau einem Photon auf.'), true, () => L('That is why only the photon energy decides whether it gets out.', 'Deshalb entscheidet nur die Photonenenergie, ob es herauskommt.')],
