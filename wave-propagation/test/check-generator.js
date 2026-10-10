@@ -11,7 +11,13 @@
 // - standing waves: the right picture has a node at each fixed end and an antinode at each free
 //   end, evenly spaced, the wrong ones not; choice questions have four options; in "find the
 //   error" exactly the wrong sketch is the answer (the reflection the wrong way up, or an antinode
-//   at a fixed end).
+//   at a fixed end),
+// - y(t) near the end (reflyt): the graph marked right is the incoming crest plus its reflection,
+//   computed here from the profile (the reflection: the crest as it would be at 2E − x, upside
+//   down at a fixed end), the others differ from it; at least 10 distinct exercises,
+// - the tutor's first crest (BUMP) is smooth and lopsided, its front steeper than its back,
+// - a drawing exercise has the same scales as its given diagram (from 0 to the same end, as
+//   high), and every height to draw fits on it.
 'use strict';
 
 const Lang = require('../lang.js');
@@ -48,8 +54,8 @@ for (const sh of [...Object.values(W.LIN), ...Object.values(W.SMOOTH)]) {
 // ---------------------------------------------------------------- exercises
 const TYPES = ['move-lin', 'move-smooth', 'yt-lin', 'yt-smooth', 'ty-lin', 'ty-smooth', 'medium-lin', 'medium-smooth', 'speed-x', 'speed-t', 'speed-len', 'sup-lin', 'sup-smooth',
   'refl-fixed', 'refl-free', 'refl-smooth', 'reflsum-lin', 'reflsum-smooth', 'mirror-lin', 'mirror-smooth', 'end-lin', 'end-smooth', 'draw-sup', 'draw-refl', 'draw-reflsum',
-  'stand-pic', 'stand-count', 'stand-ratio', 'error-refl', 'error-stand'];
-const NEW = new Set(['stand-pic', 'stand-count', 'stand-ratio', 'error-refl', 'error-stand']);
+  'stand-pic', 'stand-count', 'stand-ratio', 'error-refl', 'error-stand', 'reflyt-lin', 'reflyt-smooth'];
+const NEW = new Set(['stand-pic', 'stand-count', 'stand-ratio', 'error-refl', 'error-stand', 'reflyt-lin', 'reflyt-smooth']);
 let n = 0;
 for (const lang of ['en', 'de']) {
   Lang.set(lang, true);
@@ -110,7 +116,36 @@ for (const lang of ['en', 'de']) {
         const d = e.fig.std, lam = (4 * d.len) / d.q, lam1 = 4 * d.len / (d.ends[0] === d.ends[1] ? 2 : 1), ok = e.questions[0].options.find((o) => o.ok);
         if (e.variant === 'count' ? !near(ok.value, lam) : ok.label !== `λ₁/${Math.round(lam1 / lam)}`) fail(`${tag}: the wavelength`);
       }
+      if (e.kind === 'reflyt') {
+        // independently: the profile of the incoming crest at xp and, upside down at a fixed end,
+        // at the mirror place 2E − xp (where it would be without the end)
+        const { x0, E, v, d, type } = e.p, sh = W.LIN[e.p.sh] || W.SMOOTH[e.p.sh], xp = E - d, s = type === 'fixed' ? -1 : 1;
+        const want = (t) => W.prof(sh, xp - x0 - v * t) + s * W.prof(sh, 2 * E - xp - x0 - v * t);
+        const opts = e.questions[0].options, ok = opts.find((o) => o.ok);
+        if (!sh || e.fig.marks[0].x !== xp) fail(`${tag}: the place`);
+        let overlap = false, worst = 0;
+        for (let t = 0; t <= ok.fig.hi; t += 0.01) {
+          if (Math.abs(ok.fig.curves[0].f(t) - want(t)) > 1e-6) worst++;
+          if (W.prof(sh, xp - x0 - v * t) !== 0 && W.prof(sh, 2 * E - xp - x0 - v * t) !== 0) overlap = true;
+          if (Math.abs(W.ev(e.sc.pulses[0], E, t) * (s > 0 ? 2 : 0) - W.y(e.sc, E, t)) > 1e-6) worst++;
+        }
+        if (worst) fail(`${tag}: the right y(t) graph differs from the superposition`);
+        if (!overlap) fail(`${tag}: the incoming and the reflected crest do not overlap at the place`);
+        if (ok.fig.curves.length !== 1) fail(`${tag}: the right graph has ${ok.fig.curves.length} curves`);
+        for (const o of opts) if (!o.ok) {
+          let diff = 0;
+          for (let t = 0; t <= o.fig.hi; t += 0.02) diff = Math.max(diff, ...o.fig.curves.map((c) => Math.abs(c.f(t) - want(t))));
+          if (diff < 0.5) fail(`${tag}: a wrong graph (${o.tag}) looks like the right one`);
+        }
+        if (seed <= 15 && /NaN|undefined/.test(P.frame({ ...e.solAnim, arrows: true }, e.solAnim.t1 / 2))) fail(`${tag}: solution animation`);
+      }
       if (e.kind === 'draw') {
+        // the same scales as the given diagram, and every height fits on it
+        if (e.fig.lo !== 0 || e.fig.hi !== e.draw.hi || e.fig.Y !== e.draw.Y || e.solFig.Y !== e.draw.Y) fail(`${tag}: the drawing and the given diagram differ in scale`);
+        const sg = P.scales(e.fig), sd = P.scales({ ...W.snap(() => 0, { hi: e.draw.hi, Y: e.draw.Y }) });
+        for (const v of [0, 1.5, e.draw.hi]) if (sg.x(v) !== sd.x(v)) fail(`${tag}: the grid lines do not line up`);
+        for (const v of [-3, 5]) if (sg.y(v) !== sd.y(v)) fail(`${tag}: the heights do not line up`);
+        if (e.target.some((v) => Math.abs(v) > Math.floor(e.draw.Y))) fail(`${tag}: a height to draw beyond the diagram`);
         if (!e.target.every((v) => Number.isInteger(v)) || e.target.every((v) => v === 0)) fail(`${tag}: the heights to draw`);
         e.xs.forEach((x, i) => { if (!near(W.y(e.sc, x, e.t), e.target[i])) fail(`${tag}: a height to draw`); });
       }
@@ -127,6 +162,35 @@ for (const lang of ['en', 'de']) {
     if (/[$_]/.test(e.text + e.solution.join('') + e.questions[0].options.map((o) => (o.label || '') + o.why).join(''))) fail(`${lang} stand-ratio-${seed}: raw $ or _ in a text`);
   }
   if (seen.size < 12) fail(`${lang} stand-ratio: only ${seen.size} distinct exercises`);
+}
+// y(t) near the end: at least 10 distinct exercises in each level, by text and graphs
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  for (const type of ['reflyt-lin', 'reflyt-smooth']) {
+    const seen = new Set();
+    for (let seed = 1; seed <= 200; seed++) { const e = W.generate(type, seed); seen.add(e.text + '|' + e.questions[0].options.map((o) => W.sig(o.fig)).sort().join(',')); }
+    if (seen.size < 10) fail(`${lang} ${type}: only ${seen.size} distinct exercises`);
+  }
+}
+
+// the tutor's first crest: smooth (no jumps), lopsided, the front (right) steeper than the back
+{
+  const B = W.BUMP, h = 1e-3;
+  let jump = 0, asym = 0, back = 0, front = 0, top = 0;
+  for (let u = 0; u <= B.w; u += 0.01) {
+    jump = Math.max(jump, Math.abs(W.prof(B, u + 0.01) - W.prof(B, u)));
+    asym = Math.max(asym, Math.abs(W.prof(B, u) - W.prof(B, B.w - u)));
+    const sl = (W.prof(B, u + h) - W.prof(B, u - h)) / (2 * h);
+    if (u < B.w / 2) back = Math.max(back, sl); else front = Math.max(front, -sl);
+    top = Math.max(top, W.prof(B, u));
+  }
+  if (jump > 0.3) fail('BUMP: not smooth');
+  if (asym < 1) fail('BUMP: not lopsided');
+  if (!(front > 2 * back)) fail(`BUMP: its front (${front}) not steeper than its back (${back})`);
+  if (!near(top, 5, 1e-3) || !near(W.prof(B, 0), 0) || !near(W.prof(B, B.w), 0, 1e-9)) fail('BUMP: its height or its ends');
+  // its y(t) graph at a place is its picture reversed: the steep side first
+  const p = W.pulse(B, 1, 1, 2);
+  for (let t = 0.5; t <= 1.5; t += 0.05) if (!near(W.ev(p, 4, t), W.prof(B, 3 - 2 * t))) fail('BUMP: y(t) not the picture reversed');
 }
 console.log(`exercises: ${n}`);
 

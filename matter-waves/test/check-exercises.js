@@ -14,6 +14,7 @@
 // - the de Broglie stages (by ratios, other particles, diffraction): at least 10 different
 //   exercises each; the voltage from the wavelength (U = k²·150 V), the same momentum (all the
 //   same wavelength), voltages changed by 4 or 9/4,
+// - the voltage is V in English and U in German,
 // - the worked examples.
 'use strict';
 
@@ -130,6 +131,16 @@ for (const lang of ['en', 'de']) {
   }
   // the worked examples
   A.LESSONS.forEach((l, k) => { for (const fr of l.frames()) if (bad(fr.text + fr.figure) || htmlInSvg(fr.figure)) fail(`tutor ${k + 1} ${lang}: undefined or NaN`); });
+  // the voltage: V in English, U in German (as a symbol, not the unit)
+  {
+    const texts = [];
+    for (const type of X.TYPES) for (let seed = 1; seed <= 40; seed++) texts.push(json(X.make(type, seed)));
+    A.LESSONS.forEach((l) => { for (const fr of l.frames()) texts.push(fr.text + fr.figure); });
+    const all = texts.join(' '), sym = (c) => new RegExp(`<i>${c}</i>|>${c}<|[√·(]${c}\\b|\\b${c} [=∝]`);
+    if (lang === 'en' && sym('U').test(all)) fail(`en: the voltage written as U: ${all.match(sym('U'))[0]}`);
+    if (lang === 'en' && !/<i>V<\/i>/.test(all)) fail('en: no voltage V');
+    if (lang === 'de' && !/<i>U<\/i>/.test(all)) fail('de: no voltage U');
+  }
 }
 console.log(`${X.TYPES.length} types × ${SEEDS} seeds, ${A.OBJECTIVES.length} objectives of the check and ${A.LESSONS.length} worked examples, in both languages`);
 if (failures) { console.error(`${failures} failures`); process.exit(1); }

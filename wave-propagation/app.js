@@ -17,6 +17,8 @@
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
       correct: 'Correct', notThis: 'Not this one: check your reasoning, or take a hint.', stmtsWrong: (n) => (n === 1 ? 'One statement is judged wrong.' : `${n} statements are judged wrong.`), option: (k) => `Option ${k}`, drawWrong: (n) => `${n} grid ${n === 1 ? 'line is' : 'lines are'} not right yet (marked).`,
       tutorNote: 'Use the arrow keys ← → to step through. ▶ plays an animation; the slider moves through time.',
+      drawHow: 'Drag each point up or down to the height of the rope (or use the keys ← → and ↑ ↓). Point at the diagram above to read off its displacement there.',
+      animNoteDraw: 'The animation shows how the rope got there and stops at the state given. With ▶ or the slider you can move the crests on yourself (two crests running towards each other one by one). The time is not shown, and only the crests themselves are drawn, not the rope they make together: that appears once you have solved the exercise. The faded line is the rope in the state given.',
       given: 'Given', animLead: 'The animation shows how the rope got there; ▶ plays it again.', animNote: 'The animation shows how the rope got there and stops at the state given. With ▶ or the slider you can move the crests on yourself (two crests running towards each other one by one). The time is not shown, and only the crests themselves are drawn (an incoming crest also behind the end, in the shaded part), not the rope they make together: that appears once you have solved the exercise. The faded line is the rope in the state given.',
     },
     de: {
@@ -29,6 +31,8 @@
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
       correct: 'Richtig', notThis: 'Das stimmt nicht: Überprüfe deine Überlegung, oder nimm einen Hinweis.', stmtsWrong: (n) => (n === 1 ? 'Eine Aussage ist falsch beurteilt.' : `${n} Aussagen sind falsch beurteilt.`), option: (k) => `Antwort ${k}`, drawWrong: (n) => `${n} ${n === 1 ? 'Gitterlinie stimmt' : 'Gitterlinien stimmen'} noch nicht (markiert).`,
       tutorNote: 'Mit den Pfeiltasten ← → blätterst du weiter. ▶ spielt eine Animation ab; mit dem Schieber bewegst du dich durch die Zeit.',
+      drawHow: 'Zieh jeden Punkt nach oben oder unten auf die Höhe des Seils (oder mit den Tasten ← → und ↑ ↓). Zeig auf das Diagramm oben, um dort seine Auslenkung abzulesen.',
+      animNoteDraw: 'Die Animation zeigt, wie das Seil dorthin kam, und hält beim gegebenen Zustand an. Mit ▶ oder dem Schieber kannst du die Buckel selbst weiterbewegen (zwei aufeinander zulaufende Buckel einzeln). Die Zeit wird nicht angezeigt, und es werden nur die Buckel selbst gezeichnet, nicht das Seil, das sie zusammen ergeben: Das erscheint, sobald du die Aufgabe gelöst hast. Die blasse Linie ist das Seil im gegebenen Zustand.',
       given: 'Gegeben', animLead: 'Die Animation zeigt, wie das Seil dorthin kam; ▶ spielt sie nochmals ab.', animNote: 'Die Animation zeigt, wie das Seil dorthin kam, und hält beim gegebenen Zustand an. Mit ▶ oder dem Schieber kannst du die Buckel selbst weiterbewegen (zwei aufeinander zulaufende Buckel einzeln). Die Zeit wird nicht angezeigt, und es werden nur die Buckel selbst gezeichnet (ein einlaufender Buckel auch hinter dem Ende, im schattierten Teil), nicht das Seil, das sie zusammen ergeben: Das erscheint, sobald du die Aufgabe gelöst hast. Die blasse Linie ist das Seil im gegebenen Zustand.',
     },
   };
@@ -43,7 +47,7 @@
     move: () => L('A crest travels', 'Ein Buckel läuft'), yt: () => L('The y(t) graph', 'Das y(t)-Bild'), ty: () => L('From y(t) to the rope', 'Vom y(t)-Bild zum Seil'),
     medium: () => L('How the rope moves', 'Wie sich das Seil bewegt'), speed: () => L('Speed and timing', 'Geschwindigkeit und Zeit'), sup: () => L('Two crests meet', 'Zwei Buckel begegnen sich'),
     refl: () => L('Reflection', 'Reflexion'), reflsum: () => L('Reflection with overlap', 'Reflexion mit Überlagerung'), mirror: () => L('The mirror crest', 'Der Spiegelbuckel'),
-    end: () => L('The end itself', 'Das Ende selbst'), draw: () => L('Draw the rope', 'Zeichne das Seil'),
+    end: () => L('The end itself', 'Das Ende selbst'), reflyt: () => L('y(t) near the end', 'y(t) nahe beim Ende'), draw: () => L('Draw the rope', 'Zeichne das Seil'),
     stand: () => L('Standing waves', 'Stehende Wellen'), error: () => L('Find the error', 'Finde den Fehler'),
   };
 
@@ -80,11 +84,14 @@
       if (e.kind === 'medium') return `<div class="fig">${animSlot(base)}</div>`;
       const sc = e.anim.sc, split = !sc.end && sc.pulses.length === 2 && sc.pulses[0].dir !== sc.pulses[1].dir;
       const t1 = Math.min(15, Math.max(gone(sc, f.hi), (e.t || 0) + 2, e.anim.t1 + 2));
-      const end = !!sc.end, several = split || sc.pulses.length > 1;
+      const end = !!sc.end, several = split || sc.pulses.length > 1, draw = e.kind === 'draw';
+      // to draw: the same scales as the drawing below (no region behind the end, the same height),
+      // and a guide with the displacement where the student points (readout)
       return `<div class="fig">${animSlot({
         ...base, t1, hold: e.anim.t1, ref: e.anim.t1, noTime: true, split, show: e.anim.show,
         explore: end ? ['in'] : several ? ['parts'] : null, exploreSolved: end || several ? ['parts', 'sum'] : null, solved: () => !!st && (st.solved || st.revealed),
-        virtual: end || base.virtual, Y: split ? Math.max(base.Y || 6, 11) : base.Y, // moved one by one, any parts may overlap
+        virtual: draw ? false : end || base.virtual, Y: draw ? e.draw.Y : split ? Math.max(base.Y || 6, 11) : base.Y, // moved one by one, any parts may overlap
+        readout: draw ? readout : null,
       })}</div>`;
     }
     return graphs(e.fig);
@@ -142,29 +149,112 @@
   }
 
   // ---------------------------------------------------------------- drawing
-  // The heights at the grid lines, set by clicking; Check marks the lines still wrong.
-  const drawSpec = () => W.snap(() => 0, { hi: ex.draw.hi, end: ex.draw.end, label: ex.draw.label });
-  function drawEditor() {
-    const spec = drawSpec();
-    spec.curves = [];
-    let html = P.graph(spec, { values: st.values, xs: ex.xs, label: L('Your drawing of the rope', 'Deine Zeichnung des Seils') });
-    if (st.wrong) {
-      const sc = { W: P.SIZE.W, ML: P.SIZE.ML, MR: P.SIZE.MR, MT: P.SIZE.MT, MB: P.SIZE.MB }, PW = sc.W - sc.ML - sc.MR, PH = P.SIZE.H - sc.MT - sc.MB;
-      html = html.replace('</svg>', st.wrong.map((i) => `<rect class="wrongcol" x="${(sc.ML + (ex.xs[i] / spec.hi) * PW - 5).toFixed(1)}" y="${sc.MT}" width="10" height="${PH}"/>`).join('') + '</svg>');
-    }
-    $('#draw-area').innerHTML = `<div class="fig">${html}</div><button type="button" id="draw-clear" class="linklike">${ui().clear}</button>`;
+  // A point at each grid line (ex.xs), dragged up and down to a height (whole cm; a click sets it
+  // too), or moved with the keys (← → another point, ↑ ↓ its height); Check marks the lines still
+  // wrong. The given diagram above has the same scales (both from x = 0 to ex.draw.hi, both as high
+  // as ex.draw.Y, the same size), so their grid lines line up; pointing at either shows a guide
+  // through both at the nearest grid line, with the displacement read off the diagram above.
+  const drawSpec = () => ({ ...W.snap(() => 0, { hi: ex.draw.hi, Y: ex.draw.Y, end: ex.draw.end, label: ex.draw.label }), curves: [] });
+  const fmtY = (v) => W.num(Math.round(v * 10) / 10 || 0).replace('-', '−');
+  // the readout of the given diagram: the rope, or each crest shown, at x
+  function readout(x, vals) {
+    const out = [{ text: `x = ${W.num(x)} m: `, cls: 'plain' }];
+    vals.forEach((v, k) => out.push({ text: `${k ? ' · ' : ''}${v.cls === 'main' ? 'y = ' : ''}${fmtY(v.y)} cm`, cls: v.cls }));
+    return out;
   }
-  function onDrawClick(evt) {
-    if (!ex || ex.kind !== 'draw' || st.solved || st.revealed) return;
-    const svg = evt.target.closest('svg.drawing');
-    if (!svg) return;
-    const pt = svg.createSVGPoint();
-    pt.x = evt.clientX; pt.y = evt.clientY;
-    const q = pt.matrixTransform(svg.getScreenCTM().inverse()), hit = P.pointAt(drawSpec(), ex.xs, q.x, q.y);
-    if (!hit) return;
-    st.values[hit.i] = hit.y;
-    st.wrong = null;
-    drawEditor();
+  let gi = null, dragging = null, givenAnim = null; // the grid line of the guide, the pointer dragging a point, the given diagram
+  const locked = () => st.solved || st.revealed;
+  const drawOpts = () => ({ values: st.values, xs: ex.xs, active: gi, focus: st.focus || 0, guide: gi == null ? null : { x: ex.xs[gi], parts: [{ text: `y = ${fmtY(st.values[gi])} cm`, cls: 'drawn' }], low: true }, label: L('Your drawing of the rope', 'Deine Zeichnung des Seils') });
+  const drawSvg = () => $('#draw-area svg.drawing');
+  function drawEditor() {
+    const spec = drawSpec(), s = P.scales(spec);
+    let html = P.graph(spec, drawOpts());
+    if (st.wrong) html = html.replace('<path class="c-drawn"', st.wrong.map((i) => `<rect class="wrongcol" data-i="${i}" x="${(s.x(ex.xs[i]) - 5).toFixed(1)}" y="${s.MT}" width="10" height="${s.PH}"/>`).join('') + '<path class="c-drawn"');
+    $('#draw-area').innerHTML = `<p class="note draw-how">${ui().drawHow}</p><div class="fig">${html}</div><button type="button" id="draw-clear" class="linklike">${ui().clear}</button>`;
+  }
+  const redrawPoints = () => { const svg = drawSvg(); if (svg) P.updateDrawing(svg, drawSpec(), drawOpts()); };
+  // the guide at grid line i (null: none), in both diagrams
+  function setGuide(i) {
+    if (i === gi) return;
+    gi = i;
+    if (givenAnim) givenAnim.guide(i == null ? null : ex.xs[i]);
+    redrawPoints();
+  }
+  function setValue(i, v) {
+    const Y = Math.floor(ex.draw.Y), val = Math.max(-Y, Math.min(Y, Math.round(v)));
+    if (val === st.values[i]) return;
+    st.values[i] = val;
+    if (st.wrong) {
+      st.wrong = st.wrong.filter((k) => k !== i);
+      const r = $(`#draw-area rect.wrongcol[data-i="${i}"]`);
+      if (r) r.remove();
+      if (!st.wrong.length) st.wrong = null;
+    }
+    // the answer read again as the student changes it: the readout follows
+    if (givenAnim && gi === i) givenAnim.guide(ex.xs[i]);
+    redrawPoints();
+  }
+  const svgPoint = (svg, evt) => { const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); };
+  const nearest = (x) => ex.xs.reduce((b, v, k) => (Math.abs(v - x) < Math.abs(ex.xs[b] - x) ? k : b), 0);
+  // the grid line a pointer is at, over a diagram (svg) of the same scales as the drawing, or null
+  function lineAt(svg, evt) {
+    const q = svgPoint(svg, evt), v = P.valueAt(drawSpec(), q.x, q.y);
+    return v.inside ? { i: nearest(v.x), y: v.y } : null;
+  }
+  const focusPoint = (i) => { st.focus = i; redrawPoints(); const c = $(`#draw-area circle.handle[data-i="${i}"]`); if (c) c.focus({ preventScroll: true }); };
+  const pointFocused = () => document.activeElement && document.activeElement.matches && document.activeElement.matches('#draw-area circle.handle');
+  function wireDrawing() {
+    const area = $('#draw-area'), fig = $('#figure');
+    area.addEventListener('pointerdown', (evt) => {
+      const svg = evt.target.closest('svg.drawing');
+      if (!svg || !ex || ex.kind !== 'draw' || (evt.pointerType === 'mouse' && evt.button !== 0)) return;
+      const at = lineAt(svg, evt);
+      if (!at) return;
+      evt.preventDefault();
+      focusPoint(at.i);
+      setGuide(at.i);
+      if (locked()) return;
+      dragging = { id: evt.pointerId, i: at.i };
+      try { svg.setPointerCapture(evt.pointerId); } catch (e) { /* no capture */ }
+      setValue(at.i, at.y);
+    });
+    area.addEventListener('pointermove', (evt) => {
+      const svg = evt.target.closest('svg.drawing') || (dragging && drawSvg());
+      if (!svg || !ex || ex.kind !== 'draw') return;
+      if (dragging && evt.pointerId === dragging.id) {
+        const q = svgPoint(svg, evt);
+        setValue(dragging.i, P.valueAt(drawSpec(), q.x, q.y).y); // up and down only: the point stays on its grid line
+        return;
+      }
+      if (evt.pointerType === 'touch') return;
+      const at = lineAt(svg, evt);
+      setGuide(at ? at.i : pointFocused() ? st.focus : null);
+    });
+    const release = (evt) => { if (dragging && evt.pointerId === dragging.id) dragging = null; };
+    area.addEventListener('pointerup', release);
+    area.addEventListener('pointercancel', release);
+    const leave = () => { if (!dragging && !pointFocused()) setGuide(null); };
+    area.addEventListener('pointerleave', leave);
+    area.addEventListener('keydown', (evt) => {
+      const c = evt.target.closest('circle.handle');
+      if (!c || !ex || ex.kind !== 'draw') return;
+      const i = Number(c.dataset.i), n = ex.xs.length;
+      const step = { ArrowUp: 1, ArrowDown: -1, PageUp: 5, PageDown: -5 }[evt.key], to = { ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: n - 1 }[evt.key];
+      if (step != null) { if (!locked()) setValue(i, st.values[i] + step); } else if (to != null) { const k = Math.max(0, Math.min(n - 1, to)); focusPoint(k); setGuide(k); } else return;
+      evt.preventDefault();
+    });
+    area.addEventListener('focusin', (evt) => { const c = evt.target.closest('circle.handle'); if (c) { st.focus = Number(c.dataset.i); setGuide(st.focus); } });
+    area.addEventListener('focusout', () => setTimeout(() => { if (!dragging && !pointFocused()) setGuide(null); }, 0));
+    // the given diagram above: pointing at it (or touching it) shows the guide and the displacement
+    const over = (evt) => {
+      if (!ex || ex.kind !== 'draw') return;
+      const svg = evt.target.closest && evt.target.closest('.frames svg.wave');
+      const at = svg ? lineAt(svg, evt) : null;
+      setGuide(at ? at.i : pointFocused() ? st.focus : null);
+    };
+    fig.addEventListener('pointermove', over);
+    fig.addEventListener('pointerdown', over);
+    fig.addEventListener('pointerleave', (evt) => { if (evt.pointerType !== 'touch') leave(); });
   }
   function drawFeedback() {
     const wrong = ex.xs.map((x, i) => i).filter((i) => st.values[i] !== ex.target[i]);
@@ -180,7 +270,7 @@
   function open(exercise) {
     finish();
     ex = exercise;
-    st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null, values: ex.xs ? ex.xs.map(() => 0) : null, wrong: null };
+    st = { tries: 0, hints: 0, solved: false, revealed: false, checked: false, status: null, values: ex.xs ? ex.xs.map(() => 0) : null, wrong: null, focus: 0 };
     if (location.hash !== `#${ex.id}`) history.replaceState(null, '', `#${ex.id}`);
     render();
     topics.shown(ex);
@@ -194,8 +284,11 @@
     $('#prompt').innerHTML = `<p>${ex.text}</p>`;
     $('#figure').innerHTML = ex.fig ? given(ex) : '';
     $('#anim-note').hidden = !ex.anim;
-    $('#anim-note').textContent = ex.kind === 'medium' ? ui().animLead : ui().animNote;
+    $('#anim-note').textContent = ex.kind === 'medium' ? ui().animLead : ex.kind === 'draw' ? ui().animNoteDraw : ui().animNote;
+    gi = null; dragging = null;
     mountAnims($('#figure'));
+    givenAnim = ex.kind === 'draw' ? running.find((r) => $('#figure').contains(r.el)) || null : null;
+    $('#figure').classList.toggle('to-draw', ex.kind === 'draw');
     $('#draw-area').hidden = ex.kind !== 'draw';
     $('#draw-fb').textContent = '';
     if (ex.kind === 'draw') drawEditor();
@@ -278,9 +371,12 @@
   }
 
   // ---------------------------------------------------------------- tutor
-  // The worksheet's crest (a block 5 cm high, then a slope down to −5 cm, from x = 1 m to 3 m) at
-  // 2 m/s: how it travels, its y(t) graph at x = 4 m, two crests meeting, the reflection at a fixed
-  // and a free end at x = 5 m, and the overlap at t = 1.5 s.
+  // A smooth, lopsided crest (W.BUMP: rising gently from x = 1 m to its top at 2.5 m, falling
+  // steeply to its front at 3 m) at 2 m/s: how it travels (without turning round) and its y(t)
+  // graph at x = 4 m (front first: the picture reversed). Then the worksheet's crest (a block 5 cm
+  // high, then a slope down to −5 cm, from x = 1 m to 3 m) at 2 m/s: two crests meeting, the
+  // reflection at a fixed and a free end at x = 5 m, and the overlap at t = 1.5 s.
+  const BUMP = () => W.pulse(W.BUMP, 1, 1, 2);
   const WS = () => W.pulse(W.LIN.ws, 1, 1, 2);
   const frame = (title, text, figure) => ({ text: `<div class="step-rule">${title}</div>${text}`, figure: `<div class="figs">${figure}</div>` });
   const fig = (html) => `<div class="fig">${html}</div>`;
@@ -290,25 +386,29 @@
       topic: 0, name: () => L('A crest travels', 'Ein Buckel läuft'),
       idea: () => L('A crest moves along the rope without changing its shape; the rope itself only moves up and down.', 'Ein Buckel bewegt sich über das Seil, ohne seine Form zu ändern; das Seil selbst bewegt sich nur auf und ab.'),
       frames: () => {
-        const p = WS(), sc = { pulses: [p], end: null };
+        const p = BUMP(), sc = { pulses: [p], end: null };
         return [
-          frame(L('The crest', 'Der Buckel'), `<p>${L('A crest made of straight pieces: a block 5 cm high, then a slope down to −5 cm, from x = 1 m to x = 3 m. It runs to the right at 2 m/s.', 'Ein Buckel aus geraden Stücken: ein Block von 5 cm Höhe, dann eine Rampe hinunter bis −5 cm, von x = 1 m bis x = 3 m. Er läuft mit 2 m/s nach rechts.')}</p>`, anim({ sc, t0: 0, t1: 2.5, show: ['sum'] })),
-          frame(L('Distance = speed × time', 'Strecke = Geschwindigkeit × Zeit'), `<p>${W.RULE.move()} ${L('After 0.5 s it is 1 m further, after 1 s 2 m further.', 'Nach 0.5 s ist er 1 m weiter, nach 1 s 2 m weiter.')}</p>`,
+          frame(L('The crest', 'Der Buckel'), `<p>${L('A smooth crest, but lopsided: from its back at x = 1 m it rises gently to its top, 5 cm high, at x = 2.5 m, then falls steeply to its front at x = 3 m. It runs to the right at 2 m/s.', 'Ein runder Buckel, aber schief: Von seinem Rücken bei x = 1 m steigt er sanft bis zu seiner Spitze, 5 cm hoch, bei x = 2.5 m an, dann fällt er steil zu seiner Front bei x = 3 m ab. Er läuft mit 2 m/s nach rechts.')}</p>`, anim({ sc, t0: 0, t1: 2.5, show: ['sum'] })),
+          frame(L('Distance = speed × time', 'Strecke = Geschwindigkeit × Zeit'), `<p>${W.RULE.move()} ${L('After 0.5 s it is 1 m further, after 1 s 2 m further. The steep side stays in front: the crest does not turn round, it keeps its shape.', 'Nach 0.5 s ist er 1 m weiter, nach 1 s 2 m weiter. Die steile Seite bleibt vorne: Der Buckel dreht sich nicht um, er behält seine Form.')}</p>`,
             fig(P.graph(W.snap((x) => W.ev(p, x, 0), { label: W.tLabel(0), more: [{ f: (x) => W.ev(p, x, 0.5), cls: 'part' }, { f: (x) => W.ev(p, x, 1), cls: 'part2' }] }))) + `<p class="legend"><span class="k-main">t = 0</span> · <span class="k-part">t = 0.5 s</span> · <span class="k-part2">t = 1 s</span></p>`),
-          frame(L('The rope moves up and down', 'Das Seil bewegt sich auf und ab'), `<p>${W.RULE.medium()}</p><p>${L('Watch the three points: each only moves up and down, while the crest passes.', 'Beobachte die drei Punkte: Jeder bewegt sich nur auf und ab, während der Buckel vorbeiläuft.')}</p>`,
+          frame(L('The rope moves up and down', 'Das Seil bewegt sich auf und ab'), `<p>${W.RULE.medium()}</p><p>${L('Watch the three points: each only moves up and down while the crest passes, first quickly up (the steep front reaches it first), then slowly down (the gentle back).', 'Beobachte die drei Punkte: Jeder bewegt sich nur auf und ab, während der Buckel vorbeiläuft, zuerst schnell nach oben (die steile Front erreicht ihn zuerst), dann langsam nach unten (der sanfte Rücken).')}</p>`,
             anim({ sc, t0: 0, t1: 2.5, show: ['sum'], dots: [{ x: 3.5, label: 'P' }, { x: 4.5, label: 'Q' }, { x: 5.5, label: 'R' }] })),
         ];
       },
     },
     {
       topic: 1, name: () => L('The y(t) graph', 'Das y(t)-Bild'),
-      idea: () => L('At one place, the rope rises and falls as the crest passes: front first.', 'An einem Ort hebt und senkt sich das Seil, während der Buckel vorbeiläuft: die Front zuerst.'),
+      idea: () => L('At one place, the rope rises and falls as the crest passes: front first, so the y(t) graph is the crest’s picture reversed.', 'An einem Ort hebt und senkt sich das Seil, während der Buckel vorbeiläuft: die Front zuerst, das y(t)-Bild ist also das Bild des Buckels seitenverkehrt.'),
       frames: () => {
-        const p = WS(), sc = { pulses: [p], end: null };
+        const p = BUMP(), sc = { pulses: [p], end: null };
+        const rope = () => P.graph(W.snap((x) => W.ev(p, x, 0), { label: W.tLabel(0), marks: [{ x: 4, label: '4 m' }], arrows: [W.arrowOf(p, 0, { up: true })] }));
+        const ytg = () => P.graph(W.graphT((t) => W.ev(p, 4, t), 3, { label: 'x = 4 m' }));
         return [
           frame(L('Watching one place', 'Einen Ort beobachten'), `<p>${L('How does the rope at x = 4 m move as the crest passes? Watch its y(t) graph grow alongside.', 'Wie bewegt sich das Seil bei x = 4 m, während der Buckel vorbeiläuft? Sieh zu, wie sein y(t)-Bild daneben entsteht.')}</p>`, anim({ sc, t0: 0, t1: 2, show: ['sum'], mark: 4, trace: 4 })),
-          frame(L('The front comes first', 'Die Front kommt zuerst'), `<p>${W.RULE.yt()}</p><p>${L('The front (at x = 3 m) reaches 4 m after 0.5 s: the slope from −5 cm comes first. The block follows; the back (x = 1 m) passes after 1.5 s. The crest is 2 m long and runs 2 m/s: it takes 1 s to pass.', 'Die Front (bei x = 3 m) erreicht 4 m nach 0.5 s: Zuerst kommt die Rampe von −5 cm. Der Block folgt; der Rücken (x = 1 m) passiert nach 1.5 s. Der Buckel ist 2 m lang und läuft 2 m/s: Er braucht 1 s zum Vorbeilaufen.')}</p>`,
-            fig(P.graph(W.graphT((t) => W.ev(p, 4, t), 3, { label: 'x = 4 m' })))),
+          frame(L('The front comes first', 'Die Front kommt zuerst'), `<p>${W.RULE.yt()}</p><p>${L('The steep front (at x = 3 m) reaches 4 m after 0.5 s: the rope there shoots up, to the top at 0.75 s (the top was at 2.5 m, 1.5 m away). Then the gentle back passes: the rope sinks slowly, until the back (at x = 1 m) has passed, after 1.5 s. The crest is 2 m long and runs at 2 m/s: it takes 1 s to pass.', 'Die steile Front (bei x = 3 m) erreicht 4 m nach 0.5 s: Das Seil schnellt dort hoch, bis zur Spitze bei 0.75 s (die Spitze war bei 2.5 m, 1.5 m entfernt). Dann läuft der sanfte Rücken vorbei: Das Seil sinkt langsam, bis der Rücken (bei x = 1 m) nach 1.5 s vorbei ist. Der Buckel ist 2 m lang und läuft mit 2 m/s: Er braucht 1 s zum Vorbeilaufen.')}</p>`,
+            fig(ytg())),
+          frame(L('A mirror image', 'Ein Spiegelbild'), `<p>${L('Compare the two: on the rope, y(x) at t = 0, the steep side is on the right, in front. In the y(t) graph at x = 4 m it is on the left, at the start: what is in front on the rope happens first at the place. So the y(t) graph is the crest’s picture reversed, as in a mirror: steep at the start, gentle at the end.', 'Vergleiche die beiden: Auf dem Seil, y(x) bei t = 0, ist die steile Seite rechts, vorne. Im y(t)-Bild bei x = 4 m ist sie links, am Anfang: Was auf dem Seil vorne ist, geschieht am Ort zuerst. Das y(t)-Bild ist also das Bild des Buckels seitenverkehrt, wie in einem Spiegel: steil am Anfang, sanft am Ende.')}</p>`,
+            fig(rope()) + fig(ytg())),
         ];
       },
     },
@@ -384,7 +484,7 @@
     { name: () => L('Speed and timing', 'Geschwindigkeit und Zeit'), example: 1, stages: [{ name: () => L('two snapshots', 'zwei Momentbilder'), types: ['speed-x'] }, { name: () => L('the length', 'die Länge'), types: ['speed-len'] }, { name: () => L('two places', 'zwei Orte'), types: ['speed-t'] }] },
     { name: () => L('Superposition', 'Überlagerung'), example: 2, stages: [{ name: () => L('straight crests', 'gerade Buckel'), types: ['sup-lin'] }, { name: () => L('smooth crests', 'runde Buckel'), types: ['sup-smooth'] }, { name: () => L('draw it', 'zeichnen'), types: ['draw-sup'] }] },
     { name: () => L('Reflection', 'Reflexion'), example: 3, stages: [{ name: () => L('fixed end', 'festes Ende'), types: ['refl-fixed'] }, { name: () => L('free end', 'loses Ende'), types: ['refl-free'] }, { name: () => L('the mirror crest', 'der Spiegelbuckel'), types: ['mirror-lin', 'mirror-smooth'] }, { name: () => L('the end itself', 'das Ende selbst'), types: ['end-lin', 'end-smooth'] }, { name: () => L('smooth crests', 'runde Buckel'), types: ['refl-smooth'] }, { name: () => L('draw it', 'zeichnen'), types: ['draw-refl'] }, { name: () => L('find the error', 'finde den Fehler'), types: ['error-refl'] }] },
-    { name: () => L('Reflection with overlap', 'Reflexion mit Überlagerung'), example: 4, stages: [{ name: () => L('straight crests', 'gerade Buckel'), types: ['reflsum-lin'] }, { name: () => L('smooth crests', 'runde Buckel'), types: ['reflsum-smooth'] }, { name: () => L('draw it', 'zeichnen'), types: ['draw-reflsum'] }] },
+    { name: () => L('Reflection with overlap', 'Reflexion mit Überlagerung'), example: 4, stages: [{ name: () => L('straight crests', 'gerade Buckel'), types: ['reflsum-lin'] }, { name: () => L('smooth crests', 'runde Buckel'), types: ['reflsum-smooth'] }, { name: () => L('draw it', 'zeichnen'), types: ['draw-reflsum'] }, { name: () => L('y(t) near the end', 'y(t) nahe beim Ende'), types: ['reflyt-lin', 'reflyt-smooth'] }] },
     { name: () => L('Standing waves', 'Stehende Wellen'), example: 5, stages: [{ name: () => L('nodes and antinodes', 'Knoten und Bäuche'), types: ['stand-pic'] }, { name: () => L('the wavelength', 'die Wellenlänge'), types: ['stand-count'] }, { name: () => L('λ as a fraction of λ₁', 'λ als Bruchteil von λ₁'), types: ['stand-ratio'] }, { name: () => L('find the error', 'finde den Fehler'), types: ['error-stand'] }] },
   ];
 
@@ -396,7 +496,7 @@
     { id: 'medium', kinds: ['move-lin', 'medium-lin', 'yt-lin'], tutor: 0, topic: 0,
       name: () => L('Tell the motion of the wave from the motion of the rope: where a crest is later, how a point of the rope moves, and its y(t) graph.',
         'Die Bewegung der Welle von der Bewegung des Seils unterscheiden: wo ein Buckel später ist, wie sich ein Punkt des Seils bewegt, und sein y(t)-Bild.') },
-    { id: 'reflect', kinds: ['refl-fixed', 'refl-free', 'mirror-lin', 'error-refl'], tutor: 3, topic: 5,
+    { id: 'reflect', kinds: ['refl-fixed', 'refl-free', 'mirror-lin', 'error-refl', 'reflyt-lin'], tutor: 3, topic: 5,
       name: () => L('Predict the crest reflected at a fixed end (upside down) and at a free end (upright).',
         'Den an einem festen Ende (umgedreht) und an einem losen Ende (aufrecht) reflektierten Buckel vorhersagen.') },
     { id: 'superpose', kinds: ['sup-lin', 'sup-smooth'], tutor: 2, topic: 4,
@@ -406,7 +506,7 @@
       name: () => L('Locate the nodes and antinodes of a standing wave on a rope: nodes λ/2 apart, a node at a fixed end, an antinode at a free end.',
         'Die Knoten und Bäuche einer stehenden Welle auf einem Seil finden: Knoten im Abstand λ/2, ein Knoten an einem festen Ende, ein Bauch an einem losen Ende.') },
   ];
-  const FLAG = { dist: 'distance', dir: 'direction', turn: 'turn', flip: 'flip', copy: 'yt', back: 'yt', dur: 'yt', time: 'distance', max: 'sum', apart: 'sum', sign: 'reflection', order: 'reflection', cut: 'sum', single: 'reflection', inverse: 'formula', total: 'formula',
+  const FLAG = { dist: 'distance', dir: 'direction', turn: 'turn', flip: 'flip', copy: 'yt', back: 'yt', dur: 'yt', time: 'distance', max: 'sum', apart: 'sum', sign: 'reflection', order: 'reflection', cut: 'sum', gap: 'sum', single: 'reflection', inverse: 'formula', total: 'formula',
     ends: 'ends', errStand: 'ends', errRefl: 'reflection', even: 'halfwave', halfS: 'halfwave', count: 'halfwave', ratio: 'halfwave' };
   // two crests subtracted instead of added: the sum, not a reflection
   const flagOf = (e, tag) => (e.kind === 'sup' && tag === 'sign' ? 'sum' : FLAG[tag] || 'other');
@@ -420,7 +520,7 @@
       return { title: TITLE.medium(), text: `<p>${e.text}</p>`, figure, ask: L(`Which point ${want}?`, `Welcher Punkt ${want}?`), options: e.questions.map((q) => ({ html: q.label, correct: q.options.find((o) => o.ok).label === want, flag: 'medium', why: q.options.find((o) => o.ok).why })), explain };
     }
     const q = e.questions[0];
-    if (q.type === 'pick') return { title: TITLE[e.kind](), text: `<p>${e.text}</p>`, figure, ask: e.kind === 'error' ? L('Which sketch is wrong?', 'Welche Skizze ist falsch?') : L('Which diagram is right?', 'Welches Diagramm stimmt?'), options: q.options.map((o) => ({ html: P.graph(o.fig, { small: true }), correct: o.ok, flag: flagOf(e, o.tag), why: o.why })), explain };
+    if (q.type === 'pick') return { title: TITLE[e.kind](), text: `<p>${e.text}</p>`, figure, ask: e.kind === 'error' ? L('Which sketch is wrong?', 'Welche Skizze ist falsch?') : e.kind === 'reflyt' ? L('Which graph is right?', 'Welcher Graph stimmt?') : L('Which diagram is right?', 'Welches Diagramm stimmt?'), options: q.options.map((o) => ({ html: P.graph(o.fig, { small: true }), correct: o.ok, flag: flagOf(e, o.tag), why: o.why })), explain };
     return { title: TITLE[e.kind](), text: `<p>${e.text}</p>`, figure, ask: q.label, options: q.options.map((o) => ({ html: o.label, correct: o.ok, flag: flagOf(e, o.tag), why: o.why })), explain };
   }
   const checkSource = {
@@ -513,9 +613,9 @@
       if (evt.target.closest('.cand')) { document.querySelectorAll('.cand').forEach((el) => el.classList.remove('ok', 'bad')); document.querySelectorAll('.qfb').forEach((el) => { el.textContent = ''; }); }
     });
     $('#draw-area').addEventListener('click', (evt) => {
-      if (evt.target.id === 'draw-clear') { st.values = ex.xs.map(() => 0); st.wrong = null; drawEditor(); return; }
-      onDrawClick(evt);
+      if (evt.target.id === 'draw-clear' && !locked()) { st.values = ex.xs.map(() => 0); st.wrong = null; drawEditor(); }
     });
+    wireDrawing();
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);

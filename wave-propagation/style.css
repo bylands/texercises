@@ -41,11 +41,25 @@ svg .vlabel { fill: var(--ink); font: 13px system-ui, sans-serif; }
 svg .dot { fill: var(--accent); stroke: var(--card); stroke-width: 1.5; }
 svg .dlabel { fill: var(--ink); font: 600 14px var(--serif); }
 svg .col { stroke: var(--grid-major); stroke-width: 6; opacity: 0; }
-svg.drawing { cursor: crosshair; touch-action: manipulation; }
+/* the drawing: points dragged up and down (no scrolling while touching it); its grid lines match
+   the given diagram above, which is as wide and centred the same way */
+svg.drawing { cursor: ns-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
 svg.drawing .col { opacity: 0.25; }
-svg .handle { fill: var(--wv-drawn); }
-svg .handle.set { stroke: var(--card); stroke-width: 1.5; }
-svg .wrongcol { fill: var(--bad); opacity: 0.18; }
+svg .handle { fill: var(--wv-drawn); stroke: var(--card); stroke-width: 1.5; }
+svg .handle.set { stroke-width: 2; }
+svg .handle.active { fill: var(--wv-drawn); stroke: var(--wv-drawn); stroke-opacity: 0.35; stroke-width: 6; }
+svg .handle:focus { outline: none; }
+svg .handle:focus-visible { stroke: var(--accent); stroke-opacity: 1; stroke-width: 3; }
+svg .wrongcol { fill: var(--bad); opacity: 0.18; pointer-events: none; }
+#draw-area .fig svg.wave { margin: 0 auto; }
+#draw-area .draw-how { flex: 1 1 100%; max-width: 640px; margin: 0 auto -8px; }
+#figure.to-draw svg.wave { cursor: crosshair; touch-action: pan-y; }
+/* the guide: a line at the grid line pointed at, through both diagrams, with the displacement */
+svg .guide { stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 5 3; pointer-events: none; }
+svg .gdot { stroke: var(--card); stroke-width: 1.5; pointer-events: none; }
+svg .g-main { fill: var(--wv); } svg .g-part { fill: var(--wv-in); } svg .g-part2 { fill: var(--wv-ref); }
+svg .gread { font: 600 13px system-ui, sans-serif; paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+svg .r-plain { fill: var(--ink); } svg .r-main { fill: var(--wv); } svg .r-part { fill: var(--wv-in); } svg .r-part2 { fill: var(--wv-ref); } svg .r-drawn { fill: var(--wv-drawn); }
 .legend { font-size: 0.9rem; margin: 4px 0 0; }
 .k-main { color: var(--wv); font-weight: 600; } .k-part { color: var(--wv-in); font-weight: 600; } .k-part2 { color: var(--wv-ref); font-weight: 600; }
 

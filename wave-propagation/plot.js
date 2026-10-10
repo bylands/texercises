@@ -4,8 +4,13 @@
 //                    one, a dashed line with a ring for a free one), the region behind the end
 //                    (mirror crests), arrows for the speed, marked places and points; spec.end0
 //                    an end at the left too (a standing wave between two ends).
-//                    o: { small, values (the student's heights, for drawing), xs, label }
+//                    o: { small, values (the student's heights, for drawing), xs, active, focus,
+//                    label }
+//                    o.guide: { x, dots, parts, low } a vertical guide line with a readout (low:
+//                    at the bottom, clear of the label)
 //   pointAt(spec, px, py)  the grid line and height (whole cm) nearest to a point of a drawing
+//   valueAt(spec, px, py)  the values on the axes at a point (svg coordinates)
+//   updateDrawing(svg, spec, o)  a drawing changed in place (its points, the guide)
 //   Anim.mount(el, a)      an animation in el: the rope from a.t0 to a.t1 (a = { sc, t0, t1,
 //                    show: ['sum'], ['parts'] and/or ['in'], mark, trace (a y(t) graph at that place
 //                    growing alongside), dots, virtual (the mirror crests behind the end) }),
@@ -17,7 +22,9 @@
 //                    faded, as a reference, once the crests have left it; a.explore: what to show
 //                    then instead of a.show (['parts']: the crests, not their sum; ['in']: only the
 //                    incoming crests), and a.exploreSolved once a.solved() (e.g. the sum as well).
-//                    Returns { stop, redraw }.
+//                    a.readout(x, values): the text of a guide, a vertical line at x with the
+//                    values of the curves shown there, set by guide(x) (null: none).
+//                    Returns { stop, redraw, guide }.
 (function (root) {
   'use strict';
 
@@ -81,14 +88,55 @@
       out += `<path class="varrow" d="M${f1(x0)} ${f1(yy)} H${f1(x1)}"/><path class="varrowhead" d="M${f1(x1 + a.dir * 6)} ${f1(yy)} l${-a.dir * 9} -4 v8 z"/><text class="vlabel" x="${f1(s.x(a.x))}" y="${f1(yy - 6)}" text-anchor="middle">${a.text || `${W.num(a.v)} m/s`}</text>`;
     }
     for (const d of spec.dots || []) out += `<circle class="dot" cx="${f1(s.x(d.x))}" cy="${f1(s.y(d.y))}" r="4.5"/><text class="dlabel" x="${f1(s.x(d.x))}" y="${f1(s.y(d.y) + (d.y >= 0 ? -10 : 20))}" text-anchor="middle">${d.label}</text>`;
-    // the student's drawing: the heights clicked, joined
+    // a guide: a vertical line at o.guide.x, the values of the curves there (dots) and a readout
+    // (o.guide.parts: [{ text, cls }], cls colouring a part as its curve)
+    out += guideSvg(spec, o.guide);
+    // the student's drawing: a point at each grid line (o.xs) at the height o.values, joined; the
+    // points can be dragged up and down, or moved with the keys (app.js); o.active: the point at the guide
     if (o.values) {
       out += o.xs.map((x) => `<line class="col" x1="${f1(s.x(x))}" y1="${s.MT}" x2="${f1(s.x(x))}" y2="${s.MT + s.PH}"/>`).join('');
-      out += `<path class="c-drawn" d="M${o.xs.map((x, i) => `${f1(s.x(x))},${f1(s.y(o.values[i]))}`).join(' L')}"/>` + o.xs.map((x, i) => `<circle class="handle${o.values[i] ? ' set' : ''}" cx="${f1(s.x(x))}" cy="${f1(s.y(o.values[i]))}" r="${o.values[i] ? 4 : 2.5}"/>`).join('');
+      out += `<path class="c-drawn" d="${drawnPath(spec, o.xs, o.values)}"/>` + o.xs.map((x, i) => `<circle class="${handleClass(o, i)}" data-i="${i}" cx="${f1(s.x(x))}" cy="${f1(s.y(o.values[i]))}" r="${handleR(o, i)}" tabindex="${i === (o.focus || 0) ? 0 : -1}" role="slider" aria-orientation="vertical" aria-label="x = ${W.num(x)} m" aria-valuemin="${-Math.floor(spec.Y)}" aria-valuemax="${Math.floor(spec.Y)}" aria-valuenow="${o.values[i]}" aria-valuetext="${valText(o.values[i])}"/>`).join('');
     }
     const cls = `wave${o.small ? ' small' : ''}${o.values ? ' drawing' : ''}`;
     return `<svg class="${cls}" viewBox="0 0 ${s.W} ${s.H}" role="img" aria-label="${o.label || (isT ? L('Displacement against time', 'Auslenkung gegen die Zeit') : L('The rope: displacement against position', 'Das Seil: Auslenkung gegen den Ort'))}">` +
       `<defs><clipPath id="${id}"><rect x="${s.ML}" y="${s.MT - 4}" width="${s.PW}" height="${s.PH + 8}"/></clipPath></defs>${out}</svg>`;
+  }
+
+  function guideSvg(spec, g) {
+    if (!g || g.x == null) return '';
+    const s = scales(spec), gx = s.x(g.x), left = gx > s.ML + s.PW * 0.62;
+    let out = `<line class="guide" x1="${f1(gx)}" y1="${s.MT}" x2="${f1(gx)}" y2="${s.MT + s.PH}"/>`;
+    for (const v of g.dots || []) out += `<circle class="gdot g-${v.cls}" cx="${f1(gx)}" cy="${f1(s.y(Math.max(-spec.Y, Math.min(spec.Y, v.y))))}" r="3.5"/>`;
+    if (g.parts && g.parts.length) out += `<text class="gread" x="${f1(gx + (left ? -8 : 8))}" y="${g.low ? s.MT + s.PH - 7 : s.MT + 14}" text-anchor="${left ? 'end' : 'start'}">${g.parts.map((q) => `<tspan class="r-${q.cls || 'plain'}">${q.text}</tspan>`).join('')}</text>`;
+    return out;
+  }
+  const valText = (v) => `${String(v).replace('-', '−')} cm`;
+  const handleClass = (o, i) => `handle${o.values[i] ? ' set' : ''}${i === o.active ? ' active' : ''}`;
+  const handleR = (o, i) => (i === o.active ? 7 : o.values[i] ? 5.5 : 4.5);
+  function drawnPath(spec, xs, values) {
+    const s = scales(spec);
+    return `M${xs.map((x, i) => `${f1(s.x(x))},${f1(s.y(values[i]))}`).join(' L')}`;
+  }
+  // a drawing changed in place (while a point is dragged, so that the svg stays the same element)
+  function updateDrawing(svg, spec, o) {
+    const s = scales(spec);
+    svg.querySelector('path.c-drawn').setAttribute('d', drawnPath(spec, o.xs, o.values));
+    svg.querySelectorAll('circle.handle').forEach((c) => {
+      const i = Number(c.dataset.i);
+      c.setAttribute('cy', f1(s.y(o.values[i])));
+      c.setAttribute('r', handleR(o, i));
+      c.setAttribute('class', handleClass(o, i));
+      c.setAttribute('aria-valuenow', o.values[i]);
+      c.setAttribute('aria-valuetext', valText(o.values[i]));
+      c.setAttribute('tabindex', i === (o.focus || 0) ? 0 : -1);
+    });
+    svg.querySelectorAll('.guide, .gdot, .gread').forEach((el) => el.remove());
+    if (o.guide && o.guide.x != null) svg.querySelector('path.c-drawn').insertAdjacentHTML('beforebegin', guideSvg(spec, o.guide));
+  }
+  // svg coordinates → the value on the axes (and whether inside the plot, with a margin)
+  function valueAt(spec, px, py) {
+    const s = scales(spec);
+    return { x: spec.lo + ((px - s.ML) / s.PW) * (spec.hi - spec.lo), y: ((s.MT + s.PH / 2 - py) / (s.PH / 2)) * spec.Y, inside: px >= s.ML - 14 && px <= s.ML + s.PW + 14 && py >= s.MT - 14 && py <= s.MT + s.PH + 14 };
   }
 
   // the grid line and the height nearest to a point of a drawing (svg coordinates)
@@ -123,7 +171,7 @@
     // the speed arrows of the crests still (partly) on the rope
     const arrows = a.arrows ? sc.pulses.filter((p) => { const l = p.x0 + p.dir * p.v * t; return l + p.sh.w > 0 && l < (E != null ? E : W.X); }).map((p) => W.arrowOf(p, t, { up: p.sgn < 0 })) : [];
     const spec = { axis: 'x', lo: 0, hi, Y: a.Y || (sc.end && sc.end.type === 'free' ? 11 : 6), curves, end: sc.end, arrows, marks: [...(a.mark != null ? [{ x: a.mark, label: '' }] : []), ...(a.mark2 != null ? [{ x: a.mark2, label: '' }] : [])], dots: (a.dots || []).map((d) => ({ x: d.x, y: W.y(sc, d.x, t), label: d.label })), label: a.noTime ? '' : W.tLabel(Math.round(t * 10) / 10), virtual: a.virtual && E != null ? E : null };
-    let html = graph(spec, { label: L('Animation of the rope', 'Animation des Seils') });
+    let html = graph(spec, { label: L('Animation of the rope', 'Animation des Seils'), guide: typeof a.guide === 'function' ? a.guide(spec) : a.guide });
     if (a.trace != null) {
       html += graph({ axis: 't', lo: 0, hi: Math.max(a.t1, 1), Y: spec.Y, curves: [{ f: (tt) => (tt <= t ? W.y(sc, a.trace, tt) : null), cls: 'main' }], end: null, label: `x = ${W.num(a.trace)} m` }, { label: L('y(t) at the marked place', 'y(t) am markierten Ort') });
     }
@@ -147,7 +195,15 @@
         const moved = a.ref != null && ts.some((t) => Math.abs(t - a.ref) > 1e-6), solved = a.solved && a.solved() && a.exploreSolved;
         return { ...a, refSc: a.sc, refShown: moved, show: moved && a.explore ? (solved ? a.exploreSolved : a.explore) : a.show };
       };
-      const at = () => (a.split ? frame({ ...withRef(), sc: { ...a.sc, pulses: a.sc.pulses.map((p, i) => ({ ...p, x0: p.x0 + p.dir * p.v * ts[i] })) } }, 0) : frame(withRef(), ts[0]));
+      // a guide (a.readout given): a vertical line at gx with the values of the curves shown there
+      let gx = null;
+      const guideOf = (spec) => {
+        if (gx == null || !a.readout) return null;
+        const vals = spec.curves.filter((c) => c.cls !== 'ref').map((c) => ({ cls: c.cls, y: c.f(gx) })).filter((v) => v.y != null);
+        return { x: gx, dots: vals, parts: a.readout(gx, vals) };
+      };
+      const render = (b, t) => frame({ ...b, guide: guideOf }, t);
+      const at = () => (a.split ? render({ ...withRef(), sc: { ...a.sc, pulses: a.sc.pulses.map((p, i) => ({ ...p, x0: p.x0 + p.dir * p.v * ts[i] })) } }, 0) : render(withRef(), ts[0]));
       const show = () => { frames.innerHTML = at(); sliders.forEach((sl, i) => { sl.value = String(Math.round(((ts[i] - a.t0) / span) * 1000)); }); };
       const stop = () => { playing = false; cancelAnimationFrame(raf); btn.textContent = '▶'; btn.setAttribute('aria-label', L('Play', 'Abspielen')); };
       const step = (now) => {
@@ -172,12 +228,12 @@
       sliders.forEach((sl, i) => sl.addEventListener('input', () => { stop(); ts[i] = a.t0 + (Number(sl.value) / 1000) * span; show(); }));
       show();
       if (!reduced() && a.autoplay !== false) setTimeout(play, 300);
-      return { stop, redraw: show };
+      return { stop, redraw: show, guide: (x) => { gx = x; show(); }, el };
     },
   };
 
 
-  const api = { SIZE, graph, pointAt, frame, Anim };
+  const api = { SIZE, scales, graph, pointAt, valueAt, updateDrawing, frame, Anim };
   root.WavePlot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);
