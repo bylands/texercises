@@ -113,6 +113,36 @@ for (const lang of ['en', 'de']) {
   }
 }
 
+// ---------------------------------------------------------------- the widened stages
+// point charges and a dipole near a charge: at least 10 different exercises each (by their visible
+// text); the dipole's answers worked out independently: the nearer end feels the stronger force,
+// so the dipole is pulled towards the charge when that end and the charge have opposite signs
+{
+  const strip = (h) => String(h).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  for (const lang of ['en', 'de']) {
+    Lang.set(lang, true);
+    for (const type of ['lines-pick', 'dipole-point']) {
+      const seen = new Set();
+      for (let seed = 1; seed <= 300; seed++) {
+        const e = X.make(type, seed), tag = `${type} ${seed} ${lang}`;
+        seen.add(strip(e.text + e.questions.map((q) => q.label).join('|')));
+        if (bad(json(e))) fail(`${tag}: undefined or NaN`);
+        checkQuestions(tag, e);
+        if (/[$_]/.test(strip(e.text + e.questions.map((q) => q.label + q.options.map((o) => (o.label || '') + o.why).join(' ')).join(' ') + e.solution.join(' ')))) fail(`${tag}: a raw $ or _ in the text`);
+        if (type === 'lines-pick' && e.questions[0].options.length !== 4) fail(`${tag}: not four diagrams`);
+        if (type === 'dipole-point' && lang === 'en') {
+          const { Q, plusNear, ask = 'F' } = e.p, near = plusNear ? 1 : -1, attract = near * Q < 0;
+          const want = { F: attract ? 'towards the charge' : 'away from the charge', end: plusNear ? 'its positive end' : 'its negative end', Q: Q > 0 ? 'positive' : 'negative' }[ask];
+          if (rightOf(e, ask) !== want) fail(`${tag}: ${rightOf(e, ask)}, not ${want}`);
+          if (ask !== 'F' && !e.text.includes(attract ? 'pulled towards' : 'pushed away from')) fail(`${tag}: the text does not say how the dipole moves`);
+          if (rightOf(e, 'free') !== 'attracted') fail(`${tag}: a free dipole is attracted`);
+        }
+      }
+      if (seen.size < 10) fail(`${type} ${lang}: only ${seen.size} different exercises`);
+    }
+  }
+}
+
 // ---------------------------------------------------------------- the sketches of "find the error"
 // two polylines cross (away from the charges and the plates, where lines meet anyway)
 function crossings(lines, c) {

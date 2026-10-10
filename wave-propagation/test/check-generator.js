@@ -99,7 +99,13 @@ for (const lang of ['en', 'de']) {
         if (o.ok ? !antiAtFixed || nodeAtFree : !W.fits(d.ends, d.q, d.ph)) fail(`${tag}: a sketch judged ${o.ok ? 'wrong' : 'right'}`);
       }
       if (e.kind === 'error' && e.variant === 'refl') for (const o of e.questions[0].options) if (o.ok !== o.fig.flip) fail(`${tag}: a reflection judged ${o.ok ? 'wrong' : 'right'}`);
-      if (e.kind === 'stand' && e.variant !== 'pic') {
+      if (e.kind === 'stand' && e.variant === 'ratio-pic') for (const o of e.questions[0].options) {
+        // the picture marked right has the asked λ = λ₁/k, all of them fit the ends
+        const d = o.fig.std, k = Number(e.text.match(/λ₁\/(\d+)/)[1]), lam1 = 4 * d.len / (d.ends[0] === d.ends[1] ? 2 : 1);
+        if (!W.fits(d.ends, d.q, d.ph) || d.warp) fail(`${tag}: a picture that does not fit the ends`);
+        if (o.ok !== near(lam1 / ((4 * d.len) / d.q), k)) fail(`${tag}: a picture judged ${o.ok ? 'right' : 'wrong'}`);
+      }
+      if (e.kind === 'stand' && e.variant !== 'pic' && e.variant !== 'ratio-pic') {
         // the value marked right is the wavelength of the picture
         const d = e.fig.std, lam = (4 * d.len) / d.q, lam1 = 4 * d.len / (d.ends[0] === d.ends[1] ? 2 : 1), ok = e.questions[0].options.find((o) => o.ok);
         if (e.variant === 'count' ? !near(ok.value, lam) : ok.label !== `λ₁/${Math.round(lam1 / lam)}`) fail(`${tag}: the wavelength`);
@@ -110,6 +116,17 @@ for (const lang of ['en', 'de']) {
       }
     }
   }
+}
+// the stage "λ as a fraction of λ₁" has at least 12 distinct exercises (by text and options)
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  const seen = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    const e = W.generate('stand-ratio', seed);
+    seen.add(e.text + '|' + e.questions[0].options.map((o) => o.label || '').sort().join(','));
+    if (/[$_]/.test(e.text + e.solution.join('') + e.questions[0].options.map((o) => (o.label || '') + o.why).join(''))) fail(`${lang} stand-ratio-${seed}: raw $ or _ in a text`);
+  }
+  if (seen.size < 12) fail(`${lang} stand-ratio: only ${seen.size} distinct exercises`);
 }
 console.log(`exercises: ${n}`);
 

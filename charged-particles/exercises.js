@@ -452,20 +452,35 @@
         `Die positiven Ladungsträger bewegen sich in Stromrichtung, ${dirName(vdir)}. Rechte Hand: Daumen ${dirName(vdir)}, Zeigefinger ${dirName([0, 0, bz])}: Die Kraft zeigt ${dirName(F)}. Sie sammeln sich am ${gather === 'upper' ? 'oberen' : 'unteren'} Rand, der positiv wird; der ${neg === 'upper' ? 'obere' : 'untere'} Rand, wo sie fehlen, wird negativ.`)
       : L(`The electrons move against the current, ${dirName(vdir)}. Left hand (negative charge): thumb ${dirName(vdir)}, index finger ${dirName([0, 0, bz])}: the force points ${dirName(F)}. The electrons gather at ${edge(gather)}, which becomes negative; the other edge, short of electrons, becomes positive.`,
         `Die Elektronen bewegen sich gegen den Strom, ${dirName(vdir)}. Linke Hand (negative Ladung): Daumen ${dirName(vdir)}, Zeigefinger ${dirName([0, 0, bz])}: Die Kraft zeigt ${dirName(F)}. Die Elektronen sammeln sich am ${gather === 'upper' ? 'oberen' : 'unteren'} Rand, der negativ wird; der andere Rand, wo Elektronen fehlen, wird positiv.`);
-    const howStop = L('The charged edges make an electric field across the strip, which pushes the moving charges back. The charge grows until the electric force e·E balances the magnetic force e·v·B: then the charges pass straight along the strip, as in a velocity selector. So E = v·B, and the Hall voltage is U_H = E·d = v·B·d (d: the width of the strip).',
-      'Die geladenen Ränder erzeugen ein elektrisches Feld quer zum Streifen, das die bewegten Ladungen zurückdrückt. Die Ladung wächst, bis die elektrische Kraft e·E der magnetischen Kraft e·v·B das Gleichgewicht hält: Dann fliessen die Ladungen gerade längs des Streifens, wie im Geschwindigkeitsfilter. Also E = v·B, und die Hall-Spannung ist U_H = E·d = v·B·d (d: die Breite des Streifens).');
-    const howU = L('U_H = v·B·d: the same current means the same drift speed v; twice the field, twice the Hall voltage.', 'U_H = v·B·d: Derselbe Strom bedeutet dieselbe Driftgeschwindigkeit v; doppeltes Feld, doppelte Hall-Spannung.');
+    const howStop = L('The charged edges make an electric field across the strip, which pushes the moving charges back. The charge grows until the electric force e·E balances the magnetic force e·v·B: then the charges pass straight along the strip, as in a velocity selector. So E = v·B, and the Hall voltage is U<sub>H</sub> = E·d = v·B·d (d: the width of the strip).',
+      'Die geladenen Ränder erzeugen ein elektrisches Feld quer zum Streifen, das die bewegten Ladungen zurückdrückt. Die Ladung wächst, bis die elektrische Kraft e·E der magnetischen Kraft e·v·B das Gleichgewicht hält: Dann fliessen die Ladungen gerade längs des Streifens, wie im Geschwindigkeitsfilter. Also E = v·B, und die Hall-Spannung ist U<sub>H</sub> = E·d = v·B·d (d: die Breite des Streifens).');
+    // (c) how U_H = v·B·d changes: [the change asked, the factor, the reason]; v grows with the
+    // current in the same strip (I = n·e·v·A)
+    const CHANGE = [
+      [L('In a field twice as strong (the same current)', 'In einem doppelt so starken Feld (derselbe Strom)'), 2, L('U<sub>H</sub> = v·B·d: the same current means the same drift speed v; twice the field, twice the Hall voltage.', 'U<sub>H</sub> = v·B·d: Derselbe Strom bedeutet dieselbe Driftgeschwindigkeit v; doppeltes Feld, doppelte Hall-Spannung.')],
+      [L('In a field three times as strong (the same current)', 'In einem dreimal so starken Feld (derselbe Strom)'), 3, L('U<sub>H</sub> = v·B·d: the same current means the same drift speed v; three times the field, three times the Hall voltage.', 'U<sub>H</sub> = v·B·d: Derselbe Strom bedeutet dieselbe Driftgeschwindigkeit v; dreifaches Feld, dreifache Hall-Spannung.')],
+      [L('In a field half as strong (the same current)', 'In einem halb so starken Feld (derselbe Strom)'), 0.5, L('U<sub>H</sub> = v·B·d: the same current means the same drift speed v; half the field, half the Hall voltage.', 'U<sub>H</sub> = v·B·d: Derselbe Strom bedeutet dieselbe Driftgeschwindigkeit v; halbes Feld, halbe Hall-Spannung.')],
+      [L('With twice the current (the same field)', 'Mit doppelt so grossem Strom (dasselbe Feld)'), 2, L('U<sub>H</sub> = v·B·d: in the same strip, twice the current means the charges drift twice as fast; the same field, so twice the Hall voltage.', 'U<sub>H</sub> = v·B·d: Im selben Streifen bedeutet ein doppelt so grosser Strom, dass die Ladungen doppelt so schnell driften; dasselbe Feld, also doppelte Hall-Spannung.')],
+      [L('With twice the current in a field twice as strong', 'Mit doppelt so grossem Strom in einem doppelt so starken Feld'), 4, L('U<sub>H</sub> = v·B·d: twice the current means twice the drift speed v, and the field is twice as strong too: 2·2 = 4 times the Hall voltage.', 'U<sub>H</sub> = v·B·d: Doppelter Strom bedeutet doppelte Driftgeschwindigkeit v, und auch das Feld ist doppelt so stark: 2·2 = 4-mal die Hall-Spannung.')],
+    ];
+    const [askU, fU, howU] = r.pick(CHANGE);
+    const optsU = [[fU, ''], [1, 'same'], [1 / fU, 'inverse'], [fU === 4 ? 2 : fU * fU, 'other']];
+    for (const x of [4, 2, 0.5, 3]) if (optsU.length < 4 && !optsU.some(([y]) => Math.abs(y - x) < 1e-9)) optsU.push([x, 'other']);
+    // (a) which edge becomes negative, or which positive
+    const askPos = r.next() < 0.5;
     const end = I > 0 ? L('the right end of the strip', 'das rechte Ende des Streifens') : L('the left end of the strip', 'das linke Ende des Streifens');
-    const upperNeg = neg === 'upper';
+    const upperNeg = neg === 'upper', upperAsk = askPos ? !upperNeg : upperNeg;
+    const wrongEdge = askPos ? L(`That edge becomes negative, the other one positive. ${how}`, `Dieser Rand wird negativ, der andere positiv. ${how}`)
+      : L(`That is where the ${holes ? 'positive carriers' : 'electrons'} would go if they moved the other way. ${how}`, `Dorthin gingen die ${holes ? 'positiven Ladungsträger' : 'Elektronen'}, wenn sie sich in die andere Richtung bewegten. ${how}`);
     return {
       kind: 'hall', title: L('The Hall voltage', 'Die Hall-Spannung'),
       text: (holes ? L(`<p>A strip of a semiconductor carries a current ${it('I')} ${dirName([I, 0, 0])} in a magnetic field ${dirName([0, 0, bz])}. In this semiconductor the current is carried by positive charges.</p>`, `<p>Ein Streifen aus einem Halbleiter führt einen Strom ${it('I')} ${dirName([I, 0, 0])} in einem Magnetfeld, das ${dirName([0, 0, bz])} zeigt. In diesem Halbleiter wird der Strom von positiven Ladungen getragen.</p>`)
         : L(`<p>A copper strip carries a current ${it('I')} ${dirName([I, 0, 0])} in a magnetic field ${dirName([0, 0, bz])}. In copper the moving charges are electrons.</p>`, `<p>Ein Kupferstreifen führt einen Strom ${it('I')} ${dirName([I, 0, 0])} in einem Magnetfeld, das ${dirName([0, 0, bz])} zeigt. In Kupfer sind die bewegten Ladungen Elektronen.</p>`)),
       figs: fig(hallFig({ I, bz })),
       questions: [
-        choice('edge', L('(a) Which part of the strip becomes negatively charged?', '(a) Welcher Teil des Streifens wird negativ geladen?'), words(r, [
-          [cap(edge('upper')), upperNeg, L(`That is where the ${holes ? 'positive carriers' : 'electrons'} would go if they moved the other way. ${how}`, `Dorthin gingen die ${holes ? 'positiven Ladungsträger' : 'Elektronen'}, wenn sie sich in die andere Richtung bewegten. ${how}`), 'hallsign'],
-          [cap(edge('lower')), !upperNeg, L(`That is where the ${holes ? 'positive carriers' : 'electrons'} would go if they moved the other way. ${how}`, `Dorthin gingen die ${holes ? 'positiven Ladungsträger' : 'Elektronen'}, wenn sie sich in die andere Richtung bewegten. ${how}`), 'hallsign'],
+        choice('edge', askPos ? L('(a) Which part of the strip becomes positively charged?', '(a) Welcher Teil des Streifens wird positiv geladen?') : L('(a) Which part of the strip becomes negatively charged?', '(a) Welcher Teil des Streifens wird negativ geladen?'), words(r, [
+          [cap(edge('upper')), upperAsk, wrongEdge, 'hallsign'],
+          [cap(edge('lower')), !upperAsk, wrongEdge, 'hallsign'],
           [cap(end), false, L(`The magnetic force is perpendicular to the motion of the charges: across the strip, not along it. ${how}`, `Die magnetische Kraft steht senkrecht zur Bewegung der Ladungen: quer zum Streifen, nicht längs. ${how}`), 'perp'],
           [L('No part: the charges only flow along the strip', 'Kein Teil: Die Ladungen fliessen nur längs des Streifens'), false, L(`The moving charges feel a magnetic force across the strip. ${how}`, `Die bewegten Ladungen spüren eine magnetische Kraft quer zum Streifen. ${how}`), 'none']])),
         choice('stop', L('(b) The charge on the edges stops growing when', '(b) Die Ladung an den Rändern wächst nicht mehr, wenn'), words(r, [
@@ -473,10 +488,10 @@
           [L('all the moving charges have gathered at one edge', 'sich alle bewegten Ladungen an einem Rand gesammelt haben'), false, L(`Only a tiny part of them is needed for the field across the strip; the current goes on. ${howStop}`, `Es braucht nur einen winzigen Teil davon für das Feld quer zum Streifen; der Strom fliesst weiter. ${howStop}`), 'balance'],
           [L('the current in the strip has stopped', 'der Strom im Streifen aufgehört hat'), false, L(`The current goes on flowing along the strip. ${howStop}`, `Der Strom fliesst weiter längs des Streifens. ${howStop}`), 'balance'],
           [L('the magnetic force has used up the energy of the charges', 'die magnetische Kraft die Energie der Ladungen aufgebraucht hat'), false, L(`The magnetic force does no work. ${howStop}`, `Die magnetische Kraft verrichtet keine Arbeit. ${howStop}`), 'work']])),
-        choice('u', L('(c) In a field twice as strong (the same current), the Hall voltage would be', '(c) In einem doppelt so starken Feld (derselbe Strom) wäre die Hall-Spannung'), [[1, 'same'], [2, ''], [0.5, 'inverse'], [4, 'other']].map(([x, tag]) => ({ x, label: times2(x), ok: !tag, tag: tag || undefined, why: tag ? howU : '' })).sort((p, q) => p.x - q.x)),
+        choice('u', L(`(c) ${askU}, the Hall voltage would be`, `(c) ${askU} wäre die Hall-Spannung`), optsU.map(([x, tag]) => ({ x, label: times2(x), ok: !tag, tag: tag || undefined, why: tag ? howU : '' })).sort((p, q) => p.x - q.x)),
       ],
       hints: [holes ? L('The positive carriers move along the current.', 'Die positiven Ladungsträger bewegen sich in Stromrichtung.') : L('The electrons move against the current.', 'Die Elektronen bewegen sich gegen den Strom.'), RULE(), L('The charged edges make an electric field across the strip, as between two plates.', 'Die geladenen Ränder erzeugen ein elektrisches Feld quer zum Streifen, wie zwischen zwei Platten.')],
-      solution: [how, howStop, howU], solFig: fig(hallFig({ I, bz, edges: upperNeg ? -1 : 1 })), p: { I, bz, holes },
+      solution: [how, howStop, howU], solFig: fig(hallFig({ I, bz, edges: upperNeg ? -1 : 1 })), p: { I, bz, holes, askPos, fU },
     };
   }
 

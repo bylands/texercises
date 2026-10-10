@@ -122,6 +122,19 @@ for (const lang of ['en', 'de']) {
     Com.tutorial(e).frames.forEach((f, j) => { checkText(`tutor ${k + 1}`, `frame ${j + 1}`, f.text); checkText(`tutor ${k + 1}`, `figure ${j + 1}`, f.figure); });
   });
 }
+// The first practice stage (com-L): at least 10 different exercises (dimensions), each valid.
+{
+  Lang.set('en', true);
+  const seen = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    const ex = Com.practiceOf('com-L', seed);
+    seen.add(JSON.stringify(ex.p));
+    if (seed > 60) checkExercise(ex, `com-L-${seed}`);
+    if (/[$_]/.test(ex.text.replace(/<[^>]*>/g, ''))) fail(`com-L-${seed}: raw $ or _ in the text`);
+  }
+  if (seen.size < 10) fail(`com-L: only ${seen.size} different exercises`);
+  console.log(`com-L: ${seen.size} different exercises.`);
+}
 // the tutor's example of the stability: not in equilibrium, so that all cases are discussed
 if (Scenarios.stateOf(Lessons.EXAMPLES[2].p.D) !== 'none') fail('tutor 3: the board is in equilibrium');
 

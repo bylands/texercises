@@ -347,8 +347,9 @@
   // ---------------------------------------------------------------- the U₀(f) graph
   // The stopping voltage against the frequency: U₀ = (h/e)·f − W/e, a straight line of slope
   // h/e = 0.414 V per 10¹⁴ Hz. Threshold frequencies with a round cut-off wavelength (λ₀ = c/f₀; in German λ_G, f_G)
-  // and a work function W = h·f₀ that is easy to work out.
-  const LINE_FG = [5, 6, 7.5, 10];
+  // and a work function W = h·f₀ that is easy to work out. Each on a grid line of the graph; seed 1 (6 · 10¹⁴ Hz)
+  // is the tutor's example.
+  const LINE_FG = [5, 6, 7.5, 10, 4, 8, 12];
   function photoLine(seed) {
     const r = rng(seed * 59 + 23);
     const fg = LINE_FG[seed % LINE_FG.length], slope = P.hEV * 1e14, Wm = slope * fg, lg = 3000 / fg;

@@ -27,7 +27,7 @@
         pairs: [[0, 3], [1, 2]], balance: [0, 1],
         draw: () => D.ceiling(110, 250, 18) + D.line(180, 18, 180, 104, 'cable') + `<polygon class="obj" points="164,104 196,104 214,140 146,140"/>` + D.ground(20, 340, 210) +
           D.arrow(172, 122, 172, 170, 'f', '') + D.arrow(188, 106, 188, 60, 'f', '') + D.arrow(200, 60, 200, 96, 'f', '', { cls: 'pair' }) + D.arrow(60, 210, 60, 162, 'f', '', { cls: 'pair' }) +
-          D.text(164, 170, '1', 'lbl f', 'end') + D.text(180, 62, '2', 'lbl f', 'end') + D.text(208, 80, '3', 'lbl f', 'start') + D.text(68, 166, '4', 'lbl f', 'start') + D.words(68, 226, T('(on the Earth)', '(auf die Erde)'), 'start'),
+          D.text(164, 170, '1', 'lbl f', 'end') + D.text(180, 62, '2', 'lbl f', 'end') + D.text(208, 80, '3', 'lbl f', 'start') + D.text(68, 166, '4', 'lbl f', 'start') + D.words(68, 204, T('(on the Earth)', '(auf die Erde)'), 'start'),
       },
       wall: {
         title: T('Pushing a wall', 'Gegen eine Wand drücken'),
@@ -49,11 +49,97 @@
           D.arrow(146, 168, 190, 168, 'f', '') + D.arrow(146, 178, 102, 178, 'f', '', { cls: 'pair' }) + D.arrow(250, 130, 214, 130, 'f', '') + D.arrow(256, 116, 300, 116, 'f', '', { cls: 'pair' }) +
           D.text(194, 166, '1', 'lbl f', 'start') + D.text(98, 182, '2', 'lbl f', 'end') + D.text(210, 126, '3', 'lbl f', 'end') + D.text(304, 120, '4', 'lbl f', 'start') + D.arrow(30, 40, 80, 40, 'm', '', { head: 7 }) + D.words(88, 44, T('speeding up', 'wird schneller'), 'start'),
       },
+      fridge: {
+        title: T('Magnet on a fridge', 'Magnet am Kühlschrank'),
+        text: T('A magnet sticks at rest to the side of a steel fridge. The four horizontal forces between the magnet and the fridge are numbered in the picture.', 'Ein Magnet haftet ruhig an der Seitenwand eines Kühlschranks aus Stahl. Die vier waagrechten Kräfte zwischen Magnet und Kühlschrank sind im Bild nummeriert.'),
+        forces: [T('The fridge pulls the magnet to the right.', 'Der Kühlschrank zieht den Magneten nach rechts.'), T('The magnet pushes the fridge to the right.', 'Der Magnet drückt den Kühlschrank nach rechts.'),
+          T('The fridge pushes the magnet to the left.', 'Der Kühlschrank drückt den Magneten nach links.'), T('The magnet pulls the fridge to the left.', 'Der Magnet zieht den Kühlschrank nach links.')],
+        pairs: [[0, 3], [1, 2]], balance: [0, 2],
+        draw: () => D.ground(20, 340, 214) + D.rect(200, 20, 120, 194, 'obj', 4) + D.rect(176, 96, 24, 30, 'mag-n', 2) +
+          D.arrow(184, 104, 228, 104, 'f', '') + D.arrow(204, 142, 248, 142, 'f', '', { cls: 'pair' }) + D.arrow(192, 118, 148, 118, 'f', '') + D.arrow(248, 80, 204, 80, 'f', '', { cls: 'pair' }) +
+          D.text(232, 108, '1', 'lbl f', 'start') + D.text(252, 146, '2', 'lbl f', 'start') + D.text(144, 122, '3', 'lbl f', 'end') + D.text(200, 76, '4', 'lbl f', 'end') + D.words(260, 200, T('fridge', 'Kühlschrank')),
+      },
+      trailer: {
+        title: T('Car with a trailer', 'Auto mit Anhänger'),
+        text: T('A car pulls a trailer along a level road at constant speed; air resistance is negligible. Four forces are numbered in the picture.', 'Ein Auto zieht einen Anhänger mit konstanter Geschwindigkeit über eine ebene Strasse; der Luftwiderstand ist vernachlässigbar. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The car pulls the trailer forward.', 'Das Auto zieht den Anhänger nach vorn.'), T('The road pushes the trailer backward (friction).', 'Die Strasse drückt den Anhänger nach hinten (Reibung).'),
+          T('The trailer pushes the road forward.', 'Der Anhänger drückt die Strasse nach vorn.'), T('The trailer pulls the car backward.', 'Der Anhänger zieht das Auto nach hinten.')],
+        pairs: [[0, 3], [1, 2]], balance: [0, 1], state: 'constant',
+        draw: () => D.line(0, 176, 360, 176, 'gline') + D.rect(40, 120, 120, 40, 'obj', 3) + D.ball(70, 164, 12, 'wheel') + D.line(160, 150, 192, 150, 'cable') + D.car(190, 176, 140) +
+          D.arrow(90, 110, 136, 110, 'f', '') + D.arrow(140, 170, 96, 170, 'f', '') + D.arrow(100, 186, 144, 186, 'f', '', { cls: 'pair' }) + D.arrow(244, 100, 200, 100, 'f', '', { cls: 'pair' }) +
+          D.text(140, 114, '1', 'lbl f', 'start') + D.text(92, 174, '2', 'lbl f', 'end') + D.text(148, 190, '3', 'lbl f', 'start') + D.text(196, 104, '4', 'lbl f', 'end') +
+          D.arrow(30, 40, 80, 40, 'm', '', { head: 7 }) + D.words(88, 44, T('constant speed', 'gleichförmig'), 'start'),
+      },
+      boat: {
+        title: T('A floating boat', 'Ein schwimmendes Boot'),
+        text: T('A boat floats at rest on a lake. Four forces are numbered in the picture.', 'Ein Boot schwimmt ruhig auf einem See. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The water pushes the boat up.', 'Das Wasser drückt das Boot nach oben.'), T('The boat pulls the Earth up.', 'Das Boot zieht die Erde nach oben.'),
+          T('The Earth pulls the boat down.', 'Die Erde zieht das Boot nach unten.'), T('The boat pushes the water down.', 'Das Boot drückt das Wasser nach unten.')],
+        pairs: [[0, 3], [1, 2]], balance: [0, 2],
+        draw: () => D.rect(0, 130, 360, 70, 'ice', 0) + D.line(0, 130, 360, 130, 'ln') + D.ground(0, 360, 200) + `<polygon class="obj" points="120,104 240,104 220,146 140,146"/>` +
+          D.arrow(196, 146, 196, 96, 'f', '') + D.arrow(164, 112, 164, 160, 'f', '') + D.arrow(232, 140, 232, 184, 'f', '', { cls: 'pair' }) + D.arrow(60, 200, 60, 156, 'f', '', { cls: 'pair' }) +
+          D.text(204, 100, '1', 'lbl f', 'start') + D.text(156, 160, '3', 'lbl f', 'end') + D.text(240, 182, '4', 'lbl f', 'start') + D.text(68, 162, '2', 'lbl f', 'start') + D.words(68, 194, T('(on the Earth)', '(auf die Erde)'), 'start'),
+      },
+      helicopter: {
+        title: T('A hovering helicopter', 'Ein schwebender Helikopter'),
+        text: T('A helicopter hovers at rest above the ground; its rotor pushes air down. Four forces are numbered in the picture.', 'Ein Helikopter schwebt ruhig über dem Boden; sein Rotor drückt Luft nach unten. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The helicopter pushes the air down.', 'Der Helikopter drückt die Luft nach unten.'), T('The Earth pulls the helicopter down.', 'Die Erde zieht den Helikopter nach unten.'),
+          T('The helicopter pulls the Earth up.', 'Der Helikopter zieht die Erde nach oben.'), T('The air pushes the helicopter up.', 'Die Luft drückt den Helikopter nach oben.')],
+        pairs: [[0, 3], [1, 2]], balance: [1, 3],
+        draw: () => D.ground(20, 340, 210) + `<path class="trace" d="M108 66 v44 M244 66 v44"/>` + D.line(220, 88, 300, 80, 'body') + D.line(300, 70, 300, 92, 'body') +
+          `<ellipse class="obj" cx="180" cy="92" rx="42" ry="22"/>` + D.line(110, 58, 250, 58, 'body') + D.line(180, 58, 180, 70, 'body') + D.line(150, 130, 214, 130, 'body') + D.line(164, 112, 160, 130, 'body') + D.line(198, 112, 202, 130, 'body') +
+          D.arrow(130, 66, 130, 110, 'f', '', { cls: 'pair' }) + D.arrow(166, 98, 166, 144, 'f', '') + D.arrow(60, 210, 60, 166, 'f', '', { cls: 'pair' }) + D.arrow(196, 86, 196, 40, 'f', '') +
+          D.text(138, 108, '1', 'lbl f', 'start') + D.text(158, 148, '2', 'lbl f', 'end') + D.text(68, 172, '3', 'lbl f', 'start') + D.text(204, 44, '4', 'lbl f', 'start') + D.words(68, 204, T('(on the Earth)', '(auf die Erde)'), 'start'),
+      },
+      float: {
+        title: T('A floating magnet', 'Ein schwebender Magnet'),
+        text: T('A ring magnet floats at rest above another ring magnet that lies on a table; a smooth rod through both keeps it from sliding off sideways. Four forces are numbered in the picture.', 'Ein Ringmagnet schwebt ruhig über einem anderen Ringmagneten, der auf einem Tisch liegt; ein glatter Stab durch beide verhindert, dass er seitlich wegrutscht. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The lower magnet pushes the upper magnet up.', 'Der untere Magnet drückt den oberen Magneten nach oben.'), T('The upper magnet pushes the lower magnet down.', 'Der obere Magnet drückt den unteren Magneten nach unten.'),
+          T('The Earth pulls the upper magnet down.', 'Die Erde zieht den oberen Magneten nach unten.'), T('The upper magnet pulls the Earth up.', 'Der obere Magnet zieht die Erde nach oben.')],
+        pairs: [[0, 1], [2, 3]], balance: [0, 2],
+        draw: () => D.ground(20, 340, 214) + D.table(90, 160, 180, 214) + D.line(180, 50, 180, 160, 'cable') +
+          D.rect(150, 80, 60, 10, 'mag-s', 1) + D.rect(150, 90, 60, 10, 'mag-n', 1) + D.rect(150, 140, 60, 10, 'mag-n', 1) + D.rect(150, 150, 60, 10, 'mag-s', 1) +
+          D.arrow(196, 92, 196, 46, 'f', '') + D.arrow(226, 146, 226, 190, 'f', '', { cls: 'pair' }) + D.arrow(164, 92, 164, 134, 'f', '') + D.arrow(300, 214, 300, 172, 'f', '', { cls: 'pair' }) +
+          D.text(204, 50, '1', 'lbl f', 'start') + D.text(234, 188, '2', 'lbl f', 'start') + D.text(156, 132, '3', 'lbl f', 'end') + D.text(308, 178, '4', 'lbl f', 'start') + D.words(304, 160, T('(on the Earth)', '(auf die Erde)')),
+      },
+      rocket: {
+        title: T('A rising rocket', 'Eine steigende Rakete'),
+        text: T('A rocket rises vertically at constant speed; air resistance is negligible. Its engine pushes hot gas out downward. Four forces are numbered in the picture.', 'Eine Rakete steigt mit konstanter Geschwindigkeit senkrecht auf; der Luftwiderstand ist vernachlässigbar. Ihr Triebwerk stösst heisses Gas nach unten aus. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The Earth pulls the rocket down.', 'Die Erde zieht die Rakete nach unten.'), T('The rocket pushes the gas down.', 'Die Rakete drückt das Gas nach unten.'),
+          T('The gas pushes the rocket up.', 'Das Gas drückt die Rakete nach oben.'), T('The rocket pulls the Earth up.', 'Die Rakete zieht die Erde nach oben.')],
+        pairs: [[0, 3], [1, 2]], balance: [0, 2], state: 'constant',
+        draw: () => D.ground(20, 340, 214) + `<polygon class="flame" points="168,138 192,138 180,184"/>` + `<polygon class="obj" points="165,112 150,138 165,132"/>` + `<polygon class="obj" points="195,112 210,138 195,132"/>` +
+          D.rect(165, 40, 30, 98, 'obj', 3) + `<polygon class="obj" points="165,40 180,12 195,40"/>` +
+          D.arrow(144, 72, 144, 118, 'f', '') + D.arrow(222, 150, 222, 196, 'f', '', { cls: 'pair' }) + D.arrow(206, 132, 206, 86, 'f', '') + D.arrow(60, 214, 60, 170, 'f', '', { cls: 'pair' }) +
+          D.text(136, 118, '1', 'lbl f', 'end') + D.text(230, 194, '2', 'lbl f', 'start') + D.text(214, 90, '3', 'lbl f', 'start') + D.text(68, 176, '4', 'lbl f', 'start') + D.words(68, 208, T('(on the Earth)', '(auf die Erde)'), 'start') +
+          D.arrow(296, 110, 296, 60, 'm', '', { head: 7 }) + D.words(296, 128, T('constant speed', 'gleichförmig')),
+      },
+      crate: {
+        title: T('Pushing a crate', 'Eine Kiste schieben'),
+        text: T('A worker pushes a crate across the floor at constant speed. Four forces are numbered in the picture.', 'Ein Arbeiter schiebt eine Kiste mit konstanter Geschwindigkeit über den Boden. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The floor pushes the crate backward (friction).', 'Der Boden drückt die Kiste nach hinten (Reibung).'), T('The worker pushes the crate forward.', 'Der Arbeiter drückt die Kiste nach vorn.'),
+          T('The crate pushes the floor forward.', 'Die Kiste drückt den Boden nach vorn.'), T('The crate pushes the worker backward.', 'Die Kiste drückt den Arbeiter nach hinten.')],
+        pairs: [[0, 2], [1, 3]], balance: [0, 1], state: 'constant',
+        draw: () => D.ground(20, 340, 190) + D.rect(190, 100, 90, 90, 'obj', 2) + `<g transform="rotate(10 140 190)">${D.person(140, 190, 116, 1, 'push')}</g>` +
+          D.arrow(258, 182, 214, 182, 'f', '') + D.arrow(196, 116, 240, 116, 'f', '') + D.arrow(240, 198, 284, 198, 'f', '', { cls: 'pair' }) + D.arrow(186, 134, 142, 134, 'f', '', { cls: 'pair' }) +
+          D.text(210, 178, '1', 'lbl f', 'end') + D.text(244, 120, '2', 'lbl f', 'start') + D.text(288, 202, '3', 'lbl f', 'start') + D.text(138, 138, '4', 'lbl f', 'end') +
+          D.arrow(30, 40, 80, 40, 'm', '', { head: 7 }) + D.words(88, 44, T('constant speed', 'gleichförmig'), 'start'),
+      },
+      scales: {
+        title: T('Standing on scales', 'Auf der Personenwaage'),
+        text: T('A boy stands at rest on bathroom scales. Four forces are numbered in the picture.', 'Ein Junge steht ruhig auf einer Personenwaage. Im Bild sind vier Kräfte nummeriert.'),
+        forces: [T('The boy pushes the scales down.', 'Der Junge drückt die Waage nach unten.'), T('The Earth pulls the boy down.', 'Die Erde zieht den Jungen nach unten.'),
+          T('The scales push the boy up.', 'Die Waage drückt den Jungen nach oben.'), T('The boy pulls the Earth up.', 'Der Junge zieht die Erde nach oben.')],
+        pairs: [[0, 2], [1, 3]], balance: [1, 2],
+        draw: () => D.ground(20, 340, 200) + D.rect(136, 186, 88, 14, 'obj', 3) + D.rect(172, 189, 16, 6, 'win', 1) + D.person(180, 186, 120, 1, 'down') +
+          D.arrow(214, 188, 214, 228, 'f', '', { cls: 'pair' }) + D.arrow(206, 100, 206, 146, 'f', '') + D.arrow(148, 186, 148, 140, 'f', '') + D.arrow(40, 200, 40, 156, 'f', '', { cls: 'pair' }) +
+          D.text(222, 226, '1', 'lbl f', 'start') + D.text(214, 146, '2', 'lbl f', 'start') + D.text(140, 144, '3', 'lbl f', 'end') + D.text(48, 162, '4', 'lbl f', 'start') + D.words(24, 146, T('(on the Earth)', '(auf die Erde)'), 'start'),
+      },
     };
   }
 
   function matchPartners(r, p) {
-    const key = p.scene || r.pick(['book', 'lamp', 'wall', 'car']);
+    const key = p.scene || r.pick(Object.keys(scenes()));
     const sc = scenes()[key];
     const partner = (i) => { const pr = sc.pairs.find((x) => x.includes(i)); return pr[0] === i ? pr[1] : pr[0]; };
     const num = (i) => String(i + 1);
@@ -90,8 +176,8 @@
         { title: T('Interactions', 'Wechselwirkungen'), figure: figure(),
           text: T(`Each force belongs to an interaction between two bodies. Swapping the bodies gives the partner: ${pairsText}.`, `Jede Kraft gehört zu einer Wechselwirkung zwischen zwei Körpern. Vertauscht man die Körper, erhält man die Gegenkraft: ${pairsText}.`) },
         { title: T('Balanced is not a pair', 'Gleichgewicht ist kein Paar'), figure: figure(),
-          text: T(`Forces ${sc.balance[0] + 1} and ${sc.balance[1] + 1} both act on the same body. ${key === 'car' ? 'At constant speed they would balance' : 'They balance, because the body is at rest'} — but they belong to different interactions, so they are not partners.`,
-            `Die Kräfte ${sc.balance[0] + 1} und ${sc.balance[1] + 1} wirken beide auf denselben Körper. ${key === 'car' ? 'Bei konstanter Geschwindigkeit würden sie sich aufheben' : 'Sie heben sich auf, weil der Körper in Ruhe ist'} — aber sie gehören zu verschiedenen Wechselwirkungen, also sind sie kein Paar.`) },
+          text: T(`Forces ${sc.balance[0] + 1} and ${sc.balance[1] + 1} both act on the same body. ${key === 'car' ? 'At constant speed they would balance' : sc.state === 'constant' ? 'They balance, because the body moves at constant velocity' : 'They balance, because the body is at rest'} — but they belong to different interactions, so they are not partners.`,
+            `Die Kräfte ${sc.balance[0] + 1} und ${sc.balance[1] + 1} wirken beide auf denselben Körper. ${key === 'car' ? 'Bei konstanter Geschwindigkeit würden sie sich aufheben' : sc.state === 'constant' ? 'Sie heben sich auf, weil sich der Körper mit konstanter Geschwindigkeit bewegt' : 'Sie heben sich auf, weil der Körper in Ruhe ist'} — aber sie gehören zu verschiedenen Wechselwirkungen, also sind sie kein Paar.`) },
       ],
     };
   }

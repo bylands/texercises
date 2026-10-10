@@ -2,8 +2,9 @@
 // shared figure kit (figkit.js).
 //   IndFigures.<name>(args)  an SVG in a <div class="fig">
 //     loop({ s, w, d, v, B })      a square loop (side s cm) at distance d from a field region w cm wide
-//     magnet({ pole, move })       a bar magnet in front of a ring (pole facing it; toward, away, still)
-//     field({ into, how })         a loop in a field into or out of the page (how: up, down, out)
+//     magnet({ pole, move, who })  a bar magnet in front of a ring (pole facing it; toward, away, still;
+//                                  who moves: magnet, ring, or for still: rest, together)
+//     field({ into, how })         a loop in a field into or out of the page (how: up, down, off, out, in, shrink)
 (function (root) {
   'use strict';
 
@@ -51,23 +52,30 @@
     return rect(x, y - h / 2, half, h, cls(left)) + rect(x + half, y - h / 2, half, h, cls(rightPole)) +
       lbl(x + half / 2, y + 5, left) + lbl(x + half * 1.5, y + 5, rightPole);
   }
-  function magnet({ pole, move }) {
+  // who moves (magnet, ring); for no relative motion: both at rest, or both carried together
+  function magnet({ pole, move, who = move === 'still' ? 'rest' : 'magnet' }) {
     const y = 90, ring = 300;
-    const go = move === 'toward' ? arrow(70, 44, 160, 44) : move === 'away' ? arrow(160, 44, 70, 44) : '';
-    const body = barMagnet(40, y, 150, 34, pole) + go + (move === 'still' ? cap(115, 48, L('at rest', 'in Ruhe')) : '') +
+    const ringGo = move === 'toward' ? arrow(330, 30, 270, 30) : arrow(270, 30, 330, 30);
+    const go = who === 'together' ? arrow(70, 44, 160, 44) + arrow(270, 30, 330, 30) + cap(115, 140, L('both at the same speed', 'beide gleich schnell'))
+      : who === 'ring' ? ringGo + cap(115, 48, L('at rest', 'in Ruhe'))
+        : who === 'magnet' ? (move === 'toward' ? arrow(70, 44, 160, 44) : arrow(160, 44, 70, 44)) : cap(115, 48, L('at rest', 'in Ruhe'));
+    const body = barMagnet(40, y, 150, 34, pole) + go +
       `<ellipse class="ind-ring" cx="${ring}" cy="${y}" rx="12" ry="46"/>` + cap(ring, y + 66, L('metal ring', 'Metallring'));
     return svg(360, 170, body, L('A bar magnet in front of a metal ring', 'Ein Stabmagnet vor einem Metallring'));
   }
 
   // ---------------------------------------------------------------- a loop in a field
   function field({ into, how }) {
-    const pulled = how === 'out';
-    const fx = 20, fy = 20, fw = pulled ? 170 : 240, fh = 150, lx = pulled ? 110 : 70, ly = 50, ls = 90;
-    const note = how === 'up' ? L('the field gets stronger', 'das Feld wird stärker') : how === 'down' ? L('the field gets weaker', 'das Feld wird schwächer') : '';
-    const body = region(fx, fy, fw, fh) + marks(fx, fy, fw, fh, into, 18) + rect(lx, ly, ls, ls, 'ind-loop') +
-      (pulled ? arrow(lx + ls + 6, ly + ls / 2, lx + ls + 66, ly + ls / 2) : '') +
-      lbl(fx + 10, fy + fh + 18, `<tspan font-style="italic">B</tspan> ${into ? L('into the page', 'in die Seite hinein') : L('out of the page', 'aus der Seite heraus')}${note ? ` · ${note}` : ''}`, 'start');
-    return svg(pulled ? 300 : 280, fy + fh + 30, body, L('A loop in a magnetic field', 'Eine Schleife in einem Magnetfeld'));
+    const pulled = how === 'out', pushed = how === 'in';
+    const fx = pushed ? 124 : 20, fy = 20, fw = pulled || pushed ? 170 : 240, fh = 150, lx = pulled ? 110 : pushed ? 20 : 70, ly = 50, ls = 90;
+    const note = { up: L('the field gets stronger', 'das Feld wird stärker'), down: L('the field gets weaker', 'das Feld wird schwächer'), off: L('switched off', 'wird ausgeschaltet'), shrink: L('the loop shrinks', 'die Schleife wird kleiner') }[how] || '';
+    // squeezed: an arrow pointing in at the middle of each side
+    const cx = lx + ls / 2, cy = ly + ls / 2, h = ls / 2;
+    const squeeze = how === 'shrink' ? arrow(cx - h - 26, cy, cx - h - 4, cy) + arrow(cx + h + 26, cy, cx + h + 4, cy) + arrow(cx, cy - h - 26, cx, cy - h - 4) + arrow(cx, cy + h + 26, cx, cy + h + 4) : '';
+    const body = region(fx, fy, fw, fh) + marks(fx, fy, fw, fh, into, 18) + rect(lx, ly, ls, ls, 'ind-loop') + squeeze +
+      (pulled ? arrow(lx + ls + 6, ly + ls / 2, lx + ls + 66, ly + ls / 2) : '') + (pushed ? arrow(lx + 15, ly - 16, lx + 75, ly - 16) : '') +
+      lbl(pushed ? fx : fx + 10, fy + fh + 18, `<tspan font-style="italic">B</tspan> ${into ? L('into the page', 'in die Seite hinein') : L('out of the page', 'aus der Seite heraus')}${note ? ` · ${note}` : ''}`, 'start');
+    return svg(pulled || pushed ? 300 : 280, fy + fh + 30, body, L('A loop in a magnetic field', 'Eine Schleife in einem Magnetfeld'));
   }
 
   const api = { loop, magnet, field };

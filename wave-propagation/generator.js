@@ -619,11 +619,32 @@
     }
   }
   // the wavelength as a fraction of the fundamental's
+  // (or, the other way round, which picture shows the wave with λ = λ₁/k)
   function standRatio(r) {
-    const ends = r.pick(CONFIGS), same = ends[0] === ends[1], q = r.pick(same ? [4, 6, 8] : [3, 5, 7]), k = same ? q / 2 : q;
+    const ends = r.pick(CONFIGS), same = ends[0] === ends[1], q = r.pick(same ? [4, 6, 8, 10] : [3, 5, 7, 9]), k = same ? q / 2 : q;
     const lab = (d) => (d === 1 ? 'λ₁' : d < 1 ? `${Math.round(1 / d)}·λ₁` : `λ₁/${d}`);
     const why = same ? L(`Fixed at both ends, the fundamental is one loop: λ₁ = 2ℓ. Here ${k} loops fit: λ = 2ℓ/${k} = λ₁/${k}.`, `An beiden Enden fest ist die Grundschwingung eine Schleife: λ₁ = 2ℓ. Hier passen ${k} Schleifen: λ = 2ℓ/${k} = λ₁/${k}.`)
       : L(`With one end free, the fundamental is a quarter wavelength: λ₁ = 4ℓ. Here ${q} quarter wavelengths fit: λ = 4ℓ/${q} = λ₁/${q}.`, `Mit einem losen Ende ist die Grundschwingung eine Viertelwellenlänge: λ₁ = 4ℓ. Hier passen ${q} Viertelwellenlängen: λ = 4ℓ/${q} = λ₁/${q}.`);
+    if (r.int(0, 1)) {
+      // which picture: the same rope with other numbers of loops (quarter wavelengths)
+      const fig = (qq) => standFig(6, ends, qq, phOf(ends));
+      const other = (qq) => {
+        const kk = same ? qq / 2 : qq;
+        return same ? L(`This picture shows ${kk > 1 ? kk : 'one'} loop${kk > 1 ? 's' : ''}: ${kk === 1 ? 'λ = λ₁' : `λ = λ₁/${kk}`}. ${why}`, `Dieses Bild zeigt ${kk === 1 ? 'eine Schleife' : `${kk} Schleifen`}: ${kk === 1 ? 'λ = λ₁' : `λ = λ₁/${kk}`}. ${why}`)
+          : L(`This picture shows ${kk > 1 ? kk : 'one'} quarter wavelength${kk > 1 ? 's' : ''}: ${kk === 1 ? 'λ = λ₁' : `λ = λ₁/${kk}`}. ${why}`, `Dieses Bild zeigt ${kk === 1 ? 'eine Viertelwellenlänge' : `${kk} Viertelwellenlängen`}: ${kk === 1 ? 'λ = λ₁' : `λ = λ₁/${kk}`}. ${why}`);
+      };
+      const qs = r.shuffle([q - 2, q + 2, q + 4, q - 4].filter((x) => x >= 1));
+      const cands = qs.map((qq) => ({ spec: fig(qq), tag: same && qq === q - 2 ? 'count' : 'ratio', why: other(qq) }));
+      const right = fig(q);
+      return {
+        kind: 'stand', variant: 'ratio-pic', level: 'mixed', difficulty: 3,
+        text: L(`A rope is ${endsText(ends)}. Its fundamental (the standing wave of lowest frequency) has the wavelength λ₁. Which picture shows a standing wave on this rope with the wavelength λ = λ₁/${k}? Each picture shows the rope at its two extreme positions.`, `Ein Seil ist ${endsText(ends)}. Seine Grundschwingung (die stehende Welle mit der tiefsten Frequenz) hat die Wellenlänge λ₁. Welches Bild zeigt eine stehende Welle auf diesem Seil mit der Wellenlänge λ = λ₁/${k}? Jedes Bild zeigt das Seil in seinen beiden äussersten Lagen.`),
+        fig: null, anim: null, solAnim: null,
+        questions: [{ type: 'pick', key: 'fig', options: pickFrom(r, right, cands) }],
+        hints: [RULE.ends(), RULE.modes()],
+        solution: [RULE.modes(), why], solFig: right, p: { k: 'stand-ratio', ends, q, pic: true },
+      };
+    }
     // denominators d (λ = λ₁/d; d < 1 for a multiple)
     const cands = [
       { d: 1 / k, tag: 'ratio', why: L(`More loops on the same rope: a shorter wavelength. ${why}`, `Mehr Schleifen auf demselben Seil: eine kürzere Wellenlänge. ${why}`) },

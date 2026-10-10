@@ -122,3 +122,21 @@ svg.mf .coil { stroke: #b5651d; stroke-width: 5; stroke-linecap: round; }
 /* the nudge after a wrong check of statements */
 .stmts-fb { color: var(--bad); font-size: 0.9rem; margin: 4px 0 0; }
 .stmts-fb:empty { display: none; }
+
+/* a coil in 3D next to the drawing along its axis: side by side where there is room, else the 3D view above */
+.figs .fig.coil-pair { flex: 1 1 280px; max-width: 420px; text-align: center; }
+.figs .fig.coil-pair figcaption { margin-top: 4px; font-size: 0.9rem; font-style: italic; color: var(--muted); }
+svg.mf .pole3 { stroke: var(--ink); stroke-width: 1.2; stroke-linejoin: round; }
+svg.mf :is(.shade1, .shade2) { fill: var(--ink); stroke: none; }
+svg.mf .shade1 { opacity: 0.07; }
+svg.mf .shade2 { opacity: 0.16; }
+svg.mf .faint3 { opacity: 0.6; stroke-width: 1.3; }
+svg.mf .coil3 { stroke-width: 4; }
+svg.mf .coil-face { fill: #b5651d; opacity: 0.13; }
+svg.mf .axis3 { stroke: var(--ink); stroke-width: 1.3; stroke-dasharray: 6 4; }
+svg.mf .view { stroke: var(--muted); fill: none; }
+svg.mf .view-head { fill: var(--muted); }
+svg.mf .eye { fill: var(--card); stroke: var(--ink); stroke-width: 1.5; }
+svg.mf .pupil { fill: var(--ink); }
+svg.mf .turn { fill: none; stroke: var(--ink); stroke-width: 2.2; }
+svg.mf .turn-head { fill: var(--ink); }

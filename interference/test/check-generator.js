@@ -24,7 +24,7 @@ const round = (x, n = 3) => close(x, Number(x.toPrecision(n)), 1e-9);
 
 // how each quantity enters the pattern (or θ_min): the power of the factor (0: not at all)
 const POWER = {
-  ds: { lam: 1, L: 1, d: -1, b: 0 }, ss: { lam: 1, L: 1, b1: -1 }, gr: { lam: 1, L: 1, n: 1, N: 0 }, res: { lam: 1, D: -1 },
+  ds: { lam: 1, L: 1, d: -1, b: 0 }, ss: { lam: 1, L: 1, b1: -1 }, gr: { lam: 1, L: 1, n: 1, N: 0 }, res: { lam: 1, D: -1 }, radio: { lamr: 1, Ddish: -1 }, eye: { Dp: -1 }, cam: { Da: -1 },
 };
 const fkey = (r) => (r >= 1 ? String(Math.round(r)) : `1/${Math.round(1 / r)}`);
 
@@ -113,6 +113,12 @@ for (const lang of ['en', 'de']) {
       if (scn.quizChoice && qz.field.type !== 'choice') fail(`${where}: the check asks a number`);
     }
     if (seen.size < 8) fail(`${lang} ${scn.id}: only ${seen.size} different exercises`);
+  }
+  // the first stage of "Resolving power" has at least 12 exercises that read differently
+  {
+    const seen = new Set();
+    for (let seed = 1; seed <= 300; seed++) { const ex = Interf.practiceOf('res-change', seed); seen.add(ex.text + '|' + ex.fields.map((f) => (f.options || []).map((o) => o[1]).join(',')).join(';')); }
+    if (seen.size < 12) fail(`${lang} res-change: only ${seen.size} texts`);
   }
 
   // the tutor's examples and the topics

@@ -51,24 +51,32 @@
   };
 
   // ---------------------------------------------------------------- the de Broglie wavelength
-  // One value worked out once (an electron through 150 V has λ = 100 pm), the rest by ratios.
+  // One value worked out once (an electron through 150 V has λ = 100 pm), the rest by ratios: the
+  // wavelength from the voltage, or (rev) the voltage from the wavelength. k = √(U/150 V); K = 1/k
+  // when the voltage is lower.
   function debroglie(seed) {
     const r = rng(seed * 31 + 3);
-    const k = r.pick([2, 3, 4, 0.5]), Uv = 150 * k * k, l1 = 100 / k;
+    const rev = r.next() < 0.5;
+    const k = r.pick(rev ? [2, 4, 5, 10, 0.5, 0.2] : [2, 3, 4, 5, 10, 0.5, 0.2]), Uv = 150 * k * k, l1 = 100 / k;
+    const K = Math.round(1 / k), up = k > 1, Vt = String(Math.round(Uv * 1000) / 1000), kk = String(k * k), KK = String(K * K);
     const lPh = 1239.8 / Uv, ratio = (lPh * 1e3) / l1; // nm, the photon's; how many times longer
     return {
       title: L('The wavelength by comparison', 'Die Wellenlänge im Vergleich'),
-      text: `<p>${L(`An electron that starts at rest and is accelerated through ${U} = 150 V has the de Broglie wavelength ${lam} = 100 pm. Another electron is accelerated through ${U} = ${plain(Uv, 4)} V.`, `Ein Elektron, das in Ruhe startet und mit ${U} = 150 V beschleunigt wird, hat die de-Broglie-Wellenlänge ${lam} = 100 pm. Ein anderes Elektron wird mit ${U} = ${plain(Uv, 4)} V beschleunigt.`)}</p>`,
+      text: `<p>${L(`An electron that starts at rest and is accelerated through ${U} = 150 V has the de Broglie wavelength ${lam} = 100 pm. ${rev ? `Another electron, also from rest, has the de Broglie wavelength ${lam} = ${String(l1)} pm.` : `Another electron is accelerated through ${U} = ${Vt} V.`}`, `Ein Elektron, das in Ruhe startet und mit ${U} = 150 V beschleunigt wird, hat die de-Broglie-Wellenlänge ${lam} = 100 pm. ${rev ? `Ein anderes Elektron, ebenfalls aus der Ruhe, hat die de-Broglie-Wellenlänge ${lam} = ${String(l1)} pm.` : `Ein anderes Elektron wird mit ${U} = ${Vt} V beschleunigt.`}`)}</p>`,
       figs: '',
       questions: [
-        numQ('lam', L(`(a) its wavelength, without a calculator`, `(a) seine Wellenlänge, ohne Taschenrechner`), lam, 'pm', l1, { wrong: [{ value: 100 / (k * k), tag: 'sqrt', why: WHY.sqrt() }, { value: 100 * k, tag: 'inverse', why: WHY.inverse() }] }),
+        rev ? numQ('U', L(`(a) the voltage that accelerated it, without a calculator`, `(a) die Spannung, mit der es beschleunigt wurde, ohne Taschenrechner`), U, 'V', Uv, { wrong: [
+          { value: 150 * k, tag: 'sqrt', why: L('The wavelength goes with 1/√U, so the voltage goes with 1/λ²: square the factor of the wavelength.', 'Die Wellenlänge geht mit 1/√U, also die Spannung mit 1/λ²: Den Faktor der Wellenlänge quadrieren.') },
+          { value: 150 / (k * k), tag: 'inverse', why: L('A shorter wavelength means more momentum, so a larger voltage: λ = h/p.', 'Eine kürzere Wellenlänge bedeutet mehr Impuls, also eine grössere Spannung: λ = h/p.') },
+        ] })
+          : numQ('lam', L(`(a) its wavelength, without a calculator`, `(a) seine Wellenlänge, ohne Taschenrechner`), lam, 'pm', l1, { wrong: [{ value: 100 / (k * k), tag: 'sqrt', why: WHY.sqrt() }, { value: 100 * k, tag: 'inverse', why: WHY.inverse() }] }),
         choice('p', L(`(b) Its momentum, from its kinetic energy ${Ek}, is`, `(b) Sein Impuls, aus seiner kinetischen Energie ${Ek}, ist`), opts(r, [
           [`${p} = √(2·${m}·${Ek})`, true],
           [`${p} = ${Ek}/${i('c')}`, false, WHY.photonp(), 'photonp'],
           [`${p} = 2·${m}·${Ek}`, false, L(`${Ek} = ${p}²/(2${m}): the momentum is the square root of 2·${m}·${Ek}.`, `${Ek} = ${p}²/(2${m}): Der Impuls ist die Wurzel aus 2·${m}·${Ek}.`), 'sqrt'],
           [`${p} = ½·${m}·${v}²`, false, L(`That is the kinetic energy. The momentum is ${p} = ${m}·${v} = √(2·${m}·${Ek}).`, `Das ist die kinetische Energie. Der Impuls ist ${p} = ${m}·${v} = √(2·${m}·${Ek}).`), 'other'],
         ])),
-        choice('ph', L(`(c) A photon has the same energy, ${plain(Uv, 4)} eV. Its wavelength is`, `(c) Ein Photon hat dieselbe Energie, ${plain(Uv, 4)} eV. Seine Wellenlänge ist`), opts(r, [
+        choice('ph', L(`(c) A photon has the same energy, ${Vt} eV. Its wavelength is`, `(c) Ein Photon hat dieselbe Energie, ${Vt} eV. Seine Wellenlänge ist`), opts(r, [
           [L('much longer than the electron’s', 'viel länger als die des Elektrons'), true],
           [L(`the same, ${plain(l1)} pm`, `dieselbe, ${plain(l1)} pm`), false, L(`Same energy, but not the same momentum: the photon has ${p} = ${i('E')}/${i('c')}, the electron ${p} = √(2·${m}·${Ek}), which is far larger.`, `Dieselbe Energie, aber nicht derselbe Impuls: Das Photon hat ${p} = ${i('E')}/${i('c')}, das Elektron ${p} = √(2·${m}·${Ek}), und das ist viel grösser.`), 'photonp'],
           [L('much shorter than the electron’s', 'viel kürzer als die des Elektrons'), false, L(`At the same energy, the photon has the smaller momentum ${i('E')}/${i('c')}, so the longer wavelength.`, `Bei gleicher Energie hat das Photon den kleineren Impuls ${i('E')}/${i('c')}, also die längere Wellenlänge.`), 'photonp'],
@@ -76,25 +84,38 @@
       ],
       hints: [
         L(`${lam} = ${h}/${p}, and the electron gains ${Ek} = ${i('e')}·${U}, so ${p} = √(2·${m}·${i('e')}·${U}).`, `${lam} = ${h}/${p}, und das Elektron gewinnt ${Ek} = ${i('e')}·${U}, also ${p} = √(2·${m}·${i('e')}·${U}).`),
-        L(`So ${lam} ∝ 1/√${U}. By what factor has the voltage changed? Take its square root.`, `Also ${lam} ∝ 1/√${U}. Um welchen Faktor hat sich die Spannung geändert? Zieh die Wurzel daraus.`),
+        rev ? L(`So ${lam} ∝ 1/√${U}, and ${U} ∝ 1/${lam}². By what factor has the wavelength changed? Square it.`, `Also ${lam} ∝ 1/√${U} und ${U} ∝ 1/${lam}². Um welchen Faktor hat sich die Wellenlänge geändert? Quadriere ihn.`)
+          : L(`So ${lam} ∝ 1/√${U}. By what factor has the voltage changed? Take its square root.`, `Also ${lam} ∝ 1/√${U}. Um welchen Faktor hat sich die Spannung geändert? Zieh die Wurzel daraus.`),
         L(`A photon has ${p} = ${i('E')}/${i('c')}; a particle with mass does not.`, `Ein Photon hat ${p} = ${i('E')}/${i('c')}; ein Teilchen mit Masse nicht.`),
       ],
       solution: [
-        L(`(a) ${U} is ${plain(k * k, 2)} times as large, so ${p} = √(2·${m}·${i('e')}·${U}) is √${plain(k * k, 2)} = ${plain(k, 2)} times as large, and ${lam} = ${h}/${p} is ${plain(k, 2)} times ${k > 1 ? 'shorter' : 'longer'}: ${lam} = 100 pm / ${plain(k, 2)} = <b>${plain(l1)} pm</b>.`, `(a) ${U} ist ${plain(k * k, 2)}-mal so gross, also ist ${p} = √(2·${m}·${i('e')}·${U}) √${plain(k * k, 2)} = ${plain(k, 2)}-mal so gross, und ${lam} = ${h}/${p} ist ${plain(k, 2)}-mal so ${k > 1 ? 'kurz' : 'lang'}: ${lam} = 100 pm / ${plain(k, 2)} = <b>${plain(l1)} pm</b>.`),
+        rev ? (up
+          ? L(`(a) ${lam} is ${k} times shorter than 100 pm, so ${p} = ${h}/${lam} is ${k} times as large, and ${U} = ${p}²/(2·${m}·${i('e')}) is ${k}² = ${kk} times as large: ${U} = ${kk} · 150 V = <b>${Vt} V</b>.`, `(a) ${lam} ist ${k}-mal kürzer als 100 pm, also ist ${p} = ${h}/${lam} ${k}-mal so gross, und ${U} = ${p}²/(2·${m}·${i('e')}) ist ${k}² = ${kk}-mal so gross: ${U} = ${kk} · 150 V = <b>${Vt} V</b>.`)
+          : L(`(a) ${lam} is ${K} times as long as 100 pm, so ${p} = ${h}/${lam} is only 1/${K} as large, and ${U} = ${p}²/(2·${m}·${i('e')}) only 1/${K}² = 1/${KK} as large: ${U} = 150 V / ${KK} = <b>${Vt} V</b>.`, `(a) ${lam} ist ${K}-mal so lang wie 100 pm, also ist ${p} = ${h}/${lam} nur 1/${K} so gross, und ${U} = ${p}²/(2·${m}·${i('e')}) nur 1/${K}² = 1/${KK} so gross: ${U} = 150 V / ${KK} = <b>${Vt} V</b>.`))
+          : up
+            ? L(`(a) ${U} is ${kk} times as large, so ${p} = √(2·${m}·${i('e')}·${U}) is √${kk} = ${k} times as large, and ${lam} = ${h}/${p} is ${k} times shorter: ${lam} = 100 pm / ${k} = <b>${plain(l1)} pm</b>.`, `(a) ${U} ist ${kk}-mal so gross, also ist ${p} = √(2·${m}·${i('e')}·${U}) √${kk} = ${k}-mal so gross, und ${lam} = ${h}/${p} ist ${k}-mal kürzer: ${lam} = 100 pm / ${k} = <b>${plain(l1)} pm</b>.`)
+            : L(`(a) ${U} is only 1/${KK} of 150 V, so ${p} = √(2·${m}·${i('e')}·${U}) is only 1/√${KK} = 1/${K} as large, and ${lam} = ${h}/${p} is ${K} times as long: ${lam} = ${K} · 100 pm = <b>${plain(l1)} pm</b>.`, `(a) ${U} ist nur 1/${KK} von 150 V, also ist ${p} = √(2·${m}·${i('e')}·${U}) nur 1/√${KK} = 1/${K} so gross, und ${lam} = ${h}/${p} ist ${K}-mal so lang: ${lam} = ${K} · 100 pm = <b>${plain(l1)} pm</b>.`),
         L(`(b) ${Ek} = ½·${m}·${v}² = ${p}²/(2${m}), so <b>${p} = √(2·${m}·${Ek})</b>.`, `(b) ${Ek} = ½·${m}·${v}² = ${p}²/(2${m}), also <b>${p} = √(2·${m}·${Ek})</b>.`),
         L(`(c) The photon has ${p} = ${i('E')}/${i('c')}, far less than the electron’s √(2·${m}·${Ek}): its wavelength, ${lam} = ${h}·${i('c')}/${i('E')} = ${plain(lPh)} nm, is <b>much longer</b>, about ${plain(ratio, 2)} times. The photon’s formula must not be used for the electron.`, `(c) Das Photon hat ${p} = ${i('E')}/${i('c')}, viel weniger als das √(2·${m}·${Ek}) des Elektrons: Seine Wellenlänge, ${lam} = ${h}·${i('c')}/${i('E')} = ${plain(lPh)} nm, ist <b>viel länger</b>, etwa ${plain(ratio, 2)}-mal. Die Formel des Photons darf man für das Elektron nicht brauchen.`),
       ],
-      p: { k },
+      p: { k, rev },
     };
   }
 
-  // Electron, proton and alpha particle: which wavelength is longest, and by how much?
+  // Electron, proton and alpha particle: which wavelength is longest, and by how much? Compared at
+  // the same speed, the same kinetic energy or the same momentum (then λ = h/p is the same).
   function sameLambda(seed) {
     const r = rng(seed * 41 + 9);
-    const same = r.pick(['v', 'E']), ask = r.pick(['short', 'long']), ratio = r.pick(['v', 'E']);
+    const same = r.pick(['v', 'E', 'p']), ask = r.pick(['short', 'long']), ratio = r.pick(['v', 'E', 'p']);
+    const samePWhy = L('Same momentum, same wavelength: λ = h/p does not depend on the mass. The lighter particle is only faster, v = p/m.', 'Gleicher Impuls, gleiche Wellenlänge: λ = h/p hängt nicht von der Masse ab. Das leichtere Teilchen ist nur schneller, v = p/m.');
     const names = [L('the electron', 'das Elektron'), L('the proton', 'das Proton'), L('the alpha particle', 'das Alphateilchen')];
     const allSame = L('all the same', 'alle gleich');
-    const qa = [
+    const qa = same === 'p' ? [
+      [allSame, true],
+      [names[0], false, samePWhy, 'mass'],
+      [names[1], false, samePWhy, 'mass'],
+      [names[2], false, samePWhy, 'mass'],
+    ] : [
       [names[0], true],
       [names[1], false, L('The proton is heavier: at the same ' + (same === 'v' ? 'speed' : 'kinetic energy') + ' it has more momentum, so a shorter wavelength.', 'Das Proton ist schwerer: Bei gleicher ' + (same === 'v' ? 'Geschwindigkeit' : 'kinetischer Energie') + ' hat es mehr Impuls, also eine kürzere Wellenlänge.'), 'mass'],
       [names[2], false, L('The alpha particle is the heaviest: it has the most momentum and the shortest wavelength.', 'Das Alphateilchen ist am schwersten: Es hat am meisten Impuls und die kürzeste Wellenlänge.'), 'mass'],
@@ -111,7 +132,12 @@
       [names[2], false, L('The alpha particle is the heaviest and has twice the charge: the most momentum, the shortest wavelength.', 'Das Alphateilchen ist am schwersten und hat die doppelte Ladung: am meisten Impuls, die kürzeste Wellenlänge.'), 'charge'],
       [allSame, false, L('The voltage gives each the energy q·U, but λ = h/p depends on the momentum p = √(2·m·q·U).', 'Die Spannung gibt jedem die Energie q·U, aber λ = h/p hängt vom Impuls p = √(2·m·q·U) ab.'), 'mass'],
     ];
-    const qc = ratio === 'v' ? [
+    const qc = ratio === 'p' ? [
+      [L('the same', 'gleich lang'), true],
+      [L('about 1840 times longer', 'etwa 1840-mal länger'), false, L('That is the ratio of the speeds: with the same momentum the electron is about 1840 times faster, v = p/m. The wavelength λ = h/p is the same.', 'Das ist das Verhältnis der Geschwindigkeiten: Bei gleichem Impuls ist das Elektron etwa 1840-mal schneller, v = p/m. Die Wellenlänge λ = h/p ist dieselbe.'), 'mass'],
+      [L('about 43 times longer', 'etwa 43-mal länger'), false, L('That would be at the same kinetic energy. With the same momentum, λ = h/p is the same.', 'Das wäre bei gleicher kinetischer Energie. Bei gleichem Impuls ist λ = h/p dasselbe.'), 'mass'],
+      [L('about 1840 times shorter', 'etwa 1840-mal kürzer'), false, L('λ = h/p depends only on the momentum, and that is the same.', 'λ = h/p hängt nur vom Impuls ab, und der ist gleich.'), 'mass'],
+    ] : ratio === 'v' ? [
       [L('about 1840 times longer', 'etwa 1840-mal länger'), true],
       [L('about 43 times longer', 'etwa 43-mal länger'), false, L('At the same speed, p = m·v: the ratio of the momenta is the ratio of the masses, without a square root.', 'Bei gleicher Geschwindigkeit ist p = m·v: Das Verhältnis der Impulse ist das Verhältnis der Massen, ohne Wurzel.'), 'sqrt'],
       [L('the same', 'gleich lang'), false, L('Same speed, but not the same momentum: p = m·v.', 'Gleiche Geschwindigkeit, aber nicht derselbe Impuls: p = m·v.'), 'mass'],
@@ -127,19 +153,20 @@
       text: `<p>${L('An electron, a proton and an alpha particle (a helium nucleus: about four times the mass of a proton, twice its charge) are compared. A proton is about 1840 times as heavy as an electron, and √1840 ≈ 43. No relativity is needed.', 'Ein Elektron, ein Proton und ein Alphateilchen (ein Heliumkern: etwa viermal die Masse eines Protons, doppelte Ladung) werden verglichen. Ein Proton ist etwa 1840-mal so schwer wie ein Elektron, und √1840 ≈ 43. Die Relativitätstheorie ist nicht nötig.')}</p>`,
       figs: '',
       questions: [
-        choice('a', same === 'v' ? L('(a) All three fly at the same speed. Which has the longest wavelength?', '(a) Alle drei fliegen gleich schnell. Welches hat die grösste Wellenlänge?') : L('(a) All three have the same kinetic energy. Which has the longest wavelength?', '(a) Alle drei haben dieselbe kinetische Energie. Welches hat die grösste Wellenlänge?'), opts(r, qa)),
+        choice('a', same === 'p' ? L('(a) All three have the same momentum. Which has the longest wavelength?', '(a) Alle drei haben denselben Impuls. Welches hat die grösste Wellenlänge?') : same === 'v' ? L('(a) All three fly at the same speed. Which has the longest wavelength?', '(a) Alle drei fliegen gleich schnell. Welches hat die grösste Wellenlänge?') : L('(a) All three have the same kinetic energy. Which has the longest wavelength?', '(a) Alle drei haben dieselbe kinetische Energie. Welches hat die grösste Wellenlänge?'), opts(r, qa)),
         choice('b', ask === 'short' ? L('(b) All three start at rest and are accelerated through the same voltage. Which has the shortest wavelength?', '(b) Alle drei starten in Ruhe und werden mit derselben Spannung beschleunigt. Welches hat die kleinste Wellenlänge?') : L('(b) All three start at rest and are accelerated through the same voltage. Which has the longest wavelength?', '(b) Alle drei starten in Ruhe und werden mit derselben Spannung beschleunigt. Welches hat die grösste Wellenlänge?'), opts(r, qb)),
-        choice('c', ratio === 'v' ? L('(c) An electron and a proton have the same speed. Compared with the proton’s, the wavelength of the electron is', '(c) Ein Elektron und ein Proton haben dieselbe Geschwindigkeit. Verglichen mit der des Protons ist die Wellenlänge des Elektrons') : L('(c) An electron and a proton have the same kinetic energy. Compared with the proton’s, the wavelength of the electron is', '(c) Ein Elektron und ein Proton haben dieselbe kinetische Energie. Verglichen mit der des Protons ist die Wellenlänge des Elektrons'), opts(r, qc)),
+        choice('c', ratio === 'p' ? L('(c) An electron and a proton have the same momentum. Compared with the proton’s, the wavelength of the electron is', '(c) Ein Elektron und ein Proton haben denselben Impuls. Verglichen mit der des Protons ist die Wellenlänge des Elektrons') : ratio === 'v' ? L('(c) An electron and a proton have the same speed. Compared with the proton’s, the wavelength of the electron is', '(c) Ein Elektron und ein Proton haben dieselbe Geschwindigkeit. Verglichen mit der des Protons ist die Wellenlänge des Elektrons') : L('(c) An electron and a proton have the same kinetic energy. Compared with the proton’s, the wavelength of the electron is', '(c) Ein Elektron und ein Proton haben dieselbe kinetische Energie. Verglichen mit der des Protons ist die Wellenlänge des Elektrons'), opts(r, qc)),
       ],
       hints: [
         L(`${lam} = ${h}/${p}: the larger the momentum, the shorter the wavelength.`, `${lam} = ${h}/${p}: Je grösser der Impuls, desto kürzer die Wellenlänge.`),
-        L(`Same speed: ${p} = ${m}·${v}. Same kinetic energy: ${p} = √(2·${m}·${Ek}).`, `Gleiche Geschwindigkeit: ${p} = ${m}·${v}. Gleiche kinetische Energie: ${p} = √(2·${m}·${Ek}).`),
+        L(`Same speed: ${p} = ${m}·${v}. Same kinetic energy: ${p} = √(2·${m}·${Ek}). Same momentum: compare ${p} directly.`, `Gleiche Geschwindigkeit: ${p} = ${m}·${v}. Gleiche kinetische Energie: ${p} = √(2·${m}·${Ek}). Gleicher Impuls: ${p} direkt vergleichen.`),
         L(`Through a voltage ${U}, a particle of charge ${i('q')} gains ${Ek} = ${i('q')}·${U}, so ${p} = √(2·${m}·${i('q')}·${U}).`, `Mit einer Spannung ${U} gewinnt ein Teilchen der Ladung ${i('q')} die Energie ${Ek} = ${i('q')}·${U}, also ${p} = √(2·${m}·${i('q')}·${U}).`),
       ],
       solution: [
-        L(`(a) ${same === 'v' ? `${p} = ${m}·${v}` : `${p} = √(2·${m}·${Ek})`}: the lightest particle has the least momentum and the longest wavelength, <b>the electron</b>.`, `(a) ${same === 'v' ? `${p} = ${m}·${v}` : `${p} = √(2·${m}·${Ek})`}: Das leichteste Teilchen hat den kleinsten Impuls und die grösste Wellenlänge, <b>das Elektron</b>.`),
+        same === 'p' ? L(`(a) ${lam} = ${h}/${p} contains only the momentum: the same momentum gives the same wavelength, <b>all the same</b>. The masses differ, so the speeds do: ${v} = ${p}/${m}.`, `(a) ${lam} = ${h}/${p} enthält nur den Impuls: Derselbe Impuls ergibt dieselbe Wellenlänge, <b>alle gleich</b>. Die Massen sind verschieden, also die Geschwindigkeiten: ${v} = ${p}/${m}.`) : L(`(a) ${same === 'v' ? `${p} = ${m}·${v}` : `${p} = √(2·${m}·${Ek})`}: the lightest particle has the least momentum and the longest wavelength, <b>the electron</b>.`, `(a) ${same === 'v' ? `${p} = ${m}·${v}` : `${p} = √(2·${m}·${Ek})`}: Das leichteste Teilchen hat den kleinsten Impuls und die grösste Wellenlänge, <b>das Elektron</b>.`),
         L(`(b) ${p} = √(2·${m}·${i('q')}·${U}): compare ${m}·${i('q')}. The alpha particle has about 4·${m}${sb('p')} and 2${i('e')}, so 8 times the product of the proton. ${ask === 'short' ? 'The shortest wavelength: <b>the alpha particle</b>.' : 'The longest wavelength: <b>the electron</b>.'}`, `(b) ${p} = √(2·${m}·${i('q')}·${U}): Vergleiche ${m}·${i('q')}. Das Alphateilchen hat etwa 4·${m}${sb('p')} und 2${i('e')}, also das 8-fache Produkt des Protons. ${ask === 'short' ? 'Die kleinste Wellenlänge: <b>das Alphateilchen</b>.' : 'Die grösste Wellenlänge: <b>das Elektron</b>.'}`),
-        ratio === 'v' ? L(`(c) ${lam}${sb('e')}/${lam}${sb('p')} = ${p}${sb('p')}/${p}${sb('e')} = ${m}${sb('p')}/${m}${sb('e')} ≈ 1840: <b>about 1840 times longer</b>.`, `(c) ${lam}${sb('e')}/${lam}${sb('p')} = ${p}${sb('p')}/${p}${sb('e')} = ${m}${sb('p')}/${m}${sb('e')} ≈ 1840: <b>etwa 1840-mal länger</b>.`)
+        ratio === 'p' ? L(`(c) ${lam}${sb('e')}/${lam}${sb('p')} = ${p}${sb('p')}/${p}${sb('e')} = 1: <b>the same</b>. The electron is about 1840 times faster, ${v} = ${p}/${m}, but only the momentum counts.`, `(c) ${lam}${sb('e')}/${lam}${sb('p')} = ${p}${sb('p')}/${p}${sb('e')} = 1: <b>gleich lang</b>. Das Elektron ist etwa 1840-mal schneller, ${v} = ${p}/${m}, aber es zählt nur der Impuls.`)
+          : ratio === 'v' ? L(`(c) ${lam}${sb('e')}/${lam}${sb('p')} = ${p}${sb('p')}/${p}${sb('e')} = ${m}${sb('p')}/${m}${sb('e')} ≈ 1840: <b>about 1840 times longer</b>.`, `(c) ${lam}${sb('e')}/${lam}${sb('p')} = ${p}${sb('p')}/${p}${sb('e')} = ${m}${sb('p')}/${m}${sb('e')} ≈ 1840: <b>etwa 1840-mal länger</b>.`)
           : L(`(c) ${lam}${sb('e')}/${lam}${sb('p')} = ${p}${sb('p')}/${p}${sb('e')} = √(${m}${sb('p')}/${m}${sb('e')}) ≈ √1840 ≈ 43: <b>about 43 times longer</b>.`, `(c) ${lam}${sb('e')}/${lam}${sb('p')} = ${p}${sb('p')}/${p}${sb('e')} = √(${m}${sb('p')}/${m}${sb('e')}) ≈ √1840 ≈ 43: <b>etwa 43-mal länger</b>.`),
       ],
       p: { same, ask, ratio },
@@ -148,9 +175,12 @@
 
   // Electron diffraction at graphite: the rings shrink as the voltage grows, as λ = h/p predicts.
   const LT = 0.135, DS = [0.213e-9, 0.123e-9]; // m: the distance foil–screen, the spacings of the planes
+  // The voltage changes by a square factor, so the radius by its root: 4 (half or twice the radius) or
+  // 9/4 (2/3 or 3/2 of the radius). [U before, U after] in kV.
+  const DIFF = [[2, 8], [3, 12], [4, 16], [5, 20], [1, 4], [2, 0.5], [3, 0.75], [4, 1], [5, 1.25], [16, 4], [4, 9], [2, 4.5], [9, 4], [4.5, 2]];
   function diffraction(seed) {
     const r = rng(seed * 43 + 13);
-    const U0 = r.pick([2, 3, 4, 5]), up = r.next() < 0.5, U1 = up ? 4 * U0 : U0 / 4, f = up ? 0.5 : 2;
+    const [U0, U1] = r.pick(DIFF), up = U1 > U0, q4 = U1 / U0 === 4 || U0 / U1 === 4, f = Math.sqrt(U0 / U1);
     const radii = DS.map((dd) => (LT * M.lambdaU(U0 * 1e3) / dd) * 1e3); // mm
     const S = [[f, null], [f * f, 'sqrt'], [1 / f, 'inverse'], [1, 'same']];
     const max = Math.max(...S.map(([x]) => x * radii[1]), radii[1]) * 1.08;
@@ -179,10 +209,11 @@
         L(`${lam} = ${h}/√(2·${m}·${i('e')}·${U}) ∝ 1/√${U}.`, `${lam} = ${h}/√(2·${m}·${i('e')}·${U}) ∝ 1/√${U}.`),
       ],
       solution: [
-        L(`(a) ${i('r')} ∝ ${lam} ∝ 1/√${U}: ${up ? 'four times the voltage, <b>half the radius</b>' : 'a quarter of the voltage, <b>twice the radius</b>'}.`, `(a) ${i('r')} ∝ ${lam} ∝ 1/√${U}: ${up ? 'vierfache Spannung, <b>halber Radius</b>' : 'ein Viertel der Spannung, <b>doppelter Radius</b>'}.`),
+        q4 ? L(`(a) ${i('r')} ∝ ${lam} ∝ 1/√${U}: ${up ? 'four times the voltage, <b>half the radius</b>' : 'a quarter of the voltage, <b>twice the radius</b>'}.`, `(a) ${i('r')} ∝ ${lam} ∝ 1/√${U}: ${up ? 'vierfache Spannung, <b>halber Radius</b>' : 'ein Viertel der Spannung, <b>doppelter Radius</b>'}.`)
+          : L(`(a) ${i('r')} ∝ ${lam} ∝ 1/√${U}: ${up ? '9/4 of the voltage, √(9/4) = 3/2, so <b>2/3 of the radius</b>' : '4/9 of the voltage, √(4/9) = 2/3, so <b>3/2 of the radius</b>'}.`, `(a) ${i('r')} ∝ ${lam} ∝ 1/√${U}: ${up ? '9/4 der Spannung, √(9/4) = 3/2, also <b>2/3 des Radius</b>' : '4/9 der Spannung, √(4/9) = 2/3, also <b>das 3/2-Fache des Radius</b>'}.`),
         L('(b) Sharp rings at fixed angles are a <b>diffraction pattern</b>: the waves reflected by the planes of atoms add up only in certain directions, as for X-rays. That the rings change with the voltage exactly as λ = h/p predicts shows that the waves are the electrons’ own (Davisson and Germer, G. P. Thomson, 1927).', '(b) Scharfe Ringe bei festen Winkeln sind ein <b>Beugungsmuster</b>: Die von den Atomebenen reflektierten Wellen verstärken sich nur in bestimmten Richtungen, wie bei Röntgenstrahlung. Dass sich die Ringe mit der Spannung genau so ändern, wie λ = h/p es vorhersagt, zeigt, dass es die Wellen der Elektronen selbst sind (Davisson und Germer, G. P. Thomson, 1927).'),
       ],
-      p: { U0, up },
+      p: { U0, U1 },
     };
   }
 

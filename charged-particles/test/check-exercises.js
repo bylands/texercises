@@ -97,10 +97,25 @@ for (const lang of ['en', 'de']) {
         // the moving charges (electrons against the current, holes along it) and the left or right hand
         const { I, bz, holes } = e.p, F = M.force(holes ? 1 : -1, [holes ? I : -I, 0, 0], [0, 0, bz]);
         const negUp = holes ? F[1] < 0 : F[1] > 0, r = right(e, 'edge');
-        if (!/upper|lower/.test(r) || /upper/.test(r) !== negUp) fail(`${tag}: the negative edge`);
+        if (!/upper|lower/.test(r) || /upper/.test(r) !== (e.p.askPos ? !negUp : negUp)) fail(`${tag}: the ${e.p.askPos ? 'positive' : 'negative'} edge`);
+        // U_H = v·B·d with v ∝ I: the factor marked right is the one asked
+        const fq = e.questions.find((x) => x.key === 'u'), ask = fq.label, fB = /three times as strong/.test(ask) ? 3 : /half as strong/.test(ask) ? 0.5 : /field twice as strong/.test(ask) ? 2 : 1, fI = /twice the current/.test(ask) ? 2 : 1;
+        if (fq.options.length !== 4 || fq.options.filter((o) => o.ok).length !== 1 || !near(fq.options.find((o) => o.ok).x, fB * fI, 1e-9)) fail(`${tag}: the Hall voltage factor`);
       }
     }
   }
+}
+
+// the stage "Hall voltage": at least 12 exercises that read differently, no raw $ or _ in the texts
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  const seen = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    const e = X.make('hall', seed), t = e.text + e.questions.map((q) => q.label + ':' + q.options.map((o) => o.label).sort().join(',')).join('|');
+    seen.add(t);
+    if (/[$_]/.test((t + e.solution.join('')).replace(/<[^>]*>/g, ''))) fail(`hall ${seed} ${lang}: a raw $ or _`);
+  }
+  if (seen.size < 12) fail(`hall ${lang}: only ${seen.size} different exercises`);
 }
 
 // ---------------------------------------------------------------- the check

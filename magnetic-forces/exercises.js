@@ -216,19 +216,37 @@
   const WHYL = {
     grip: () => L('The arrows run the wrong way round: grip the conductor with your right hand, thumb along the current; the fingers curl the way of the field.', 'Die Pfeile laufen falsch herum: Umfasse den Leiter mit der rechten Hand, Daumen in Stromrichtung; die gekrümmten Finger zeigen die Richtung des Feldes.'),
     ns: () => L('Outside a magnet, the field lines run from the north pole to the south pole.', 'Ausserhalb eines Magneten laufen die Feldlinien vom Nordpol zum Südpol.'),
-    closed: () => L('Magnetic field lines are closed: a line that comes back outside goes on through the inside in the same sense, without a break or a turn.', 'Magnetische Feldlinien sind geschlossen: Eine Linie, die aussen zurückläuft, setzt sich innen im selben Sinn fort, ohne Bruch oder Umkehr.'),
+    closed: () => L('Magnetic field lines are closed. Follow a line along its arrows: it comes back round the outside and carries on through the inside, without a break and without turning round.', 'Magnetische Feldlinien sind geschlossen. Folge einer Linie in Pfeilrichtung: Sie läuft aussen zurück und innen weiter, ohne Unterbruch und ohne umzukehren.'),
     radial: () => L('The field of a straight current circles around it: it does not point towards or away from the wire.', 'Das Feld eines geraden Stroms umkreist ihn: Es zeigt nicht zum Draht hin oder von ihm weg.'),
   };
   const drawLines = (o) => linesFig({ ...o, small: true });
+  // (b) the field at a point named in words: around a wire above, below, to the right or to the
+  // left of it; for a loop or a solenoid in the middle, on the axis outside, or just outside a
+  // conductor (the lines coming back round); for a magnet inside, beyond either pole on the axis,
+  // or beside its middle. [where (en, de), the field there as a multiple of the field inside (or
+  // the wire's direction), the tag of the opposite direction]
+  const AT = {
+    wire: { up: [['directly above the wire', 'direkt über dem Draht'], [0, 1]], down: [['directly below the wire', 'direkt unter dem Draht'], [0, -1]], right: [['to the right of the wire', 'rechts neben dem Draht'], [1, 0]], left: [['to the left of the wire', 'links neben dem Draht'], [-1, 0]] },
+    loop: { mid: [() => ['in the middle of the loop', 'in der Mitte der Schleife'], 1, 'grip'], axis: [() => ['on its axis, outside the loop', 'auf ihrer Achse, ausserhalb der Schleife'], 1, 'closed'], side: [(e) => [`just outside the ${e[0]} conductor, on the side away from the middle of the loop`, `knapp ausserhalb des ${e[1]} Leiters, auf der von der Schleifenmitte abgewandten Seite`], -1, 'closed'] },
+    solenoid: { mid: [() => ['inside the solenoid, in its middle', 'im Innern der Spule, in ihrer Mitte'], 1, 'grip'], axis: [() => ['on its axis, just beyond one end', 'auf ihrer Achse, knapp hinter einem Ende'], 1, 'closed'], side: [(e) => [`just outside the ${e[0]} row of conductors, beside the middle of the solenoid`, `knapp ausserhalb des ${e[1]} Teils, neben der Mitte der Spule`], -1, 'closed'] },
+    magnet: { N: [() => ['just beyond its north pole, on its axis', 'knapp vor seinem Nordpol, auf seiner Achse'], 1, 'ns'], S: [() => ['just beyond its south pole, on its axis', 'knapp vor seinem Südpol, auf seiner Achse'], 1, 'ns'], mid: [() => ['inside the magnet, in its middle', 'im Innern des Magneten, in seiner Mitte'], 1, 'closed'], side: [() => ['just beside the middle of the magnet, outside it', 'knapp neben der Mitte des Magneten, ausserhalb'], -1, 'ns'] },
+  };
+  const WHYAT = {
+    grip: () => L('That is the field for a current the other way round: mind the right hand.', 'Das ist das Feld für einen Strom in der Gegenrichtung: Achte auf die rechte Hand.'),
+    across: () => L('By symmetry the field there runs along the axis, not across it.', 'Aus Symmetriegründen verläuft das Feld dort längs der Achse, nicht quer zu ihr.'),
+  };
   function lines(src, seed) {
     const r = rng(seed * 79 + 47), s = r.pick([1, -1]), vertical = src !== 'wire' && r.next() < 0.5;
     const base = { src, s, vertical }, inside = vertical ? [0, s, 0] : [s, 0, 0];
     const wrongs = src === 'wire' ? [['reverse', 'grip'], ['out', 'radial'], ['in', 'radial']] : [['reverse', src === 'magnet' ? 'ns' : 'grip'], ['inside', 'closed'], ['outside', 'closed']];
     const ends = vertical ? [L('left', 'linken'), L('right', 'rechten')] : [L('upper', 'oberen'), L('lower', 'unteren')];
+    const endsEnDe = vertical ? ['left', 'linken'] : ['upper', 'oberen'];
     const way = (k) => (k > 0 ? L('out of the page', 'aus der Seite heraus') : L('into the page', 'in die Seite hinein'));
     const what = { wire: L('a long straight wire', 'eines langen geraden Drahts'), loop: L('a circular loop', 'einer kreisförmigen Leiterschleife'), solenoid: L('a solenoid', 'einer Spule'), magnet: L('a bar magnet', 'eines Stabmagneten') }[src];
+    // the magnet: where its north pole is (at +x for s = +1, turned up the page when vertical)
+    const nSide = vertical ? (s > 0 ? ['at the top', 'oben', 'at the bottom', 'unten'] : ['at the bottom', 'unten', 'at the top', 'oben']) : (s > 0 ? ['at the right', 'rechts', 'at the left', 'links'] : ['at the left', 'links', 'at the right', 'rechts']);
     const text = src === 'wire' ? L(`<p>A long straight wire carries a current ${way(s)}.</p>`, `<p>Ein langer gerader Draht führt einen Strom ${way(s)}.</p>`)
-      : src === 'magnet' ? L('<p>A bar magnet, with its north pole N and its south pole S.</p>', '<p>Ein Stabmagnet mit seinem Nordpol N und seinem Südpol S.</p>')
+      : src === 'magnet' ? L(`<p>A bar magnet, its north pole N ${nSide[0]} and its south pole S ${nSide[2]}.</p>`, `<p>Ein Stabmagnet, sein Nordpol N ${nSide[1]} und sein Südpol S ${nSide[3]}.</p>`)
         : L(`<p>${src === 'loop' ? 'A circular loop of wire is cut through its middle' : 'A solenoid (a long coil) is cut along its axis'} and seen from the side: in the ${ends[0]} ${src === 'loop' ? 'conductor' : 'row'}, the current flows ${way(s)}, in the ${ends[1]} one ${way(-s)}.</p>`,
           `<p>${src === 'loop' ? 'Eine kreisförmige Leiterschleife ist in der Mitte durchgeschnitten' : 'Eine Spule ist längs ihrer Achse durchgeschnitten'} und von der Seite gesehen: Im ${ends[0]} ${src === 'loop' ? 'Leiter' : 'Teil'} fliesst der Strom ${way(s)}, im ${ends[1]} ${way(-s)}.</p>`);
     const how = src === 'wire' ? L(`${GRIP()} A current ${way(s)}: the field lines are circles around the wire, ${s > 0 ? 'anticlockwise' : 'clockwise'}.`, `${GRIP()} Ein Strom ${way(s)}: Die Feldlinien sind Kreise um den Draht, ${s > 0 ? 'im Gegenuhrzeigersinn' : 'im Uhrzeigersinn'}.`)
@@ -236,11 +254,36 @@
         : L(`Grip rule at each conductor: between the ${src === 'loop' ? 'two conductors' : 'two rows'} the fields add up and point ${dirName(inside)}. Outside, the lines come back round: every line is closed. ${src === 'solenoid' ? 'The end where the field lines come out acts as a north pole: the solenoid’s field outside is like that of a bar magnet.' : ''}`,
           `Rechte-Hand-Regel bei jedem Leiter: Zwischen den ${src === 'loop' ? 'beiden Leitern' : 'beiden Reihen'} addieren sich die Felder und zeigen ${dirName(inside)}. Aussen laufen die Linien zurück: Jede Linie ist geschlossen. ${src === 'solenoid' ? 'Das Ende, wo die Feldlinien austreten, wirkt als Nordpol: Aussen ist das Feld der Spule wie das eines Stabmagneten.' : ''}`);
     const opts = [{ wrong: null, ok: true }, ...wrongs.map(([wrong, tag]) => ({ wrong, tag }))];
+    const qp = { type: 'pick', key: 'p', label: L('(a) Which drawing shows its field lines?', '(a) Welche Zeichnung zeigt seine Feldlinien?'), options: r.shuffle(opts).map((o) => ({ html: drawLines({ ...base, wrong: o.wrong }), ok: !!o.ok, tag: o.tag, why: o.ok ? '' : `${WHYL[o.tag]()} ${how}` })) };
+    // (b) the field at a point
+    const at = r.pick(Object.keys(AT[src])), A = AT[src][at];
+    let where, B, oppTag, howB;
+    if (src === 'wire') {
+      where = L(...A[0]); B = [-s * A[1][1] || 0, s * A[1][0] || 0, 0]; oppTag = 'grip';
+      howB = L(`The field lines are circles around the wire, ${s > 0 ? 'anticlockwise' : 'clockwise'} for a current ${way(s)}: ${A[0][0]} the circle runs ${dirName(B)}.`, `Die Feldlinien sind Kreise um den Draht, ${s > 0 ? 'im Gegenuhrzeigersinn' : 'im Uhrzeigersinn'} für einen Strom ${way(s)}: ${A[0][1]} läuft der Kreis ${dirName(B)}.`);
+    } else {
+      const w = A[0](endsEnDe);
+      where = L(...w); B = inside.map((x) => x * A[1] || 0); oppTag = A[2];
+      const cond = src === 'loop' ? L('the two conductors', 'den beiden Leitern') : L('the two rows', 'den beiden Reihen');
+      howB = src === 'magnet'
+        ? { N: L(`The field lines leave the magnet at its north pole: beyond N, on the axis, the field points away from N, ${dirName(B)}.`, `Die Feldlinien treten am Nordpol aus dem Magneten aus: Vor N, auf der Achse, zeigt das Feld von N weg, ${dirName(B)}.`),
+          S: L(`The field lines enter the magnet at its south pole: beyond S, on the axis, the field points towards S, ${dirName(B)}.`, `Die Feldlinien treten am Südpol in den Magneten ein: Vor S, auf der Achse, zeigt das Feld zu S hin, ${dirName(B)}.`),
+          mid: L(`Inside the magnet the lines run from S to N, ${dirName(B)}: they close the lines that run from N to S outside.`, `Im Innern des Magneten laufen die Linien von S nach N, ${dirName(B)}: Sie schliessen die Linien, die aussen von N nach S laufen.`),
+          side: L(`Outside the magnet the lines run from N to S: beside its middle the field points ${dirName(B)}, against the field inside.`, `Ausserhalb des Magneten laufen die Linien von N nach S: Neben seiner Mitte zeigt das Feld ${dirName(B)}, entgegen dem Feld innen.`) }[at]
+        : at === 'side' ? L(`Between ${cond} the field points ${dirName(inside)}; outside, the lines come back round the other way: just outside the ${endsEnDe[0]} ${src === 'loop' ? 'conductor' : 'row'} the field points ${dirName(B)} (grip rule at ${src === 'loop' ? 'that conductor' : 'those conductors'}).`, `Zwischen ${cond} zeigt das Feld ${dirName(inside)}; aussen laufen die Linien umgekehrt zurück: Knapp ausserhalb des ${endsEnDe[1]} ${src === 'loop' ? 'Leiters' : 'Teils'} zeigt das Feld ${dirName(B)} (Rechte-Hand-Regel an ${src === 'loop' ? 'diesem Leiter' : 'diesen Leitern'}).`)
+          : L(`Between ${cond} the fields of the currents add up and point ${dirName(inside)}${at === 'axis' ? '; on the axis the lines keep this direction also outside, before they spread out and come back round' : ''}.`, `Zwischen ${cond} addieren sich die Felder der Ströme und zeigen ${dirName(inside)}${at === 'axis' ? '; auf der Achse behalten die Linien diese Richtung auch ausserhalb, bevor sie auseinanderlaufen und zurückkehren' : ''}.`);
+    }
+    const IN = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0]];
+    const qb = tiles('B', L(`(b) Which way does the field point ${where}?`, `(b) In welche Richtung zeigt das Feld ${where}?`), r.shuffle(IN.map((d) => {
+      const ok = same(d, B), tag = ok ? undefined : same(d, neg(B)) ? oppTag : src === 'wire' ? 'radial' : 'other';
+      const pre = tag === 'grip' ? WHYAT.grip() : tag === 'radial' ? WHYL.radial() : tag === 'other' ? WHYAT.across() : tag ? WHYL[tag]() : '';
+      return { html: tile(d), ok, tag, why: ok ? '' : `${pre} ${howB}` };
+    })));
     return {
       kind: 'lines', title: L(`The field of ${what}`, `Das Feld ${what}`), text, figs: `<div class="fig">${linesFig({ ...base, wrong: 'none' })}</div>`,
-      questions: [{ type: 'pick', key: 'p', label: L('Which drawing shows its field lines?', 'Welche Zeichnung zeigt seine Feldlinien?'), options: r.shuffle(opts).map((o) => ({ html: drawLines({ ...base, wrong: o.wrong }), ok: !!o.ok, tag: o.tag, why: o.ok ? '' : `${WHYL[o.tag]()} ${how}` })) }],
+      questions: [qp, qb],
       hints: [src === 'magnet' ? L('Outside a magnet, the field points from N to S.', 'Ausserhalb eines Magneten zeigt das Feld von N nach S.') : GRIP(), L('Magnetic field lines have no beginning and no end: they are closed.', 'Magnetische Feldlinien haben keinen Anfang und kein Ende: Sie sind geschlossen.')],
-      solution: [how], solFig: `<div class="fig">${linesFig({ ...base, wrong: null })}</div>`, p: base,
+      solution: [how, howB], solFig: `<div class="fig">${linesFig({ ...base, wrong: null })}</div>`, p: { ...base, at },
     };
   }
 
@@ -331,13 +374,22 @@
   function coilFig(phi, s, bx, solved) {
     const a = 0.7, u = wireAt(phi), Bv = [bx, 0, 0], F1 = force(1, [0, 0, s], Bv);
     const items = [{ kind: 'wire', d: [0, 0, s], at: [a * u[0], a * u[1]], name: '1' }, { kind: 'wire', d: [0, 0, -s], at: [-a * u[0], -a * u[1]], name: '2' }];
-    return scene({ field: { dir: Bv }, items, links: [[0, 1]], vecs: solved ? [{ of: 0, kind: 'F', dir: F1, len: 44 }, { of: 1, kind: 'F', dir: neg(F1), len: 44 }] : [] });
+    // across the field the forces lie along the coil: shorter, so that they stay in the drawing,
+    // and named beside them where they point at each other
+    const across = Math.abs(u[1]) > 0.9, meet = across && F1[1] * u[1] < 0, len = meet ? 20 : across ? 30 : 44;
+    return scene({ field: { dir: Bv }, items, links: [[0, 1]], vecs: solved ? [{ of: 0, kind: 'F', dir: F1, len, beside: meet }, { of: 1, kind: 'F', dir: neg(F1), len, beside: meet }] : [] });
+  }
+  // the coil in 3D next to the drawing along the axis, both at the same angle; solved: with the
+  // forces (both drawings) and the sense of rotation (3D, none where there is no torque)
+  function coilFigs(phi, s, bx, solved, turn = solved) {
+    const tau = s * bx * Math.round(Math.cos((phi * Math.PI) / 180) * 1e9) / 1e9;
+    return `<figure class="fig coil-pair">${P.coil3d({ phi, s, bx, forces: solved, turn: turn ? Math.sign(tau) : 0 })}<figcaption>${L('The coil in 3D', 'Die Spule räumlich')}</figcaption></figure>` +
+      `<figure class="fig coil-pair">${coilFig(phi, s, bx, solved)}<figcaption>${L('Seen along the axis, from the eye', 'Längs der Achse gesehen, vom Auge aus')}</figcaption></figure>`;
   }
   function coil(seed) {
     const r = rng(seed * 97 + 61), s = r.pick([1, -1]), bx = r.pick([1, -1]), phi = r.pick([0, 30, 60, 90, 120, 150, 30, 150]), app = r.int(0, APPS.length - 1);
     const Bv = [bx, 0, 0];
     const F1 = force(1, [0, 0, s], Bv), F2 = neg(F1), tau = Math.round(s * bx * Math.cos((phi * Math.PI) / 180) * 1e9) / 1e9;
-    const fig = (solved) => coilFig(phi, s, bx, solved);
     const howF = `${howForce(1, 'I', [0, 0, s], Bv)} ${L(`Side 2 carries the current the other way: its force points ${dirName(F2)}.`, `Seite 2 führt den Strom in Gegenrichtung: Die Kraft auf sie zeigt ${dirName(F2)}.`)}`;
     const sense = (t) => (t > 0 ? L('anticlockwise', 'im Gegenuhrzeigersinn') : L('clockwise', 'im Uhrzeigersinn'));
     const howT = tau ? L(`The two forces are equal and opposite, but they do not act along one line: they turn the coil ${sense(tau)} (a torque), without moving it as a whole.`, `Die beiden Kräfte sind gleich gross und entgegengesetzt, wirken aber nicht längs einer Geraden: Sie drehen die Spule ${sense(tau)} (ein Drehmoment), ohne sie als Ganzes zu verschieben.`)
@@ -353,7 +405,7 @@
       kind: 'coil', title: L('A coil in a magnetic field', 'Eine Spule im Magnetfeld'),
       text: L(`<p>A rectangular coil can turn about an axis perpendicular to the page (the dot). Seen along the axis, its two long sides cut the page: side 1 carries the current ${s > 0 ? 'out of' : 'into'} the page, side 2 ${s > 0 ? 'into' : 'out of'} it. The uniform field points ${dirName(Bv)}${phi === 0 ? '' : `; the coil makes an angle of ${phi}° with it`}.</p>`,
         `<p>Eine rechteckige Spule kann sich um eine Achse senkrecht zur Seite drehen (der Punkt). Längs der Achse gesehen, schneiden ihre beiden langen Seiten die Seite: Seite 1 führt den Strom ${s > 0 ? 'aus der Seite heraus' : 'in die Seite hinein'}, Seite 2 ${s > 0 ? 'in die Seite hinein' : 'aus der Seite heraus'}. Das homogene Feld zeigt ${dirName(Bv)}${phi === 0 ? '' : `; die Spule schliesst mit ihm einen Winkel von ${phi}° ein`}.</p>`),
-      figs: `<div class="fig">${fig(false)}</div>`,
+      figs: coilFigs(phi, s, bx, false),
       questions: [
         tiles('F', L('(a) In which direction does the force on side 1 point?', '(a) In welche Richtung zeigt die Kraft auf Seite 1?'), forceOptions(r, F1, [[neg(F1), 'hand'], [Bv, 'alongB'], [null, 'none']], howF)),
         choice('t', L('(b) How does the coil start to move?', '(b) Wie beginnt sich die Spule zu bewegen?'), turn),
@@ -361,7 +413,7 @@
         choice('u', `(d) ${L(...ap.q)}`, r.shuffle(apOpts)),
       ],
       hints: [RULE(), L('Do the two forces act along one line, or do they form a pair that turns the coil?', 'Wirken die beiden Kräfte längs einer Geraden, oder bilden sie ein Paar, das die Spule dreht?'), L('The torque is force times lever arm: the distance from the axis across to the line of the force.', 'Das Drehmoment ist Kraft mal Hebelarm: der Abstand von der Achse quer zur Wirkungslinie der Kraft.')],
-      solution: [howF, howT, howMax, `${L(...ap.ok)} ${L(...ap.why)}`], solFig: `<div class="fig">${fig(true)}</div>`, p: { s, bx, phi, app },
+      solution: [howF, howT, howMax, `${L(...ap.ok)} ${L(...ap.why)}`], solFig: coilFigs(phi, s, bx, true), p: { s, bx, phi, app },
     };
   }
 
@@ -468,7 +520,7 @@
     return { ...f(seed), type, difficulty, id: `${type}-${seed}`, seed };
   }
 
-  const api = { TYPES: Object.keys(TYPES), make, vec, LAW, dirName, howForce, RULE, PERP, GRIP, hand, signName, tile, nice, coilFig };
+  const api = { TYPES: Object.keys(TYPES), make, vec, LAW, dirName, howForce, RULE, PERP, GRIP, hand, signName, tile, nice, coilFig, coilFigs };
   root.MagEx = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

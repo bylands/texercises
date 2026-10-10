@@ -11,6 +11,9 @@
 // - the check: every objective has kinds, a worked example and a practice topic; each of its kinds
 //   gives questions with four different options, exactly one right, every wrong one with a flag
 //   that names a misconception or none,
+// - the de Broglie stages (by ratios, other particles, diffraction): at least 10 different
+//   exercises each; the voltage from the wavelength (U = k²·150 V), the same momentum (all the
+//   same wavelength), voltages changed by 4 or 9/4,
 // - the worked examples.
 'use strict';
 
@@ -92,9 +95,23 @@ for (const lang of ['en', 'de']) {
       if (!e.hints.length || !e.solution.length || !e.title || !e.p) fail(`${tag}: no hints, solution, title or parameters`);
       checkQuestions(tag, e);
       if (lang === 'de') continue;
-      if (type === 'debroglie' && !near(e.questions[0].value, 100 / e.p.k, 1e-9)) fail(`${tag}: λ = 100 pm/k`);
+      if (type === 'debroglie' && !near(e.questions[0].value, e.p.rev ? 150 * e.p.k * e.p.k : 100 / e.p.k, 1e-9)) fail(`${tag}: λ = 100 pm/k, U = k²·150 V`);
+      if (type === 'same-lambda' && (e.p.same === 'p') !== (e.questions[0].options.find((o) => o.ok).label === Lang.L('all the same', 'alle gleich'))) fail(`${tag}: the same momentum, the same wavelength`);
+      if (type === 'diffraction' && ![4, 9 / 4].some((x) => near(Math.max(e.p.U1 / e.p.U0, e.p.U0 / e.p.U1), x, 1e-9))) fail(`${tag}: the voltage changes by 4 or 9/4`);
       if (type === 'box-energy' && !near(e.questions[0].value, e.p.k * e.p.k * e.p.e1, 1e-9)) fail(`${tag}: E = k²·E1`);
     }
+  }
+  // the de Broglie stages: at least 10 different exercises each (by what the student reads), each
+  // choice with exactly one right option, no raw $ or _ in the text
+  for (const type of ['debroglie', 'same-lambda', 'diffraction']) {
+    const seen = new Set();
+    for (let seed = 1; seed <= 300; seed++) {
+      const e = X.make(type, seed), text = e.text + e.questions.map((q) => q.label).join('|') + e.solution.join('|');
+      seen.add(text);
+      if (/[$_]/.test(text.replace(/<[^>]*>/g, ''))) fail(`${type} ${seed} ${lang}: raw $ or _`);
+      for (const q of e.questions) if (q.options && q.options.filter((o) => o.ok).length !== 1) fail(`${type} ${seed} ${lang}: (${q.key}) not exactly one right option`);
+    }
+    if (seen.size < 10) fail(`${type} ${lang}: only ${seen.size} different exercises`);
   }
   // the check
   for (const o of A.OBJECTIVES) {

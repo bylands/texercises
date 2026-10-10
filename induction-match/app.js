@@ -408,7 +408,7 @@
   function lenzQuestion(e, seed) {
     const r = I.rng(seed * 7 + 3), why = e.solution[0];
     if (e.type === 'lenz-field') {
-      const { into, how } = e.p, grows = how === 'up', indInto = grows ? !into : into;
+      const { into, how } = e.p, grows = X.lenzGrows(how), indInto = grows ? !into : into;
       const field = (inn) => (inn ? L('into the page', 'in die Seite hinein') : L('out of the page', 'aus der Seite heraus'));
       // clockwise (as seen in the figure) goes with a field into the page inside the loop
       const list = [[true, true], [false, false], [true, false], [false, true]].map(([cw, inn]) => {

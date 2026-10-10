@@ -291,11 +291,23 @@
   const SC = [
     { id: 'four', c: [[1, 1, 1], [1, -1, 1], [1, -1, -1], [1, 1, -1]], name: () => L('four equal positive charges at the corners of a square', 'vier gleiche positive Ladungen an den Ecken eines Quadrats') },
     { id: 'alt', c: [[1, 1, 1], [-1, -1, 1], [1, -1, -1], [-1, 1, -1]], name: () => L('charges +q, −q, +q, −q in turn at the corners of a square', 'Ladungen +q, −q, +q, −q abwechselnd an den Ecken eines Quadrats') },
-    { id: 'halves', c: [[1, -1, 1], [1, 1, 1], [-1, 1, -1], [-1, -1, -1]], name: () => L('two positive charges above and two negative ones below, at the corners of a square', 'zwei positive Ladungen oben und zwei negative unten, an den Ecken eines Quadrats') },
+    // flipped (turned a quarter turn): the positive charges on the right
+    { id: 'halves', c: [[1, -1, 1], [1, 1, 1], [-1, 1, -1], [-1, -1, -1]], name: (flip) => (flip ? L('two positive charges on the right and two negative ones on the left, at the corners of a square', 'zwei positive Ladungen rechts und zwei negative links, an den Ecken eines Quadrats') : L('two positive charges above and two negative ones below, at the corners of a square', 'zwei positive Ladungen oben und zwei negative unten, an den Ecken eines Quadrats')) },
     { id: 'pair', c: [[1, -1.5, 0], [1, 1.5, 0]], name: () => L('two equal positive charges', 'zwei gleiche positive Ladungen') },
     { id: 'dip', c: [[1, -1.5, 0], [-1, 1.5, 0]], name: () => L('a positive and a negative charge of the same size', 'eine positive und eine negative Ladung gleichen Betrags') },
     { id: 'negpair', c: [[-1, -1.5, 0], [-1, 1.5, 0]], name: () => L('two equal negative charges', 'zwei gleiche negative Ladungen') },
     { id: 'tri', c: [[1, 0, 1.4], [1, -0.7 * Math.sqrt(3), -0.7], [1, 0.7 * Math.sqrt(3), -0.7]], name: () => L('three equal positive charges at the corners of an equilateral triangle', 'drei gleiche positive Ladungen an den Ecken eines gleichseitigen Dreiecks') },
+    { id: 'fourneg', c: [[-1, 1, 1], [-1, -1, 1], [-1, -1, -1], [-1, 1, -1]], name: () => L('four equal negative charges at the corners of a square', 'vier gleiche negative Ladungen an den Ecken eines Quadrats') },
+    { id: 'trineg', c: [[-1, 0, 1.4], [-1, -0.7 * Math.sqrt(3), -0.7], [-1, 0.7 * Math.sqrt(3), -0.7]], name: () => L('three equal negative charges at the corners of an equilateral triangle', 'drei gleiche negative Ladungen an den Ecken eines gleichseitigen Dreiecks') },
+    { id: 'dipv', c: [[-1, 0, 1.5], [1, 0, -1.5]], name: () => L('a negative charge above and a positive charge of the same size below', 'eine negative Ladung oben und eine positive Ladung gleichen Betrags unten') },
+    // charges of different sizes: M is still half-way between them
+    { id: 'big', c: [[2, -1.5, 0], [1, 1.5, 0]], name: () => L('a charge +2q on the left and a charge +q on the right', 'eine Ladung +2q links und eine Ladung +q rechts') },
+    { id: 'mix', c: [[2, -1.5, 0], [-1, 1.5, 0]], name: () => L('a charge +2q on the left and a charge −q on the right', 'eine Ladung +2q links und eine Ladung −q rechts'),
+      more: () => L('the positive charge is twice as large, at the same distance', 'Die positive Ladung ist doppelt so gross, im selben Abstand') },
+    { id: 'mixneg', c: [[1, -1.5, 0], [-2, 1.5, 0]], name: () => L('a charge +q on the left and a charge −2q on the right', 'eine Ladung +q links und eine Ladung −2q rechts'),
+      more: () => L('the negative charge is twice as large, at the same distance', 'Die negative Ladung ist doppelt so gross, im selben Abstand') },
+    { id: 'row', c: [[1, -2.4, 0], [-1, -1.2, 0], [-1, 1.2, 0], [1, 2.4, 0]], name: () => L('four charges in a row: two negative ones at the same distance on either side of M, and two positive ones of the same size twice as far out', 'vier Ladungen in einer Reihe: zwei negative im selben Abstand links und rechts von M und zwei gleich grosse positive doppelt so weit draussen'),
+      more: () => L('the negative charges are only half as far away', 'Die negativen Ladungen sind nur halb so weit weg') },
   ];
   function scalar(seed) {
     const r = rng(seed * 67 + 37), S = r.pick(SC), flip = S.id === 'halves' && r.next() < 0.5;
@@ -303,14 +315,17 @@
     const Ev = C.field(c, 0, 0), d = Math.hypot(...Ev) < 1e-6 ? null : dirOf(Ev), V = C.potential(c, 0, 0), vs = Math.abs(V) < 1e-9 ? 0 : Math.sign(V);
     const opts = [{ d, ok: true }];
     for (const x of [null, [1, 0], [0, -1], [0, 1], [-1, 0]]) if (opts.length < 4 && !opts.some((o) => dkey(o.d) === dkey(x))) opts.push({ d: x });
-    const howE = d ? L(`The fields add as vectors and do not cancel here: the net field points ${dirName(d)}, from the positive towards the negative charges.`, `Die Felder addieren sich als Vektoren und heben sich hier nicht auf: Das Gesamtfeld zeigt ${dirName(d)}, von den positiven zu den negativen Ladungen.`)
+    const same = ch.every((x) => x.q > 0) || ch.every((x) => x.q < 0);
+    const howE = d && same ? L(`The fields add as vectors and do not cancel here: the larger charge, at the same distance, gives the stronger field; the net field points ${dirName(d)}, away from it.`, `Die Felder addieren sich als Vektoren und heben sich hier nicht auf: Die grössere Ladung gibt im selben Abstand das stärkere Feld; das Gesamtfeld zeigt ${dirName(d)}, von ihr weg.`)
+      : d ? L(`The fields add as vectors and do not cancel here: the net field points ${dirName(d)}, from the positive towards the negative charges.`, `Die Felder addieren sich als Vektoren und heben sich hier nicht auf: Das Gesamtfeld zeigt ${dirName(d)}, von den positiven zu den negativen Ladungen.`)
       : L('The fields add as vectors: by symmetry they cancel at the centre.', 'Die Felder addieren sich als Vektoren: Aus Symmetriegründen heben sie sich im Mittelpunkt auf.');
-    const howV = vs ? L(`The potentials add as numbers: all the contributions have the same sign, so V ${vs > 0 ? '> 0' : '< 0'} although ${d ? 'the field points somewhere' : 'the field is zero'}.`, `Die Potentiale addieren sich als Zahlen: Alle Beiträge haben dasselbe Vorzeichen, also ist Φ ${vs > 0 ? '> 0' : '< 0'}, obwohl ${d ? 'das Feld irgendwohin zeigt' : 'das Feld null ist'}.`)
+    const howV = vs && !same ? L(`The potentials add as numbers: the contributions have opposite signs, but they do not cancel: ${S.more()}. So V ${vs > 0 ? '> 0' : '< 0'}, and the field is ${d ? 'not zero either' : 'zero'}.`, `Die Potentiale addieren sich als Zahlen: Die Beiträge haben entgegengesetzte Vorzeichen, heben sich aber nicht auf: ${S.more()}. Also ist Φ ${vs > 0 ? '> 0' : '< 0'}, und das Feld ist ${d ? 'auch nicht null' : 'null'}.`)
+      : vs ? L(`The potentials add as numbers: all the contributions have the same sign, so V ${vs > 0 ? '> 0' : '< 0'} although ${d ? 'the field points somewhere' : 'the field is zero'}.`, `Die Potentiale addieren sich als Zahlen: Alle Beiträge haben dasselbe Vorzeichen, also ist Φ ${vs > 0 ? '> 0' : '< 0'}, obwohl ${d ? 'das Feld irgendwohin zeigt' : 'das Feld null ist'}.`)
       : L(`The potentials add as numbers: equal positive and negative contributions at equal distances cancel, V = 0, although ${d ? 'the field is not zero' : 'the field is zero too'}.`, `Die Potentiale addieren sich als Zahlen: Gleiche positive und negative Beiträge in gleichen Abständen heben sich auf, Φ = 0, obwohl ${d ? 'das Feld nicht null ist' : 'auch das Feld null ist'}.`);
-    const lab = (q) => (q > 0 ? '+' : '−');
+    const lab = (q) => `${q > 0 ? '+' : '−'}${Math.abs(q) > 1 ? Math.abs(q) : ''}`;
     return {
       kind: 'pc', title: L('Field and potential at the centre', 'Feld und Potential im Mittelpunkt'),
-      text: L(`<p>The figure shows ${S.name()}. M is the centre (the potential is zero far away).</p>`, `<p>Die Abbildung zeigt ${S.name()}. M ist der Mittelpunkt (weit weg ist das Potential null).</p>`),
+      text: L(`<p>The figure shows ${S.name(flip)}. M is the centre (the potential is zero far away).</p>`, `<p>Die Abbildung zeigt ${S.name(flip)}. M ist der Mittelpunkt (weit weg ist das Potential null).</p>`),
       figs: fig(C.fig(c, { box: [-3, 3, -2.1, 2.1], labels: ch.map((s) => lab(s.q)), points: [{ x: 0, y: 0, name: 'M' }] })),
       questions: [
         tiles('E', L('(a) The field at M points', '(a) Das Feld in M zeigt'), r.shuffle(opts).map((o) => ({ html: tile(o.d, L('nowhere: it is zero', 'nirgends hin: Es ist null')), ok: !!o.ok, why: o.ok ? '' : howE }))),

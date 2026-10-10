@@ -93,13 +93,33 @@ for (const lang of ['en', 'de']) {
         if (want.dir === 'clockwise' && right('dir') !== 'clockwise') fail(`${tag}: Lenz direction`);
       }
       if (type === 'lenz-field') {
-        const { into, how } = e.p, indInto = how === 'up' ? !into : into, right = (k) => e.questions.find((q) => q.key === k).options.find((o) => o.ok).label;
+        const { into, how } = e.p, indInto = how === 'up' || how === 'in' ? !into : into, right = (k) => e.questions.find((q) => q.key === k).options.find((o) => o.ok).label;
         if (right('ind') !== (indInto ? 'Into the page' : 'Out of the page')) fail(`${tag}: the induced field`);
         if (right('dir') !== (indInto ? 'clockwise' : 'anticlockwise')) fail(`${tag}: the direction of the current`);
       }
     }
   }
 }
+// Lenz's rule: each practice stage has at least 10 distinct exercises (by their text), and every
+// variant (who moves, how the flux changes) comes up, in both languages, with clean text.
+for (const [type, key, want] of [['lenz-magnet', (p) => `${p.move}/${p.who}`, 6], ['lenz-field', (p) => p.how, 6]]) {
+  for (const lang of ['en', 'de']) {
+    Lang.set(lang, true);
+    const texts = new Set(), seen = new Set();
+    for (let seed = 1; seed <= 300; seed++) {
+      const e = X.make(type, seed), tag = `${type} ${seed} ${lang}`;
+      texts.add(e.text + e.questions.map((q) => q.label + q.options.map((o) => o.label).sort().join('|')).join('/'));
+      seen.add(key(e.p));
+      const words = [e.text, ...e.hints, ...e.solution, ...e.questions.flatMap((q) => [q.label, ...q.options.flatMap((o) => [o.label, o.why])])].join(' ').replace(/<[^>]+>/g, '');
+      if (/[$_]/.test(words)) fail(`${tag}: raw $ or _ in the text`);
+      if (/\b(the|and|is|of)\b/.test(lang === 'de' ? words : '')) fail(`${tag}: English in the German text`);
+    }
+    if (texts.size < 10) fail(`${type} ${lang}: only ${texts.size} distinct exercises`);
+    if (seen.size < want) fail(`${type} ${lang}: only ${seen.size} variants`);
+  }
+}
+Lang.set('en', true);
+
 console.log(`${X.TYPES.length} types × ${SEEDS} seeds, in both languages`);
 if (failures) { console.error(`${failures} failures`); process.exit(1); }
 console.log('all checks passed');

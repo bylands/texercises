@@ -14,6 +14,7 @@
 //   flag the check knows (or none); a whole check (check.js) plans the right number of questions,
 // - questions that wait for another (after) wait for an earlier one; Einstein's equation (b), (c)
 //   wait for (a), the U₀(f) line (e) for (d),
+// - the U₀(f) line: at least 10 different exercises, f₀ on a grid line of the graph, λ₀ round,
 // - the symbols f₀, λ₀ in English and f_G, λ_G in German, everywhere (practice, tutor, check),
 //   and φ, V_s, E_k,max, V (British textbooks) in English where German has W, U₀, E_kin,max, U,
 // - the spectrum: the labels of the marks under the scale, apart from each other and the captions.
@@ -131,6 +132,19 @@ for (const type of X.TYPES) {
     if (type === 'photo-line' && e.questions.find((q) => q.key === 'metal').after !== 'slope') fail(`${tag}: (e) must wait for (d)`);
     if (type === 'model' && e.questions[1].after !== 'obs') fail(`${tag}: (b) must wait for (a)`);
   }
+}
+// the U₀(f) line: at least 10 different exercises (by what the student reads, the solution with its
+// numbers included), the threshold on a grid line of the graph (0.5 · 10¹⁴ Hz) and λ₀ a whole number of nm
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  const seen = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    const e = X.make('photo-line', seed), tag = `photo-line ${seed} ${lang}`;
+    seen.add(e.text + e.questions.map((q) => q.label).join('|') + e.solution.join('|'));
+    if (Math.abs(e.p.fg * 2 - Math.round(e.p.fg * 2)) > 1e-9 || Math.abs(3000 / e.p.fg - Math.round(3000 / e.p.fg)) > 1e-9) fail(`${tag}: f₀ = ${e.p.fg} not on the grid or λ₀ not round`);
+    if (/[$_]/.test(e.text.replace(/<[^>]*>/g, '') + e.solution.join('').replace(/<[^>]*>/g, ''))) fail(`${tag}: raw $ or _`);
+  }
+  if (seen.size < 10) fail(`photo-line ${lang}: only ${seen.size} different exercises`);
 }
 // the threshold frequency and the cut-off wavelength: f₀, λ₀ in English, f_G, λ_G in German
 {

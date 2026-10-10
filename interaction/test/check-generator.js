@@ -129,14 +129,49 @@ for (let seed = 1; seed <= 100; seed++) {
 }
 // partner: the partner swaps the two bodies of the force, and it is just as large; the force on
 // the same body (the weight's balance) is flagged as a pair confusion.
-for (const scene of ['mosquito', 'electron', 'dancer', 'hammer']) {
+const PARTNER_WANT = { mosquito: 'mosquito pushes the windscreen', electron: 'electron pulls the nucleus', dancer: 'dancer pulls the Earth', hammer: 'nail pushes the hammer',
+  moon: 'Moon pulls the Earth', tennis: 'ball pushes the racket', clip: 'clip pulls the magnet', skater: 'wall pushes the skater', cart: 'cart pulls the child',
+  spheres: 'right sphere pushes the left sphere', jump: 'girl pushes the floor', bird: 'bird pushes the air' };
+for (const scene of Object.keys(PARTNER_WANT)) {
   const ex = FC.GENS.partner(r(), { scene });
   checkExercise(ex, `partner ${scene}`);
-  const want = { mosquito: 'mosquito pushes the windscreen', electron: 'electron pulls the nucleus', dancer: 'dancer pulls the Earth', hammer: 'nail pushes the hammer' }[scene];
+  const want = PARTNER_WANT[scene];
   if (!right(ex, 'partner').includes(want)) fail(`partner ${scene}: “${right(ex, 'partner')}”`);
   if (!right(ex, 'size').startsWith('Just as hard')) fail(`partner ${scene}: size`);
   if (!ex.questions[0].options.some((x) => x.code === 'pair-confusion')) fail(`partner ${scene}: no force on the same body offered`);
 }
+// match the partners: in every scene each force has exactly one partner, the two act on the
+// swapped bodies (read from the words), and the two forces on one body are flagged as balancing.
+for (const scene of ['book', 'lamp', 'wall', 'car', 'fridge', 'trailer', 'boat', 'helicopter', 'float', 'rocket', 'crate', 'scales']) {
+  const ex = FC.GENS['match-partners'](r(), { scene }), q = ex.questions[0], at = `match-partners ${scene}`;
+  checkExercise(ex, at);
+  const bodies = (s) => { const m = strip(s).replace(/^\d+ /, '').match(/^the (.+?)(?:’s (?:tyres|feet))? (?:pulls|pushes|push) the (.+?)(?:’s (?:tyres|feet))? (?:down|up|forward|backward|to the left|to the right)/i); const b = (w) => (w.toLowerCase() === 'tyres' ? 'car' : w.toLowerCase()); return m ? [b(m[1]), b(m[2])] : null; };
+  if (q.items.length !== 4) fail(`${at}: ${q.items.length} forces`);
+  for (const x of q.items) {
+    const y = q.items.find((z) => z.name === x.answer);
+    if (!y || y.answer !== x.name) { fail(`${at}: partner of ${x.name} not mutual`); continue; }
+    const [f, g] = [bodies(x.label), bodies(y.label)];
+    if (!f || !g) { fail(`${at}: cannot read “${strip(x.label)}” or “${strip(y.label)}”`); continue; }
+    if (f[0] !== g[1] || f[1] !== g[0]) fail(`${at}: ${x.name} ↔ ${y.name} do not swap the bodies`);
+  }
+  if (!q.items.some((x) => Object.values(x.wrong).some((w) => w.code === 'pair-confusion'))) fail(`${at}: no balancing pair flagged`);
+}
+// widened stages: at least 10 distinct exercises each (by their visible text, option order ignored),
+// and no raw $ or _ in the text.
+for (const type of ['interact/partner', 'interact/match-partners']) {
+  for (const lang of FC.LANGS) {
+    FC.setLang(lang);
+    const seen = new Set();
+    for (let seed = 1; seed <= 300; seed++) {
+      const ex = FC.generateGen(type, seed);
+      const words = [ex.title, ex.situation, ...ex.questions.flatMap((q) => [q.prompt, ...[...(q.options || []), ...(q.items || [])].map((o) => strip(o.text || o.label)).sort()])].map(strip);
+      seen.add(words.join('|'));
+      if (/[$_]/.test(words.join(' ') + ex.hints.join(' ') + ex.steps.map((x) => x.text).join(' '))) fail(`${type}-${seed} ${lang}: raw $ or _ in the text`);
+    }
+    if (seen.size < 10) fail(`${type} ${lang}: only ${seen.size} distinct exercises`);
+  }
+}
+FC.setLang('en');
 // find the error: exactly one listed pair has both forces on the same body; every other pair
 // swaps the two bodies, and no force has two partners in the right pairs.
 for (let seed = 1; seed <= 300; seed++) {
@@ -202,6 +237,22 @@ for (const type of TYPES) {
     }
   }
 }
+// every scene of the partner exercises, in German
+FC.setLang('de');
+for (const [gen, scenes] of [['partner', Object.keys(PARTNER_WANT)], ['match-partners', ['book', 'lamp', 'wall', 'car', 'fridge', 'trailer', 'boat', 'helicopter', 'float', 'rocket', 'crate', 'scales']]]) {
+  for (const scene of scenes) {
+    const de = FC.GENS[gen](FC.rng(3), { scene });
+    checkExercise(de, `de ${gen} ${scene}`);
+    const texts = [de.title, de.situation, ...de.hints, ...de.steps.flatMap((x) => [x.title, x.text]), ...de.questions.flatMap(qTexts)].map(strip);
+    const svgWords = [de.figure, ...de.steps.map((x) => x.figure)].join('').match(/<text class="txt"[^>]*>([^<]*)</g) || [];
+    for (const t of [...texts, ...svgWords.map(strip)]) {
+      if (/ß/.test(t)) fail(`de ${gen} ${scene}: ß in “${t.slice(0, 60)}”`);
+      const m = t.match(ENGLISH);
+      if (m) fail(`de ${gen} ${scene}: English “${m[0]}” in “${t.slice(0, 80)}”`);
+    }
+  }
+}
+FC.setLang('en');
 for (const c of Object.keys(FC.MIS)) {
   const m = FC.mis(c);
   if (!m.name || !m.text || /ß/.test(m.name + m.text)) fail(`de misconception ${c}`);
