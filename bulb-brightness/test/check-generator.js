@@ -9,7 +9,7 @@
 // - the diagram renders.
 'use strict';
 
-const { LEVELS, generate, diagnose } = require('../generator.js');
+const { LEVELS, ANSWERS, generate, diagnose } = require('../generator.js');
 const { circuit } = require('../draw.js');
 
 const SAMPLES = 400;
@@ -80,7 +80,8 @@ for (const level of Object.keys(LEVELS)) {
         if (!inside(vs[i], b.iv)) fail(`${tag}: ${b.name} has V = ${vs[i].toFixed(4)} for ${label} bulbs, outside its bounds`);
       });
     }
-    if (level !== 'easy' && val(ex.E) !== 0 && new Set(ex.bulbs.map((b) => b.answer)).size < 2) fail(`${tag}: every bulb has the same answer`);
+    if (level !== 'easy' && val(ex.E) !== 0 && ex.bulbs.every((b) => b.models.fixedCurrent === b.answer)) fail(`${tag}: the fixed-current model gets every bulb right`);
+    if (level !== 'easy' && !LEVELS[level].sameOk && val(ex.E) !== 0 && new Set(ex.bulbs.map((b) => b.answer)).size < 2) fail(`${tag}: every bulb has the same answer`);
 
     const right = ex.bulbs.map((b) => b.answer);
     if (diagnose(ex, right).some((c) => c !== 'right')) fail(`${tag}: right answers not accepted`);
@@ -107,6 +108,34 @@ for (const level of Object.keys(LEVELS)) {
   console.log(`${level}: ${SAMPLES} seeds, ${seen.size} distinct circuits, ${Date.now() - t0} ms`);
   console.log(`  answers ${JSON.stringify(answers)}; short circuits ${pct(shorts)}, reversed battery ${pct(reversed)}, fixed-current trap ${pct(trapped)}`);
   console.log(`  misconception models recognised as ${JSON.stringify(codes)}`);
+}
+
+// Practice stages (app.js): an exercise of a kind ('series', 'parallel', 'mixed', 'bridged',
+// 'reversed') at a level, as ofType() picks it. Each stage offers at least 10 different circuits
+// (batteries and structure), and every one of them is a valid exercise.
+{
+  const { canon } = require('../generator.js');
+  const hasWire = (n) => n.t === 'W' || (n.kids || []).some(hasWire);
+  const kindOf = (e) => (e.packKey[0] === 'R' ? 'reversed' : hasWire(e.load) ? 'bridged'
+    : e.load.kids.every((k) => k.t === 'L') ? (e.load.t === 'S' ? 'series' : 'parallel') : 'mixed');
+  const ofType = (type, seed) => {
+    const [kind, lv] = type.split(':');
+    for (let k = 0; k < 5000; k++) { const e = generate(lv, seed * 1000 + k); if (kindOf(e) === kind) return e; }
+    return null;
+  };
+  for (const type of ['series:easy', 'parallel:easy', 'mixed:medium', 'reversed:medium']) {
+    const seen = new Set();
+    for (let seed = 1; seed <= 300; seed++) {
+      const ex = ofType(type, seed);
+      if (!ex) { fail(`${type} ${seed}: none found`); continue; }
+      seen.add(`${ex.packKey} ${canon(ex.load)}`);
+      if (ex.bulbs.some((b) => !ANSWERS.includes(b.answer))) fail(`${type} ${seed}: undecided bulb`);
+      if (diagnose(ex, ex.bulbs.map((b) => b.answer)).some((c) => c !== 'right')) fail(`${type} ${seed}: right answers not accepted`);
+      if (type.endsWith('easy') && (ex.bulbs.length > 4 || ex.packKey[0] === 'R')) fail(`${type} ${seed}: not easy`);
+    }
+    if (seen.size < 10) fail(`${type}: only ${seen.size} different circuits`);
+    console.log(`stage ${type}: ${seen.size} different circuits`);
+  }
 }
 
 if (failures) { console.error(`\n${failures} failures`); process.exit(1); }

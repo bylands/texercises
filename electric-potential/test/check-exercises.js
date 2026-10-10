@@ -116,6 +116,16 @@ for (const lang of ['en', 'de']) {
       }
     }
   }
+  // the stage "scalar, not vector": at least 12 exercises that read differently, none with a raw $ or _
+  {
+    const seen = new Set();
+    for (let seed = 1; seed <= 300; seed++) {
+      const e = X.make('scalar', seed), t = e.text + e.questions.map((q) => q.options.map((o) => strip(o.label || o.html)).sort().join(',')).join('|');
+      seen.add(t);
+      if (/[$_]/.test(strip(t + e.solution.join('')))) fail(`scalar ${seed} ${lang}: a raw $ or _`);
+    }
+    if (seen.size < 12) fail(`scalar ${lang}: only ${seen.size} different exercises`);
+  }
   // the check: each kind of each objective, many seeds
   for (const o of X.OBJECTIVES) {
     if (!o.name() || !o.kinds.length) fail(`objective ${o.id}: no name or kinds`);

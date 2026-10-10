@@ -21,17 +21,22 @@
   'use strict';
 
   const ANSWERS = ['brighter', 'equal', 'dimmer', 'off'];
-  // Batteries in series; R2 and R3 have one reversed cell.
+  // Batteries in series; R2, R3 and R4 have one reversed cell.
   const PACKS = {
     1: { t: 'B', dir: 1 },
     S2: { t: 'S', kids: [{ t: 'B', dir: 1 }, { t: 'B', dir: 1 }] },
     S3: { t: 'S', kids: [{ t: 'B', dir: 1 }, { t: 'B', dir: 1 }, { t: 'B', dir: 1 }] },
     R2: { t: 'S', kids: [{ t: 'B', dir: 1 }, { t: 'B', dir: -1 }] },
+    S4: { t: 'S', kids: [{ t: 'B', dir: 1 }, { t: 'B', dir: 1 }, { t: 'B', dir: 1 }, { t: 'B', dir: 1 }] },
     R3: { t: 'S', kids: [{ t: 'B', dir: 1 }, { t: 'B', dir: 1 }, { t: 'B', dir: -1 }] },
+    R4: { t: 'S', kids: [{ t: 'B', dir: 1 }, { t: 'B', dir: 1 }, { t: 'B', dir: 1 }, { t: 'B', dir: -1 }] },
   };
+  // easy: only bulbs in series or only bulbs in parallel (flat). medium: four bulbs only without
+  // a wire and without a group inside a group inside a group (plain4); now and then every bulb
+  // gets the same answer (sameOk), as long as the fixed-current model gets one wrong.
   const LEVELS = {
-    easy: { name: 'Easy', bulbs: [2, 2], packs: ['1', '1', 'S2', 'S2', 'S3'], shorts: 0 },
-    medium: { name: 'Medium', bulbs: [2, 3], packs: ['1', '1', 'S2', 'S2', 'S3', 'R3'], shorts: 0.3 },
+    easy: { name: 'Easy', bulbs: [2, 4], flat: true, packs: ['1', '1', 'S2', 'S2', 'S3', 'S4'], shorts: 0 },
+    medium: { name: 'Medium', bulbs: [2, 4], plain4: true, sameOk: 0.4, packs: ['1', '1', 'S2', 'S2', 'S3', 'R3', 'R4'], shorts: 0.3 },
     hard: { name: 'Hard', bulbs: [3, 4], packs: ['1', '1', 'S2', 'S2', 'S2', 'S3', 'S3', 'R3', 'R3', 'R2'], shorts: 0.3 },
   };
   const PS = [0.3, 0.5, 0.7, 1, 1.5, 2, 3]; // bulb characteristics I ∝ V^p used to compare parts
@@ -243,15 +248,18 @@
     // The batteries are chosen once, so that retries do not favour easily decided ones.
     const packKey = r.pick(lv.packs);
     for (;;) {
-      const load = buildLoad(r.int(lv.bulbs[0], lv.bulbs[1]), null, r);
-      if (r.next() < lv.shorts) addShort(load, r);
+      const n = r.int(lv.bulbs[0], lv.bulbs[1]);
+      const load = lv.flat ? { t: r.pick(['S', 'P']), kids: Array.from({ length: n }, () => ({ t: 'L' })) } : buildLoad(n, null, r);
+      if (lv.plain4 && n === 4 && depth(load) > 2) continue;
+      if (r.next() < lv.shorts && !(lv.plain4 && n === 4)) addShort(load, r);
       if (shorted(load)) continue; // the batteries would be short-circuited
       const ex = make(packKey, load, `${level}-${seed}`, level);
       if (!ex) continue;
-      // Beyond the easy level: not every bulb gets the same answer (unless no current flows),
-      // and the fixed-current model predicts something wrong for at least one bulb.
+      // Beyond the easy level: not every bulb gets the same answer (unless no current flows; at
+      // the medium level, such a circuit is kept with the probability sameOk), and the
+      // fixed-current model predicts something wrong for at least one bulb.
       if (lv !== LEVELS.easy && !isZero(ex.E)) {
-        if (new Set(ex.bulbs.map((b) => b.answer)).size < 2) continue;
+        if (new Set(ex.bulbs.map((b) => b.answer)).size < 2 && !(lv.sameOk && r.next() < lv.sameOk)) continue;
         if (ex.bulbs.every((b) => b.models.fixedCurrent === b.answer)) continue;
       }
       return ex;

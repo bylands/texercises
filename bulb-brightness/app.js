@@ -124,8 +124,10 @@
     1: () => L(`One battery gives ${V0()}.`, `Eine Batterie liefert ${V0()}.`),
     S2: () => L(`The two batteries are in series: their voltages add up to 2 ${V0()}.`, `Die zwei Batterien sind in Serie: Ihre Spannungen addieren sich zu 2 ${V0()}.`),
     S3: () => L(`The three batteries are in series: their voltages add up to 3 ${V0()}.`, `Die drei Batterien sind in Serie: Ihre Spannungen addieren sich zu 3 ${V0()}.`),
+    S4: () => L(`The four batteries are in series: their voltages add up to 4 ${V0()}.`, `Die vier Batterien sind in Serie: Ihre Spannungen addieren sich zu 4 ${V0()}.`),
     R2: () => L('One battery is connected the other way round, so the two voltages cancel: 0.', 'Eine Batterie ist verkehrt herum angeschlossen, also heben sich die zwei Spannungen auf: 0.'),
     R3: () => L(`One battery is connected the other way round and cancels one of the others: ${V0()} in total.`, `Eine Batterie ist verkehrt herum angeschlossen und hebt eine der anderen auf: insgesamt ${V0()}.`),
+    R4: () => L(`One of the four batteries is connected the other way round and cancels one of the others: 2 ${V0()} in total.`, `Eine der vier Batterien ist verkehrt herum angeschlossen und hebt eine der anderen auf: insgesamt 2 ${V0()}.`),
   };
 
   // One reasoning step on the way from the batteries to a bulb.

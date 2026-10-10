@@ -92,7 +92,7 @@
 
   const SHAPES = {
     // the worksheet's a): a vertical side and a top bar to the right, as Γ
-    L: { difficulty: 2, make: (r) => differ({ h: pick(r, [6, 8, 10, 12, 16, 20]), b: pick(r, [4, 6, 8, 10, 12]) }),
+    L: { difficulty: 2, make: (r) => differ({ h: pick(r, [6, 8, 9, 10, 12, 15, 16, 18, 20, 24]), b: pick(r, [3, 4, 6, 8, 9, 10, 12, 15, 18]) }),
       parts: (p) => [{ kind: 'seg', a: [0, 0], b: [0, p.h], name: 'a' }, { kind: 'seg', a: [0, p.h], b: [p.b, p.h], name: 'b' }],
       title: () => L('An angle of wire', 'Ein Drahtwinkel'), ask: ['x', 'y'], offWire: true },
     U: { difficulty: 3, make: (r) => differ({ h: pick(r, [6, 8, 10, 12, 16]), b: pick(r, [6, 8, 10, 12, 16]) }),

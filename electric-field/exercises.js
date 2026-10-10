@@ -32,6 +32,7 @@
   const LCONF = [
     { id: 'like', c: [[1, -1], [1, 1]] }, { id: 'opp', c: [[1, -1], [-1, 1]] }, { id: 'unequal', c: [[2, -1], [-1, 1]] },
     { id: 'neg', c: [[-1, -1], [-1, 1]] }, { id: 'unequal2', c: [[1, -1], [-2, 1]] },
+    { id: 'likeun', c: [[2, -1], [1, 1]] }, { id: 'likeun2', c: [[1, -1], [2, 1]] }, { id: 'three', c: [[3, -1], [-1, 1]] }, { id: 'three2', c: [[1, -1], [-3, 1]] },
   ];
   const pts2 = (spec) => ({ kind: 'points', charges: spec.map(([q, x]) => ({ q, x, y: 0 })) });
   const label = (q) => (q > 0 ? (q > 1 ? `+${q}` : '+') : q < -1 ? `−${-q}` : '−');
@@ -242,23 +243,47 @@
       solution: [how], p: { f: [f.q, f.d, f.E].join(','), a1, a2 },
     };
   }
+  // A dipole along the line to a point charge: given which end is nearer and the sign of the
+  // charge, the net force (ask 'F'); or, from the way the dipole is pushed or pulled, which end is
+  // nearer ('end': the ends' signs hidden) or the sign of the charge ('Q': the charge grey, no lines)
   function dipolePoint(seed) {
-    const r = rng(seed * 83 + 53), Q = r.pick([1, -1]), plusNear = r.next() < 0.5;
-    const c = { kind: 'points', charges: [{ q: Q * 2, x: -1.8, y: 0 }] }, xn = 0.3, xf = 1.5;
+    const r = rng(seed * 83 + 53), Q = r.pick([1, -1]), plusNear = r.next() < 0.5, ask = r.pick(['F', 'end', 'Q']);
+    const c = { kind: 'points', charges: [{ q: Q * 2, x: -1.8, y: 0, name: 'Q' }] }, xn = 0.3, xf = 1.5;
     const near = plusNear ? 1 : -1, attract = near * Q < 0;
-    const parts = [{ x: xn, y: 0, q: near }, { x: xf, y: 0, q: -near }];
+    const parts = [{ x: xn, y: 0, q: near, sym: ask === 'end' ? '?' : undefined }, { x: xf, y: 0, q: -near, sym: ask === 'end' ? '?' : undefined }];
     const how = L(`The end nearer the charge is in the stronger field (the lines are denser there). Its ${near > 0 ? 'positive' : 'negative'} end is nearer the ${Q > 0 ? 'positive' : 'negative'} charge, so the stronger force ${attract ? 'pulls it towards' : 'pushes it away from'} the charge.`, `Das Ende näher bei der Ladung ist im stärkeren Feld (die Linien sind dort dichter). Sein ${near > 0 ? 'positives' : 'negatives'} Ende ist näher bei der ${Q > 0 ? 'positiven' : 'negativen'} Ladung, also ${attract ? 'zieht' : 'stösst'} die stärkere Kraft ihn ${attract ? 'zur Ladung hin' : 'von der Ladung weg'}.`);
     const howFree = L('A dipole that can turn freely first turns its end of the opposite sign towards the charge; then it is attracted. That is why a charged rod attracts neutral scraps of paper.', 'Ein Dipol, der sich frei drehen kann, dreht zuerst sein Ende mit dem entgegengesetzten Vorzeichen zur Ladung; dann wird er angezogen. Darum zieht ein geladener Stab neutrale Papierschnipsel an.');
+    const decides = L('The end nearer the charge is in the stronger field (the lines are denser there): the force on it is the larger one and decides which way the dipole moves.', 'Das Ende näher bei der Ladung ist im stärkeren Feld (die Linien sind dort dichter): Die Kraft darauf ist die grössere und entscheidet, wohin sich der Dipol bewegt.');
+    const notCancel = L('In a field that is not uniform, the forces on the two ends are not equal.', 'In einem nicht homogenen Feld sind die Kräfte auf die beiden Enden nicht gleich.');
+    let text, figs, qa, sol;
+    if (ask === 'F') {
+      text = L(`<p>A dipole is held near a ${Q > 0 ? 'positive' : 'negative'} point charge, along the line to it, its ${near > 0 ? 'positive' : 'negative'} end nearer.</p>`, `<p>Ein Dipol wird nahe einer ${Q > 0 ? 'positiven' : 'negativen'} Punktladung gehalten, längs der Geraden zu ihr, mit dem ${near > 0 ? 'positiven' : 'negativen'} Ende näher.</p>`);
+      figs = fig(C.fig(c, { box: BOX, lines: true, lineOpts: { per: 6 }, labels: [label(Q * 2)], rods: [[xn, 0, xf, 0]], parts, W: 340 }));
+      qa = choice('F', L('(a) The net force on the dipole points', '(a) Die Gesamtkraft auf den Dipol zeigt'), words(r, [[L('towards the charge', 'zur Ladung hin'), attract, how], [L('away from the charge', 'von der Ladung weg'), !attract, how], [L('nowhere: it is zero', 'nirgends hin: Sie ist null'), false, `${notCancel} ${how}`]]));
+      sol = how;
+    } else if (ask === 'end') {
+      // which end is nearer: the force on the nearer end has the direction of the net force
+      sol = L(`${decides} The dipole ${attract ? 'is pulled towards' : 'is pushed away from'} the ${Q > 0 ? 'positive' : 'negative'} charge, so its nearer end is ${attract ? 'attracted' : 'repelled'} by it: it is ${attract === (Q > 0) ? 'negative' : 'positive'}.`,
+        `${decides} Der Dipol ${attract ? 'wird zur' : 'wird von der'} ${Q > 0 ? 'positiven' : 'negativen'} Ladung ${attract ? 'hingezogen' : 'weggestossen'}, also wird sein näheres Ende von ihr ${attract ? 'angezogen' : 'abgestossen'}: Es ist ${attract === (Q > 0) ? 'negativ' : 'positiv'}.`);
+      text = L(`<p>A dipole is held near a ${Q > 0 ? 'positive' : 'negative'} point charge, along the line to it; the signs of its ends are hidden. When it is let go, it ${attract ? 'is pulled towards' : 'is pushed away from'} the charge.</p>`, `<p>Ein Dipol wird nahe einer ${Q > 0 ? 'positiven' : 'negativen'} Punktladung gehalten, längs der Geraden zu ihr; die Vorzeichen seiner Enden sind verdeckt. Losgelassen ${attract ? 'wird er zur Ladung hingezogen' : 'wird er von der Ladung weggestossen'}.</p>`);
+      figs = fig(C.fig(c, { box: BOX, lines: true, lineOpts: { per: 6 }, labels: [label(Q * 2)], rods: [[xn, 0, xf, 0]], parts, W: 340 }));
+      qa = choice('end', L('(a) The end of the dipole nearer the charge is', '(a) Das Ende des Dipols näher bei der Ladung ist'), words(r, [[L('its positive end', 'sein positives Ende'), near > 0, sol], [L('its negative end', 'sein negatives Ende'), near < 0, sol], [L('cannot be told: the forces on the two ends cancel', 'nicht zu sagen: Die Kräfte auf die beiden Enden heben sich auf'), false, `${notCancel} ${sol}`]]));
+    } else {
+      // the sign of the charge: the nearer end is pulled towards an unlike charge, pushed away from a like one
+      sol = L(`${decides} The dipole ${attract ? 'is pulled towards' : 'is pushed away from'} the charge, so its nearer, ${near > 0 ? 'positive' : 'negative'} end is ${attract ? 'attracted' : 'repelled'}: the charge Q is ${Q > 0 ? 'positive' : 'negative'}.`,
+        `${decides} Der Dipol ${attract ? 'wird zur Ladung hingezogen' : 'wird von der Ladung weggestossen'}, also wird sein näheres, ${near > 0 ? 'positives' : 'negatives'} Ende ${attract ? 'angezogen' : 'abgestossen'}: Die Ladung Q ist ${Q > 0 ? 'positiv' : 'negativ'}.`);
+      text = L(`<p>A dipole is held near a point charge Q, along the line to it, its ${near > 0 ? 'positive' : 'negative'} end nearer. When it is let go, it ${attract ? 'is pulled towards' : 'is pushed away from'} the charge.</p>`, `<p>Ein Dipol wird nahe einer Punktladung Q gehalten, längs der Geraden zu ihr, mit dem ${near > 0 ? 'positiven' : 'negativen'} Ende näher. Losgelassen ${attract ? 'wird er zur Ladung hingezogen' : 'wird er von der Ladung weggestossen'}.</p>`);
+      figs = fig(C.fig(c, { box: BOX, unknown: true, rods: [[xn, 0, xf, 0]], parts, W: 340 }));
+      qa = choice('Q', L('(a) The charge Q is', '(a) Die Ladung Q ist'), words(r, [[L('positive', 'positiv'), Q > 0, sol], [L('negative', 'negativ'), Q < 0, sol], [L('cannot be told: a dipole is always pulled towards a charge', 'nicht zu sagen: Ein Dipol wird immer zu einer Ladung hingezogen'), false, L(`Only a dipole that can turn freely is always attracted in the end; this one is held along the line. ${sol}`, `Nur ein Dipol, der sich frei drehen kann, wird am Ende immer angezogen; dieser wird längs der Geraden gehalten. ${sol}`)]]));
+    }
     return {
-      kind: 'dipole', title: L('A dipole near a charge', 'Ein Dipol nahe einer Ladung'),
-      text: L(`<p>A dipole is held near a ${Q > 0 ? 'positive' : 'negative'} point charge, along the line to it, its ${near > 0 ? 'positive' : 'negative'} end nearer.</p>`, `<p>Ein Dipol wird nahe einer ${Q > 0 ? 'positiven' : 'negativen'} Punktladung gehalten, längs der Geraden zu ihr, mit dem ${near > 0 ? 'positiven' : 'negativen'} Ende näher.</p>`),
-      figs: fig(C.fig(c, { box: BOX, lines: true, lineOpts: { per: 6 }, labels: [label(Q * 2)], rods: [[xn, 0, xf, 0]], parts, W: 340 })),
+      kind: 'dipole', title: L('A dipole near a charge', 'Ein Dipol nahe einer Ladung'), text, figs,
       questions: [
-        choice('F', L('(a) The net force on the dipole points', '(a) Die Gesamtkraft auf den Dipol zeigt'), words(r, [[L('towards the charge', 'zur Ladung hin'), attract, how], [L('away from the charge', 'von der Ladung weg'), !attract, how], [L('nowhere: it is zero', 'nirgends hin: Sie ist null'), false, L(`In a field that is not uniform, the forces on the two ends are not equal. ${how}`, `In einem nicht homogenen Feld sind die Kräfte auf die beiden Enden nicht gleich. ${how}`)]])),
+        qa,
         choice('free', L('(b) If the dipole could turn freely, it would in the end be', '(b) Könnte sich der Dipol frei drehen, würde er schliesslich'), words(r, [[L('attracted', 'angezogen'), true, ''], [L('repelled', 'abgestossen'), false, howFree], [L('neither', 'weder noch'), false, howFree]])),
       ],
       hints: [L('The field of a point charge gets weaker with the distance.', 'Das Feld einer Punktladung wird mit dem Abstand schwächer.'), L('Which end of the dipole feels the stronger force?', 'Welches Ende des Dipols spürt die stärkere Kraft?')],
-      solution: [how, howFree], p: { Q, plusNear },
+      solution: [sol, howFree], p: ask === 'F' ? { Q, plusNear } : { Q, plusNear, ask },
     };
   }
 

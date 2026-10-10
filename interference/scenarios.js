@@ -261,6 +261,8 @@
     d: () => L('the slit spacing $d$', 'der Spaltabstand $d$'), b: () => L('the width $b$ of the slits', 'die Breite $b$ der Spalte'), b1: () => L('the width $b$ of the slit', 'die Breite $b$ des Spalts'),
     n: () => L('the number $n$ of lines per millimetre', 'die Anzahl $n$ Linien pro Millimeter'), N: () => L('the number $N$ of lit slits (by widening the beam)', 'die Anzahl $N$ beleuchteter Spalte (durch Aufweiten des Strahls)'),
     D: () => L('the diameter $D$ of its mirror', 'der Durchmesser $D$ seines Spiegels'),
+    lamr: () => L('the wavelength $\\lambda$ at which it observes', 'die Beobachtungswellenlänge $\\lambda$'), Ddish: () => L('the diameter $D$ of its dish', 'der Durchmesser $D$ seiner Schüssel'),
+    Dp: () => L('the diameter $D$ of your pupil', 'der Durchmesser $D$ deiner Pupille'), Da: () => L('the diameter $D$ of the aperture (the opening of the lens)', 'der Durchmesser $D$ der Blende (der Öffnung des Objektivs)'),
   };
   const SETUPS = {
     ds: { sym: '\\Delta y', tex: '\\Delta y = \\frac{\\lambda L}{d}', vars: { lam: 1, L: 1, d: -1, b: 0 }, base: { lam: 600e-9, L: 2, d: 0.25e-3, b: 0.05e-3, N: 2 },
@@ -272,13 +274,35 @@
     gr: { sym: 'y_1', tex: 'y_1 = \\frac{\\lambda L}{d} = \\lambda L n', vars: { lam: 1, L: 1, n: 1, N: 0 }, base: { lam: 500e-9, L: 1, d: 10e-6, b: 0, N: 6 },
       what: () => L('the distance $y_1$ of the first-order maxima from the centre', 'der Abstand $y_1$ der Maxima erster Ordnung von der Mitte'),
       intro: () => L('Laser light falls on a grating; on a screen far behind it you see sharp bright spots.', 'Laserlicht fällt auf ein Gitter; auf einem Schirm weit dahinter siehst du scharfe helle Punkte.') },
-    res: { sym: '\\theta_{\\min}', tex: '\\theta_{\\min} = 1.22\\,\\frac{\\lambda}{D}', vars: { lam: 1, D: -1 },
+    res: { sym: '\\theta_{\\min}', tex: '\\theta_{\\min} = 1.22\\,\\frac{\\lambda}{D}', vars: { lam: 1, D: -1 }, res: true,
       what: () => L('the smallest angle $\\theta_{\\min}$ between two stars that it can still resolve', 'der kleinste Winkel $\\theta_{\\min}$ zwischen zwei Sternen, die es noch trennen kann'),
-      intro: () => L('A telescope looks at pairs of stars close together in the sky.', 'Ein Teleskop beobachtet Paare von Sternen, die am Himmel nahe beieinander stehen.') },
+      intro: () => L('A telescope looks at pairs of stars close together in the sky.', 'Ein Teleskop beobachtet Paare von Sternen, die am Himmel nahe beieinander stehen.'),
+      finer: () => L('The telescope now resolves finer detail: stars closer together.', 'Das Teleskop trennt jetzt feinere Einzelheiten: näher beieinander stehende Sterne.'),
+      blurred: () => L('The telescope now resolves less: the images of the stars are more blurred.', 'Das Teleskop trennt jetzt weniger: Die Bilder der Sterne sind stärker verwaschen.'),
+      same: () => L('after: the same two stars', 'nachher: dieselben zwei Sterne') },
+    // the same formula for a radio telescope, the eye and a camera lens
+    radio: { sym: '\\theta_{\\min}', tex: '\\theta_{\\min} = 1.22\\,\\frac{\\lambda}{D}', vars: { lamr: 1, Ddish: -1 }, res: true,
+      what: () => L('the smallest angle $\\theta_{\\min}$ between two radio sources that it can still resolve', 'der kleinste Winkel $\\theta_{\\min}$ zwischen zwei Radioquellen, die es noch trennen kann'),
+      intro: () => L('A radio telescope looks at pairs of radio sources (distant galaxies) close together in the sky.', 'Ein Radioteleskop beobachtet Paare von Radioquellen (fernen Galaxien), die am Himmel nahe beieinander stehen.'),
+      finer: () => L('The radio telescope now resolves finer detail: sources closer together.', 'Das Radioteleskop trennt jetzt feinere Einzelheiten: näher beieinander stehende Quellen.'),
+      blurred: () => L('The radio telescope now resolves less: the images of the sources are more blurred.', 'Das Radioteleskop trennt jetzt weniger: Die Bilder der Quellen sind stärker verwaschen.'),
+      same: () => L('after: the same two sources', 'nachher: dieselben zwei Quellen') },
+    eye: { sym: '\\theta_{\\min}', tex: '\\theta_{\\min} = 1.22\\,\\frac{\\lambda}{D}', vars: { Dp: -1 }, res: true,
+      what: () => L('the smallest angle $\\theta_{\\min}$ between two lamps that your eye can still resolve (by diffraction alone)', 'der kleinste Winkel $\\theta_{\\min}$ zwischen zwei Lampen, die dein Auge (allein wegen der Beugung) noch trennen kann'),
+      intro: () => L('You look at the two headlights of a car far away on a straight road.', 'Du schaust auf die beiden Scheinwerfer eines Autos weit weg auf einer geraden Strasse.'),
+      finer: () => L('Your eye now resolves finer detail: the two headlights can be seen as two from further away.', 'Dein Auge trennt jetzt feinere Einzelheiten: Die beiden Scheinwerfer sind auch aus grösserer Entfernung als zwei zu sehen.'),
+      blurred: () => L('Your eye now resolves less: the two headlights merge into one from a shorter distance already.', 'Dein Auge trennt jetzt weniger: Die beiden Scheinwerfer verschmelzen schon aus kleinerer Entfernung zu einem.'),
+      same: () => L('after: the same two headlights', 'nachher: dieselben zwei Scheinwerfer') },
+    cam: { sym: '\\theta_{\\min}', tex: '\\theta_{\\min} = 1.22\\,\\frac{\\lambda}{D}', vars: { Da: -1 }, res: true,
+      what: () => L('the smallest angle $\\theta_{\\min}$ between two lamps that the camera can still resolve (by diffraction alone)', 'der kleinste Winkel $\\theta_{\\min}$ zwischen zwei Lampen, welche die Kamera (allein wegen der Beugung) noch trennen kann'),
+      intro: () => L('A camera with a telephoto lens photographs two small lamps far away.', 'Eine Kamera mit einem Teleobjektiv fotografiert zwei kleine Lampen in grosser Entfernung.'),
+      finer: () => L('The camera now resolves finer detail: lamps closer together.', 'Die Kamera trennt jetzt feinere Einzelheiten: näher beieinander stehende Lampen.'),
+      blurred: () => L('The camera now resolves less: the images of the lamps are more blurred.', 'Die Kamera trennt jetzt weniger: Die Bilder der Lampen sind stärker verwaschen.'),
+      same: () => L('after: the same two lamps', 'nachher: dieselben zwei Lampen') },
   };
   // what one sees, after the change
   function seen(s, v, r) {
-    if (s === 'res') return r < 1 ? L('The telescope now resolves finer detail: stars closer together.', 'Das Teleskop trennt jetzt feinere Einzelheiten: näher beieinander stehende Sterne.') : L('The telescope now resolves less: the images of the stars are more blurred.', 'Das Teleskop trennt jetzt weniger: Die Bilder der Sterne sind stärker verwaschen.');
+    if (SETUPS[s].res) return r < 1 ? SETUPS[s].finer() : SETUPS[s].blurred();
     if (v === 'b') return L('The fringes stay where they are; what changes is the envelope, the pattern of each single slit: narrower slits spread the light more, so more fringes are bright, and wider slits fewer.', 'Die Streifen bleiben, wo sie sind; was sich ändert, ist die Einhüllende, das Muster jedes einzelnen Spalts: Schmalere Spalte streuen das Licht stärker, also sind mehr Streifen hell, breitere weniger.');
     if (v === 'N') return L('The maxima stay where they are; with more slits they become sharper and brighter, with fewer broader.', 'Die Maxima bleiben, wo sie sind; mit mehr Spalten werden sie schärfer und heller, mit weniger breiter.');
     return r > 1 ? L('The whole pattern spreads out.', 'Das ganze Muster wird breiter.') : L('The whole pattern shrinks together.', 'Das ganze Muster zieht sich zusammen.');
@@ -287,7 +311,7 @@
   function changeFigure(p, after) {
     const S = SETUPS[p.s];
     // two stars a little more than θ_min apart: after the change, in units of the new θ_min
-    if (p.s === 'res') return Fg().airy(1.15, { caption: L('before: just resolved', 'vorher: knapp getrennt') }) + (after ? Fg().airy(1.15, { scale: after ** S.vars[p.v], caption: L('after: the same two stars', 'nachher: dieselben zwei Sterne') }) : '');
+    if (S.res) return Fg().airy(1.15, { caption: L('before: just resolved', 'vorher: knapp getrennt') }) + (after ? Fg().airy(1.15, { scale: after ** S.vars[p.v], caption: S.same() }) : '');
     const c0 = { ...S.base }, c1 = { ...S.base }, k = p.k;
     if (after) {
       if (p.v === 'lam') c1.lam *= k; if (p.v === 'L') c1.L *= k; if (p.v === 'd') c1.d *= k; if (p.v === 'n') c1.d /= k;
@@ -313,7 +337,7 @@
             : L('The number of slits changes how sharp and bright the maxima are, not where they are: $y_1 = \\lambda L/d$.', 'Die Anzahl Spalte ändert, wie scharf und hell die Maxima sind, nicht wo sie liegen: $y_1 = \\lambda L/d$.');
           if (flag === flags.same) return L(`$${S.sym}$ depends on ${vn}: $${S.tex}$.`, `$${S.sym}$ hängt von ${dat(vn)} ab: $${S.tex}$.`);
           if (flag === flags.inv) return e > 0 ? L(`Turned round: ${vn} stands in the numerator of $${S.tex}$, so $${S.sym}$ grows in proportion.`, `Umgekehrt: ${cap(vn)} steht im Zähler von $${S.tex}$, also wächst $${S.sym}$ im selben Verhältnis.`)
-            : L(`Turned round: ${vn} stands in the denominator of $${S.tex}$, so $${S.sym}$ shrinks when it grows.${p.s === 'res' ? ' A larger opening diffracts less.' : ' The narrower or closer the slits, the wider the pattern.'}`, `Umgekehrt: ${cap(vn)} steht im Nenner von $${S.tex}$, also wird $${S.sym}$ kleiner, wenn diese Grösse wächst.${p.s === 'res' ? ' Eine grössere Öffnung beugt weniger.' : ' Je schmaler oder näher die Spalte, desto breiter das Muster.'}`);
+            : L(`Turned round: ${vn} stands in the denominator of $${S.tex}$, so $${S.sym}$ shrinks when it grows.${S.res ? ' A larger opening diffracts less.' : ' The narrower or closer the slits, the wider the pattern.'}`, `Umgekehrt: ${cap(vn)} steht im Nenner von $${S.tex}$, also wird $${S.sym}$ kleiner, wenn diese Grösse wächst.${S.res ? ' Eine grössere Öffnung beugt weniger.' : ' Je schmaler oder näher die Spalte, desto breiter das Muster.'}`);
           return L(`${cap(vn)} enters $${S.tex}$ once, not squared.`, `${cap(vn)} kommt in $${S.tex}$ einfach vor, nicht im Quadrat.`);
         };
         const list = opts.slice().sort((a, b) => a[0] - b[0]).map(([x, flag]) => [fkey(x), `$${S.sym}$ ${fact(x)}`, flag === '' ? '' : why(x, flag), flag || null]);
@@ -324,7 +348,7 @@
       steps: (p, v) => {
         const S = SETUPS[p.s], e = S.vars[p.v], vn = VARS[p.v](), r = p.k ** e;
         return [
-          step(L('The formula', 'Die Formel'), `$$${S.tex}$$` + (p.s === 'res' ? p$(L('The smaller $\\theta_{\\min}$, the finer the detail the telescope resolves.', 'Je kleiner $\\theta_{\\min}$, desto feinere Einzelheiten trennt das Teleskop.')) : '')),
+          step(L('The formula', 'Die Formel'), `$$${S.tex}$$` + (S.res ? p$(p.s === 'res' ? L('The smaller $\\theta_{\\min}$, the finer the detail the telescope resolves.', 'Je kleiner $\\theta_{\\min}$, desto feinere Einzelheiten trennt das Teleskop.') : L('The smaller $\\theta_{\\min}$, the finer the detail that can be resolved.', 'Je kleiner $\\theta_{\\min}$, desto feinere Einzelheiten lassen sich trennen.')) : '')),
           step(L('The change', 'Die Änderung'), p$(e ? L(`${cap(vn)} stands in the ${e > 0 ? 'numerator' : 'denominator'}: it is ${VERB[fkey(p.k)][0]}, so $${S.sym}$ <span class="result">${fact(r)}</span>.`, `${cap(vn)} steht im ${e > 0 ? 'Zähler' : 'Nenner'} und wird ${VERB[fkey(p.k)][1]}: $${S.sym}$ <span class="result">${fact(r)}</span>.`)
             : L(`${cap(vn)} does not appear: $${S.sym}$ <span class="result">${fact(1)}</span>.`, `${cap(vn)} kommt nicht vor: $${S.sym}$ <span class="result">${fact(1)}</span>.`)) + p$(seen(p.s, p.v, r)), ['after']),
         ];
@@ -333,7 +357,7 @@
     };
   }
   const change = changeOf('change', ['ds', 'ds', 'ss', 'gr'], { inv: 'inv', same: 'same' });
-  const resChange = changeOf('res-change', ['res'], { inv: 'rinv', same: 'rsame' });
+  const resChange = changeOf('res-change', ['res', 'radio', 'eye', 'cam'], { inv: 'rinv', same: 'rsame' });
 
   // the central fringe of a single slit, w = 2·λ·L/b; or the width of a hair from it (a hair
   // gives the same pattern as a slit of its width)
