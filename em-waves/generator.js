@@ -85,11 +85,15 @@
   // wanted, then the steps of its solution.
   function tutorial(lesson) {
     const scn = byId(lesson.scenario), ex = exercise(scn, lesson.p);
-    const wanted = ex.fields.map((f) => (f.type === 'num' ? `${f.what} $${f.sym}$` : f.what.replace(/:$/, ''))).join(', ');
+    // numbers are named as wanted; a choice lists its options
+    const nums = ex.fields.filter((f) => f.type === 'num'), choices = ex.fields.filter((f) => f.type !== 'num');
+    const wanted = nums.length ? `<p>${L('Wanted', 'Gesucht')}: ${nums.map((f) => `${f.what} $${f.sym}$`).join(', ')}</p>` : '';
+    const offered = choices.map((f) => `<p>${L('Choose from', 'Zur Auswahl')}: ${f.options.map((o) => `<span class="opt">${o[1]}</span>`).join(' · ')}</p>`).join('');
     const intro = (lesson.intro || []).map((fr) => ({ text: `<p class="step-rule">${fr.title()}</p>${fr.text()}`, figure: fr.figure() }));
     const task = {
-      text: `<p class="step-rule">${L('An exercise', 'Eine Aufgabe')}</p>${ex.text}<p>${L('Wanted', 'Gesucht')}: ${wanted}</p>`,
-      figure: ex.figure({ task: true }) || ex.solutionFigure(),
+      text: `<p class="step-rule">${L('An exercise', 'Eine Aufgabe')}</p>${ex.text}${wanted}${offered}`,
+      // without a figure of its own, the task shows the solution's figure before any step marks it
+      figure: ex.figure({ task: true }) || ex.figure({ show: new Set() }),
     };
     return { frames: [...intro, task, ...ex.steps.map((s) => ({ text: s.text, figure: ex.figure({ show: new Set(s.show || []) }) }))] };
   }

@@ -4,6 +4,27 @@ Der Hang ist ein rechtwinkliges Dreieck: $\ell = \lP$ entlang des Hangs, $h = \h
 \end{align}
 Für den Neigungswinkel $\alpha$ gilt $\sin\alpha = h/\ell$ und $\cos\alpha = b/\ell$. Die Gewichtskraft wird zerlegt: $m\,g\sin\alpha$ hangabwärts, $m\,g\cos\alpha$ in den Hang hinein.
 
+\begin{center}
+\begin{tikzpicture}[>=stealth]
+ \draw[fill=gray!8] (0,0) -- (4.4,0) -- (4.4,3.3) -- cycle;
+ \draw (-0.4,0) -- (4.9,0);
+ \draw (0.9,0) arc (0:36.87:0.9);
+ \node at (1.15,0.38) {$\alpha$};
+ \draw[fill=gray!20] (2.08,1.56) -- (2.72,2.04) -- (2.12,2.84) -- (1.48,2.36) -- cycle;
+ \draw[->, very thick] (2.1,2.2) -- (2.1,-0.4);
+ \fill (2.1,2.2) circle (0.05);
+ \node[right] at (2.1,-0.4) {$\vec F_\mathrm{G}$};
+ \draw[->, very thick] (2.52,1.89) -- (1.27,3.55);
+ \fill (2.52,1.89) circle (0.05);
+ \node[above right] at (1.27,3.55) {$\vec F_\mathrm{N}$};
+ \draw[->, very thick] (2.56,1.92) -- (2.81,2.11);
+ \fill (2.56,1.92) circle (0.05);
+ \node at (2.89,1.73) {$\vec F_\mathrm{R}$};
+ \draw[->, thick, blue!70!black] (1.64,1.6) -- (0.72,0.92) node[above left] {$\vec a$};
+ \node[font=\small] at (2.3,-1) {Kräfte auf den Skifahrer};
+\end{tikzpicture}
+\end{center}
+
 \begin{abcliste}
 \abc
 Die Normalkraft hält der Komponente in den Hang hinein das Gleichgewicht:

@@ -1,3 +1,30 @@
+\begin{center}
+\begin{tikzpicture}[>=stealth]
+ \draw[fill=gray!20] (-0.75,-0.88) rectangle (0.75,0.88);
+ \draw[->, very thick] (0,0.88) -- (0,3.04);
+ \fill (0,0.88) circle (0.05);
+ \node[right] at (0,3.04) {$\vec F_\mathrm{S}$};
+ \draw[->, very thick] (0,0) -- (0,-2.4);
+ \fill (0,0) circle (0.05);
+ \node[right] at (0,-2.4) {$\vec F_\mathrm{G,K}$};
+ \draw[->, thick, blue!70!black] (1.75,0.57) -- (1.75,-0.57) node[right] {$\vec a$};
+ \node[font=\small] at (0,-2.95) {Kräfte auf die Kabine};
+\end{tikzpicture}
+\hspace{1cm}
+\begin{tikzpicture}[>=stealth]
+ \draw[fill=gray!20] (-0.42,-0.75) rectangle (0.42,0.75);
+ \draw[->, very thick] (0,0.75) -- (0,2.91);
+ \fill (0,0.75) circle (0.05);
+ \node[right] at (0,2.91) {$\vec F_\mathrm{S}$};
+ \draw[->, very thick] (0,0) -- (0,-1.96);
+ \fill (0,0) circle (0.05);
+ \node[right] at (0,-1.96) {$\vec F_\mathrm{G,G}$};
+ \draw[->, thick, blue!70!black] (1.5,-0.57) -- (1.5,0.57) node[right] {$\vec a$};
+ \node[font=\small] at (0,-2.95) {Kräfte auf das Gegengewicht};
+\end{tikzpicture}
+\end{center}
+Beide Bilder haben denselben Massstab.
+
 \begin{abcliste}
 \abc
 Entlang des Seils bilden Kabine und Gegengewicht ein System: Die Differenz ihrer Gewichtskräfte beschleunigt beide Massen.

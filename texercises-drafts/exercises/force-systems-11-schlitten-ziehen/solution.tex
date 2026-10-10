@@ -4,6 +4,25 @@ Das Seil ist die Hypotenuse eines rechtwinkligen Dreiecks: $\ell = \lS$ lang, $h
 \end{align}
 Die Zugkraft $F$ hat einen waagrechten Teil $F\cos\alpha$ nach vorn und einen senkrechten Teil $F\sin\alpha$ nach oben.
 
+\begin{center}
+\begin{tikzpicture}[>=stealth]
+ \draw[fill=gray!20] (-1.12,-0.5) rectangle (1.12,0.5);
+ \draw[->, very thick] (-0.15,0) -- (-0.15,-2.4);
+ \fill (-0.15,0) circle (0.05);
+ \node[right] at (-0.15,-2.4) {$\vec F_\mathrm{G}$};
+ \draw[->, very thick] (0.15,-0.5) -- (0.15,1.59);
+ \fill (0.15,-0.5) circle (0.05);
+ \node[right] at (0.15,1.59) {$\vec F_\mathrm{N}$};
+ \draw[->, very thick] (-0.75,-0.5) -- (-1.17,-0.5);
+ \fill (-0.75,-0.5) circle (0.05);
+ \node[below=1pt] at (-1.17,-0.5) {$\vec F_\mathrm{R}$};
+ \draw[->, very thick] (1.12,0) -- (1.54,0.31);
+ \fill (1.12,0) circle (0.05);
+ \node[right] at (1.54,0.31) {$\vec F$};
+ \node[font=\small] at (0,-2.95) {Kräfte auf den Schlitten};
+\end{tikzpicture}
+\end{center}
+
 \begin{abcliste}
 \abc
 Senkrecht tragen der Boden und der nach oben gerichtete Teil der Zugkraft die Gewichtskraft; waagrecht (konstante Geschwindigkeit) hält der Teil nach vorn der Reibung das Gleichgewicht:

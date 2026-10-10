@@ -89,12 +89,17 @@
     }
     return `<div class="qrow" data-key="${q.key}"><span class="what">${q.label}</span><div class="opts" role="radiogroup">${q.options.map((o, k) => `<label><input type="radio" name="q-${q.key}" value="${k}"><span>${o.label}</span></label>`).join('')}</div><span class="fb" aria-live="polite"></span></div>`;
   }
+  // Number fields waiting for the same question share one hidden block (and one grid).
   function questionsHtml(qs) {
-    let out = '', nums = '';
-    const flush = () => { if (nums) out += `<div class="fields">${nums}</div>`; nums = ''; };
+    let out = '', nums = '', numsAfter = '';
+    const wrap = (after, html) => (after ? `<div class="after" data-after="${after}" hidden>${html}</div>` : html);
+    const flush = () => { if (nums) out += wrap(numsAfter, `<div class="fields">${nums}</div>`); nums = ''; };
     for (const q of qs) {
-      if (q.type === 'num') nums += questionHtml(q);
-      else { flush(); out += q.after ? `<div class="after" data-after="${q.after}" hidden>${questionHtml(q)}</div>` : questionHtml(q); }
+      if (q.type === 'num') {
+        if (nums && (q.after || '') !== numsAfter) flush();
+        numsAfter = q.after || '';
+        nums += questionHtml(q);
+      } else { flush(); out += wrap(q.after, questionHtml(q)); }
     }
     flush();
     return out;
@@ -123,6 +128,7 @@
         if (!raw.trim()) { all = false; missing = true; row.className = 'field'; row.querySelector('.fb').textContent = ''; continue; }
         const r = judge(parse(raw), q);
         row.className = `field ${r.cls}`;
+        if (r.cls === 'ok') showAfter(q.key);
         row.querySelector('.fb').innerHTML = r.cls === 'bad' && r.tag ? nudge(r.msg) : r.msg;
         if (r.cls !== 'ok') all = false;
         continue;
@@ -136,6 +142,7 @@
           li.querySelector('.fb').innerHTML = done && !good ? (on ? s.why : `${ui().missed.replace(/:$/, '')}: ${s.why}`) : '';
         });
         $(`[data-fb="${q.key}"]`).innerHTML = !done && wrong ? ui().stmtsWrong(wrong) : '';
+        if (!wrong) showAfter(q.key);
         continue;
       }
       const inputs = [...document.querySelectorAll(`input[name="q-${q.key}"]`)], on = inputs.filter((x) => x.checked).map((x) => Number(x.value));
@@ -148,6 +155,7 @@
           if (x.checked) { el.classList.add(o.ok ? 'ok' : 'bad'); if (!o.ok) { notes.push(nudge(o.why)); all = false; } }
         });
         $(`[data-fb="${q.key}"]`).innerHTML = notes.map((n) => `<li>${n}</li>`).join('');
+        if (!notes.length) showAfter(q.key);
         continue;
       }
       const o = q.options[on[0]], row = $(`.qrow[data-key="${q.key}"]`);
@@ -276,13 +284,15 @@
   const frame = (title, text, figure) => ({ text: `<p class="step-rule">${title}</p>${text}`, figure: figure ? `<div class="figs">${figure}</div>` : '' });
   const fig = (html) => `<div class="fig">${html}</div>`;
   const { i, sb } = X;
-  const lam = i('λ'), E = i('E'), f = i('f'), h = i('h'), c = i('c'), W = i('W'), U0 = `${i('U')}${sb('0')}`, Ek = `${i('E')}${sb('kin,max')}`, fG = `${i('f')}${sb('G')}`;
+  const lam = i('λ'), E = i('E'), f = i('f'), h = i('h'), c = i('c'), W = i('W'), U0 = `${i('U')}${sb('0')}`, Ek = `${i('E')}${sb('kin,max')}`;
+  // the threshold frequency and the cut-off wavelength: f₀, λ₀ in English, f_G, λ_G (Grenzfrequenz) in German
+  const fG = () => `${i('f')}${sb(L('0', 'G'))}`, lG = () => `${lam}${sb(L('0', 'G'))}`;
   const legend = (alt) => `<p class="note legend"><span class="k-old">- - -</span> ${L('before', 'vorher')} · <span class="k-new">—</span> ${L('after', 'nachher')}${alt ? ` · <span class="k-alt">—</span> ${alt}` : ''}</p>`;
   const LESSONS = [
     { topic: 0, stage: 0, name: () => L('What the wave model cannot explain', 'Was das Wellenmodell nicht erklärt'), idea: () => L('For each observation, ask what a stronger wave or a longer wait would change. Where the wave model says “more” and the experiment says “no”, only photons explain it.', 'Frage bei jeder Beobachtung, was eine stärkere Welle oder längeres Warten ändern würde. Wo das Wellenmodell „mehr“ sagt und das Experiment „nein“, erklären es nur Photonen.'),
       frames: () => [
         frame(L('The test', 'Der Test'), `<p>${L('Light on a metal releases electrons. In the wave model, light is a wave whose energy grows with its brightness (its amplitude) and is spread over the whole surface. That makes three predictions that can be tested: brighter light gives faster electrons; any colour works if it is bright enough; dim light needs time before the first electron gets out.', 'Licht auf einem Metall löst Elektronen aus. Im Wellenmodell ist Licht eine Welle, deren Energie mit der Helligkeit (der Amplitude) wächst und über die ganze Fläche verteilt ist. Daraus folgen drei prüfbare Voraussagen: Helleres Licht ergibt schnellere Elektronen; jede Farbe wirkt, wenn sie hell genug ist; schwaches Licht braucht Zeit, bis das erste Elektron herauskommt.')}</p>`, fig(G.cell({ nm: 400, counter: true }))),
-        frame(L('1. The threshold frequency', '1. Die Grenzfrequenz'), `<p>${L(`Wave model: red light on zinc, made bright enough, should release electrons. Observed: nothing, however bright. Photons: one electron takes up the energy of one photon. Red light of 620 nm brings 1240 eV·nm / 620 nm = 2.00 eV per photon; zinc needs ${W} = 4.27 eV. Below the threshold frequency ${fG} = ${W}/${h}, no single photon has enough.`, `Wellenmodell: Rotes Licht auf Zink sollte Elektronen auslösen, wenn es nur hell genug ist. Beobachtet: nichts, wie hell es auch ist. Photonen: Ein Elektron nimmt die Energie eines Photons auf. Rotes Licht von 620 nm bringt 1240 eV·nm / 620 nm = 2.00 eV pro Photon; Zink braucht ${W} = 4.27 eV. Unterhalb der Grenzfrequenz ${fG} = ${W}/${h} hat kein einzelnes Photon genug.`)}</p>`, fig(G.bars(2, 4.27))),
+        frame(L('1. The threshold frequency', '1. Die Grenzfrequenz'), `<p>${L(`Wave model: red light on zinc, made bright enough, should release electrons. Observed: nothing, however bright. Photons: one electron takes up the energy of one photon. Red light of 620 nm brings 1240 eV·nm / 620 nm = 2.00 eV per photon; zinc needs ${W} = 4.27 eV. Below the threshold frequency ${fG()} = ${W}/${h}, no single photon has enough.`, `Wellenmodell: Rotes Licht auf Zink sollte Elektronen auslösen, wenn es nur hell genug ist. Beobachtet: nichts, wie hell es auch ist. Photonen: Ein Elektron nimmt die Energie eines Photons auf. Rotes Licht von 620 nm bringt 1240 eV·nm / 620 nm = 2.00 eV pro Photon; Zink braucht ${W} = 4.27 eV. Unterhalb der Grenzfrequenz ${fG()} = ${W}/${h} hat kein einzelnes Photon genug.`)}</p>`, fig(G.bars(2, 4.27))),
         frame(L('2. Brightness and the kinetic energy', '2. Helligkeit und kinetische Energie'), `<p>${L(`Wave model: brighter light shakes the electrons harder, so they come out faster. Observed: the stopping voltage ${U0}, and so the energy of the fastest electrons, stays the same; only the current grows. Photons: brighter light brings more photons per second, each with the same energy ${h}·${f}.`, `Wellenmodell: Helleres Licht schüttelt die Elektronen stärker, also kommen sie schneller heraus. Beobachtet: Die Gegenspannung ${U0} und damit die Energie der schnellsten Elektronen bleibt gleich; nur der Strom wächst. Photonen: Helleres Licht bringt mehr Photonen pro Sekunde, jedes mit derselben Energie ${h}·${f}.`)}</p>`,
           fig(G.ivGraph([{ U0: 1.2, I: 10, cls: 'old', dash: true }, { U0: 1.2, I: 20, cls: 'new' }], { Imax: 24 })) + legend()),
         frame(L('3. No waiting', '3. Kein Warten'), `<p>${L('Wave model: in very dim light, the energy spread over the surface trickles in slowly; an electron would have to collect it for a long time before it could leave. Observed: the first electrons come out at once. Photons: the energy arrives in portions; the first photon that hits an electron can free it.', 'Wellenmodell: Bei sehr schwachem Licht rieselt die über die Fläche verteilte Energie langsam herein; ein Elektron müsste sie lange sammeln, bevor es austreten kann. Beobachtet: Die ersten Elektronen kommen sofort. Photonen: Die Energie kommt in Portionen; das erste Photon, das ein Elektron trifft, kann es lösen.')}</p>`, fig(G.cell({ nm: 300 }))),
@@ -320,8 +330,8 @@
         const e = X.make('photo-line', 1);
         return [
           frame(L('A straight line', 'Eine Gerade'), `<p>${L(`For light of several frequencies, the stopping voltage is measured. Einstein: ${i('e')}·${U0} = ${h}·${f} − ${W}, so ${U0} = (${h}/${i('e')})·${f} − ${W}/${i('e')}: plotted against ${f}, the stopping voltages lie on a straight line.`, `Für Licht mehrerer Frequenzen wird die Gegenspannung gemessen. Einstein: ${i('e')}·${U0} = ${h}·${f} − ${W}, also ${U0} = (${h}/${i('e')})·${f} − ${W}/${i('e')}: Gegen ${f} aufgetragen, liegen die Gegenspannungen auf einer Geraden.`)}</p><p class="law">${U0} = (${h}/${i('e')})·${f} − ${W}/${i('e')}</p>`, e.figs),
-          frame(L('The threshold frequency and the cut-off wavelength', 'Grenzfrequenz und Grenzwellenlänge'), `<p>${L(`Where the line meets the ${f}-axis, ${U0} = 0: the electrons just get out. Here ${fG} = 6.0 · 10<sup>14</sup> Hz. The longest wavelength that still releases electrons: ${lam}${sb('G')} = ${c}/${fG} = 3.00 · 10<sup>8</sup> m/s / 6.0 · 10<sup>14</sup> Hz = 500 nm. Green light of 532 nm releases nothing from this cathode.`, `Wo die Gerade die ${f}-Achse schneidet, ist ${U0} = 0: Die Elektronen kommen gerade noch heraus. Hier ist ${fG} = 6.0 · 10<sup>14</sup> Hz. Die grösste Wellenlänge, die noch Elektronen auslöst: ${lam}${sb('G')} = ${c}/${fG} = 3.00 · 10<sup>8</sup> m/s / 6.0 · 10<sup>14</sup> Hz = 500 nm. Grünes Licht von 532 nm löst aus dieser Kathode nichts aus.`)}</p>`, e.solFig),
-          frame(L('The work function', 'Die Austrittsarbeit'), `<p>${e.solution[2].replace(/^\(c\) ./, (x) => x.slice(4).toUpperCase())}</p><p>${L(`Below ${fG} the line has no meaning (no electrons, no stopping voltage): the dashed part is only drawn to find the intercept.`, `Unterhalb von ${fG} hat die Gerade keine Bedeutung (keine Elektronen, keine Gegenspannung): Der gestrichelte Teil ist nur gezeichnet, um den Achsenabschnitt zu finden.`)}</p>`, e.solFig),
+          frame(L('The threshold frequency and the cut-off wavelength', 'Grenzfrequenz und Grenzwellenlänge'), `<p>${L(`Where the line meets the ${f}-axis, ${U0} = 0: the electrons just get out. Here ${fG()} = 6.0 · 10<sup>14</sup> Hz. The longest wavelength that still releases electrons: ${lG()} = ${c}/${fG()} = 3.00 · 10<sup>8</sup> m/s / 6.0 · 10<sup>14</sup> Hz = 500 nm. Green light of 532 nm releases nothing from this cathode.`, `Wo die Gerade die ${f}-Achse schneidet, ist ${U0} = 0: Die Elektronen kommen gerade noch heraus. Hier ist ${fG()} = 6.0 · 10<sup>14</sup> Hz. Die grösste Wellenlänge, die noch Elektronen auslöst: ${lG()} = ${c}/${fG()} = 3.00 · 10<sup>8</sup> m/s / 6.0 · 10<sup>14</sup> Hz = 500 nm. Grünes Licht von 532 nm löst aus dieser Kathode nichts aus.`)}</p>`, e.solFig),
+          frame(L('The work function', 'Die Austrittsarbeit'), `<p>${e.solution[2].replace(/^\(c\) ./, (x) => x.slice(4).toUpperCase())}</p><p>${L(`Below ${fG()} the line has no meaning (no electrons, no stopping voltage): the dashed part is only drawn to find the intercept.`, `Unterhalb von ${fG()} hat die Gerade keine Bedeutung (keine Elektronen, keine Gegenspannung): Der gestrichelte Teil ist nur gezeichnet, um den Achsenabschnitt zu finden.`)}</p>`, e.solFig),
           frame(L('The slope is h/e', 'Die Steigung ist h/e'), `<p>${L(`From 7 to 11 · 10<sup>14</sup> Hz the line rises by 1.65 V: 0.414 V per 10<sup>14</sup> Hz, so ${h} = 4.14 · 10<sup>−15</sup> eV·s, Planck’s constant. With another cathode, only ${W} changes: the line moves sideways, parallel. A larger work function means a higher threshold frequency, further to the right. Typical mistakes: taking the slope for ${W}/${i('e')}, or expecting brighter light to change the line.`, `Von 7 bis 11 · 10<sup>14</sup> Hz steigt die Gerade um 1.65 V: 0.414 V pro 10<sup>14</sup> Hz, also ${h} = 4.14 · 10<sup>−15</sup> eV·s, die Planck-Konstante. Mit einer anderen Kathode ändert sich nur ${W}: Die Gerade verschiebt sich parallel. Eine grössere Austrittsarbeit bedeutet eine höhere Grenzfrequenz, weiter rechts. Typische Fehler: die Steigung für ${W}/${i('e')} halten, oder erwarten, dass helleres Licht die Gerade ändert.`)}</p>`, e.solFig),
         ];
       } },
@@ -385,9 +395,137 @@
     concepts: () => ({
       intensity: L('brightness is the number of photons, not their energy', 'Helligkeit ist die Zahl der Photonen, nicht ihre Energie'), inverse: L('shorter wavelength, more energy per photon', 'kürzere Wellenlänge, mehr Energie pro Photon'),
       wave: L('what the wave model can and cannot explain', 'was das Wellenmodell erklärt und was nicht'), work: L('the work function in Einstein’s equation', 'die Austrittsarbeit in Einsteins Gleichung'),
-      threshold: L('the threshold frequency f_G = W/h', 'die Grenzfrequenz f_G = W/h'), graph: L('the slope h/e and the intercepts of the U₀(f) line', 'die Steigung h/e und die Achsenabschnitte der U₀(f)-Geraden'),
+      threshold: L('the threshold frequency f₀ = W/h', 'die Grenzfrequenz f_G = W/h'), graph: L('the slope h/e and the intercepts of the U₀(f) line', 'die Steigung h/e und die Achsenabschnitte der U₀(f)-Geraden'),
     }),
   };
+
+  // ---------------------------------------------------------------- reading off a graph
+  // A graph from plot.js with data-read carries its axis mapping (user units of the plot area and the
+  // values there). Over it, guide lines to both axes and a small label with both coordinates follow
+  // the pointer: hover with a mouse; tap and then drag with a finger (the graph then stops scrolling
+  // the page until a tap elsewhere); arrow keys once it has the focus (announced in a live region).
+  // Everything is drawn inside the svg, so nothing around it moves.
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const fmt = (v, p) => { const d = Math.max(0, Math.round(-Math.log10(p))); const t = (Math.round(v / p) * p).toFixed(d); return (/^-0?\.?0*$/.test(t) ? t.slice(1) : t).replace('-', '−'); };
+  function axesOf(svg) {
+    const [px0, px1, py0, py1] = svg.dataset.read.split(' ').map(Number), [x0, x1, y0, y1] = svg.dataset.val.split(' ').map(Number);
+    const d = svg.dataset;
+    return { px0, px1, py0, py1, x0, x1, y0, y1, xp: Number(d.xp), yp: Number(d.yp), xn: d.xn, xu: d.xu, yn: d.yn, yu: d.yu };
+  }
+  const readText = (a, x, y) => [`${a.xn} = ${fmt(x, a.xp)} ${a.xu}`, `${a.yn} = ${fmt(y, a.yp)} ${a.yu}`];
+  // the readout at the user coordinates (ux, uy) of the svg, or none if they lie outside the plot area
+  function showRead(svg, ux, uy) {
+    const a = axesOf(svg);
+    let g = svg.querySelector('g.readout');
+    if (ux < a.px0 - 0.5 || ux > a.px1 + 0.5 || uy > a.py0 + 0.5 || uy < a.py1 - 0.5) { if (g) g.remove(); return null; }
+    // the values, rounded to the steps, and the point drawn where those rounded values lie
+    const x = Math.round((a.x0 + ((ux - a.px0) / (a.px1 - a.px0)) * (a.x1 - a.x0)) / a.xp) * a.xp;
+    const y = Math.round((a.y0 + ((uy - a.py0) / (a.py1 - a.py0)) * (a.y1 - a.y0)) / a.yp) * a.yp;
+    const X = a.px0 + ((x - a.x0) / (a.x1 - a.x0)) * (a.px1 - a.px0), Y = a.py0 + ((y - a.y0) / (a.y1 - a.y0)) * (a.py1 - a.py0);
+    const ax = Math.max(a.x0, Math.min(a.x1, 0)), ay = Math.max(a.y0, Math.min(a.y1, 0));
+    const AX = a.px0 + ((ax - a.x0) / (a.x1 - a.x0)) * (a.px1 - a.px0), AY = a.py0 + ((ay - a.y0) / (a.y1 - a.y0)) * (a.py1 - a.py0);
+    if (!g) {
+      g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('class', 'readout');
+      g.setAttribute('aria-hidden', 'true');
+      g.innerHTML = '<line class="ro-guide"/><line class="ro-guide"/><circle class="ro-pt" r="3.2"/><rect class="ro-box" rx="4"/><text class="ro-text"><tspan/><tspan/></text>';
+      svg.appendChild(g);
+    }
+    const [lv, lh] = g.querySelectorAll('line'), pt = g.querySelector('circle'), box = g.querySelector('rect'), text = g.querySelector('text'), [t1, t2] = text.querySelectorAll('tspan');
+    // guide lines from the point to both axes (where the axes cross, x = 0 or y = 0 when shown)
+    lv.setAttribute('x1', X); lv.setAttribute('x2', X); lv.setAttribute('y1', Y); lv.setAttribute('y2', AY);
+    lh.setAttribute('y1', Y); lh.setAttribute('y2', Y); lh.setAttribute('x1', X); lh.setAttribute('x2', AX);
+    pt.setAttribute('cx', X); pt.setAttribute('cy', Y);
+    const [s1, s2] = readText(a, x, y);
+    t1.textContent = s1; t2.textContent = s2;
+    // the label beside the point, up and to the right, flipped to stay within the drawing
+    const W = svg.viewBox.baseVal.width, pad = 5, lineH = 14;
+    t1.setAttribute('dy', 0); t2.setAttribute('dy', lineH);
+    let bw = 0;
+    try { bw = text.getComputedTextLength ? Math.max(t1.getComputedTextLength(), t2.getComputedTextLength()) : 0; } catch (e) { bw = 0; }
+    if (!bw) bw = Math.max(s1.length, s2.length) * 6.6;
+    const bh = 2 * lineH + 2 * pad - 4;
+    let bx = X + 10, by = Y - 10 - bh;
+    if (bx + bw + 2 * pad > W - 2) bx = X - 10 - bw - 2 * pad;
+    if (by < 2) by = Y + 10;
+    bx = Math.max(2, bx);
+    box.setAttribute('x', bx); box.setAttribute('y', by); box.setAttribute('width', bw + 2 * pad); box.setAttribute('height', bh);
+    t1.setAttribute('x', bx + pad); t2.setAttribute('x', bx + pad); text.setAttribute('y', by + pad + 10);
+    g.dataset.ux = X; g.dataset.uy = Y;
+    return `${s1}, ${s2}`;
+  }
+  function hideRead(svg) { const g = svg && svg.querySelector('g.readout'); if (g) g.remove(); }
+  function userPoint(svg, evt) {
+    const m = svg.getScreenCTM();
+    if (!m) return null;
+    const p = new DOMPoint(evt.clientX, evt.clientY).matrixTransform(m.inverse());
+    return [p.x, p.y];
+  }
+  let reading = null; // the graph a finger is reading (it does not scroll the page meanwhile)
+  function stopReading() { if (reading) { reading.classList.remove('reading'); hideRead(reading); reading = null; } }
+  function wireReadout() {
+    const live = document.createElement('p');
+    live.className = 'sr-only';
+    live.setAttribute('aria-live', 'polite');
+    live.id = 'readout-live';
+    live.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:-1px;padding:0;border:0';
+    document.body.appendChild(live);
+    // the graph under the pointer; a drawing to choose (a label or button around it, whose input may
+    // lie on top of the drawing) counts as well
+    const graphOf = (evt) => {
+      const el = evt.target && evt.target.closest ? evt.target : null;
+      if (!el) return null;
+      const svg = el.closest('svg[data-read]');
+      if (svg) return svg;
+      const box = el.closest('label, button');
+      return box ? box.querySelector('svg[data-read]') : null;
+    };
+    document.addEventListener('pointermove', (evt) => {
+      const svg = graphOf(evt);
+      if (evt.pointerType === 'mouse' || evt.pointerType === 'pen') {
+        document.querySelectorAll('svg[data-read] g.readout').forEach((g) => { if (g.ownerSVGElement !== svg && g.ownerSVGElement !== document.activeElement) g.remove(); });
+        if (svg) { const p = userPoint(svg, evt); if (p) showRead(svg, ...p); }
+      } else if (reading) {
+        const p = userPoint(reading, evt);
+        if (p) showRead(reading, ...p);
+      }
+    }, { passive: true });
+    document.addEventListener('pointerdown', (evt) => {
+      if (evt.pointerType === 'mouse') return;
+      const svg = graphOf(evt);
+      if (!svg) { stopReading(); return; }
+      if (reading !== svg) stopReading();
+      reading = svg;
+      svg.classList.add('reading');
+      const p = userPoint(svg, evt);
+      if (p && !showRead(svg, ...p)) stopReading();
+    });
+    document.addEventListener('pointerout', (evt) => {
+      if (evt.pointerType !== 'mouse') return;
+      const svg = graphOf(evt);
+      if (svg && !svg.contains(evt.relatedTarget) && graphOf({ target: evt.relatedTarget }) !== svg && svg !== document.activeElement) hideRead(svg);
+    });
+    // arrow keys move the point by about a hundredth of the axis (shift: ten times as far); Escape hides it
+    document.addEventListener('keydown', (evt) => {
+      const svg = evt.target && evt.target.matches && evt.target.matches('svg[data-read]') ? evt.target : null;
+      if (!svg) return;
+      if (evt.key === 'Escape') { hideRead(svg); return; }
+      const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[evt.key];
+      if (!d) return;
+      evt.preventDefault();
+      evt.stopPropagation();
+      const a = axesOf(svg), g = svg.querySelector('g.readout');
+      const k = evt.shiftKey ? 10 : 1;
+      const stepOf = (range, p) => Math.max(1, Math.round(range / 100 / p)) * p;
+      const dx = ((a.px1 - a.px0) / (a.x1 - a.x0)) * stepOf(a.x1 - a.x0, a.xp) * k, dy = ((a.py0 - a.py1) / (a.y1 - a.y0)) * stepOf(a.y1 - a.y0, a.yp) * k;
+      let ux = g ? Number(g.dataset.ux) : (a.px0 + a.px1) / 2, uy = g ? Number(g.dataset.uy) : (a.py0 + a.py1) / 2;
+      if (g) { ux += d[0] * dx; uy += d[1] * dy; }
+      ux = Math.max(a.px0, Math.min(a.px1, ux)); uy = Math.max(a.py1, Math.min(a.py0, uy));
+      const said = showRead(svg, ux, uy);
+      if (said) live.textContent = said;
+    });
+    document.addEventListener('focusout', (evt) => { if (evt.target && evt.target.matches && evt.target.matches('svg[data-read]')) hideRead(evt.target); });
+  }
 
   // ---------------------------------------------------------------- language and modes
   function applyStatic() {
@@ -408,6 +546,7 @@
       typedIn.forEach(([k, v]) => { const x = $(`#in-${k}`); if (x) x.value = v; });
       chosen.forEach(([n, v]) => { const x = document.querySelector(`input[name="${n}"][value="${v}"]`); if (x) x.checked = true; });
       if (st.revealed) markRight(); else if (st.checked) feedback();
+      unlocked = false;
       if (st.solved) lock();
       showStatus(status);
       showHints();
@@ -478,6 +617,7 @@
       const li = evt.target.closest('.stmts li');
       if (li) { li.className = ''; li.querySelector('.fb').textContent = ''; }
     });
+    wireReadout();
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);

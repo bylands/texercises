@@ -1,15 +1,17 @@
 // The drawings of Photoelectric Effect, as SVG strings (in user units, y down; the classes are in style.css):
 //   graph(o)                 axes with a grid and ticks: o = { x: [lo, hi, step], y: [lo, hi, step],
-//                            xl, yl (axis labels, SVG text), w, h, minor (grid lines between ticks) };
+//                            xl, yl (axis labels, SVG text), w, h, minor (grid lines between ticks),
+//                            read (the coordinate readout: { x: [name, unit, step], y: [...] }) };
 //                            returns { X(x), Y(y), s (the SVG of the axes), svg(body, label, cls) }
 //   ufGraph(o)               stopping voltage U₀ against frequency f (10¹⁴ Hz): o = { pts: [[f, U]],
 //                            line: { slope, icept } (V per 10¹⁴ Hz, V; the axes then reach down to
 //                            −W/e), draw (the line drawn, extended to both axes), solve (the same,
-//                            with f_G, −W/e and a slope triangle marked) }
+//                            with f₀ (German f_G), −W/e and a slope triangle marked) }
 //   ivGraph(curves, o)       the current of a photocell against the voltage: curves [{ U0, I, cls,
 //                            dash }], I in nA; o = { Imax, label }
 //   current(U, U0, I)        the model of that current (nA)
 //   bar(marks)               the spectrum from 100 nm to 1000 nm, with wavelengths marked [{ nm, label }]
+//                            (the labels in a row of their own under the scale, never on top of it)
 //   bars(E, W)               the photon energy split into the work function and E_kin (eV)
 //   cell(o)                  a photocell: light on the cathode, electrons to the anode, the voltage
 //                            against them (o.counter) and the ammeter
@@ -41,7 +43,11 @@
     if (!o.noYTicks) for (let k = 0; k <= Math.round((y1 - y0) / ys); k++) { const y = y0 + k * ys; s += `<text class="tick" x="${X(x0) - 6}" y="${Y(y) + 4}" text-anchor="end">${dec(y)}</text>`; }
     s += `<text class="lbl" x="${w - 4}" y="${h - 4}" text-anchor="end">${o.xl}</text>`;
     s += `<text class="lbl" x="${X(ax) + 10}" y="14" text-anchor="start">${o.yl}</text>`;
-    const svg = (body, label, cls = '') => `<svg class="ph graph ${cls}" viewBox="0 0 ${w} ${h}" width="${w}" role="img" aria-label="${label}">${s}${body}</svg>`;
+    // o.read = { x: [name, unit, step], y: [...] }: the svg carries its axis mapping, and app.js shows
+    // the coordinates under the pointer (hover, tap and drag, arrow keys), rounded to the steps
+    const rd = o.read, rdAttr = (k, [n, u, p]) => ` data-${k}n="${n}" data-${k}u="${u}" data-${k}p="${p}"`;
+    const read = rd ? ` data-read="${X(x0)} ${X(x1)} ${Y(y0)} ${Y(y1)}" data-val="${x0} ${x1} ${y0} ${y1}"${rdAttr('x', rd.x)}${rdAttr('y', rd.y)}${o.small ? '' : ' tabindex="0"'}` : '';
+    const svg = (body, label, cls = '') => `<svg class="ph graph ${cls}" viewBox="0 0 ${w} ${h}" width="${w}" role="img" aria-label="${label}"${read}>${s}${body}</svg>`;
     return { X, Y, s, svg, w, h };
   }
   const poly = (pts, cls, extra = '') => `<polyline class="${cls}" points="${pts.map(([x, y]) => `${x},${y}`).join(' ')}"${extra}/>`;
@@ -52,7 +58,7 @@
     const Umax = Math.max(...o.pts.map((p) => p[1]));
     const xHi = Math.ceil(fmax + 1), yHi = Math.max(1, Math.ceil(Umax * 2 + 0.6) / 2);
     const yLo = o.line ? -Math.ceil(-o.line.icept * 2 + 0.6) / 2 : 0;
-    const g = graph({ x: [0, xHi, 1], y: [yLo, yHi, 0.5], xl: `${it('f')} in 10<tspan font-size="72%" dy="-6">14</tspan><tspan dy="6"> Hz</tspan>`, yl: `${it('U')}${sub('0')} in V`, w: 360, h: o.line ? 300 : 240, minor: 2 });
+    const g = graph({ x: [0, xHi, 1], y: [yLo, yHi, 0.5], xl: `${it('f')} in 10<tspan font-size="72%" dy="-6">14</tspan><tspan dy="6"> Hz</tspan>`, yl: `${it('U')}${sub('0')} in V`, w: 360, h: o.line ? 300 : 240, minor: 2, read: { x: ['f', '· 10¹⁴ Hz', 0.01], y: ['U₀', 'V', 0.01] } });
     let body = '';
     if (o.draw || o.solve) {
       const { slope, icept } = o.line, fG = -icept / slope;
@@ -61,7 +67,7 @@
     }
     if (o.solve) {
       const { slope, icept } = o.line, fG = -icept / slope;
-      body += `<circle class="mark" cx="${g.X(fG)}" cy="${g.Y(0)}" r="4"/><text class="lbl small" x="${g.X(fG) + 6}" y="${g.Y(0) - 8}">${it('f')}${sub('G')}</text>`;
+      body += `<circle class="mark" cx="${g.X(fG)}" cy="${g.Y(0)}" r="4"/><text class="lbl small" x="${g.X(fG) + 6}" y="${g.Y(0) - 8}">${it('f')}${sub(L('0', 'G'))}</text>`;
       body += `<circle class="mark" cx="${g.X(0)}" cy="${g.Y(icept)}" r="4"/><text class="lbl small" x="${g.X(0) + 8}" y="${g.Y(icept) + 16}">−${it('W')}/${it('e')}</text>`;
       // the slope triangle between the outer points
       const [a, b] = [o.pts[0], o.pts[o.pts.length - 1]].map(([f]) => [f, icept + slope * f]);
@@ -77,7 +83,7 @@
   function ivGraph(curves, o = {}) {
     const Imax = o.Imax || Math.max(...curves.map((k) => k.I)) * 1.15;
     const step = Imax > 40 ? 20 : Imax > 16 ? 5 : 2;
-    const g = graph({ x: [-3, 3, 1], y: [0, Math.ceil(Imax / step) * step, step], xl: `${it('U')} in V`, yl: `${it('I')} in nA`, w: o.w || 320, h: o.h || 210, noYTicks: o.noYTicks });
+    const g = graph({ x: [-3, 3, 1], y: [0, Math.ceil(Imax / step) * step, step], xl: `${it('U')} in V`, yl: `${it('I')} in nA`, w: o.w || 320, h: o.h || 210, noYTicks: o.noYTicks, small: o.small, read: { x: ['U', 'V', 0.01], y: ['I', 'nA', 0.1] } });
     const body = curves.map((k) => {
       const pts = [];
       for (let U = -3; U <= 3.0001; U += 0.05) pts.push([g.X(U), g.Y(current(U, k.U0, k.I))]);
@@ -87,19 +93,58 @@
   }
 
   // ---------------------------------------------------------------- the spectrum as a bar
+  // From the top: the regions (UV, visible, infrared), the bar, the scale with its numbers, then a
+  // row of its own for the marks (an arrow under the scale and its label below it, moved sideways
+  // where labels would overlap, with a short line back to the arrow), and the axis captions at the
+  // bottom. A mark is also drawn as a thin line across the bar.
+  const textWidth = (html, px) => String(html).replace(/<[^>]*>/g, '').replace(/&[a-z#0-9]+;/gi, 'x').length * px * 0.56 + 2;
+  // centres for labels of the given widths, as near the wanted ones as they can be without
+  // overlapping (gap between them) and within lo..hi: overlapping neighbours become one block
+  // around the mean of what they want
+  function spread(items, lo, hi, gap) {
+    let blocks = [];
+    for (const it of [...items].sort((a, b) => a.x - b.x)) {
+      blocks.push({ items: [it], want: it.x, w: it.w });
+      for (;;) {
+        const n = blocks.length;
+        if (n < 2) break;
+        const a = blocks[n - 2], b = blocks[n - 1];
+        const left = (blk) => Math.max(lo, Math.min(hi - blk.w, blk.want - blk.w / 2));
+        if (left(a) + a.w + gap <= left(b)) break;
+        const all = a.items.concat(b.items), w = all.reduce((t, x) => t + x.w, 0) + gap * (all.length - 1);
+        // the block's centre: the mean of the wanted centres
+        blocks.splice(n - 2, 2, { items: all, want: all.reduce((t, x) => t + x.x, 0) / all.length, w });
+      }
+    }
+    for (const blk of blocks) {
+      let x = Math.max(lo, Math.min(hi - blk.w, blk.want - blk.w / 2));
+      for (const it of blk.items) { it.c = x + it.w / 2; x += it.w + gap; }
+    }
+    return items;
+  }
   function bar(marks = []) {
-    const w = 420, h = 92, x0 = 20, x1 = 400, lo = 100, hi = 1000;
+    const w = 420, x0 = 20, x1 = 400, lo = 100, hi = 1000;
     const X = (nm) => f1(x0 + ((nm - lo) / (hi - lo)) * (x1 - x0));
+    const shown = marks.filter((m) => m.nm >= lo && m.nm <= hi), labelled = shown.some((m) => m.label);
+    // the rows: arrows from 70 to 78, their labels on 93, the captions below
+    const capY = shown.length ? (labelled ? 112 : 96) : 84, h = capY + 8;
     let s = '<defs><linearGradient id="ph-vis" x1="0" x2="1">';
     for (let nm = 380; nm <= 750; nm += 10) s += `<stop offset="${((nm - 380) / 370).toFixed(3)}" stop-color="${P.rgb(nm)}"/>`;
     s += '</linearGradient></defs>';
     s += `<rect class="uv" x="${X(lo)}" y="26" width="${X(380) - X(lo)}" height="22"/><rect x="${X(380)}" y="26" width="${X(750) - X(380)}" height="22" fill="url(#ph-vis)"/><rect class="ir" x="${X(750)}" y="26" width="${X(hi) - X(750)}" height="22"/>`;
     s += `<text class="lbl small" x="${(X(lo) + X(380)) / 2}" y="20" text-anchor="middle">UV</text><text class="lbl small" x="${(X(380) + X(750)) / 2}" y="20" text-anchor="middle">${L('visible', 'sichtbar')}</text><text class="lbl small" x="${(X(750) + X(hi)) / 2}" y="20" text-anchor="middle">${L('infrared', 'Infrarot')}</text>`;
     for (const nm of [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]) s += `<line class="ax" x1="${X(nm)}" y1="48" x2="${X(nm)}" y2="53"/><text class="tick" x="${X(nm)}" y="65" text-anchor="middle">${nm}</text>`;
-    s += `<text class="lbl small" x="${x1}" y="84" text-anchor="end">${it('λ')} in nm</text>`;
-    s += `<text class="lbl small" x="${x0}" y="84">${L('higher photon energy ←', 'höhere Photonenenergie ←')}</text>`;
-    for (const m of marks) if (m.nm >= lo && m.nm <= hi) s += `<path class="mark-arrow" d="M${X(m.nm)} 50 l-5 9 h10 z"/>${m.label ? `<text class="lbl small strong" x="${X(m.nm)}" y="76" text-anchor="middle">${m.label}</text>` : ''}`;
-    return `<svg class="ph bar" viewBox="0 0 ${w} ${h}" width="${w}" role="img" aria-label="${L('The spectrum from ultraviolet to infrared', 'Das Spektrum vom Ultraviolett bis zum Infrarot')}">${s}</svg>`;
+    s += `<text class="lbl small" x="${x1}" y="${capY}" text-anchor="end">${it('λ')} in nm</text>`;
+    s += `<text class="lbl small" x="${x0}" y="${capY}">${L('higher photon energy ←', 'höhere Photonenenergie ←')}</text>`;
+    const items = spread(shown.map((m) => ({ x: X(m.nm), w: m.label ? textWidth(m.label, 13) : 0, m })), 2, w - 2, 8);
+    for (const { x, c, m } of items) {
+      s += `<line class="mark-halo" x1="${x}" y1="24" x2="${x}" y2="50"/><line class="mark-line" x1="${x}" y1="24" x2="${x}" y2="50"/>`;
+      s += `<path class="mark-arrow" d="M${x} 70 l-5 8 h10 z"/>`;
+      if (!m.label) continue;
+      if (Math.abs(c - x) > 2) s += `<line class="mark-lead" x1="${x}" y1="78" x2="${f1(c)}" y2="82"/>`;
+      s += `<text class="lbl small strong" x="${f1(c)}" y="93" text-anchor="middle">${m.label}</text>`;
+    }
+    return `<svg class="ph bar" viewBox="0 0 ${w} ${h}" width="${w}" role="img" aria-label="${L('The spectrum from ultraviolet to infrared', 'Das Spektrum vom Ultraviolett bis zum Infrarot')}${shown.length ? `: ${shown.map((m) => `${Math.round(m.nm)} nm${m.label ? ` (${String(m.label).replace(/<[^>]*>/g, '')})` : ''}`).join(', ')}` : ''}">${s}</svg>`;
   }
 
   // ---------------------------------------------------------------- energy bars
