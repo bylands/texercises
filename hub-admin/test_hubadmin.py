@@ -152,15 +152,15 @@ class Unit(unittest.TestCase):
         self.assertEqual(H.slug("Kräfte & Bewegung"), "kraefte-bewegung")
 
     def test_starter_tags(self):
-        # a new app gets the starter tags of its card; one of the same English name is that tag
+        # an app without tags gets the starter tags of its card; one of the same English name is that tag
         ids = ["a", "b", "new"]
-        starters = {"new": [{"en": "light", "de": "Licht!"}, {"en": "Quantum physics", "de": "Quantenphysik"}], "a": [{"en": "Waves", "de": "Wellen"}]}
+        starters = {"new": [{"en": "light", "de": "Licht!"}, {"en": "Quantum physics", "de": "Quantenphysik"}], "b": [{"en": "Waves", "de": "Wellen"}]}
         cfg = H.normalize({"order": ["a", "b"], "tags": {"b": ["l"]}, "labels": {"l": {"en": "Light", "de": "Licht"}}}, ids, starters)
-        self.assertEqual(cfg["tags"], {"b": ["l"], "new": ["l", "quantum-physics"]})  # a is known: no starters
+        self.assertEqual(cfg["tags"], {"b": ["l"], "new": ["l", "quantum-physics"]})  # b has tags: no starters
         self.assertEqual(cfg["labels"], {"l": {"en": "Light", "de": "Licht"}, "quantum-physics": {"en": "Quantum physics", "de": "Quantenphysik"}})
-        # once the app is known (the admin panel saved it), its tags are its own, even none
-        cfg = H.normalize({"order": ["a", "b", "new"], "tags": {}}, ids, starters)
-        self.assertEqual(cfg["tags"], {})
+        # an app already in the order but still without tags gets them too, under the saved key of that name
+        cfg = H.normalize({"order": ["new", "b", "a"], "tags": {"b": ["dc"]}, "labels": {"dc": {"en": "Light", "de": "Licht"}}}, ids, starters)
+        self.assertEqual(cfg["tags"], {"new": ["dc", "quantum-physics"], "b": ["dc"]})
         self.assertTrue(H.slug("…").startswith("tag-"))
 
     def test_write(self):

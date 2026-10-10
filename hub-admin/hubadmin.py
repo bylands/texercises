@@ -176,8 +176,9 @@ def normalize(config: object, app_ids: List[str], starters: Optional[Dict[str, L
     missing). A tag given as plain text (no key) becomes a tag of that name in both languages; two
     tags with the same English name are one. Unknown apps, unused tags and anything malformed are
     dropped. starters: the starter tags of the apps ({id: [{"en", "de"}]}, from their cards), for an
-    app the config does not know yet (not in its order): a tag of the same English name is that
-    tag, else a new one; once the admin panel saves, the app is known and its tags are its own."""
+    app without tags in the config: a tag of the same English name is that tag, else a new one; once
+    the admin panel saves them, they are the app's own (an app whose tags are all removed gets its
+    card's suggestion back)."""
     config = config if isinstance(config, dict) else {}
     order_in = config.get("order") if isinstance(config.get("order"), list) else []
     order = [a for i, a in enumerate(order_in) if a in app_ids and a not in order_in[:i]]
@@ -189,8 +190,10 @@ def normalize(config: object, app_ids: List[str], starters: Optional[Dict[str, L
 
     def tag(raw: object) -> Optional[str]:
         lab = labels_in.get(raw) if isinstance(raw, str) and KEY.fullmatch(raw) else None
-        if isinstance(raw, dict):  # a starter tag
-            lab, raw = raw, slug(clean_tag(raw.get("en")))
+        if isinstance(raw, dict):  # a starter tag: the saved tag of that English name, if there is one
+            en = clean_tag(raw.get("en")).casefold()
+            saved = next((k for k, v in labels_in.items() if KEY.fullmatch(k) and isinstance(v, dict) and clean_tag(v.get("en")).casefold() == en), None)
+            lab, raw = (labels_in[saved], saved) if saved else (raw, slug(clean_tag(raw.get("en"))))
         if isinstance(lab, dict) and clean_tag(lab.get("en")):
             key, en = raw, clean_tag(lab.get("en"))
             de = clean_tag(lab.get("de")) or en
@@ -211,7 +214,7 @@ def normalize(config: object, app_ids: List[str], starters: Optional[Dict[str, L
     tags: Dict[str, List[str]] = {}
     for app in order:
         raw = tags_in.get(app) if isinstance(tags_in.get(app), list) else []
-        if app not in order_in and not raw and starters:
+        if not raw and starters:
             raw = starters.get(app) or []
         keys: List[str] = []
         for t in raw:
@@ -619,7 +622,7 @@ def panel_page() -> str:
       <form method="post" action="/admin/logout" class="logout"><button type="submit">Log out</button></form>
     </div>
     <section id="view-apps" hidden>
-      <p class="lead">Put the apps in order and give them tags, e.g. physics topics. On the hub page, visitors can filter the apps by tag, in English or German.</p>
+      <p class="lead">Put the apps in order (drag them, use the arrows, or type a new position into the number before a name and press Enter) and give them tags, e.g. physics topics. On the hub page, visitors can filter the apps by tag, in English or German.</p>
       <div class="bar">
         <button type="button" id="save" class="primary" disabled>Save</button>
         <span id="status" class="status" aria-live="polite"></span>
@@ -710,6 +713,7 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .app.moved { border-color: var(--accent); }
 .move { display: flex; flex-direction: column; gap: 4px; }
 .move button { padding: 2px 9px; line-height: 1.3; }
+.app h2 .pos { width: 4.2em; padding: 2px 4px; margin-right: 10px; font-size: 0.9rem; font-weight: 400; text-align: center; vertical-align: middle; }
 .drag { display: block; text-align: center; padding: 6px 0; font-size: 1.15rem; line-height: 1; color: var(--muted); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .drag:hover { color: var(--accent); }
 .dragging { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); position: relative; z-index: 2; }
@@ -892,13 +896,22 @@ ADMIN_JS = r"""
         renderTags();
       };
       input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+      // its place in the list: type another and press Enter to move it there at once
+      const pos = el('input', { type: 'number', class: 'pos', min: '1', max: String(order.length), value: String(i + 1), title: 'Type a position and press Enter', 'aria-label': `Position of ${nameOf(id)}` });
+      pos.addEventListener('change', () => {
+        const to = Math.min(order.length, Math.max(1, Math.round(Number(pos.value)) || i + 1)) - 1;
+        if (to === i) { pos.value = String(i + 1); return; }
+        order.splice(to, 0, order.splice(i, 1)[0]);
+        changed();
+        renderApps({ id, what: 'pos' });
+      });
       return el('li', { class: 'app', 'data-id': id },
         el('div', { class: 'move' },
           el('button', { type: 'button', 'aria-label': `Move ${nameOf(id)} up`, onclick: () => move(i, -1), ...(i === 0 ? { disabled: '' } : {}) }, '↑'),
           AdminDrag.handle((from, to) => { order.splice(to, 0, order.splice(from, 1)[0]); changed(); renderApps({ id, what: 'drop' }); }),
           el('button', { type: 'button', 'aria-label': `Move ${nameOf(id)} down`, onclick: () => move(i, 1), ...(i === order.length - 1 ? { disabled: '' } : {}) }, '↓')),
         el('div', {},
-          el('h2', {}, nameOf(id), el('span', { class: 'id' }, `/${id}/`)),
+          el('h2', {}, pos, nameOf(id), el('span', { class: 'id' }, `/${id}/`)),
           el('div', { class: 'tags' },
             ...own.map((k) => el('span', { class: 'tag' }, label(k),
               el('button', { type: 'button', 'aria-label': `Remove tag ${labels[k].en} from ${nameOf(id)}`, onclick: () => { tags[id] = own.filter((x) => x !== k); changed(); renderApps(); renderTags(); } }, '×'))),
@@ -909,7 +922,8 @@ ADMIN_JS = r"""
     if (focus) {
       const li = list.querySelector(`li[data-id="${focus.id}"]`);
       if (li) {
-        if (focus.what === 'input') li.querySelector('input').focus();
+        if (focus.what === 'input') li.querySelector('.add input').focus();
+        else if (focus.what === 'pos') { li.querySelector('.pos').focus(); li.classList.add('moved'); li.scrollIntoView({ block: 'center' }); }
         else if (focus.what === 'drop') li.classList.add('moved');
         else { const b = li.querySelectorAll('.move button')[focus.what === 'up' ? 0 : 1]; (b.disabled ? li.querySelector('.move button:not(:disabled)') : b).focus(); li.classList.add('moved'); }
       }
