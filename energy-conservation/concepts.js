@@ -37,6 +37,22 @@
     .split(/(?<=[.?!])\s+(?=[A-Z])/).filter((x) => !/\?$/.test(x) && !ASKS.test(x)).join(' ');
   const prompt = (s) => `<p>${situationText(s)}</p>${zeroNote(s)}`;
   const sum = (e) => FORMS3.filter((k) => e[k]).map((k) => e[k]).join(' + ') || '0';
+  // The length of an option as shown, roughly one per letter or symbol (½ counts as three): the
+  // right option should not stand out as the longest or the shortest.
+  const shown = (html) => {
+    let t = html.replace(/<[^>]*>/g, '');
+    for (let k = 0; k < 3; k++) t = t.replace(/\\[td]?frac\{([^{}]*)\}\{([^{}]*)\}/g, '$1/$2');
+    return t.replace(/\\mathrm\{([^{}]*)\}/g, '$1').replace(/\\(left|right)/g, '').replace(/\\[,;!]/g, '')
+      .replace(/\\[a-zA-Z]+/g, 'x').replace(/[{}^_$]/g, '').replace(/\s+/g, ' ').trim().length;
+  };
+  // Three wrong options of a list, so that the right one is the longest, the shortest or in
+  // between about equally often: t of them (0 to 3, at random where the list allows) at least as
+  // long as the right one, the others shorter.
+  function threeByLength(r, right, list, key) {
+    const n = shown(right), longer = list.filter((x) => shown(x.html) >= n), rest = list.filter((x) => shown(x.html) < n);
+    const t = Math.max(3 - rest.length, Math.min(longer.length, Math.floor(r() * 4)));
+    return [...three(r, longer, key).slice(0, t), ...three(r, rest, key).slice(0, 3 - t)];
+  }
 
   // ---------------------------------------------------------------- why a state has a form or not
   // In state i the form k is there (has) or not.
@@ -69,6 +85,19 @@
       });
     });
     for (const x of s.scn.slips ? s.scn.slips(s.p) : []) if (x.tex !== s.en[x.i][x.k]) out.push({ ...x, flag: 'level', why: x.why() });
+    return out;
+  }
+  // Kinetic or elastic energy without the factor ½ or without the square: ½ m v² as m v² or ½ m v.
+  function squareSlips(s) {
+    const out = [], half = '\\tfrac{1}{2}\\,';
+    s.en.forEach((e, i) => ['kin', 'el'].forEach((k) => {
+      const t = e[k];
+      if (!t || !t.startsWith(half) || !t.endsWith('^2')) return;
+      const what = k === 'kin' ? L('kinetic energy', 'kinetische Energie') : L('elastic energy', 'Spannenergie');
+      const full = k === 'kin' ? '\\tfrac{1}{2}\\,m\\,v^2' : '\\tfrac{1}{2}\\,k\\,s^2';
+      out.push({ i, k, tex: t.slice(half.length), flag: 'half', why: L(`In ${CIRCLED[i]} the factor ½ is missing: the ${what} is $${etex(k)} = ${full}$.`, `In ${CIRCLED[i]} fehlt der Faktor ½: Die ${what} ist $${etex(k)} = ${full}$.`) });
+      out.push({ i, k, tex: t.slice(0, -2), flag: 'linear', why: L(`In ${CIRCLED[i]} the square is missing: the ${what} grows with the square, $${etex(k)} = ${full}$.`, `In ${CIRCLED[i]} fehlt das Quadrat: Die ${what} wächst mit dem Quadrat, $${etex(k)} = ${full}$.`) });
+    }));
     return out;
   }
   const cellTex = (s, i, k) => s.en[i][k] || '0';
@@ -131,7 +160,9 @@
   }
 
   // ---------------------------------------------------------------- forms of one state
-  const setName = (set) => (set.length ? set.map((k) => `$${etex(k)}$`).join(', ') : '–');
+  // a set of forms as all three, each zero or not: every option names the same three forms, so
+  // that a state with more forms does not give a longer option
+  const setName = (set) => FORMS3.map((k) => `$${etex(k)} ${set.includes(k) ? '\\neq' : '='} 0$`).join(', ');
   function forms(seed) {
     const r = rng(seed), s = situation(pick(r, SPRINGS), seed), i = Math.floor(r() * s.states.length), c = CIRCLED[i];
     const has = FORMS3.filter((k) => (s.states[i][k] || 0) > 1e-9);
@@ -148,7 +179,7 @@
     });
     return {
       title: s.ex.title, text: prompt(s), figure: s.ex.figure({ hl: new Set([i]) }),
-      ask: L(`Which forms of energy are not zero in state ${c}?`, `Welche Energieformen sind im Zustand ${c} nicht null?`),
+      ask: L(`Which forms of energy are zero in state ${c}, and which are not?`, `Welche Energieformen sind im Zustand ${c} null, welche nicht?`),
       options: shuffle(r, [{ html: setName(has), correct: true }, ...wrong]),
       explain: explainTable(s, FORMS3.map((k) => reason[k](c, has.includes(k))).join(' ')),
       hints: [hintForms()],
@@ -163,8 +194,10 @@
       // initial and final state, or (with three states) another pair
       const [a, b] = n === 3 && r() < 0.35 ? pick(r, [[0, 1], [1, 2]]) : [0, n - 1];
       const eq = (en) => `${sum(en[a])} = ${sum(en[b])}`, right = eq(s.en);
-      const cand = slipsOf(s).filter((x) => x.i === a || x.i === b);
-      const opts = three(r, cand.map((x) => ({ ...x, eq: eq(withSlip(s, x)) })).filter((x) => x.eq !== right), (x) => x.eq);
+      const cand = [...slipsOf(s), ...squareSlips(s)].filter((x) => x.i === a || x.i === b)
+        .map((x) => ({ ...x, eq: eq(withSlip(s, x)) })).filter((x) => x.eq !== right)
+        .map((x) => ({ ...x, html: `$${x.eq}$` }));
+      const opts = threeByLength(r, `$${right}$`, cand, (x) => x.eq);
       if (opts.length < 3 && k < 50) continue;
       return {
         title: s.ex.title, text: prompt(s), figure: s.ex.figure({ hl: new Set([a, b]) }),
@@ -182,11 +215,12 @@
     // kinetic energy at a turning point and heights from the wrong level come up more often
     const weighted = list.flatMap((x) => (x.flag === 'rest' || x.flag === 'level' ? [x, x] : [x]));
     const x = pick(r, weighted), en = withSlip(s, x);
-    // three right entries, from other states first, not all of them zero
-    const cells = shuffle(r, s.en.flatMap((_, i) => s.forms.map((k) => ({ i, k }))).filter((c) => !(c.i === x.i && c.k === x.k)));
-    cells.sort((u, v) => (u.i === x.i) - (v.i === x.i) || !s.en[u.i][u.k] - !s.en[v.i][v.k]);
-    const right = cells.slice(0, 3);
+    // three right entries, from different states, not all of them zero, and some longer, some
+    // shorter than the wrong one (which is not given away by its length)
     const label = (i, k, tex) => `${CIRCLED[i]} $${etex(k)} = ${tex}$`;
+    const cells = s.en.flatMap((_, i) => s.forms.map((k) => ({ i, k, html: label(i, k, cellTex(s, i, k)) }))).filter((c) => !(c.i === x.i && c.k === x.k));
+    let right = threeByLength(r, label(x.i, x.k, x.tex), cells, (c) => c.html);
+    if (right.every((c) => !s.en[c.i][c.k])) right = [...right.slice(0, 2), cells.find((c) => s.en[c.i][c.k] && !right.includes(c))];
     return {
       title: L('Find the error', 'Finde den Fehler'),
       text: `${prompt(s)}<p>${L('A student has filled in this energy table:', 'Ein Schüler hat diese Energietabelle ausgefüllt:')}</p>${tableHtml(s, en)}`,
@@ -239,10 +273,12 @@
   }
 
   // ---------------------------------------------------------------- the path does not matter
-  // a question of fixed options: { title, text, ask, right, wrong: [[html, flag, why]], explain }
+  // a question of fixed options: { title, text, ask, right, wrong: [[html, flag, why]], explain };
+  // of more than three wrong ones, three at random (written about as long as the right one, some
+  // longer, some shorter, so that its length gives nothing away)
   const choice = (r, q) => ({
     title: q.title, text: q.text, figure: q.figure || '', ask: q.ask,
-    options: shuffle(r, [{ html: q.right, correct: true }, ...q.wrong.map(([html, flag, why]) => ({ html, correct: false, flag, why }))]),
+    options: shuffle(r, [{ html: q.right, correct: true }, ...shuffle(r, [...q.wrong]).slice(0, 3).map(([html, flag, why]) => ({ html, correct: false, flag, why }))]),
     explain: () => q.explain, hints: q.hints || [],
   });
   const PATH_EXPLAIN = () => L('Lifting work changes the potential energy, and that depends only on the height: $W = m\\,g\\,h$ on every path. On a ramp $n$ times as long as it is high, the force needed is $n$ times smaller, $m\\,g/n$, but it acts over an $n$ times longer path: $W = \\frac{m\\,g}{n}\\cdot n\\,h = m\\,g\\,h$.',
@@ -256,7 +292,7 @@
         title: L('Lifting work', 'Hubarbeit'), hints,
         text: L(`<p>A crate of mass $m$ is raised by a height $h$, once lifted straight up (work $W_A$), once pushed slowly up a smooth ramp ${n} times as long as it is high (work $W_B$).</p>`, `<p>Eine Kiste der Masse $m$ wird um die Höhe $h$ angehoben, einmal senkrecht hochgehoben (Arbeit $W_A$), einmal langsam eine glatte Rampe hinaufgeschoben, die ${n}-mal so lang wie hoch ist (Arbeit $W_B$).</p>`),
         ask: L('How do the two works compare?', 'Wie verhalten sich die beiden Arbeiten?'),
-        right: '$W_B = W_A = m\\,g\\,h$',
+        right: '$W_B = W_A$',
         wrong: [[`$W_B = ${n}\\,W_A$`, 'path', L('The path is longer, but the force needed on the ramp is smaller by the same factor.', 'Der Weg ist länger, aber die nötige Kraft auf der Rampe ist um denselben Faktor kleiner.')],
           [`$W_B = \\tfrac{1}{${n}}\\,W_A$`, 'path', L('The force is smaller, but it acts over a longer path, by the same factor.', 'Die Kraft ist kleiner, aber sie wirkt über einen längeren Weg, um denselben Faktor.')],
           ['$W_B = 0$', 'other', L('The ramp carries part of the weight, but the crate still gains the potential energy m g h.', 'Die Rampe trägt einen Teil des Gewichts, aber die Kiste gewinnt trotzdem die Lageenergie m g h.')]],
@@ -269,10 +305,11 @@
         title: L('Two slides', 'Zwei Rutschen'), hints,
         text: L(`<p>Two children start at rest from the same height $h$, one down ${a}, the other down ${b}. Friction is negligible.</p>`, `<p>Zwei Kinder starten in Ruhe auf derselben Höhe $h$, eines auf ${a}, das andere auf ${b}. Die Reibung ist vernachlässigbar.</p>`),
         ask: L('How fast are they at the bottom?', 'Wie schnell sind sie unten?'),
-        right: L('Equally fast: $v = \\sqrt{2\\,g\\,h}$ for both', 'Gleich schnell: $v = \\sqrt{2\\,g\\,h}$ für beide'),
+        right: L('Equally fast: only the height counts, so both have $v = \\sqrt{2\\,g\\,h}$', 'Gleich schnell: Nur die Höhe zählt, also haben beide unten $v = \\sqrt{2\\,g\\,h}$'),
         wrong: [[L('The one on the steeper or straighter slide is faster', 'Das Kind auf der steileren oder geraderen Rutsche ist schneller'), 'path', L('It gets there sooner, but not faster: only the height counts.', 'Es ist früher unten, aber nicht schneller: Nur die Höhe zählt.')],
           [L('The one on the longer slide is faster: it speeds up for longer', 'Das Kind auf der längeren Rutsche ist schneller: Es beschleunigt länger'), 'path', L('On the longer slide it speeds up for longer, but more gently: only the height counts.', 'Auf der längeren Rutsche beschleunigt es länger, aber schwächer: Nur die Höhe zählt.')],
-          [L('The heavier child is faster', 'Das schwerere Kind ist schneller'), 'other', L('The mass cancels out: $m\\,g\\,h = \\tfrac{1}{2}\\,m\\,v^2$.', 'Die Masse kürzt sich weg: $m\\,g\\,h = \\tfrac{1}{2}\\,m\\,v^2$.')]],
+          [L('The heavier child is faster: it is pulled down harder', 'Das schwerere Kind ist schneller: Es wird stärker gezogen'), 'other', L('The mass cancels out: $m\\,g\\,h = \\tfrac{1}{2}\\,m\\,v^2$.', 'Die Masse kürzt sich weg: $m\\,g\\,h = \\tfrac{1}{2}\\,m\\,v^2$.')],
+          [L('Neither reaches $\\sqrt{2\\,g\\,h}$: some energy goes into pressing on the slide', 'Keines erreicht $\\sqrt{2\\,g\\,h}$: Etwas Energie geht ins Drücken auf die Rutsche'), 'other', L('The slide pushes at right angles to the motion: it does no work, and all of m g h becomes kinetic energy.', 'Die Rutsche drückt senkrecht zur Bewegung: Sie verrichtet keine Arbeit, und das ganze m g h wird zu kinetischer Energie.')]],
         explain: `<p>${L('$E_1 = E_2$: $m\\,g\\,h = \\tfrac{1}{2}\\,m\\,v^2$, so $v = \\sqrt{2\\,g\\,h}$ on every slide. The shape decides how long the ride takes, not the speed at the bottom.', '$E_1 = E_2$: $m\\,g\\,h = \\tfrac{1}{2}\\,m\\,v^2$, also $v = \\sqrt{2\\,g\\,h}$ auf jeder Rutsche. Die Form bestimmt, wie lange die Fahrt dauert, nicht die Geschwindigkeit unten.')}</p>`,
       });
     }
@@ -280,10 +317,11 @@
       title: L('Lifting work', 'Hubarbeit'), hints,
       text: `<p>${L('Without friction, the work needed to lift a body by a height $h$ is $m\\,g\\,h$, whatever the path.', 'Ohne Reibung ist die Arbeit, um einen Körper um die Höhe $h$ anzuheben, $m\\,g\\,h$, egal auf welchem Weg.')}</p>`,
       ask: L('Why does the path not matter?', 'Warum spielt der Weg keine Rolle?'),
-      right: L('The work becomes potential energy, which depends only on the height; on a longer path the force needed is smaller by the same factor', 'Die Arbeit wird zu Lageenergie, die nur von der Höhe abhängt; auf einem längeren Weg ist die nötige Kraft um denselben Faktor kleiner'),
-      wrong: [[L('The force is the same, m g, on every path', 'Die Kraft ist auf jedem Weg gleich, m g'), 'path', L('On a ramp the force needed is smaller than m g; the path is longer.', 'Auf einer Rampe ist die nötige Kraft kleiner als m g; dafür ist der Weg länger.')],
-        [L('The path is the same length on every route', 'Der Weg ist auf jeder Route gleich lang'), 'path', L('The paths differ in length; the force differs too, by the inverse factor.', 'Die Wege sind verschieden lang; die Kraft unterscheidet sich auch, um den umgekehrten Faktor.')],
-        [L('Work does not depend on the force', 'Die Arbeit hängt nicht von der Kraft ab'), 'other', L('Work is force times path: both change on a ramp, and their product stays m g h.', 'Arbeit ist Kraft mal Weg: Beide ändern sich auf einer Rampe, und ihr Produkt bleibt m g h.')]],
+      right: L('A longer path needs a force smaller by the same factor: force times path stays $m\\,g\\,h$', 'Ein längerer Weg braucht eine um denselben Faktor kleinere Kraft: Kraft mal Weg bleibt $m\\,g\\,h$'),
+      wrong: [[L('The force needed is the same, $m\\,g$, on every path, so a ramp does not help at all', 'Die nötige Kraft ist auf jedem Weg gleich, $m\\,g$, eine Rampe hilft also gar nicht'), 'path', L('On a ramp the force needed is smaller than m g; the path is longer.', 'Auf einer Rampe ist die nötige Kraft kleiner als m g; dafür ist der Weg länger.')],
+        [L('All routes from the bottom to the top are equally long, so force and path are the same', 'Alle Wege von unten nach oben sind gleich lang, also sind auch Kraft und Weg überall dieselben'), 'path', L('The paths differ in length; the force differs too, by the inverse factor.', 'Die Wege sind verschieden lang; die Kraft unterscheidet sich auch, um den umgekehrten Faktor.')],
+        [L('Work does not depend on the force: the height alone sets it, however hard one pushes', 'Die Arbeit hängt nicht von der Kraft ab: Die Höhe allein bestimmt sie, egal wie stark man schiebt'), 'other', L('Work is force times path: both change on a ramp, and their product stays m g h.', 'Arbeit ist Kraft mal Weg: Beide ändern sich auf einer Rampe, und ihr Produkt bleibt m g h.')],
+        [L('A longer path needs more work, but without friction the extra work is given back', 'Ein längerer Weg braucht mehr Arbeit, aber ohne Reibung wird die Mehrarbeit zurückgegeben'), 'path', L('A longer path needs no more work: the force needed is smaller by the same factor as the path is longer.', 'Ein längerer Weg braucht nicht mehr Arbeit: Die nötige Kraft ist um denselben Faktor kleiner, um den der Weg länger ist.')]],
       explain: `<p>${PATH_EXPLAIN()}</p>`,
     });
   }
@@ -299,17 +337,21 @@
         title: L('Friction', 'Reibung'), hints,
         text: L('<p>A sled starts at rest at a height $h$ and slides down a slope with friction. At the bottom its kinetic energy is less than $m\\,g\\,h$.</p>', '<p>Ein Schlitten startet in Ruhe auf der Höhe $h$ und gleitet mit Reibung einen Hang hinunter. Unten ist seine kinetische Energie kleiner als $m\\,g\\,h$.</p>'),
         ask: L('Where has the rest of the energy gone?', 'Wo ist der Rest der Energie?'),
-        right: L('Into thermal energy: the work done by friction warms the runners and the snow', 'In thermische Energie: Die Reibungsarbeit erwärmt die Kufen und den Schnee'),
-        wrong: [[L('Nowhere: friction destroys it', 'Nirgends: Die Reibung vernichtet sie'), 'lost', L('Energy is never destroyed: friction turns it into thermal energy.', 'Energie wird nie vernichtet: Die Reibung wandelt sie in thermische Energie um.')],
-          [L('It is still stored as potential energy in the sled', 'Sie ist noch als Lageenergie im Schlitten gespeichert'), 'other', L('At the bottom the sled is at the zero level: it has no potential energy left.', 'Unten ist der Schlitten auf dem Nullniveau: Er hat keine Lageenergie mehr.')],
+        right: L('Into thermal energy: friction warms the runners and the snow', 'In thermische Energie: Die Reibung erwärmt die Kufen und den Schnee'),
+        wrong: [[L('Nowhere: friction destroys the energy the sled loses', 'Nirgends: Die Reibung vernichtet die Energie, die der Schlitten verliert'), 'lost', L('Energy is never destroyed: friction turns it into thermal energy.', 'Energie wird nie vernichtet: Die Reibung wandelt sie in thermische Energie um.')],
+          [L('It is used up by the friction force, which needs energy to act', 'Sie wird von der Reibungskraft verbraucht, die zum Wirken Energie braucht'), 'lost', L('A force does not use up energy: the work done by friction becomes thermal energy.', 'Eine Kraft verbraucht keine Energie: Die Reibungsarbeit wird zu thermischer Energie.')],
+          [L('It is still stored in the sled as potential energy', 'Sie ist noch als Lageenergie im Schlitten gespeichert'), 'other', L('At the bottom the sled is at the zero level: it has no potential energy left.', 'Unten ist der Schlitten auf dem Nullniveau: Er hat keine Lageenergie mehr.')],
           [L('It was never there: on a slope the potential energy is only $m\\,g\\,h\\sin\\alpha$', 'Sie war nie da: Auf einem Hang ist die Lageenergie nur $m\\,g\\,h\\sin\\alpha$'), 'path', L('The potential energy is m g h, whatever the slope: only the height counts.', 'Die Lageenergie ist m g h, egal wie steil der Hang ist: Nur die Höhe zählt.')]],
         explain: `<p>${L('The energy balance with friction: $m\\,g\\,h = \\tfrac{1}{2}\\,m\\,v^2 + E_{\\mathrm{th}}$. The work done by friction, $E_{\\mathrm{th}}$, is the thermal energy of runners and snow: the total energy stays the same.', 'Die Energiebilanz mit Reibung: $m\\,g\\,h = \\tfrac{1}{2}\\,m\\,v^2 + E_{\\mathrm{th}}$. Die Reibungsarbeit, $E_{\\mathrm{th}}$, ist die thermische Energie von Kufen und Schnee: Die Gesamtenergie bleibt gleich.')}</p>`,
       });
     }
-    const [n, d] = pick(r, FR), e = (k) => `$${ftex(k, d)}m\\,g\\,h$`;
-    const cand = [[d - n, 'right'], [n, 'swap'], [0, 'lost'], [d, 'all'], [d + n, 'sum']];
+    const [n, d] = pick(r, FR), e = (k) => (k === 0 ? '$0$' : `$${ftex(k, d)}m\\,g\\,h$`);
+    // the fractions of m g h first (swapped, added up), so that the right one is not the only
+    // fraction among 0 and m g h
+    const plain = r() < 0.5 ? [[0, 'lost'], [d, 'all']] : [[d, 'all'], [0, 'lost']];
+    const cand = [[n, 'swap'], [d + n, 'sum'], ...plain];
     const seen = new Set([d - n]), wrong = [];
-    for (const [k, tag] of cand.slice(1)) if (!seen.has(k) && wrong.length < 3) { seen.add(k); wrong.push([k, tag]); }
+    for (const [k, tag] of cand) if (!seen.has(k) && wrong.length < 3) { seen.add(k); wrong.push([k, tag]); }
     const WHY = {
       swap: L('That is the kinetic energy at the bottom; the thermal energy is the rest of m g h.', 'Das ist die kinetische Energie unten; die thermische Energie ist der Rest von m g h.'),
       lost: L('Energy is not lost: what is missing from the kinetic energy has become thermal energy.', 'Energie geht nicht verloren: Was der kinetischen Energie fehlt, ist thermische Energie geworden.'),
@@ -335,22 +377,25 @@
       figure: s.ex.figure({}), explain: `<p>${EQ_EXPLAIN()}</p>`, hints: [L('Where does the rope pull harder than the weight, and where less?', 'Wo zieht das Seil stärker als die Gewichtskraft, wo schwächer?')] };
     if (v === 0) return choice(r, { ...base,
       ask: L('Where is the jumper fastest?', 'Wo ist die Springerin am schnellsten?'),
-      right: L('Between ② and ③, where the rope pulls as hard as the weight ($k\\,x = m\\,g$)', 'Zwischen ② und ③, wo das Seil so stark zieht wie die Gewichtskraft ($k\\,x = m\\,g$)'),
-      wrong: [[L('At ②, where the rope starts to stretch', 'In ②, wo sich das Seil zu dehnen beginnt'), 'stretch', L('Just below ② the rope still pulls less than the weight: the jumper keeps speeding up.', 'Knapp unter ② zieht das Seil noch schwächer als die Gewichtskraft: Die Springerin wird noch schneller.')],
-        [L('At ③, the lowest point', 'In ③, im tiefsten Punkt'), 'turn', L('At the lowest point the jumper turns round: the speed is zero there.', 'Im tiefsten Punkt kehrt die Springerin um: Dort ist die Geschwindigkeit null.')],
-        [L('Halfway between ① and ③', 'In der Mitte zwischen ① und ③'), 'other', L('The jumper speeds up as long as the weight is larger than the pull of the rope, which is below ②.', 'Die Springerin wird schneller, solange die Gewichtskraft grösser ist als der Zug des Seils, also bis unter ②.')]] });
+      right: L('Between ② and ③, where the rope pulls as hard as the weight', 'Zwischen ② und ③, wo die Seilkraft gleich der Gewichtskraft ist'),
+      wrong: [[L('At ②, where the free fall ends and the rope starts to stretch', 'In ②, wo der freie Fall endet und sich das Seil zu dehnen beginnt'), 'stretch', L('Just below ② the rope still pulls less than the weight: the jumper keeps speeding up.', 'Knapp unter ② zieht das Seil noch schwächer als die Gewichtskraft: Die Springerin wird noch schneller.')],
+        [L('At ③, the lowest point, where the rope is stretched furthest', 'In ③, im tiefsten Punkt, wo das Seil am stärksten gedehnt ist'), 'turn', L('At the lowest point the jumper turns round: the speed is zero there.', 'Im tiefsten Punkt kehrt die Springerin um: Dort ist die Geschwindigkeit null.')],
+        [L('Halfway between ① and ③, in the middle of the whole drop', 'In der Mitte zwischen ① und ③, nach der Hälfte des ganzen Falls'), 'other', L('The jumper speeds up as long as the weight is larger than the pull of the rope, which is below ②.', 'Die Springerin wird schneller, solange die Gewichtskraft grösser ist als der Zug des Seils, also bis unter ②.')],
+        [L('Between ① and ②, in the free fall, before the rope pulls', 'Zwischen ① und ②, im freien Fall, bevor das Seil zieht'), 'other', L('In the free fall the jumper keeps speeding up, and still does just below ②, while the rope pulls less than the weight.', 'Im freien Fall wird die Springerin immer schneller, und knapp unter ② noch immer, solange das Seil schwächer zieht als die Gewichtskraft.')]] });
     if (v === 1) return choice(r, { ...base,
       ask: L('What holds at the lowest point ③?', 'Was gilt im tiefsten Punkt ③?'),
-      right: L('$v = 0$, and the rope pulls harder than the weight', '$v = 0$, und das Seil zieht stärker als die Gewichtskraft'),
+      right: L('$v = 0$, and the rope pulls harder than the weight', '$v = 0$, und das Seil zieht dort stärker als die Gewichtskraft'),
       wrong: [[L('$v = 0$, and the rope pulls as hard as the weight', '$v = 0$, und das Seil zieht so stark wie die Gewichtskraft'), 'equil', L('Then the jumper would stay there. The lowest point is not the equilibrium: the rope pulls harder, and the jumper goes back up.', 'Dann bliebe die Springerin dort. Der tiefste Punkt ist nicht die Gleichgewichtslage: Das Seil zieht stärker, und sie geht wieder hoch.')],
-        [L('The speed is largest', 'Die Geschwindigkeit ist am grössten'), 'turn', L('At the lowest point the jumper turns round: v = 0.', 'Im tiefsten Punkt kehrt die Springerin um: v = 0.')],
-        [L('The elastic energy is zero', 'Die Spannenergie ist null'), 'forgot', L('The rope is stretched most there: all the energy is elastic energy.', 'Das Seil ist dort am stärksten gedehnt: Die ganze Energie ist Spannenergie.')]] });
+        [L('The speed is largest, as the jumper has fallen furthest', 'Die Geschwindigkeit ist am grössten, weil sie am weitesten gefallen ist'), 'turn', L('At the lowest point the jumper turns round: v = 0.', 'Im tiefsten Punkt kehrt die Springerin um: v = 0.')],
+        [L('The elastic energy is zero, as the jumper is at rest', 'Die Spannenergie ist null, weil die Springerin ruht'), 'forgot', L('The rope is stretched most there: all the energy is elastic energy.', 'Das Seil ist dort am stärksten gedehnt: Die ganze Energie ist Spannenergie.')],
+        [L('$v = 0$, and the rope pulls less than the weight', '$v = 0$, und das Seil zieht dort schwächer als die Gewichtskraft'), 'other', L('Then the jumper would go on down. At the lowest point the rope is stretched most and pulls harder than the weight.', 'Dann sänke die Springerin weiter. Im tiefsten Punkt ist das Seil am stärksten gedehnt und zieht stärker als die Gewichtskraft.')]] });
     return choice(r, { ...base,
       ask: L('What holds where the rope pulls as hard as the weight ($k\\,x_0 = m\\,g$)?', 'Was gilt dort, wo das Seil so stark zieht wie die Gewichtskraft ($k\\,x_0 = m\\,g$)?'),
-      right: L('The speed is largest; the jumper passes through', 'Die Geschwindigkeit ist am grössten; die Springerin fliegt durch'),
-      wrong: [[L('The jumper is at rest: $v = 0$', 'Die Springerin ruht: $v = 0$'), 'equil', L('v = 0 only at the turning points. In the equilibrium position the jumper stops speeding up, at the largest speed.', 'v = 0 nur in den Umkehrpunkten. In der Gleichgewichtslage wird die Springerin nicht mehr schneller, sie hat dort die grösste Geschwindigkeit.')],
-        [L('It is the lowest point of the jump', 'Es ist der tiefste Punkt des Sprungs'), 'equil', L('The jumper passes it with the largest speed and goes on down to the lowest point.', 'Die Springerin passiert sie mit der grössten Geschwindigkeit und sinkt weiter bis zum tiefsten Punkt.')],
-        [L('The rope is not stretched yet', 'Das Seil ist noch nicht gedehnt'), 'stretch', L('A slack rope does not pull; at the equilibrium it is stretched by $x_0 = m\\,g/k$.', 'Ein schlaffes Seil zieht nicht; in der Gleichgewichtslage ist es um $x_0 = m\\,g/k$ gedehnt.')]] });
+      right: L('The speed is largest there; the jumper passes right through', 'Die Geschwindigkeit ist am grössten; die Springerin fliegt durch'),
+      wrong: [[L('The jumper is at rest there: $v = 0$, as the forces balance', 'Die Springerin ruht dort: $v = 0$, weil sich die Kräfte aufheben'), 'equil', L('v = 0 only at the turning points. In the equilibrium position the jumper stops speeding up, at the largest speed.', 'v = 0 nur in den Umkehrpunkten. In der Gleichgewichtslage wird die Springerin nicht mehr schneller, sie hat dort die grösste Geschwindigkeit.')],
+        [L('It is the lowest point, where the jumper turns round', 'Es ist der tiefste Punkt, wo die Springerin umkehrt'), 'equil', L('The jumper passes it with the largest speed and goes on down to the lowest point.', 'Die Springerin passiert sie mit der grössten Geschwindigkeit und sinkt weiter bis zum tiefsten Punkt.')],
+        [L('The rope is not stretched yet: it is about to start pulling', 'Das Seil ist dort noch nicht gedehnt: Es beginnt erst gleich zu ziehen'), 'stretch', L('A slack rope does not pull; at the equilibrium it is stretched by $x_0 = m\\,g/k$.', 'Ein schlaffes Seil zieht nicht; in der Gleichgewichtslage ist es um $x_0 = m\\,g/k$ gedehnt.')],
+        [L('The jumper speeds up most, as the net force is largest there', 'Sie wird dort am stärksten schneller, weil die resultierende Kraft am grössten ist'), 'other', L('There the net force is zero: the jumper stops speeding up and is fastest.', 'Dort ist die resultierende Kraft null: Die Springerin wird nicht mehr schneller und ist am schnellsten.')]] });
   }
   function hang(seed) {
     const r = rng(seed), s = situation('spring-hang', seed), v = Math.floor(r() * 3);
@@ -367,10 +412,10 @@
         ['$\\tfrac{1}{\\sqrt{2}}\\,s$', 'other', L('The spring force grows in proportion to the stretch: k x₀ = m g gives x₀ = s/2.', 'Die Federkraft wächst proportional zur Dehnung: k x₀ = m g ergibt x₀ = s/2.')]] });
     if (v === 1) return choice(r, { ...base, text: start, figure: s.ex.figure({}),
       ask: L('Where is the block fastest?', 'Wo ist der Klotz am schnellsten?'),
-      right: L('$\\tfrac{1}{2}\\,s$ below the start, where the spring pulls as hard as the weight', '$\\tfrac{1}{2}\\,s$ unter dem Start, wo die Feder so stark zieht wie die Gewichtskraft'),
-      wrong: [[L('At the lowest point, $s$ below the start', 'Im tiefsten Punkt, $s$ unter dem Start'), 'turn', L('The block turns round there: v = 0.', 'Dort kehrt der Klotz um: v = 0.')],
-        [L('Just after the release', 'Gleich nach dem Loslassen'), 'other', L('It starts from rest and speeds up as long as the weight is larger than the spring force.', 'Er startet aus der Ruhe und wird schneller, solange die Gewichtskraft grösser ist als die Federkraft.')],
-        [L('$\\tfrac{1}{4}\\,s$ below the start', '$\\tfrac{1}{4}\\,s$ unter dem Start'), 'other', L('There the spring pulls less than the weight: the block is still speeding up.', 'Dort zieht die Feder schwächer als die Gewichtskraft: Der Klotz wird noch schneller.')]] });
+      right: L('$\\tfrac{1}{2}\\,s$ below the start, where the spring force equals the weight', '$\\tfrac{1}{2}\\,s$ unter dem Start, wo Federkraft und Gewichtskraft gleich sind'),
+      wrong: [[L('At the lowest point, $s$ below the start, where the spring is stretched most', 'Im tiefsten Punkt, $s$ unter dem Start, wo die Feder am stärksten gedehnt ist'), 'turn', L('The block turns round there: v = 0.', 'Dort kehrt der Klotz um: v = 0.')],
+        [L('Just after the release, while the spring hardly pulls yet', 'Gleich nach dem Loslassen, solange die Feder noch kaum zieht'), 'other', L('It starts from rest and speeds up as long as the weight is larger than the spring force.', 'Er startet aus der Ruhe und wird schneller, solange die Gewichtskraft grösser ist als die Federkraft.')],
+        [L('$\\tfrac{1}{4}\\,s$ below the start, before the spring starts to pull hard', '$\\tfrac{1}{4}\\,s$ unter dem Start, bevor die Feder richtig zu ziehen beginnt'), 'other', L('There the spring pulls less than the weight: the block is still speeding up.', 'Dort zieht die Feder schwächer als die Gewichtskraft: Der Klotz wird noch schneller.')]] });
     return choice(r, { ...base,
       text: L('<p>A block hangs at rest on a spring, which is stretched by $x_0$. It is lifted until the spring is relaxed and released from rest there.</p>', '<p>Ein Klotz hängt in Ruhe an einer Feder, die um $x_0$ gedehnt ist. Er wird angehoben, bis die Feder entspannt ist, und dort aus der Ruhe losgelassen.</p>'),
       ask: L('How far does it drop before it turns round?', 'Wie weit sinkt er, bevor er umkehrt?'),

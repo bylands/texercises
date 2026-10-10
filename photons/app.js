@@ -283,10 +283,11 @@
   // All numbers in eV, so that they can be worked out in the head.
   const frame = (title, text, figure) => ({ text: `<p class="step-rule">${title}</p>${text}`, figure: figure ? `<div class="figs">${figure}</div>` : '' });
   const fig = (html) => `<div class="fig">${html}</div>`;
-  const { i, sb } = X;
-  const lam = i('λ'), E = i('E'), f = i('f'), h = i('h'), c = i('c'), W = i('W'), U0 = `${i('U')}${sb('0')}`, Ek = `${i('E')}${sb('kin,max')}`;
-  // the threshold frequency and the cut-off wavelength: f₀, λ₀ in English, f_G, λ_G (Grenzfrequenz) in German
-  const fG = () => `${i('f')}${sb(L('0', 'G'))}`, lG = () => `${lam}${sb(L('0', 'G'))}`;
+  const { i } = X;
+  const lam = i('λ'), E = i('E'), f = i('f'), h = i('h'), c = i('c');
+  // the symbols that differ between the languages (exercises.js): in English φ, V_s, E_k,max, V, f₀,
+  // λ₀ as in British textbooks, in German W, U₀, E_kin,max, U, f_G, λ_G (Grenzfrequenz)
+  const { W, U0, V } = X.SYM, Ek = X.SYM.EkMax, fG = () => X.SYM.fG, lG = () => X.SYM.lG;
   const legend = (alt) => `<p class="note legend"><span class="k-old">- - -</span> ${L('before', 'vorher')} · <span class="k-new">—</span> ${L('after', 'nachher')}${alt ? ` · <span class="k-alt">—</span> ${alt}` : ''}</p>`;
   const LESSONS = [
     { topic: 0, stage: 0, name: () => L('What the wave model cannot explain', 'Was das Wellenmodell nicht erklärt'), idea: () => L('For each observation, ask what a stronger wave or a longer wait would change. Where the wave model says “more” and the experiment says “no”, only photons explain it.', 'Frage bei jeder Beobachtung, was eine stärkere Welle oder längeres Warten ändern würde. Wo das Wellenmodell „mehr“ sagt und das Experiment „nein“, erklären es nur Photonen.'),
@@ -305,7 +306,7 @@
         frame(L('Brighter is not bluer', 'Heller ist nicht blauer'), `<p>${L('The red light made twice as bright: twice as many photons per second, each still with 2.00 eV. The power of the light is (photons per second) × (energy of one photon): brightness changes the first factor, colour the second. A typical mistake: “brighter light has more energetic photons”.', 'Das rote Licht doppelt so hell gemacht: doppelt so viele Photonen pro Sekunde, jedes immer noch mit 2.00 eV. Die Leistung des Lichts ist (Photonen pro Sekunde) × (Energie eines Photons): Die Helligkeit ändert den ersten Faktor, die Farbe den zweiten. Ein typischer Fehler: „Helleres Licht hat energiereichere Photonen“.')}</p><p class="law">${i('P')} = ${i('N')} · ${E}</p>`, fig(G.bar([{ nm: 620, label: '2.00 eV' }]))),
         frame(L('Two sources compared', 'Zwei Quellen verglichen'), `<p>${L(`A red pointer (650 nm, 5 mW) and a violet one (405 nm, 1 mW). Energy per photon: only the wavelength counts, so violet wins. Photons per second: ${i('N')} = ${i('P')}/${E} is proportional to ${i('P')}·${lam}: red 5 · 650 = 3250, violet 1 · 405 = 405, so the red pointer emits about eight times as many photons.`, `Ein roter Pointer (650 nm, 5 mW) und ein violetter (405 nm, 1 mW). Energie pro Photon: Nur die Wellenlänge zählt, also gewinnt Violett. Photonen pro Sekunde: ${i('N')} = ${i('P')}/${E} ist proportional zu ${i('P')}·${lam}: rot 5 · 650 = 3250, violett 1 · 405 = 405; der rote Pointer sendet also etwa achtmal so viele Photonen aus.`)}</p>`, fig(G.bar([{ nm: 650, label: '5 mW' }, { nm: 405, label: '1 mW' }]))),
       ] },
-    { topic: 2, stage: 0, name: () => L('Einstein’s equation as bookkeeping', 'Einsteins Gleichung als Buchhaltung'), idea: () => L('The photon brings h·f; the electron pays the work function W to get out; the rest is the kinetic energy of the fastest electrons, measured as e·U₀.', 'Das Photon bringt h·f; das Elektron bezahlt die Austrittsarbeit W, um herauszukommen; der Rest ist die kinetische Energie der schnellsten Elektronen, gemessen als e·U₀.'),
+    { topic: 2, stage: 0, name: () => L('Einstein’s equation as bookkeeping', 'Einsteins Gleichung als Buchhaltung'), idea: () => L('The photon brings h·f; the electron pays the work function φ to get out; the rest is the kinetic energy of the fastest electrons, measured as e·V<sub>s</sub>.', 'Das Photon bringt h·f; das Elektron bezahlt die Austrittsarbeit W, um herauszukommen; der Rest ist die kinetische Energie der schnellsten Elektronen, gemessen als e·U₀.'),
       frames: () => [
         frame(L('The account', 'Die Abrechnung'), `<p>${L(`UV light of 248 nm on zinc (${W} = 4.27 eV). Income: one photon, 1240 eV·nm / 248 nm = 5.00 eV. Cost of getting out: 4.27 eV. Left over: ${Ek} = 5.00 eV − 4.27 eV = 0.73 eV. That is the most an electron can have; electrons from deeper inside lose some on the way out.`, `UV-Licht von 248 nm auf Zink (${W} = 4.27 eV). Einnahme: ein Photon, 1240 eV·nm / 248 nm = 5.00 eV. Kosten für das Austreten: 4.27 eV. Übrig: ${Ek} = 5.00 eV − 4.27 eV = 0.73 eV. Das ist das Höchste, was ein Elektron haben kann; Elektronen aus tieferen Schichten verlieren auf dem Weg nach aussen etwas.`)}</p><p class="law">${h}·${f} = ${W} + ${Ek}</p>`, fig(G.bars(5, 4.27))),
         frame(L('The stopping voltage', 'Die Gegenspannung'), `<p>${L(`A counter-voltage between cathode and anode slows the electrons. At the stopping voltage ${U0} even the fastest just fail to reach the anode: ${i('e')}·${U0} = ${Ek}. An energy in eV is stopped by the same number of volts: 0.73 eV by ${U0} = 0.73 V. Measuring ${U0} measures what is left over.`, `Eine Gegenspannung zwischen Kathode und Anode bremst die Elektronen. Bei der Gegenspannung ${U0} erreichen auch die schnellsten die Anode gerade nicht mehr: ${i('e')}·${U0} = ${Ek}. Eine Energie in eV wird von gleich vielen Volt gestoppt: 0.73 eV von ${U0} = 0.73 V. Wer ${U0} misst, misst, was übrig bleibt.`)}</p>`, fig(G.cell({ nm: 248, counter: true }))),
@@ -315,7 +316,7 @@
       ] },
     { topic: 3, stage: 0, name: () => L('The characteristic of a photocell', 'Die Kennlinie einer Photozelle'), idea: () => L('The saturation current counts the photons per second; the stopping voltage measures the energy of one photon minus the work function.', 'Der Sättigungsstrom zählt die Photonen pro Sekunde; die Gegenspannung misst die Energie eines Photons minus die Austrittsarbeit.'),
       frames: () => [
-        frame(L('Reading the characteristic', 'Die Kennlinie lesen'), `<p>${L(`The current against the voltage between anode and cathode. To the right (positive), the anode collects every released electron: the current levels off at the saturation current, which counts the electrons, and so the photons, per second. To the left, a counter-voltage turns back the slower electrons; at ${i('U')} = −${U0} even the fastest are stopped.`, `Der Strom gegen die Spannung zwischen Anode und Kathode. Rechts (positiv) sammelt die Anode jedes ausgelöste Elektron: Der Strom erreicht den Sättigungsstrom, der die Elektronen und damit die Photonen pro Sekunde zählt. Links schickt eine Gegenspannung die langsameren Elektronen zurück; bei ${i('U')} = −${U0} werden auch die schnellsten gestoppt.`)}</p>`, fig(G.ivGraph([{ U0: 1.2, I: 10, cls: 'new' }], { Imax: 24 }))),
+        frame(L('Reading the characteristic', 'Die Kennlinie lesen'), `<p>${L(`The current against the voltage between anode and cathode. To the right (positive), the anode collects every released electron: the current levels off at the saturation current, which counts the electrons, and so the photons, per second. To the left, a counter-voltage turns back the slower electrons; at ${V} = −${U0} even the fastest are stopped.`, `Der Strom gegen die Spannung zwischen Anode und Kathode. Rechts (positiv) sammelt die Anode jedes ausgelöste Elektron: Der Strom erreicht den Sättigungsstrom, der die Elektronen und damit die Photonen pro Sekunde zählt. Links schickt eine Gegenspannung die langsameren Elektronen zurück; bei ${V} = −${U0} werden auch die schnellsten gestoppt.`)}</p>`, fig(G.ivGraph([{ U0: 1.2, I: 10, cls: 'new' }], { Imax: 24 }))),
         frame(L('Twice as bright', 'Doppelt so hell'), `<p>${L('Twice as many photons per second release twice as many electrons: the saturation current doubles. Each photon has the same energy, so the stopping voltage stays.', 'Doppelt so viele Photonen pro Sekunde lösen doppelt so viele Elektronen aus: Der Sättigungsstrom verdoppelt sich. Jedes Photon hat dieselbe Energie, also bleibt die Gegenspannung.')}</p>`,
           fig(G.ivGraph([{ U0: 1.2, I: 10, cls: 'old', dash: true }, { U0: 1.2, I: 20, cls: 'new' }], { Imax: 24 })) + legend()),
         frame(L('A higher frequency', 'Eine höhere Frequenz'), `<p>${L(`Light of a higher frequency, with the same number of photons per second: each photon brings more energy, ${W} stays, so more is left over: a larger stopping voltage. The same number of electrons per second: the same saturation current.`, `Licht höherer Frequenz, mit gleich vielen Photonen pro Sekunde: Jedes Photon bringt mehr Energie, ${W} bleibt, also bleibt mehr übrig: eine grössere Gegenspannung. Gleich viele Elektronen pro Sekunde: derselbe Sättigungsstrom.`)}</p>`,
@@ -325,7 +326,7 @@
         frame(L('Two questions for every change', 'Zwei Fragen bei jeder Änderung'), `<p>${L('How many photons arrive per second? That moves the saturation current. How much energy does each photon bring, and how much does the cathode take? That moves the stopping voltage. Brightness answers only the first question, colour and metal only the second.', 'Wie viele Photonen kommen pro Sekunde an? Das verschiebt den Sättigungsstrom. Wie viel Energie bringt jedes Photon, und wie viel nimmt die Kathode? Das verschiebt die Gegenspannung. Die Helligkeit beantwortet nur die erste Frage, Farbe und Metall nur die zweite.')}</p>`,
           fig(G.ivGraph([{ U0: 1.2, I: 10, cls: 'old', dash: true }, { U0: 1.2, I: 20, cls: 'new' }, { U0: 2.0, I: 10, cls: 'alt' }], { Imax: 24 })) + `<p class="note legend"><span class="k-old">- - -</span> ${L('before', 'vorher')} · <span class="k-new">—</span> ${L('twice as bright', 'doppelt so hell')} · <span class="k-alt">—</span> ${L('higher frequency', 'höhere Frequenz')}</p>`),
       ] },
-    { topic: 4, stage: 0, name: () => L('The U₀(f) line', 'Die U₀(f)-Gerade'), idea: () => L('The stopping voltage against the frequency is a straight line: it meets the f-axis at the threshold frequency and the U₀-axis at −W/e; its slope h/e is the same for every metal.', 'Die Gegenspannung gegen die Frequenz ist eine Gerade: Sie schneidet die f-Achse bei der Grenzfrequenz und die U₀-Achse bei −W/e; ihre Steigung h/e ist für jedes Metall gleich.'),
+    { topic: 4, stage: 0, name: () => L('Stopping voltage against frequency', 'Die U₀(f)-Gerade'), idea: () => L('The stopping voltage against the frequency is a straight line: it meets the f-axis at the threshold frequency and the V<sub>s</sub>-axis at −φ/e; its slope h/e is the same for every metal.', 'Die Gegenspannung gegen die Frequenz ist eine Gerade: Sie schneidet die f-Achse bei der Grenzfrequenz und die U₀-Achse bei −W/e; ihre Steigung h/e ist für jedes Metall gleich.'),
       frames: () => {
         const e = X.make('photo-line', 1);
         return [
@@ -342,7 +343,7 @@
     { name: () => L('Photon energy', 'Photonenenergie'), stages: [stage(() => L('energy', 'Energie'), ['energy']), stage(() => L('brighter or bluer', 'heller oder blauer'), ['rank'])] },
     { name: () => L('Einstein’s equation', 'Einsteins Gleichung'), stages: [stage(() => L('bookkeeping', 'Buchhaltung'), ['photo-calc'])] },
     { name: () => L('The characteristic', 'Die Kennlinie'), stages: [stage(() => L('characteristic', 'Kennlinie'), ['photo-curve'])] },
-    { name: () => L('The U₀(f) line', 'Die U₀(f)-Gerade'), stages: [stage(() => L('reading the line', 'die Gerade lesen'), ['photo-line'])] },
+    { name: () => L('Stopping voltage against frequency', 'Die U₀(f)-Gerade'), stages: [stage(() => L('reading the line', 'die Gerade lesen'), ['photo-line'])] },
   ];
   const lessons = () => LESSONS.map((l) => ({ name: l.name(), idea: l.idea(), frames: l.frames, also: topics.also(l.topic) }));
 
@@ -357,10 +358,10 @@
       name: () => L('Name the observations of the photoelectric effect that the wave model cannot explain: the threshold frequency, and a kinetic energy that does not depend on the brightness.',
         'Die Beobachtungen beim Photoeffekt nennen, die das Wellenmodell nicht erklärt: die Grenzfrequenz, und eine kinetische Energie, die nicht von der Helligkeit abhängt.') },
     { id: 'einstein', kinds: ['photo-calc:ek', 'energy:E', 'photo-calc:U0', 'photo-curve:W', 'photo-calc:out'], tutor: 2, topic: 2,
-      name: () => L('Apply E = h·f and the energy balance h·f = W + E_kin,max, with E_kin,max measured by the stopping voltage.',
+      name: () => L('Apply E = h·f and the energy balance h·f = φ + E_k,max, with E_k,max measured by the stopping voltage.',
         'E = h·f und die Energiebilanz h·f = W + E_kin,max anwenden, mit E_kin,max gemessen durch die Gegenspannung.') },
     { id: 'threshold', kinds: ['photo-line:fG', 'photo-line:W', 'photo-line:slope', 'photo-line:lG', 'photo-calc:light', 'photo-line:metal'], tutor: 4, topic: 4,
-      name: () => L('Determine the threshold frequency, the cut-off wavelength and the work function, for instance from a U₀(f) graph with slope h/e.',
+      name: () => L('Determine the threshold frequency, the cut-off wavelength and the work function, for instance from a V_s(f) graph with slope h/e.',
         'Die Grenzfrequenz, die Grenzwellenlänge und die Austrittsarbeit bestimmen, zum Beispiel aus einem U₀(f)-Diagramm mit der Steigung h/e.') },
     { id: 'rate', kinds: ['photo-curve:new', 'energy:k', 'rank:N', 'rank:E'], tutor: 3, topic: 3,
       name: () => L('Tell the photon energy from the number of photons per second when the brightness or the frequency of the light changes, also in the characteristic of a photocell.',
@@ -395,7 +396,7 @@
     concepts: () => ({
       intensity: L('brightness is the number of photons, not their energy', 'Helligkeit ist die Zahl der Photonen, nicht ihre Energie'), inverse: L('shorter wavelength, more energy per photon', 'kürzere Wellenlänge, mehr Energie pro Photon'),
       wave: L('what the wave model can and cannot explain', 'was das Wellenmodell erklärt und was nicht'), work: L('the work function in Einstein’s equation', 'die Austrittsarbeit in Einsteins Gleichung'),
-      threshold: L('the threshold frequency f₀ = W/h', 'die Grenzfrequenz f_G = W/h'), graph: L('the slope h/e and the intercepts of the U₀(f) line', 'die Steigung h/e und die Achsenabschnitte der U₀(f)-Geraden'),
+      threshold: L('the threshold frequency f₀ = φ/h', 'die Grenzfrequenz f_G = W/h'), graph: L('the slope h/e and the intercepts of the V_s(f) line', 'die Steigung h/e und die Achsenabschnitte der U₀(f)-Geraden'),
     }),
   };
 
@@ -413,6 +414,20 @@
     return { px0, px1, py0, py1, x0, x1, y0, y1, xp: Number(d.xp), yp: Number(d.yp), xn: d.xn, xu: d.xu, yn: d.yn, yu: d.yu };
   }
   const readText = (a, x, y) => [`${a.xn} = ${fmt(x, a.xp)} ${a.xu}`, `${a.yn} = ${fmt(y, a.yp)} ${a.yu}`];
+  // A name with a subscript is written V_s: the part after _ (up to a space) is set lower and smaller.
+  function rich(tspan, s) {
+    tspan.textContent = '';
+    s.split(/_(\S+)/).forEach((part, k) => {
+      if (!part) return;
+      if (k % 2) {
+        const sub = document.createElementNS(SVGNS, 'tspan');
+        sub.setAttribute('font-size', '75%'); sub.setAttribute('dy', '3'); sub.textContent = part;
+        const back = document.createElementNS(SVGNS, 'tspan');
+        back.setAttribute('dy', '-3'); back.textContent = '\u200b';
+        tspan.append(sub, back);
+      } else tspan.append(part);
+    });
+  }
   // the readout at the user coordinates (ux, uy) of the svg, or none if they lie outside the plot area
   function showRead(svg, ux, uy) {
     const a = axesOf(svg);
@@ -437,7 +452,7 @@
     lh.setAttribute('y1', Y); lh.setAttribute('y2', Y); lh.setAttribute('x1', X); lh.setAttribute('x2', AX);
     pt.setAttribute('cx', X); pt.setAttribute('cy', Y);
     const [s1, s2] = readText(a, x, y);
-    t1.textContent = s1; t2.textContent = s2;
+    rich(t1, s1); rich(t2, s2);
     // the label beside the point, up and to the right, flipped to stay within the drawing
     const W = svg.viewBox.baseVal.width, pad = 5, lineH = 14;
     t1.setAttribute('dy', 0); t2.setAttribute('dy', lineH);
@@ -452,7 +467,7 @@
     box.setAttribute('x', bx); box.setAttribute('y', by); box.setAttribute('width', bw + 2 * pad); box.setAttribute('height', bh);
     t1.setAttribute('x', bx + pad); t2.setAttribute('x', bx + pad); text.setAttribute('y', by + pad + 10);
     g.dataset.ux = X; g.dataset.uy = Y;
-    return `${s1}, ${s2}`;
+    return `${s1}, ${s2}`.replace(/_/g, '');
   }
   function hideRead(svg) { const g = svg && svg.querySelector('g.readout'); if (g) g.remove(); }
   function userPoint(svg, evt) {

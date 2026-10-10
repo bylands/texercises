@@ -15,6 +15,7 @@
 // - questions that wait for another (after) wait for an earlier one; Einstein's equation (b), (c)
 //   wait for (a), the U₀(f) line (e) for (d),
 // - the symbols f₀, λ₀ in English and f_G, λ_G in German, everywhere (practice, tutor, check),
+//   and φ, V_s, E_k,max, V (British textbooks) in English where German has W, U₀, E_kin,max, U,
 // - the spectrum: the labels of the marks under the scale, apart from each other and the captions.
 'use strict';
 
@@ -148,6 +149,57 @@ for (const type of X.TYPES) {
     // and the right one is used
     if (!all.some((t) => (lang === 'en' ? /<sub>0<\/sub>|f₀/ : /<sub>G<\/sub>|f_G/).test(t) && /Grenz|threshold/.test(t))) fail(`${lang}: the threshold frequency symbol is missing`);
   }
+}
+// the other symbols: in English as in British textbooks (work function φ, stopping voltage V_s,
+// E_k and E_k,max, a voltage V), in German W, U₀, E_kin, E_kin,max and U, everywhere (practice, its
+// hints, solutions, reasons for wrong answers and drawings, the tutor, the check and its reasons,
+// the objectives and the coordinate readout). The texts are compared without their tags (so
+// <i>U</i><sub>0</sub> reads U0), item by item in both languages: where German writes U₀, English
+// writes V_s, and so on (the names of the worked example and practice topic of the U₀(f) line are
+// words in English: Stopping voltage against frequency).
+{
+  const strip = (html) => String(html).replace(/<\/?(i|sub|sup|b|tspan)\b[^>]*>/g, '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/​/g, '');
+  const count = (t, re) => (t.match(re) || []).length;
+  // the texts of an exercise, a check question, a worked example: only what the student reads
+  const exTexts = (e) => [e.title, e.text, e.figs, e.solFig, ...e.hints, ...e.solution, ...e.questions.flatMap((q) => [q.label, q.sym, q.unit,
+    ...(q.wrong || []).map((w) => w.why), ...(q.options || []).flatMap((o) => [o.label, o.html, o.why]), ...(q.statements || []).flatMap((st) => [st.html, st.why])])].filter((t) => t != null);
+  const items = () => {
+    const out = [];
+    for (const type of X.TYPES) for (let seed = 1; seed <= 60; seed++) out.push([`${type} ${seed}`, exTexts(X.make(type, seed))]);
+    A.OBJECTIVES.forEach((o) => { out.push([`objective ${o.id}`, [o.name()]]); for (const kind of o.kinds) for (const seed of [1, 2, 3, 5, 8, 13]) { const q = A.checkQuestion(kind, seed); out.push([`check ${kind} ${seed}`, [q.title, q.text, q.figure, q.ask, q.explain(), ...q.options.flatMap((op) => [op.html, op.why])].filter((t) => t != null)]); } });
+    A.LESSONS.forEach((l, k) => { out.push([`tutor ${k + 1}`, [l.idea(), ...l.frames().flatMap((fr) => [fr.text, fr.figure])]]); out.push([`name: tutor ${k + 1}`, [l.name()]]); });
+    A.TOPICS.forEach((t, k) => out.push([`name: topic ${k + 1}`, [t.name(), ...t.stages.map((st) => st.name())]]));
+    out.push(['concepts', Object.values(A.concepts())]);
+    return out;
+  };
+  const EN_NOT = [[/U₀|U0|E_?kin|(?<![\p{L}\d])U(?![\p{L}\d])/u, 'U₀, E_kin or U'], [/(?<![\p{L}\d])(?<!\d[\s-])W(?![\p{L}\d-])/u, 'W for the work function'], [/data-[xy]n="U/, 'U in the readout']];
+  const DE_NOT = [[/V_?s\b|φ|E_?k\b|E_?k,max|\bV\s*=|\bV\s+in\s+V/, 'V_s, φ, E_k or V'], [/data-[xy]n="V/, 'V in the readout']];
+  const sets = {};
+  for (const lang of ['en', 'de']) {
+    Lang.set(lang, true);
+    sets[lang] = items().map(([tag, texts]) => [tag, texts.map((t) => [String(t), strip(t)])]);
+    for (const [tag, texts] of sets[lang]) {
+      for (const [raw, t] of texts) {
+        for (const [re, what] of lang === 'en' ? EN_NOT : DE_NOT) {
+          const hit = re.test(t) ? t : re.test(raw) ? raw : null;
+          if (hit) { const k = hit.search(re); fail(`${lang} ${tag}: ${what}: …${hit.slice(Math.max(0, k - 50), k + 30)}…`); }
+        }
+      }
+    }
+  }
+  // in both languages or in neither, item by item
+  const PAIRS = [[/\bVs\b|V_s/g, /U₀|U0/g, 'V_s / U₀'], [/φ/g, /(?<![\p{L}\d])(?<!\d[\s-])W(?![\p{L}\d-])/gu, 'φ / W'], [/\bEk\b|E_k\b|Ek,max|E_k,max/g, /Ekin|E_kin/g, 'E_k / E_kin']];
+  let seen = 0;
+  sets.en.forEach(([tag, en], n) => {
+    const de = sets.de[n][1], te = en.map((x) => x[1]).join(' | '), td = de.map((x) => x[1]).join(' | ');
+    if (tag.startsWith('name:')) return;
+    for (const [re, rd, what] of PAIRS) {
+      const a = count(te, re), b = count(td, rd);
+      seen += b;
+      if (!a !== !b) fail(`${tag}: ${what} ${a} times in English, ${b} times in German`);
+    }
+  });
+  if (seen < 500) fail(`the symbols: only ${seen} found in German`);
 }
 // the spectrum: the labels of the marks lie in a row of their own under the scale, apart from each
 // other and within the drawing (widths estimated: 13 px bold, 0.6 em a character)

@@ -35,6 +35,7 @@ svg.ef .lbl { fill: var(--ink); font-size: 15px; paint-order: stroke; stroke: va
 svg.ef .lbl.name { font-weight: 700; font-family: system-ui, sans-serif; font-size: 13px; }
 svg.ef .lbl.small { font-size: 12px; }
 svg.ef .it { font-style: italic; }
+svg.ef .sub { font-size: 75%; }
 svg.ef .pt { fill: var(--ink); }
 svg.ef .metal { fill: var(--ef-metal); }
 svg.ef .metal-edge { stroke: var(--ink); stroke-width: 1.2; }

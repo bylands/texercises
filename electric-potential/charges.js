@@ -110,7 +110,10 @@
 
   // ---------------------------------------------------------------- drawing
   const svg = (w, h, body, label, cls = '') => `<svg class="ef ${cls}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${label}">${body}</svg>`;
-  const txt = (x, y, s, cls = 'lbl', anchor = 'middle') => `<text class="${cls}" x="${f1(x)}" y="${f1(y)}" text-anchor="${anchor}">${s}</text>`;
+  // an index in a label: V_A is drawn as V with a smaller, lowered A (and the text after it back on
+  // the line)
+  const sub = (s) => String(s).replace(/([A-Za-zΦ])_([A-Za-z0-9]+)/g, (m, a, i, at, all) => `${a}<tspan class="sub" dy="0.3em">${i}</tspan>${at + m.length < all.length ? '<tspan dy="-0.225em">\u200b</tspan>' : ''}`);
+  const txt = (x, y, s, cls = 'lbl', anchor = 'middle') => `<text class="${cls}" x="${f1(x)}" y="${f1(y)}" text-anchor="${anchor}">${sub(s)}</text>`;
   const head = (x, y, ux, uy, cls, H = 9, B = 4) => { const bx = x - H * ux, by = y - H * uy; return `<polygon class="${cls}" points="${f1(x)},${f1(y)} ${f1(bx - B * uy)},${f1(by + B * ux)} ${f1(bx + B * uy)},${f1(by - B * ux)}"/>`; };
   function arrow(x1, y1, x2, y2, cls, w = 2.4) {
     const d = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / d, uy = (y2 - y1) / d;

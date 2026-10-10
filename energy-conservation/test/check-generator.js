@@ -83,6 +83,16 @@ function checkExercise(ex, id) {
     if (!ex.formal && Number.isFinite(t.value) && Math.abs(t.value - ex.value) <= 0.03 * ex.value) fail(`${id}: trap ${t.flag} (${t.tex}) is too close to the answer`);
     if (!Energy.WHY[t.flag] && !(sc.why && sc.why[t.flag])) fail(`${id}: unknown flag ${t.flag}`);
   }
+  // with numbers, no two wrong ideas give nearly the same value (each value has one explanation)
+  if (!ex.formal) ex.traps.forEach((t, k) => ex.traps.slice(0, k).forEach((u) => {
+    if (Number.isFinite(t.value) && Math.abs(t.value - u.value) <= 0.03 * Math.abs(u.value)) fail(`${id}: traps ${u.tex} and ${t.tex} give nearly the same value`);
+  }));
+  // twice the compression: wrong ideas with other factors than 2 and 4 (3 h + s, 4 h + 3 s, …)
+  if (ex.scenario === 'twice' && ex.formal) {
+    const factors = new Set(ex.traps.flatMap((t) => (t.tex.match(/\d+/g) || ['1'])));
+    if (![...factors].some((x) => x !== '2' && x !== '4')) fail(`${id}: twice: only the factors ${[...factors]}`);
+    if (ex.traps.length < 6) fail(`${id}: twice: only ${ex.traps.length} wrong ideas`);
+  }
   // the answer formula, if typed as it is shown, is right
   checkText(id, 'title', ex.title);
   checkText(id, 'text', ex.text);
@@ -162,7 +172,7 @@ const lesson = (id) => Energy.tutorial(Lessons.EXAMPLES.find((e) => e.scenario =
 const TYPED = [
   ['part-drop', 'sqrt(2/3*g*h)', 'ok'], ['part-drop', '√(2gh)', 'trap'], ['part-drop', 'sqrt(4/3 g h)', 'trap'], ['part-drop', '2/3gh', 'trap'], ['part-drop', 'sqrt(2 g h\')', 'unknown'], ['part-drop', "v'", 'wanted'], ['part-drop', 'sqrt(2gh*m/m)', 'unknown'],
   ['speed-fraction', '5/9 h', 'ok'], ['speed-fraction', '5h/9', 'ok'], ['speed-fraction', '1/3 h', 'trap'], ['speed-fraction', '4/9*h', 'trap'], ['speed-fraction', 'h', 'wrong'],
-  ['twice', '4h + 2s', 'ok'], ['twice', '2h', 'trap'], ['incline', 'sqrt(2gh)', 'ok'],
+  ['twice', '4h + 2s', 'ok'], ['twice', '2h', 'trap'], ['twice', '3h + s', 'trap'], ['twice', '4h + 3s', 'trap'], ['twice', '4h - 2s', 'trap'], ['twice', '2(h + s)', 'trap'], ['incline', 'sqrt(2gh)', 'ok'],
   ['spring-hang', 'sqrt(1/2 g s)', 'ok'], ['spring-hang', 'sqrt(g*s/2)', 'ok'], ['spring-hang', 'sqrt(gs)', 'trap'], ['spring-hang', '√(0.5gs', 'syntax'], ['spring-hang', '', 'empty'],
 ];
 for (const [k, text, key] of TYPED) {

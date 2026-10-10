@@ -545,12 +545,12 @@
    {
     "id": "quantities",
     "en": "Tell potential energy, potential and potential difference apart, and say which of them depends on the charge.",
-    "de": "Potentielle Energie, Potential und Potentialdifferenz unterscheiden und sagen, welche davon von der Ladung abhängt."
+    "de": "Potentielle Energie, Potential und Spannung unterscheiden und sagen, welche davon von der Ladung abhängt."
    },
    {
     "id": "uniform",
     "en": "Use E = ΔV/d in a uniform field, with d measured along the field lines.",
-    "de": "E = ΔV/d im homogenen Feld anwenden, mit d längs der Feldlinien gemessen."
+    "de": "E = U/d im homogenen Feld anwenden, mit d längs der Feldlinien gemessen."
    },
    {
     "id": "point",
@@ -560,7 +560,7 @@
    {
     "id": "energy",
     "en": "Decide whether a charge gains or loses potential energy moving between two points, from the signs of q and of ΔV.",
-    "de": "Entscheiden, ob eine Ladung zwischen zwei Punkten potentielle Energie gewinnt oder verliert, aus den Vorzeichen von q und von ΔV."
+    "de": "Entscheiden, ob eine Ladung zwischen zwei Punkten potentielle Energie gewinnt oder verliert, aus den Vorzeichen von q und von ΔΦ."
    }
   ]
  },
@@ -654,12 +654,12 @@
    },
    {
     "id": "einstein",
-    "en": "Apply E = h·f and the energy balance h·f = W + E_kin,max, with E_kin,max measured by the stopping voltage.",
+    "en": "Apply E = h·f and the energy balance h·f = φ + E_k,max, with E_k,max measured by the stopping voltage.",
     "de": "E = h·f und die Energiebilanz h·f = W + E_kin,max anwenden, mit E_kin,max gemessen durch die Gegenspannung."
    },
    {
     "id": "threshold",
-    "en": "Determine the threshold frequency, the cut-off wavelength and the work function, for instance from a U₀(f) graph with slope h/e.",
+    "en": "Determine the threshold frequency, the cut-off wavelength and the work function, for instance from a V_s(f) graph with slope h/e.",
     "de": "Die Grenzfrequenz, die Grenzwellenlänge und die Austrittsarbeit bestimmen, zum Beispiel aus einem U₀(f)-Diagramm mit der Steigung h/e."
    },
    {
