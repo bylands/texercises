@@ -27,7 +27,7 @@
   // ---------------------------------------------------------------- writing
   const i = (s) => `<i>${s}</i>`;
   const sb = (s) => `<sub>${s}</sub>`;
-  const lam = i('λ'), p = i('p'), m = i('m'), v = i('v'), h = i('h'), U = i('U'), Ek = `${i('E')}${sb('kin')}`, dx = `Δ${i('x')}`, dp = `Δ${i('p')}`, Lb = i('L'), n = i('n'), E1 = `${i('E')}${sb('1')}`, psi2 = `|${i('ψ')}|²`, xm = `⟨${i('x')}⟩`;
+  const lam = i('λ'), p = i('p'), m = i('m'), v = i('v'), h = i('h'), U = { toString: () => i(L('V', 'U')) }, Ek = `${i('E')}${sb('kin')}`, dx = `Δ${i('x')}`, dp = `Δ${i('p')}`, Lb = i('L'), n = i('n'), E1 = `${i('E')}${sb('1')}`, psi2 = `|${i('ψ')}|²`, xm = `⟨${i('x')}⟩`;
   const fig = (html) => `<div class="fig">${html}</div>`;
   // a multiple of the width L, as a fraction: 2L/3, L/2, 2L
   const gcd = (a, b) => (b ? gcd(b, a % b) : a);
@@ -44,7 +44,7 @@
   // ---------------------------------------------------------------- typical mistakes
   const WHY = {
     photonp: () => L('That is the formula for a photon (p = E/c, λ = h·c/E). A particle with mass has p = √(2·m·E<sub>kin</sub>).', 'Das ist die Formel für ein Photon (p = E/c, λ = h·c/E). Ein Teilchen mit Masse hat p = √(2·m·E<sub>kin</sub>).'),
-    sqrt: () => L('The momentum grows with the square root of the energy: p = √(2·m·E<sub>kin</sub>), so λ ∝ 1/√E<sub>kin</sub> ∝ 1/√U.', 'Der Impuls wächst mit der Wurzel der Energie: p = √(2·m·E<sub>kin</sub>), also λ ∝ 1/√E<sub>kin</sub> ∝ 1/√U.'),
+    sqrt: () => L('The momentum grows with the square root of the energy: p = √(2·m·E<sub>kin</sub>), so λ ∝ 1/√E<sub>kin</sub> ∝ 1/√V.', 'Der Impuls wächst mit der Wurzel der Energie: p = √(2·m·E<sub>kin</sub>), also λ ∝ 1/√E<sub>kin</sub> ∝ 1/√U.'),
     inverse: () => L('More energy means more momentum, so a shorter wavelength: λ = h/p.', 'Mehr Energie bedeutet mehr Impuls, also eine kürzere Wellenlänge: λ = h/p.'),
     nsq: () => L('E<sub>n</sub> = n²·h²/(8·m·L²): the energy grows with n², not with n.', 'E<sub>n</sub> = n²·h²/(8·m·L²): Die Energie wächst mit n², nicht mit n.'),
     lsq: () => L('λ ∝ L, so p ∝ 1/L and E = p²/(2m) ∝ 1/L².', 'λ ∝ L, also p ∝ 1/L und E = p²/(2m) ∝ 1/L².'),
@@ -65,8 +65,8 @@
       text: `<p>${L(`An electron that starts at rest and is accelerated through ${U} = 150 V has the de Broglie wavelength ${lam} = 100 pm. ${rev ? `Another electron, also from rest, has the de Broglie wavelength ${lam} = ${String(l1)} pm.` : `Another electron is accelerated through ${U} = ${Vt} V.`}`, `Ein Elektron, das in Ruhe startet und mit ${U} = 150 V beschleunigt wird, hat die de-Broglie-Wellenlänge ${lam} = 100 pm. ${rev ? `Ein anderes Elektron, ebenfalls aus der Ruhe, hat die de-Broglie-Wellenlänge ${lam} = ${String(l1)} pm.` : `Ein anderes Elektron wird mit ${U} = ${Vt} V beschleunigt.`}`)}</p>`,
       figs: '',
       questions: [
-        rev ? numQ('U', L(`(a) the voltage that accelerated it, without a calculator`, `(a) die Spannung, mit der es beschleunigt wurde, ohne Taschenrechner`), U, 'V', Uv, { wrong: [
-          { value: 150 * k, tag: 'sqrt', why: L('The wavelength goes with 1/√U, so the voltage goes with 1/λ²: square the factor of the wavelength.', 'Die Wellenlänge geht mit 1/√U, also die Spannung mit 1/λ²: Den Faktor der Wellenlänge quadrieren.') },
+        rev ? numQ('U', L(`(a) the voltage that accelerated it, without a calculator`, `(a) die Spannung, mit der es beschleunigt wurde, ohne Taschenrechner`), String(U), 'V', Uv, { wrong: [
+          { value: 150 * k, tag: 'sqrt', why: L('The wavelength goes with 1/√V, so the voltage goes with 1/λ²: square the factor of the wavelength.', 'Die Wellenlänge geht mit 1/√U, also die Spannung mit 1/λ²: Den Faktor der Wellenlänge quadrieren.') },
           { value: 150 / (k * k), tag: 'inverse', why: L('A shorter wavelength means more momentum, so a larger voltage: λ = h/p.', 'Eine kürzere Wellenlänge bedeutet mehr Impuls, also eine grössere Spannung: λ = h/p.') },
         ] })
           : numQ('lam', L(`(a) its wavelength, without a calculator`, `(a) seine Wellenlänge, ohne Taschenrechner`), lam, 'pm', l1, { wrong: [{ value: 100 / (k * k), tag: 'sqrt', why: WHY.sqrt() }, { value: 100 * k, tag: 'inverse', why: WHY.inverse() }] }),
@@ -123,14 +123,14 @@
     ];
     const qb = ask === 'short' ? [
       [names[0], false, L('The electron is the lightest: it has the longest wavelength.', 'Das Elektron ist am leichtesten: Es hat die längste Wellenlänge.'), 'mass'],
-      [names[1], false, L('The alpha particle is heavier and, with twice the charge, gains twice the energy: p = √(2·m·q·U).', 'Das Alphateilchen ist schwerer und gewinnt mit der doppelten Ladung die doppelte Energie: p = √(2·m·q·U).'), 'charge'],
+      [names[1], false, L('The alpha particle is heavier and, with twice the charge, gains twice the energy: p = √(2·m·q·V).', 'Das Alphateilchen ist schwerer und gewinnt mit der doppelten Ladung die doppelte Energie: p = √(2·m·q·U).'), 'charge'],
       [names[2], true],
-      [allSame, false, L('The voltage gives each the energy q·U, but λ = h/p depends on the momentum p = √(2·m·q·U).', 'Die Spannung gibt jedem die Energie q·U, aber λ = h/p hängt vom Impuls p = √(2·m·q·U) ab.'), 'mass'],
+      [allSame, false, L('The voltage gives each the energy q·V, but λ = h/p depends on the momentum p = √(2·m·q·V).', 'Die Spannung gibt jedem die Energie q·U, aber λ = h/p hängt vom Impuls p = √(2·m·q·U) ab.'), 'mass'],
     ] : [
       [names[0], true],
       [names[1], false, L('The proton is about 1800 times heavier than the electron: more momentum, shorter wavelength.', 'Das Proton ist etwa 1800-mal schwerer als das Elektron: mehr Impuls, kürzere Wellenlänge.'), 'mass'],
       [names[2], false, L('The alpha particle is the heaviest and has twice the charge: the most momentum, the shortest wavelength.', 'Das Alphateilchen ist am schwersten und hat die doppelte Ladung: am meisten Impuls, die kürzeste Wellenlänge.'), 'charge'],
-      [allSame, false, L('The voltage gives each the energy q·U, but λ = h/p depends on the momentum p = √(2·m·q·U).', 'Die Spannung gibt jedem die Energie q·U, aber λ = h/p hängt vom Impuls p = √(2·m·q·U) ab.'), 'mass'],
+      [allSame, false, L('The voltage gives each the energy q·V, but λ = h/p depends on the momentum p = √(2·m·q·V).', 'Die Spannung gibt jedem die Energie q·U, aber λ = h/p hängt vom Impuls p = √(2·m·q·U) ab.'), 'mass'],
     ];
     const qc = ratio === 'p' ? [
       [L('the same', 'gleich lang'), true],

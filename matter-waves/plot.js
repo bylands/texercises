@@ -67,7 +67,7 @@
     s += `<circle class="spot" cx="300" cy="90" r="3"/><circle class="spot" cx="300" cy="44" r="3"/><circle class="spot" cx="300" cy="136" r="3"/>`;
     s += span(142, 176, 300, 176, it('L'), 0, -5);
     s += span(314, 90, 314, 44, it('r'), 10, 4);
-    if (o.U) s += `<text class="lbl small" x="96" y="160" text-anchor="middle">${it('U')} = ${o.U}</text>`;
+    if (o.U) s += `<text class="lbl small" x="96" y="160" text-anchor="middle">${it(L('V', 'U'))} = ${o.U}</text>`;
     return `<svg class="mw tube" viewBox="0 0 340 190" width="340" role="img" aria-label="${L('An electron diffraction tube: electrons pass a thin graphite foil and make rings on the screen at the distance L', 'Eine Elektronenbeugungsröhre: Elektronen durchqueren eine dünne Graphitfolie und erzeugen Ringe auf dem Schirm im Abstand L')}">${s}</svg>`;
   }
   function rings(radii, o = {}) {

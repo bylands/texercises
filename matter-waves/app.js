@@ -261,11 +261,11 @@
   const frame = (title, text, figure) => ({ text: `<p class="step-rule">${title}</p>${text}`, figure: figure ? `<div class="figs">${figure}</div>` : '' });
   const fig = (html) => `<div class="fig">${html}</div>`;
   const { i, sb, ofL } = X;
-  const lam = i('λ'), p = i('p'), m = i('m'), v = i('v'), h = i('h'), U = i('U'), Ek = `${i('E')}${sb('kin')}`, dx = `Δ${i('x')}`, dp = `Δ${i('p')}`, d = i('d'), Lb = i('L'), n = i('n'), E1 = `${i('E')}${sb('1')}`, En = `${i('E')}${sb('n')}`, psi2 = `|${i('ψ')}|²`, xm = `⟨${i('x')}⟩`;
+  const lam = i('λ'), p = i('p'), m = i('m'), v = i('v'), h = i('h'), U = { toString: () => i(L('V', 'U')) }, Ek = `${i('E')}${sb('kin')}`, dx = `Δ${i('x')}`, dp = `Δ${i('p')}`, d = i('d'), Lb = i('L'), n = i('n'), E1 = `${i('E')}${sb('1')}`, En = `${i('E')}${sb('n')}`, psi2 = `|${i('ψ')}|²`, xm = `⟨${i('x')}⟩`;
   // the rings of graphite (mm) at a voltage in kV: r = L·λ/d, L = 13.5 cm, d = 0.213 nm and 0.123 nm
   const ringsAt = (kV) => [0.213e-9, 0.123e-9].map((dd) => (0.135 * P.lambdaU(kV * 1e3)) / dd * 1e3);
   const LESSONS = [
-    { topic: 0, stage: 0, name: () => L('The wavelength by comparison', 'Die Wellenlänge im Vergleich'), idea: () => L('λ = h/p. Work it out once (an electron through 150 V: 100 pm), then compare: for a particle with mass p = √(2·m·E_kin), never E/c, so λ ∝ 1/√U.', 'λ = h/p. Einmal ausrechnen (ein Elektron durch 150 V: 100 pm), dann vergleichen: Für ein Teilchen mit Masse ist p = √(2·m·E_kin), nie E/c, also λ ∝ 1/√U.'),
+    { topic: 0, stage: 0, name: () => L('The wavelength by comparison', 'Die Wellenlänge im Vergleich'), idea: () => L('λ = h/p. Work it out once (an electron through 150 V: 100 pm), then compare: for a particle with mass p = √(2·m·E_kin), never E/c, so λ ∝ 1/√V.', 'λ = h/p. Einmal ausrechnen (ein Elektron durch 150 V: 100 pm), dann vergleichen: Für ein Teilchen mit Masse ist p = √(2·m·E_kin), nie E/c, also λ ∝ 1/√U.'),
       frames: () => {
         const Uv = 150, pp = P.pOfU(P.me, Uv), lm = P.h / pp, lPh = (P.h * P.c) / (Uv * P.e), ball = P.h / (0.057 * 50);
         return [
@@ -374,7 +374,7 @@
   const checkSource = {
     id: 'mw', objectives: OBJECTIVES, question: checkQuestion, concept: CONCEPT,
     concepts: () => ({
-      momentum: L('p = E/c, the photon’s formula, for a particle with mass', 'p = E/c, die Formel des Photons, für ein Teilchen mit Masse'), root: L('λ ∝ 1/√U: the square root', 'λ ∝ 1/√U: die Wurzel'),
+      momentum: L('p = E/c, the photon’s formula, for a particle with mass', 'p = E/c, die Formel des Photons, für ein Teilchen mit Masse'), root: L('λ ∝ 1/√V: the square root', 'λ ∝ 1/√U: die Wurzel'),
       inverse: L('more momentum, shorter wavelength', 'mehr Impuls, kürzere Wellenlänge'), mass: L('the mass (and charge) in the momentum', 'die Masse (und Ladung) im Impuls'),
       particle: L('electrons only as particles in diffraction', 'Elektronen bei der Beugung nur als Teilchen'), standing: L('standing waves: zero at the walls, n half waves', 'stehende Wellen: null an den Wänden, n halbe Wellen'),
       psisq: L('ψ and |ψ|² told apart', 'ψ und |ψ|² unterscheiden'), classical: L('the particle as a ball bouncing in the box', 'das Teilchen als Kugel, die im Kasten hin- und herprallt'),
