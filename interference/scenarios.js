@@ -1,0 +1,524 @@
+// The exercise types of the app. Each:
+//   { id, difficulty, title(p), make(r) → parameters p (or null: draw again), solve(p, o) → values v
+//     (SI; with a flag of traps set in o: the result of that wrong idea), traps: [flag],
+//     why: { flag: () => text }, fields(p, v) → [field], text(p), hints(p, v), steps(p, v) → [{ text,
+//     show: [keys] }], figure(p, v, view), quizChoice (the check asks the choice, not a number) }
+// A field is a number { key, type: 'num', sym, unit, what, sci } (its value in the unit), or a
+// choice { key, type: 'choice', what, ask (for the check), options: [[value, html, why, flag]],
+// stack (one option below the other), pics (pictures) }; the value of a choice comes from v[key].
+// view: { task: true } the task; { show: Set } the solution (or a step of it).
+//
+//   Huygens          gap (which picture shows the waves behind a gap: narrow or wide compared
+//                    with λ)
+//   double slit      path (bright or dark at P, from the path difference), ds-pos (the position of
+//                    a bright fringe, y = k·λ·L/d), ds-lam (the wavelength from the fringes)
+//   grating          grating (d = 1/n and the position of a maximum), grating-max (sin α = k·λ/d
+//                    and the highest order)
+//   changes          change (how the pattern changes when λ, L, d, b or N changes), single (the
+//                    central fringe of a single slit, w = 2·λ·L/b, or the width of a hair from it)
+//   resolving power  res-change (how θₘᵢₙ = 1.22·λ/D changes), res-scale (θₘᵢₙ or D by ratios)
+//   concepts         concept-huy, concept-ds, concept-pat, concept-res (which statement is right)
+// The numbers are chosen so that the results come out round: small angles and ratios, no
+// calculator.
+(function (root) {
+  'use strict';
+
+  const IW = root.IW || require('./core.js');
+  const { L, pick, shuffle, tnum, q, tq, sig } = IW;
+  const Fg = () => root.Figures;
+
+  // ---------------------------------------------------------------- helpers
+  const step = (rule, html, show = []) => ({ text: `<p class="step-rule">${rule}</p>${html}`, show });
+  const p$ = (s) => `<p>${s}</p>`;
+  const res = (x) => `\\htmlClass{result}{${x}}`;
+  const num$ = (key, sym, unit, what, o = {}) => ({ key, type: 'num', sym, unit, what, ...o });
+  const choice = (key, what, options, o = {}) => ({ key, type: 'choice', what, options, ...o });
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  // a whole number of tenths (of the unit u): a result for mental arithmetic
+  const tidy = (x, u, per = 10) => { const y = IW.inUnit(x, u) * per; return Math.abs(y - Math.round(y)) < 1e-6; };
+  const nm = (x) => x * 1e-9, mm = (x) => x * 1e-3;
+  const ord = (k) => L(['', '1st', '2nd', '3rd'][k] || `${k}th`, `${k}.`);
+
+  // ================================================================ 1 Huygens: waves at a gap
+  // the medium, the wavelengths (in its unit) and the gap's widths in wavelengths
+  const GAP_MEDIA = [
+    { en: 'Straight water waves in a ripple tank', de: 'Gerade Wasserwellen in einer Wellenwanne', lam: [1, 1.5, 2, 3], u: 'cm' },
+    { en: 'Sound waves from a distant loudspeaker (with straight fronts)', de: 'Schallwellen eines fernen Lautsprechers (mit geraden Fronten)', lam: [0.4, 0.5, 1], u: 'm' },
+  ];
+  const GAPS = [0.5, 1, 4, 5];
+  const GAP_KEYS = ['arcs', 'beam', 'shadow', 'short'];
+  const WHY_GAP = {
+    narrow: () => L('This gap is no wider than about one wavelength: it acts like a single source of wavelets, and circular waves spread into the whole space behind the wall.', 'Diese Öffnung ist nicht breiter als etwa eine Wellenlänge: Sie wirkt wie eine einzige Quelle von Elementarwellen, und Kreiswellen breiten sich im ganzen Raum hinter der Wand aus.'),
+    wide: () => L('Circular waves come from a gap about one wavelength wide or narrower. This gap is several wavelengths wide: the wavelets of its points add up to a straight front; only at its ends does the wave bend into the shadow.', 'Kreiswellen entstehen an einer Öffnung, die etwa eine Wellenlänge breit oder schmaler ist. Diese Öffnung ist mehrere Wellenlängen breit: Die Elementarwellen ihrer Punkte setzen sich zu einer geraden Front zusammen; nur an ihren Enden biegt die Welle in den Schatten.'),
+    ray: () => L('Waves do not stop at the edge of the shadow: the points at the edges of the gap send wavelets into it too (Huygens).', 'Wellen hören am Rand des Schattens nicht auf: Auch die Punkte am Rand der Öffnung senden Elementarwellen in ihn hinein (Huygens).'),
+    lambda: () => L('Behind the wall the wave is in the same medium, at the same speed and the same frequency: its wavelength stays the same.', 'Hinter der Wand ist die Welle im selben Medium, mit derselben Geschwindigkeit und derselben Frequenz: Ihre Wellenlänge bleibt gleich.'),
+  };
+  const HUYGENS = () => L('Huygens: every point of a wave front is the source of a wavelet; the new front is the envelope of the wavelets.', 'Huygens: Jeder Punkt einer Wellenfront ist Quelle einer Elementarwelle; die neue Front ist die Einhüllende der Elementarwellen.');
+  const gap = {
+    id: 'gap', difficulty: 1, quizChoice: true,
+    title: () => L('Waves at a gap', 'Wellen an einer Öffnung'),
+    make: (r) => { const m = Math.floor(r() * GAP_MEDIA.length); return { m, lam: pick(r, GAP_MEDIA[m].lam), a: pick(r, GAPS), order: shuffle(r, GAP_KEYS.slice()) }; },
+    solve: (p) => ({ ans: p.a <= 1 ? 'arcs' : 'beam' }),
+    traps: [],
+    fields: (p, v) => {
+      const why = (k) => (k === 'shadow' ? WHY_GAP.ray() : k === 'short' ? WHY_GAP.lambda() : v.ans === 'arcs' ? WHY_GAP.narrow() : WHY_GAP.wide());
+      const flag = (k) => ({ shadow: 'ray', short: 'lambda' })[k] || 'size';
+      const opts = p.order.map((k) => [k, Fg().waves({ small: true, a: p.a, behind: k === 'short' ? v.ans : k, short: k === 'short' }), k === v.ans ? '' : why(k), k === v.ans ? null : flag(k)]);
+      return [choice('ans', L('The waves behind the wall:', 'Die Wellen hinter der Wand:'), opts, { pics: true, ask: L('Which picture shows the waves behind the wall?', 'Welches Bild zeigt die Wellen hinter der Wand?') })];
+    },
+    text: (p) => {
+      const g = GAP_MEDIA[p.m], lam = p.lam * IW.UNITS[g.u][0];
+      return L(`${g.en} with a wavelength of ${q(lam, g.u)} meet a wall with a gap ${q(p.a * lam, g.u)} wide. Which picture shows the waves behind the wall (seen from above)?`,
+        `${g.de} mit einer Wellenlänge von ${q(lam, g.u)} treffen auf eine Wand mit einer Öffnung von ${q(p.a * lam, g.u)} Breite. Welches Bild zeigt die Wellen hinter der Wand (von oben gesehen)?`);
+    },
+    hints: () => [HUYGENS(), L('Compare the width of the gap with the wavelength: about one wavelength or less, or many wavelengths?', 'Vergleiche die Breite der Öffnung mit der Wellenlänge: etwa eine Wellenlänge oder weniger, oder viele Wellenlängen?'),
+      L('Does the wavelength change behind the wall? The medium is the same.', 'Ändert sich die Wellenlänge hinter der Wand? Das Medium ist dasselbe.')],
+    steps: (p, v) => [
+      step(L('Gap and wavelength', 'Öffnung und Wellenlänge'), p$(L(`The gap is ${p.a === 0.5 ? 'half a wavelength' : p.a === 1 ? 'one wavelength' : `${p.a} wavelengths`} wide: $a/\\lambda = ${p.a}$.`, `Die Öffnung ist ${p.a === 0.5 ? 'eine halbe Wellenlänge' : p.a === 1 ? 'eine Wellenlänge' : `${p.a} Wellenlängen`} breit: $a/\\lambda = ${p.a}$.`)), ['wavelets']),
+      step(L('The wavelets', 'Die Elementarwellen'), p$(`${HUYGENS()} ${v.ans === 'arcs'
+        ? L('In a gap this narrow, the few wavelets act like one point source: <span class="result">circular waves</span> spread into the whole space behind the wall, also into the shadow.', 'In einer so schmalen Öffnung wirken die wenigen Elementarwellen wie eine einzige punktförmige Quelle: <span class="result">Kreiswellen</span> breiten sich im ganzen Raum hinter der Wand aus, auch im Schatten.')
+        : L('In a gap this wide, the wavelets of its many points add up to a <span class="result">straight front</span>; only at its ends does the wave bend a little into the shadow. The narrower the gap compared with λ, the more the wave spreads.', 'In einer so breiten Öffnung setzen sich die Elementarwellen ihrer vielen Punkte zu einer <span class="result">geraden Front</span> zusammen; nur an ihren Enden biegt die Welle etwas in den Schatten. Je schmaler die Öffnung im Vergleich zu λ, desto stärker breitet sich die Welle aus.')}`) +
+        p$(L('The wavelength stays the same: same medium, same speed, same frequency.', 'Die Wellenlänge bleibt gleich: dasselbe Medium, dieselbe Geschwindigkeit, dieselbe Frequenz.')), ['wavelets', 'behind']),
+    ],
+    figure: (p, v, view) => Fg().waves({ a: p.a, dims: true, behind: view.task || !view.show.has('behind') ? null : v.ans, wavelets: !view.task && view.show.has('wavelets') }),
+  };
+
+  // ================================================================ 2 path difference
+  // bright (loud) where Δs = m·λ, dark (quiet) where Δs = (m + ½)·λ; the choices in the order of Δs
+  const MS = [0.5, 1, 1.5, 2, 2.5, 3, 3.5];
+  const WHY_HALF = () => L('Bright where the path difference is a whole number of wavelengths (crest meets crest), dark where it is an odd number of half wavelengths (crest meets trough).', 'Hell, wo der Gangunterschied eine ganze Zahl von Wellenlängen ist (Berg trifft Berg), dunkel, wo er eine ungerade Zahl halber Wellenlängen ist (Berg trifft Tal).');
+  const WHY_ORDER = () => L('The order is the path difference counted in wavelengths: $\\Delta s = k\\cdot\\lambda$ for the maximum of order $k$, $\\Delta s = (k + \\tfrac12)\\cdot\\lambda$ for the minimum after it.', 'Die Ordnung ist der Gangunterschied in Wellenlängen gezählt: $\\Delta s = k\\cdot\\lambda$ für das Maximum der Ordnung $k$, $\\Delta s = (k + \\tfrac12)\\cdot\\lambda$ für das Minimum danach.');
+  function fringeName(m, sound) {
+    const k = Math.floor(m);
+    if (m === k) return sound ? L(`loud: maximum of order ${k}`, `laut: Maximum ${k}. Ordnung`) : L(`bright: maximum of order ${k}`, `hell: Maximum ${k}. Ordnung`);
+    return `${sound ? L('quiet', 'leise') : L('dark', 'dunkel')}: ${L(`minimum between the orders ${k} and ${k + 1}`, `Minimum zwischen der ${k}. und ${k + 1}. Ordnung`)}`;
+  }
+  const path = {
+    id: 'path', difficulty: 1, quizChoice: true,
+    title: () => L('Bright or dark?', 'Hell oder dunkel?'),
+    make: (r) => {
+      const sound = r() < 0.5, m = pick(r, MS.slice(0, 6));
+      return sound ? { sound, m, lam: pick(r, [0.2, 0.4, 0.5, 0.8]), r1: pick(r, [2, 3, 4, 5]), off: Math.floor(r() * 4) }
+        : { sound, m, lam: nm(pick(r, [400, 500, 600, 700])), off: Math.floor(r() * 4) };
+    },
+    solve: (p) => ({ ds: p.m * p.lam, ans: String(p.m) }),
+    traps: [],
+    fields: (p, v) => {
+      const i = MS.indexOf(p.m), lo = Math.max(0, Math.min(MS.length - 4, i - p.off));
+      const opts = MS.slice(lo, lo + 4).map((m) => [String(m), fringeName(m, p.sound), m === p.m ? '' : (m % 1 === 0) !== (p.m % 1 === 0) ? WHY_HALF() : WHY_ORDER(), m === p.m ? null : (m % 1 === 0) !== (p.m % 1 === 0) ? 'half' : 'order']);
+      const f = [choice('ans', L('At P:', 'Bei P:'), opts, { stack: true, ask: p.sound ? L('What does the microphone at P pick up?', 'Was nimmt das Mikrofon bei P auf?') : L('What is there at P on the screen?', 'Was ist bei P auf dem Schirm?') })];
+      return p.sound ? [num$('ds', '\\Delta s', 'cm', L('path difference', 'Gangunterschied')), ...f] : f;
+    },
+    text: (p) => (p.sound
+      ? L(`Two loudspeakers S₁ and S₂, driven by the same generator, send out sound in step, with a wavelength of ${q(p.lam, 'cm')}. A microphone at P is ${q(p.r1, 'm')} from S₁ and ${q(p.r1 + p.m * p.lam, 'm')} from S₂. What is the path difference, and is the sound at P loud or quiet?`,
+        `Zwei Lautsprecher S₁ und S₂ am selben Generator senden im Gleichtakt Schall mit einer Wellenlänge von ${q(p.lam, 'cm')} aus. Ein Mikrofon bei P ist ${q(p.r1, 'm')} von S₁ und ${q(p.r1 + p.m * p.lam, 'm')} von S₂ entfernt. Wie gross ist der Gangunterschied, und ist der Schall bei P laut oder leise?`)
+      : L(`Light with a wavelength of ${q(p.lam, 'nm')} falls on a double slit. At a point P on the screen, the light from one slit has travelled ${q(p.m * p.lam, p.m * p.lam >= 1e-6 ? 'μm' : 'nm')} further than the light from the other. Is P bright or dark, and which fringe is it?`,
+        `Licht mit einer Wellenlänge von ${q(p.lam, 'nm')} fällt auf einen Doppelspalt. Zu einem Punkt P auf dem Schirm hat das Licht des einen Spalts einen um ${q(p.m * p.lam, p.m * p.lam >= 1e-6 ? 'μm' : 'nm')} längeren Weg als das des anderen. Ist P hell oder dunkel, und welcher Streifen ist es?`)),
+    hints: () => [L('The path difference is the difference of the two distances: $\\Delta s = r_2 - r_1$.', 'Der Gangunterschied ist die Differenz der beiden Wege: $\\Delta s = r_2 - r_1$.'), L('Count it in wavelengths: $\\Delta s/\\lambda$.', 'Zähle ihn in Wellenlängen: $\\Delta s/\\lambda$.'), WHY_HALF()],
+    steps: (p, v) => {
+      const u = p.sound ? 'cm' : 'nm', k = Math.floor(p.m), whole = p.m === k;
+      return [
+        step(L('The path difference', 'Der Gangunterschied'), (p.sound ? `$$\\Delta s = r_2 - r_1 = ${tq(p.r1 + p.m * p.lam, 'm')} - ${tq(p.r1, 'm')} = ${res(tq(v.ds, 'cm'))}$$` : p$(L(`$\\Delta s = ${tq(v.ds, 'nm')}$.`, `$\\Delta s = ${tq(v.ds, 'nm')}$.`))) +
+          p$(L('In wavelengths:', 'In Wellenlängen:')) + `$$\\frac{\\Delta s}{\\lambda} = \\frac{${tq(v.ds, u)}}{${tq(p.lam, u)}} = ${p.m}$$`, ['ds']),
+        step(whole ? L('A whole number of wavelengths', 'Eine ganze Zahl von Wellenlängen') : L('An odd number of half wavelengths', 'Eine ungerade Zahl halber Wellenlängen'), p$(whole
+          ? L(`The wave from S₂ arrives exactly ${k === 1 ? 'one wavelength' : `${k} wavelengths`} later: crest meets crest, constructive interference. P is the <span class="result">maximum of order ${k}</span>.`, `Die Welle von S₂ kommt genau ${k === 1 ? 'eine Wellenlänge' : `${k} Wellenlängen`} später an: Berg trifft Berg, konstruktive Interferenz. P ist das <span class="result">Maximum ${k}. Ordnung</span>.`)
+          : L(`The wave from S₂ arrives ${p.m} wavelengths later: crest meets trough, destructive interference. P is ${p.sound ? 'quiet' : 'dark'}: the <span class="result">minimum between the orders ${k} and ${k + 1}</span>.`, `Die Welle von S₂ kommt ${p.m} Wellenlängen später an: Berg trifft Tal, destruktive Interferenz. P ist ${p.sound ? 'leise' : 'dunkel'}: das <span class="result">Minimum zwischen der ${k}. und ${k + 1}. Ordnung</span>.`)), ['ds']),
+      ];
+    },
+    figure: (p, v, view) => Fg().sources({ kind: p.sound ? 'speaker' : 'slit', r1: p.sound ? q(p.r1, 'm') : '', r2: p.sound ? q(p.r1 + p.m * p.lam, 'm') : '', ds: !view.task && view.show.has('ds') }),
+  };
+
+  // ================================================================ 3 the double slit
+  // y_k = k·λ·L/d for small angles; λ, d and L chosen so that y comes out in whole tenths of a mm
+  const DS_LAM = [400, 450, 500, 600, 700].map(nm), DS_D = [0.1, 0.2, 0.25, 0.3, 0.4, 0.5].map(mm), DS_L = [1, 1.5, 2, 2.5, 3];
+  const dsMake = (r) => {
+    const p = { lam: pick(r, DS_LAM), d: pick(r, DS_D), L: pick(r, DS_L), k: pick(r, [1, 2, 3]) }, y1 = (p.lam * p.L) / p.d;
+    return tidy(y1, 'mm') && y1 >= 1e-3 && p.k * y1 <= 30e-3 ? p : null;
+  };
+  const SMALL = () => L('For small angles, $\\sin\\alpha \\approx \\tan\\alpha = y/L$: the bright fringe of order $k$ lies at $y_k = k\\cdot\\dfrac{\\lambda L}{d}$, and neighbouring fringes are $\\Delta y = \\dfrac{\\lambda L}{d}$ apart.', 'Für kleine Winkel ist $\\sin\\alpha \\approx \\tan\\alpha = y/L$: Der helle Streifen der Ordnung $k$ liegt bei $y_k = k\\cdot\\dfrac{\\lambda L}{d}$, und benachbarte Streifen sind $\\Delta y = \\dfrac{\\lambda L}{d}$ voneinander entfernt.');
+  const DSIN = () => L('Bright where the path difference is a whole number of wavelengths: $\\Delta s = d\\cdot\\sin\\alpha = k\\cdot\\lambda$.', 'Hell, wo der Gangunterschied eine ganze Zahl von Wellenlängen ist: $\\Delta s = d\\cdot\\sin\\alpha = k\\cdot\\lambda$.');
+  const WHY_K = () => L('That is the first bright fringe; the one of order $k$ is $k$ times as far from the centre: $y_k = k\\cdot\\lambda L/d$.', 'Das ist der erste helle Streifen; der der Ordnung $k$ ist $k$-mal so weit von der Mitte entfernt: $y_k = k\\cdot\\lambda L/d$.');
+  const WHY_YHALF = () => L('That is a dark fringe: $\\Delta s = (k - \\tfrac12)\\cdot\\lambda$. Bright needs a whole number of wavelengths.', 'Das ist ein dunkler Streifen: $\\Delta s = (k - \\tfrac12)\\cdot\\lambda$. Hell braucht eine ganze Zahl von Wellenlängen.');
+  // the pattern of a double slit (narrow slits) with the bright fringe of order k marked
+  const dsPattern = (lam, L0, d, k, n = 2) => { const y1 = (lam * L0) / d; return Fg().pattern([{ lam, L: L0, d, N: n, b: 0 }], { Y: (Math.max(k, 2) + 1.4) * y1, ticks: Array.from({ length: Math.max(k, 2) + 1 }, (_, j) => j + 1).flatMap((j) => [[j * y1, j === k ? `${it$('y')}${sub$(k)}` : ''], [-j * y1, '']]) }); };
+  const it$ = (s) => `<tspan font-style="italic">${s}</tspan>`, sub$ = (s) => `<tspan font-size="72%" dy="4">${s}</tspan><tspan dy="-4">​</tspan>`;
+  const dsPos = {
+    id: 'ds-pos', difficulty: 2,
+    title: () => L('Where are the bright fringes?', 'Wo sind die hellen Streifen?'),
+    make: dsMake,
+    solve: (p, o = {}) => ({ y: ((o.half ? p.k - 0.5 : o.k ? 1 : p.k) * p.lam * p.L) / p.d }),
+    traps: ['half', 'k'],
+    why: { half: WHY_YHALF, k: WHY_K },
+    fields: (p) => [num$('y', 'y_{' + p.k + '}', 'mm', p.k === 1 ? L('distance of the first bright fringe beside the centre', 'Abstand des ersten hellen Streifens neben der Mitte') : L(`distance of the ${ord(p.k)} order bright fringe from the centre`, `Abstand des hellen Streifens ${ord(p.k)} Ordnung von der Mitte`))],
+    text: (p) => L(`Laser light with a wavelength of ${q(p.lam, 'nm')} falls on a double slit with a slit spacing of ${q(p.d, 'mm')}. The screen is ${q(p.L, 'm')} away. How far from the central bright fringe is the bright fringe of order ${p.k}?`,
+      `Laserlicht mit einer Wellenlänge von ${q(p.lam, 'nm')} fällt auf einen Doppelspalt mit einem Spaltabstand von ${q(p.d, 'mm')}. Der Schirm ist ${q(p.L, 'm')} entfernt. Wie weit vom hellen Streifen in der Mitte ist der helle Streifen der Ordnung ${p.k} entfernt?`),
+    hints: () => [DSIN(), L('The angles are small: $\\sin\\alpha \\approx \\tan\\alpha = y/L$.', 'Die Winkel sind klein: $\\sin\\alpha \\approx \\tan\\alpha = y/L$.'), L('In metres: 1 nm = 10⁻⁹ m, 1 mm = 10⁻³ m. Divide first: λ/d is a small pure number.', 'In Metern: 1 nm = 10⁻⁹ m, 1 mm = 10⁻³ m. Teile zuerst: λ/d ist eine kleine reine Zahl.')],
+    steps: (p, v) => [
+      step(L('The path difference', 'Der Gangunterschied'), p$(L('From two slits at the distance $d$, the rays to a far point are almost parallel; the one from the lower slit is longer by $\\Delta s = d\\cdot\\sin\\alpha$.', 'Von zwei Spalten im Abstand $d$ sind die Strahlen zu einem fernen Punkt fast parallel; der vom unteren Spalt ist um $\\Delta s = d\\cdot\\sin\\alpha$ länger.')) + p$(DSIN()), ['zoom']),
+      step(L('Small angles', 'Kleine Winkel'), p$(SMALL()), ['geo']),
+      step(L('The numbers', 'Die Zahlen'), `$$y_{${p.k}} = \\frac{${p.k}\\cdot\\lambda\\cdot L}{d} = \\frac{${p.k}\\cdot ${tq(p.lam, 'm')}\\cdot ${tq(p.L, 'm')}}{${tq(p.d, 'm')}} = ${res(tq(v.y, 'mm'))}$$` +
+        p$(L(`Check: $\\lambda/d = ${tnum(p.lam / p.d)}$, a small angle indeed.`, `Kontrolle: $\\lambda/d = ${tnum(p.lam / p.d)}$, tatsächlich ein kleiner Winkel.`)), ['pat']),
+    ],
+    // the task: the set-up; the steps: the path difference close up, the set-up, the pattern
+    figure: (p, v, view) => {
+      if (view.task || (view.show.has('geo') && !view.show.has('pat'))) return Fg().geometry();
+      return view.show.has('zoom') && !view.show.has('pat') ? Fg().pathDiff() : dsPattern(p.lam, p.L, p.d, p.k);
+    },
+  };
+
+  // the wavelength from the fringes (as with a HeNe laser in the notes)
+  const dsLam = {
+    id: 'ds-lam', difficulty: 3,
+    title: () => L('Measuring a wavelength', 'Eine Wellenlänge messen'),
+    make: (r) => { const p = dsMake(r); if (!p || p.k === 3) return null; p.both = r() < 0.5; return p; },
+    solve: (p, o = {}) => { const D = ((p.both ? 2 : 1) * p.k * p.lam * p.L) / p.d, y = o.both ? D : p.both ? D / 2 : D; return { D, lam: (y * p.d) / (o.k ? 1 : p.k) / p.L }; },
+    traps: ['both', 'k'],
+    why: { both: () => L('Those are the fringes on both sides: the distance from the centre to one of them is half of it.', 'Das sind die Streifen auf beiden Seiten: Der Abstand von der Mitte zu einem von ihnen ist die Hälfte davon.'), k: () => L('The fringe of order $k$ lies at $y_k = k\\cdot\\lambda L/d$: divide by $k$ too.', 'Der Streifen der Ordnung $k$ liegt bei $y_k = k\\cdot\\lambda L/d$: Teile auch durch $k$.') },
+    fields: () => [num$('lam', '\\lambda', 'nm', L('wavelength', 'Wellenlänge'))],
+    text: (p) => {
+      const D = ((p.both ? 2 : 1) * p.k * p.lam * p.L) / p.d;
+      return p.both ? L(`Laser light falls on a double slit with a slit spacing of ${q(p.d, 'mm')}. On a screen ${q(p.L, 'm')} away, the two bright fringes of order ${p.k} on either side of the centre are ${q(D, 'mm')} apart. What is the wavelength?`, `Laserlicht fällt auf einen Doppelspalt mit einem Spaltabstand von ${q(p.d, 'mm')}. Auf einem Schirm in ${q(p.L, 'm')} Entfernung sind die beiden hellen Streifen der Ordnung ${p.k} links und rechts der Mitte ${q(D, 'mm')} voneinander entfernt. Wie gross ist die Wellenlänge?`)
+        : L(`Laser light falls on a double slit with a slit spacing of ${q(p.d, 'mm')}. On a screen ${q(p.L, 'm')} away, the bright fringe of order ${p.k} is ${q(D, 'mm')} from the central one. What is the wavelength?`, `Laserlicht fällt auf einen Doppelspalt mit einem Spaltabstand von ${q(p.d, 'mm')}. Auf einem Schirm in ${q(p.L, 'm')} Entfernung ist der helle Streifen der Ordnung ${p.k} vom mittleren ${q(D, 'mm')} entfernt. Wie gross ist die Wellenlänge?`);
+    },
+    hints: (p) => [SMALL(), p.both ? L('The distance given is from one side to the other: from the centre it is half as far.', 'Der gegebene Abstand reicht von einer Seite zur anderen: Von der Mitte aus ist es halb so weit.') : L('Solve $y_k = k\\cdot\\lambda L/d$ for $\\lambda$.', 'Löse $y_k = k\\cdot\\lambda L/d$ nach $\\lambda$ auf.'), L('$\\lambda = \\dfrac{y_k\\cdot d}{k\\cdot L}$.', '$\\lambda = \\dfrac{y_k\\cdot d}{k\\cdot L}$.')],
+    steps: (p, v) => {
+      const y = p.both ? v.D / 2 : v.D;
+      return [
+        step(L('From the centre', 'Von der Mitte aus'), p$(p.both ? L(`The fringe of order ${p.k} is half of that from the centre: $y_{${p.k}} = ${tq(y, 'mm')}$.`, `Der Streifen der Ordnung ${p.k} ist halb so weit von der Mitte entfernt: $y_{${p.k}} = ${tq(y, 'mm')}$.`) : L(`$y_{${p.k}} = ${tq(y, 'mm')}$ from the centre.`, `$y_{${p.k}} = ${tq(y, 'mm')}$ von der Mitte aus.`)) + p$(SMALL()), ['pat']),
+        step(L('The wavelength', 'Die Wellenlänge'), `$$\\lambda = \\frac{y_{${p.k}}\\cdot d}{${p.k}\\cdot L} = \\frac{${tq(y, 'm')}\\cdot ${tq(p.d, 'm')}}{${p.k}\\cdot ${tq(p.L, 'm')}} = ${res(tq(v.lam, 'nm'))}$$`, ['pat']),
+      ];
+    },
+    figure: (p, v, view) => (view.task ? Fg().geometry() : dsPattern(p.lam, p.L, p.d, p.k)),
+  };
+
+  // ================================================================ 4 the grating
+  // n lines per mm: d = 1/n; the same positions as a double slit with that spacing, much sharper
+  const GRATING = () => L('A grating has its maxima where a double slit with the same spacing $d$ has them: $d\\cdot\\sin\\alpha = k\\cdot\\lambda$. With many slits they are much sharper and brighter.', 'Ein Gitter hat seine Maxima dort, wo ein Doppelspalt mit demselben Abstand $d$ sie hat: $d\\cdot\\sin\\alpha = k\\cdot\\lambda$. Mit vielen Spalten sind sie viel schärfer und heller.');
+  const grating = {
+    id: 'grating', difficulty: 2,
+    title: () => L('A grating', 'Ein Gitter'),
+    make: (r) => {
+      const p = { n: pick(r, [50, 100, 200]), lam: pick(r, DS_LAM), L: pick(r, [0.5, 1, 1.5, 2]), k: pick(r, [1, 2]) }, d = 1e-3 / p.n;
+      return (p.k * p.lam) / d <= 0.1 && tidy((p.k * p.lam * p.L) / d, 'cm') ? p : null;
+    },
+    solve: (p, o = {}) => { const d = 1e-3 / p.n; return { d, y: ((o.half ? p.k - 0.5 : o.k ? 1 : p.k) * p.lam * p.L) / d }; },
+    traps: ['half', 'k'],
+    why: { half: WHY_YHALF, k: WHY_K },
+    fields: (p) => [num$('d', 'd', 'μm', L('slit spacing', 'Spaltabstand')), num$('y', `y_{${p.k}}`, 'cm', L(`distance of the maximum of order ${p.k} from the centre`, `Abstand des Maximums ${p.k}. Ordnung von der Mitte`))],
+    text: (p) => L(`A grating with ${p.n} lines per millimetre is lit by laser light with a wavelength of ${q(p.lam, 'nm')}. The screen is ${q(p.L, 'm')} away. What is the slit spacing, and how far from the central maximum is the maximum of order ${p.k}?`,
+      `Ein Gitter mit ${p.n} Linien pro Millimeter wird mit Laserlicht der Wellenlänge ${q(p.lam, 'nm')} beleuchtet. Der Schirm ist ${q(p.L, 'm')} entfernt. Wie gross ist der Spaltabstand, und wie weit vom mittleren Maximum ist das Maximum der Ordnung ${p.k} entfernt?`),
+    hints: () => [L('$n$ lines per millimetre: the slits are $d = 1/n$ apart, e.g. 100 lines per mm, $d = 0.01$ mm = 10 μm.', '$n$ Linien pro Millimeter: Die Spalte sind $d = 1/n$ voneinander entfernt, z. B. 100 Linien pro mm, $d = 0.01$ mm = 10 μm.'), GRATING(), L('Here the angle is small: $y_k = k\\cdot\\lambda L/d$.', 'Hier ist der Winkel klein: $y_k = k\\cdot\\lambda L/d$.')],
+    steps: (p, v) => [
+      step(L('The slit spacing', 'Der Spaltabstand'), `$$d = \\frac{1}{n} = \\frac{1\\,\\mathrm{mm}}{${p.n}} = ${res(tq(v.d, 'μm'))}$$`),
+      step(L('The maximum', 'Das Maximum'), p$(GRATING()) + p$(L(`Here $k\\lambda/d = ${tnum((p.k * p.lam) / v.d)}$: a small angle, so $\\sin\\alpha \\approx y/L$:`, `Hier ist $k\\lambda/d = ${tnum((p.k * p.lam) / v.d)}$: ein kleiner Winkel, also $\\sin\\alpha \\approx y/L$:`)) +
+        `$$y_{${p.k}} = \\frac{${p.k}\\cdot\\lambda\\cdot L}{d} = \\frac{${p.k}\\cdot ${tq(p.lam, 'm')}\\cdot ${tq(p.L, 'm')}}{${tq(v.d, 'm')}} = ${res(tq(v.y, 'cm'))}$$`, ['pat']),
+    ],
+    figure: (p, v, view) => (view.task ? '' : dsPattern(p.lam, p.L, v.d, p.k, 8)),
+  };
+
+  // sin α = k·λ/d = k·n·λ ≤ 1: the highest order
+  const gratingMax = {
+    id: 'grating-max', difficulty: 3, quizChoice: true,
+    title: () => L('How many orders?', 'Wie viele Ordnungen?'),
+    make: (r) => {
+      const p = { n: pick(r, [200, 250, 300, 400, 500, 600, 800]), lam: pick(r, DS_LAM), off: Math.floor(r() * 3) }, s = sig(p.n * 1e3 * p.lam, 6), x = 1 / s;
+      return Math.abs(s * 100 - Math.round(s * 100)) < 1e-9 && x > 1.2 && x < 7 && x - Math.floor(x) > 0.05 ? p : null;
+    },
+    solve: (p) => { const s = sig(p.n * 1e3 * p.lam, 6); return { d: 1e-3 / p.n, s, kmax: String(Math.floor(1 / s)) }; },
+    traps: [],
+    fields: (p, v) => {
+      const k = Number(v.kmax), lo = Math.max(1, k - p.off), ks = [lo, lo + 1, lo + 2, lo + 3];
+      const why = (j) => (j > k ? L(`For order ${j}, $\\sin\\alpha = ${j}\\cdot ${tnum(v.s)} = ${tnum(sig(j * v.s))}$, more than 1: no angle has that sine; that order does not exist.`, `Für die Ordnung ${j} wäre $\\sin\\alpha = ${j}\\cdot ${tnum(v.s)} = ${tnum(sig(j * v.s))}$, mehr als 1: Kein Winkel hat diesen Sinus; diese Ordnung gibt es nicht.`)
+        : L(`Order ${j + 1} still has $\\sin\\alpha = ${tnum(sig((j + 1) * v.s))}$, less than 1: it is seen too.`, `Auch die Ordnung ${j + 1} hat noch $\\sin\\alpha = ${tnum(sig((j + 1) * v.s))}$, weniger als 1: Sie ist auch zu sehen.`));
+      return [num$('s', '\\sin\\alpha_1', '', L('first order:', '1. Ordnung:')),
+        choice('kmax', L('Highest order:', 'Höchste Ordnung:'), ks.map((j) => [String(j), String(j), j === k ? '' : why(j), j === k ? null : j > k ? 'round' : null]), { ask: L('What is the highest order that can be seen?', 'Was ist die höchste Ordnung, die man sieht?') })];
+    },
+    text: (p) => L(`Light with a wavelength of ${q(p.lam, 'nm')} falls perpendicularly on a grating with ${p.n} lines per millimetre. What is $\\sin\\alpha$ for the maximum of the first order, and what is the highest order that can be seen?`,
+      `Licht mit einer Wellenlänge von ${q(p.lam, 'nm')} fällt senkrecht auf ein Gitter mit ${p.n} Linien pro Millimeter. Wie gross ist $\\sin\\alpha$ für das Maximum erster Ordnung, und was ist die höchste Ordnung, die man sieht?`),
+    hints: () => [L('$d\\cdot\\sin\\alpha = k\\cdot\\lambda$ with $d = 1/n$: so $\\sin\\alpha = k\\cdot n\\cdot\\lambda$.', '$d\\cdot\\sin\\alpha = k\\cdot\\lambda$ mit $d = 1/n$: also $\\sin\\alpha = k\\cdot n\\cdot\\lambda$.'), L('In the same units: $n$ per metre and $\\lambda$ in metres (or both in millimetres).', 'In denselben Einheiten: $n$ pro Meter und $\\lambda$ in Metern (oder beides in Millimetern).'), L('A sine is at most 1.', 'Ein Sinus ist höchstens 1.')],
+    steps: (p, v) => [
+      step(L('The first order', 'Die erste Ordnung'), p$(L('$d\\cdot\\sin\\alpha = k\\cdot\\lambda$ with $d = 1/n$:', '$d\\cdot\\sin\\alpha = k\\cdot\\lambda$ mit $d = 1/n$:')) + `$$\\sin\\alpha_1 = \\frac{\\lambda}{d} = n\\cdot\\lambda = ${tnum(p.n * 1e3)}\\,\\mathrm{m^{-1}}\\cdot ${tq(p.lam, 'm')} = ${res(tnum(v.s))}$$`),
+      step(L('The highest order', 'Die höchste Ordnung'), p$(L(`Order $k$ has $\\sin\\alpha_k = k\\cdot ${tnum(v.s)}$, and a sine cannot be more than 1: $k \\le 1/${tnum(v.s)} = ${tnum(sig(1 / v.s, 3))}$. The highest order is <span class="result">${v.kmax}</span>${Number(v.kmax) > 1 ? `: on each side ${v.kmax} maxima, ${2 * v.kmax + 1} with the central one` : ''}.`, `Die Ordnung $k$ hat $\\sin\\alpha_k = k\\cdot ${tnum(v.s)}$, und ein Sinus kann nicht grösser als 1 sein: $k \\le 1/${tnum(v.s)} = ${tnum(sig(1 / v.s, 3))}$. Die höchste Ordnung ist <span class="result">${v.kmax}</span>${Number(v.kmax) > 1 ? `: auf jeder Seite ${v.kmax} Maxima, ${2 * v.kmax + 1} mit dem mittleren` : ''}.`)) +
+        p$(L('The angles are large here: $\\sin\\alpha \\approx y/L$ no longer holds.', 'Die Winkel sind hier gross: $\\sin\\alpha \\approx y/L$ gilt nicht mehr.'))),
+    ],
+    figure: () => '',
+  };
+
+  // ================================================================ 5 how the pattern changes
+  // A setup: the quantity asked (sym, its formula), the quantities that may change with the power
+  // they enter it (0: not at all), and the base values of the figure.
+  const FACT = {
+    9: ['becomes nine times as large', 'wird neunmal so gross'], 4: ['becomes four times as large', 'wird viermal so gross'], 3: ['triples', 'verdreifacht sich'], 2: ['doubles', 'verdoppelt sich'], 1: ['stays the same', 'bleibt gleich'],
+    '1/2': ['halves', 'halbiert sich'], '1/3': ['falls to a third', 'sinkt auf einen Drittel'], '1/4': ['falls to a quarter', 'sinkt auf einen Viertel'], '1/9': ['falls to a ninth', 'sinkt auf einen Neuntel'],
+  };
+  // the dative of a German noun phrase (der Abstand → dem Abstand, die Breite → der Breite)
+  const dat = (s) => s.replace(/^der kleinste /, 'dem kleinsten ').replace(/^der /, 'dem ').replace(/^die /, 'der ');
+  const fkey = (r) => (r >= 1 ? String(Math.round(r)) : `1/${Math.round(1 / r)}`);
+  const fact = (r) => L(...FACT[fkey(r)]);
+  const VERB = { 2: ['doubled', 'verdoppelt'], 3: ['tripled', 'verdreifacht'], '1/2': ['halved', 'halbiert'], '1/3': ['reduced to a third', 'auf einen Drittel verkleinert'] };
+  const VARS = {
+    lam: () => L('the wavelength $\\lambda$', 'die Wellenlänge $\\lambda$'), L: () => L('the distance $L$ to the screen', 'der Abstand $L$ zum Schirm'),
+    d: () => L('the slit spacing $d$', 'der Spaltabstand $d$'), b: () => L('the width $b$ of the slits', 'die Breite $b$ der Spalte'), b1: () => L('the width $b$ of the slit', 'die Breite $b$ des Spalts'),
+    n: () => L('the number $n$ of lines per millimetre', 'die Anzahl $n$ Linien pro Millimeter'), N: () => L('the number $N$ of lit slits (by widening the beam)', 'die Anzahl $N$ beleuchteter Spalte (durch Aufweiten des Strahls)'),
+    D: () => L('the diameter $D$ of its mirror', 'der Durchmesser $D$ seines Spiegels'),
+  };
+  const SETUPS = {
+    ds: { sym: '\\Delta y', tex: '\\Delta y = \\frac{\\lambda L}{d}', vars: { lam: 1, L: 1, d: -1, b: 0 }, base: { lam: 600e-9, L: 2, d: 0.25e-3, b: 0.05e-3, N: 2 },
+      what: () => L('the distance $\\Delta y$ between neighbouring bright fringes', 'der Abstand $\\Delta y$ benachbarter heller Streifen'),
+      intro: () => L('Laser light falls on a double slit; on a screen far behind it you see a row of bright fringes.', 'Laserlicht fällt auf einen Doppelspalt; auf einem Schirm weit dahinter siehst du eine Reihe heller Streifen.') },
+    ss: { sym: 'w', tex: 'w = \\frac{2\\lambda L}{b}', vars: { lam: 1, L: 1, b1: -1 }, base: { lam: 600e-9, L: 2, b: 0.1e-3, N: 1 },
+      what: () => L('the width $w$ of the central bright fringe', 'die Breite $w$ des mittleren hellen Streifens'),
+      intro: () => L('Laser light falls on a single slit; on a screen far behind it you see a wide central bright fringe with weaker ones beside it.', 'Laserlicht fällt auf einen Einzelspalt; auf einem Schirm weit dahinter siehst du einen breiten hellen Streifen in der Mitte, daneben schwächere.') },
+    gr: { sym: 'y_1', tex: 'y_1 = \\frac{\\lambda L}{d} = \\lambda L n', vars: { lam: 1, L: 1, n: 1, N: 0 }, base: { lam: 500e-9, L: 1, d: 10e-6, b: 0, N: 6 },
+      what: () => L('the distance $y_1$ of the first-order maxima from the centre', 'der Abstand $y_1$ der Maxima erster Ordnung von der Mitte'),
+      intro: () => L('Laser light falls on a grating; on a screen far behind it you see sharp bright spots.', 'Laserlicht fällt auf ein Gitter; auf einem Schirm weit dahinter siehst du scharfe helle Punkte.') },
+    res: { sym: '\\theta_{\\min}', tex: '\\theta_{\\min} = 1.22\\,\\frac{\\lambda}{D}', vars: { lam: 1, D: -1 },
+      what: () => L('the smallest angle $\\theta_{\\min}$ between two stars that it can still resolve', 'der kleinste Winkel $\\theta_{\\min}$ zwischen zwei Sternen, die es noch trennen kann'),
+      intro: () => L('A telescope looks at pairs of stars close together in the sky.', 'Ein Teleskop beobachtet Paare von Sternen, die am Himmel nahe beieinander stehen.') },
+  };
+  // what one sees, after the change
+  function seen(s, v, r) {
+    if (s === 'res') return r < 1 ? L('The telescope now resolves finer detail: stars closer together.', 'Das Teleskop trennt jetzt feinere Einzelheiten: näher beieinander stehende Sterne.') : L('The telescope now resolves less: the images of the stars are more blurred.', 'Das Teleskop trennt jetzt weniger: Die Bilder der Sterne sind stärker verwaschen.');
+    if (v === 'b') return L('The fringes stay where they are; what changes is the envelope, the pattern of each single slit: narrower slits spread the light more, so more fringes are bright, and wider slits fewer.', 'Die Streifen bleiben, wo sie sind; was sich ändert, ist die Einhüllende, das Muster jedes einzelnen Spalts: Schmalere Spalte streuen das Licht stärker, also sind mehr Streifen hell, breitere weniger.');
+    if (v === 'N') return L('The maxima stay where they are; with more slits they become sharper and brighter, with fewer broader.', 'Die Maxima bleiben, wo sie sind; mit mehr Spalten werden sie schärfer und heller, mit weniger breiter.');
+    return r > 1 ? L('The whole pattern spreads out.', 'Das ganze Muster wird breiter.') : L('The whole pattern shrinks together.', 'Das ganze Muster zieht sich zusammen.');
+  }
+  // the figure: the pattern before (dashed) and after; for the telescope, two stars before and after
+  function changeFigure(p, after) {
+    const S = SETUPS[p.s];
+    // two stars a little more than θ_min apart: after the change, in units of the new θ_min
+    if (p.s === 'res') return Fg().airy(1.15, { caption: L('before: just resolved', 'vorher: knapp getrennt') }) + (after ? Fg().airy(1.15, { scale: after ** S.vars[p.v], caption: L('after: the same two stars', 'nachher: dieselben zwei Sterne') }) : '');
+    const c0 = { ...S.base }, c1 = { ...S.base }, k = p.k;
+    if (after) {
+      if (p.v === 'lam') c1.lam *= k; if (p.v === 'L') c1.L *= k; if (p.v === 'd') c1.d *= k; if (p.v === 'n') c1.d /= k;
+      if (p.v === 'b' || p.v === 'b1') c1.b *= k; if (p.v === 'N') c1.N = Math.round(c1.N * k);
+    }
+    const reach = (c) => (p.s === 'gr' ? 2.4 * (c.lam * c.L) / c.d : p.s === 'ss' ? 3.3 * (c.lam * c.L) / c.b : 1.15 * (c.lam * c.L) / c.b);
+    const Y = Math.max(reach(c0), after ? reach(c1) : 0);
+    return Fg().pattern(after ? [{ ...c0, cls: 'old' }, c1] : [c0], { Y, label: after ? L('The pattern on the screen before (dashed) and after the change (solid), with the screen after it below', 'Das Muster auf dem Schirm vor (gestrichelt) und nach der Änderung (ausgezogen), darunter der Schirm nachher') : undefined });
+  }
+  function changeOf(id, setups, flags) {
+    return {
+      id, difficulty: 2, quizChoice: true,
+      title: () => (id === 'res-change' ? L('Finer or blurrier?', 'Feiner oder verwaschener?') : L('What changes?', 'Was ändert sich?')),
+      make: (r) => { const s = pick(r, setups), v = pick(r, Object.keys(SETUPS[s].vars)); return { s, v, k: pick(r, [2, 3, 1 / 2, 1 / 3]) }; },
+      solve: (p) => ({ ans: fkey(p.k ** SETUPS[p.s].vars[p.v]) }),
+      traps: [],
+      fields: (p, v) => {
+        const S = SETUPS[p.s], e = S.vars[p.v], r = p.k ** e, vn = VARS[p.v]();
+        const zero = p.v === 'N' ? 'grating' : 'bd';
+        const opts = e ? [[r, ''], [1 / r, flags.inv], [1, flags.same], [r * r, null]] : [[1, ''], [p.k, zero], [1 / p.k, zero], [p.k * p.k, null]];
+        const why = (x, flag) => {
+          if (!e) return p.v === 'b' ? L('The slit width $b$ does not appear in $\\Delta y = \\lambda L/d$: it changes the envelope (how far out the fringes are bright), not their spacing.', 'Die Spaltbreite $b$ kommt in $\\Delta y = \\lambda L/d$ nicht vor: Sie ändert die Einhüllende (wie weit hinaus die Streifen hell sind), nicht ihren Abstand.')
+            : L('The number of slits changes how sharp and bright the maxima are, not where they are: $y_1 = \\lambda L/d$.', 'Die Anzahl Spalte ändert, wie scharf und hell die Maxima sind, nicht wo sie liegen: $y_1 = \\lambda L/d$.');
+          if (flag === flags.same) return L(`$${S.sym}$ depends on ${vn}: $${S.tex}$.`, `$${S.sym}$ hängt von ${dat(vn)} ab: $${S.tex}$.`);
+          if (flag === flags.inv) return e > 0 ? L(`Turned round: ${vn} stands in the numerator of $${S.tex}$, so $${S.sym}$ grows in proportion.`, `Umgekehrt: ${cap(vn)} steht im Zähler von $${S.tex}$, also wächst $${S.sym}$ im selben Verhältnis.`)
+            : L(`Turned round: ${vn} stands in the denominator of $${S.tex}$, so $${S.sym}$ shrinks when it grows.${p.s === 'res' ? ' A larger opening diffracts less.' : ' The narrower or closer the slits, the wider the pattern.'}`, `Umgekehrt: ${cap(vn)} steht im Nenner von $${S.tex}$, also wird $${S.sym}$ kleiner, wenn diese Grösse wächst.${p.s === 'res' ? ' Eine grössere Öffnung beugt weniger.' : ' Je schmaler oder näher die Spalte, desto breiter das Muster.'}`);
+          return L(`${cap(vn)} enters $${S.tex}$ once, not squared.`, `${cap(vn)} kommt in $${S.tex}$ einfach vor, nicht im Quadrat.`);
+        };
+        const list = opts.slice().sort((a, b) => a[0] - b[0]).map(([x, flag]) => [fkey(x), `$${S.sym}$ ${fact(x)}`, flag === '' ? '' : why(x, flag), flag || null]);
+        return [choice('ans', L('Then:', 'Dann:'), list, { stack: true, ask: L(`What happens to ${S.what()}?`, `Was passiert mit ${dat(S.what())}?`) })];
+      },
+      text: (p) => { const S = SETUPS[p.s], vb = VERB[fkey(p.k)]; return `${S.intro()} ${L(`${cap(VARS[p.v]())} is ${vb[0]}; everything else stays the same. What happens to ${S.what()}?`, `${cap(VARS[p.v]())} wird ${vb[1]}; alles andere bleibt gleich. Was passiert mit ${dat(S.what())}?`)}`; },
+      hints: (p) => { const S = SETUPS[p.s]; return [L(`Write down the formula: $${S.tex}$.`, `Schreib die Formel auf: $${S.tex}$.`), L('Is the quantity that changes in the numerator, in the denominator, or not in it at all?', 'Steht die Grösse, die sich ändert, im Zähler, im Nenner oder gar nicht darin?')]; },
+      steps: (p, v) => {
+        const S = SETUPS[p.s], e = S.vars[p.v], vn = VARS[p.v](), r = p.k ** e;
+        return [
+          step(L('The formula', 'Die Formel'), `$$${S.tex}$$` + (p.s === 'res' ? p$(L('The smaller $\\theta_{\\min}$, the finer the detail the telescope resolves.', 'Je kleiner $\\theta_{\\min}$, desto feinere Einzelheiten trennt das Teleskop.')) : '')),
+          step(L('The change', 'Die Änderung'), p$(e ? L(`${cap(vn)} stands in the ${e > 0 ? 'numerator' : 'denominator'}: it is ${VERB[fkey(p.k)][0]}, so $${S.sym}$ <span class="result">${fact(r)}</span>.`, `${cap(vn)} steht im ${e > 0 ? 'Zähler' : 'Nenner'} und wird ${VERB[fkey(p.k)][1]}: $${S.sym}$ <span class="result">${fact(r)}</span>.`)
+            : L(`${cap(vn)} does not appear: $${S.sym}$ <span class="result">${fact(1)}</span>.`, `${cap(vn)} kommt nicht vor: $${S.sym}$ <span class="result">${fact(1)}</span>.`)) + p$(seen(p.s, p.v, r)), ['after']),
+        ];
+      },
+      figure: (p, v, view) => changeFigure(p, !view.task && view.show.has('after') ? p.k : 0),
+    };
+  }
+  const change = changeOf('change', ['ds', 'ds', 'ss', 'gr'], { inv: 'inv', same: 'same' });
+  const resChange = changeOf('res-change', ['res'], { inv: 'rinv', same: 'rsame' });
+
+  // the central fringe of a single slit, w = 2·λ·L/b; or the width of a hair from it (a hair
+  // gives the same pattern as a slit of its width)
+  const single = {
+    id: 'single', difficulty: 3,
+    title: (p) => (p.hair ? L('The width of a hair', 'Die Dicke eines Haars') : L('A single slit', 'Ein Einzelspalt')),
+    make: (r) => {
+      const p = { lam: pick(r, DS_LAM), L: pick(r, DS_L), b: mm(pick(r, [0.05, 0.06, 0.08, 0.1, 0.12, 0.15, 0.2, 0.25])), hair: r() < 0.5 };
+      const w = (2 * p.lam * p.L) / p.b;
+      return tidy(w, 'mm') && w <= 80e-3 && (!p.hair || p.b <= 0.12e-3) ? p : null;
+    },
+    solve: (p, o = {}) => { const w = (2 * p.lam * p.L) / p.b; return p.hair ? { w, b: ((o.whole ? 1 : 2) * p.lam * p.L) / w } : { w: o.whole ? w / 2 : w }; },
+    traps: ['whole'],
+    why: { whole: () => L('The central bright fringe reaches from the first dark fringe on one side to the first on the other: it is twice as wide as the distance $y_1 = \\lambda L/b$ of one of them from the centre.', 'Der mittlere helle Streifen reicht vom ersten dunklen Streifen auf der einen Seite bis zum ersten auf der anderen: Er ist doppelt so breit wie der Abstand $y_1 = \\lambda L/b$ eines von ihnen von der Mitte.') },
+    fields: (p) => (p.hair ? [num$('b', 'b', 'μm', L('thickness of the hair', 'Dicke des Haars'))] : [num$('w', 'w', 'mm', L('width of the central bright fringe', 'Breite des mittleren hellen Streifens'))]),
+    text: (p) => (p.hair
+      ? L(`A hair is held in a laser beam with a wavelength of ${q(p.lam, 'nm')}. It gives the same pattern as a slit of its width. On a screen ${q(p.L, 'm')} away, the central bright fringe is ${q((2 * p.lam * p.L) / p.b, 'mm')} wide (from one dark fringe to the other). How thick is the hair?`,
+        `Ein Haar wird in einen Laserstrahl mit der Wellenlänge ${q(p.lam, 'nm')} gehalten. Es gibt dasselbe Muster wie ein Spalt seiner Breite. Auf einem Schirm in ${q(p.L, 'm')} Entfernung ist der mittlere helle Streifen ${q((2 * p.lam * p.L) / p.b, 'mm')} breit (von einem dunklen Streifen zum andern). Wie dick ist das Haar?`)
+      : L(`Laser light with a wavelength of ${q(p.lam, 'nm')} falls on a single slit ${q(p.b, 'mm')} wide. How wide is the central bright fringe on a screen ${q(p.L, 'm')} away (from one dark fringe to the other)?`,
+        `Laserlicht mit der Wellenlänge ${q(p.lam, 'nm')} fällt auf einen Einzelspalt von ${q(p.b, 'mm')} Breite. Wie breit ist der mittlere helle Streifen auf einem Schirm in ${q(p.L, 'm')} Entfernung (von einem dunklen Streifen zum andern)?`)),
+    hints: () => [L('The first dark fringes of a single slit are where $b\\cdot\\sin\\alpha = \\lambda$: the slit splits into two halves whose wavelets cancel in pairs.', 'Die ersten dunklen Streifen eines Einzelspalts liegen dort, wo $b\\cdot\\sin\\alpha = \\lambda$: Der Spalt zerfällt in zwei Hälften, deren Elementarwellen sich paarweise auslöschen.'), L('Small angles: $y_1 = \\lambda L/b$ on each side, so $w = 2\\lambda L/b$.', 'Kleine Winkel: $y_1 = \\lambda L/b$ auf jeder Seite, also $w = 2\\lambda L/b$.')],
+    steps: (p, v) => [
+      step(L('The first dark fringes', 'Die ersten dunklen Streifen'), p$(L('A single slit is dark where $b\\cdot\\sin\\alpha = \\lambda$: each wavelet from the upper half of the slit meets one from the lower half half a wavelength behind. For small angles they lie at $y_1 = \\lambda L/b$ on both sides, and the central bright fringe is $w = 2\\lambda L/b$ wide.', 'Ein Einzelspalt ist dunkel, wo $b\\cdot\\sin\\alpha = \\lambda$: Jede Elementarwelle aus der oberen Hälfte des Spalts trifft eine aus der unteren, die eine halbe Wellenlänge zurückliegt. Für kleine Winkel liegen sie bei $y_1 = \\lambda L/b$ auf beiden Seiten, und der mittlere helle Streifen ist $w = 2\\lambda L/b$ breit.')), ['pat']),
+      p.hair ? step(L('The thickness', 'Die Dicke'), `$$b = \\frac{2\\lambda L}{w} = \\frac{2\\cdot ${tq(p.lam, 'm')}\\cdot ${tq(p.L, 'm')}}{${tq(v.w, 'm')}} = ${res(tq(p.b, 'μm'))}$$`, ['pat'])
+        : step(L('The width', 'Die Breite'), `$$w = \\frac{2\\lambda L}{b} = \\frac{2\\cdot ${tq(p.lam, 'm')}\\cdot ${tq(p.L, 'm')}}{${tq(p.b, 'm')}} = ${res(tq(v.w, 'mm'))}$$`, ['pat']),
+    ],
+    figure: (p, v, view) => { const y1 = (p.lam * p.L) / p.b; return view.task ? '' : Fg().pattern([{ lam: p.lam, L: p.L, b: p.b, N: 1 }], { Y: 3.4 * y1, dims: [[-y1, y1, it$('w')]], ticks: [[y1, ''], [-y1, '']] }); },
+  };
+
+  // ================================================================ 6 resolving power by ratios
+  // θₘᵢₙ = 1.22·λ/D: from a known instrument to another by the ratios of D and λ
+  const RES = [
+    // the eye and a telescope: the same light, a larger opening
+    { k: 'eye', D1: 5e-3, th1: 130e-6, D2: [5e-2, 0.5, 1.3e-1, 2.6] },
+    // one telescope in two colours
+    { k: 'colour', D: 0.5, l1: 700e-9, th1: 1.7e-6, l2: [350e-9, 1.4e-6, 2.1e-6] },
+    // a radio telescope for the same detail as an optical one
+    { k: 'radio', D1: [0.5, 1, 2], l1: 500e-9, l2: [0.21, 0.06, 0.03] },
+  ];
+  const resScale = {
+    id: 'res-scale', difficulty: 3,
+    title: (p) => (p.k === 'radio' ? L('A radio telescope', 'Ein Radioteleskop') : L('Finer detail', 'Feinere Einzelheiten')),
+    make: (r) => {
+      const c = pick(r, RES);
+      if (c.k === 'eye') return { k: 'eye', D2: pick(r, c.D2) };
+      if (c.k === 'colour') return { k: 'colour', l2: pick(r, c.l2) };
+      return { k: 'radio', D1: pick(r, c.D1), l2: pick(r, c.l2) };
+    },
+    solve: (p, o = {}) => {
+      const inv = (x) => (o.rinv ? 1 / x : x);
+      if (p.k === 'eye') return { th: RES[0].th1 * inv(RES[0].D1 / p.D2) };
+      if (p.k === 'colour') return { th: RES[1].th1 * inv(p.l2 / RES[1].l1) };
+      return { D: p.D1 * inv(p.l2 / RES[2].l1) };
+    },
+    traps: ['rinv'],
+    why: { rinv: () => L('Turned round: $\\theta_{\\min} = 1.22\\,\\lambda/D$ grows with the wavelength and shrinks with the diameter.', 'Umgekehrt: $\\theta_{\\min} = 1.22\\,\\lambda/D$ wächst mit der Wellenlänge und wird mit dem Durchmesser kleiner.') },
+    fields: (p, v) => (p.k === 'radio' ? [num$('D', 'D', v.D >= 1e3 ? 'km' : 'm', L('diameter of the dish', 'Durchmesser der Schüssel'))] : [num$('th', '\\theta_{\\min}', 'μrad', L('smallest angle resolved', 'kleinster getrennter Winkel'))]),
+    text: (p) => {
+      if (p.k === 'eye') return L(`Diffraction at the pupil (diameter ${q(RES[0].D1, 'mm')}) limits the eye to angles of about ${q(RES[0].th1, 'μrad')}. What smallest angle could a telescope with an opening of ${q(p.D2, p.D2 < 1 ? 'cm' : 'm')} resolve in the same light, if only diffraction limited it?`,
+        `Die Beugung an der Pupille (Durchmesser ${q(RES[0].D1, 'mm')}) begrenzt das Auge auf Winkel von etwa ${q(RES[0].th1, 'μrad')}. Welchen kleinsten Winkel könnte ein Teleskop mit einer Öffnung von ${q(p.D2, p.D2 < 1 ? 'cm' : 'm')} im selben Licht trennen, wenn nur die Beugung es begrenzte?`);
+      if (p.k === 'colour') return L(`A telescope with a mirror of ${q(RES[1].D, 'm')} resolves angles down to ${q(RES[1].th1, 'μrad')} in red light of ${q(RES[1].l1, 'nm')}. What is its smallest resolvable angle at a wavelength of ${q(p.l2, p.l2 >= 1e-6 ? 'μm' : 'nm')}${p.l2 < 400e-9 ? ' (ultraviolet)' : ' (infrared)'}?`,
+        `Ein Teleskop mit einem Spiegel von ${q(RES[1].D, 'm')} trennt im roten Licht von ${q(RES[1].l1, 'nm')} Winkel bis hinunter zu ${q(RES[1].th1, 'μrad')}. Wie gross ist sein kleinster trennbarer Winkel bei einer Wellenlänge von ${q(p.l2, p.l2 >= 1e-6 ? 'μm' : 'nm')}${p.l2 < 400e-9 ? ' (Ultraviolett)' : ' (Infrarot)'}?`);
+      return L(`An optical telescope with a mirror of ${q(p.D1, 'm')} observes at ${q(RES[2].l1, 'nm')}. How large would the dish of a radio telescope have to be to resolve the same angles at a wavelength of ${q(p.l2, 'cm')}?`,
+        `Ein optisches Teleskop mit einem Spiegel von ${q(p.D1, 'm')} beobachtet bei ${q(RES[2].l1, 'nm')}. Wie gross müsste die Schüssel eines Radioteleskops sein, um bei einer Wellenlänge von ${q(p.l2, 'cm')} dieselben Winkel zu trennen?`);
+    },
+    hints: (p) => [L('The Rayleigh criterion: $\\theta_{\\min} = 1.22\\,\\lambda/D$.', 'Das Rayleigh-Kriterium: $\\theta_{\\min} = 1.22\\,\\lambda/D$.'), p.k === 'radio' ? L('The same angle needs the same ratio $\\lambda/D$: $D$ must grow as much as $\\lambda$.', 'Derselbe Winkel braucht dasselbe Verhältnis $\\lambda/D$: $D$ muss so stark wachsen wie $\\lambda$.') : L('You need no 1.22: compare by the ratio of the quantity that changes.', 'Die 1.22 brauchst du nicht: Vergleiche über das Verhältnis der Grösse, die sich ändert.')],
+    steps: (p, v) => {
+      if (p.k === 'eye') { const f = p.D2 / RES[0].D1; return [step(L('By the ratio', 'Über das Verhältnis'), p$(L(`The same wavelength, an opening ${tnum(f)} times as large: $\\theta_{\\min} = 1.22\\,\\lambda/D$ is ${tnum(f)} times smaller.`, `Dieselbe Wellenlänge, eine ${tnum(f)}-mal so grosse Öffnung: $\\theta_{\\min} = 1.22\\,\\lambda/D$ ist ${tnum(f)}-mal kleiner.`)) + `$$\\theta_{\\min} = ${tq(RES[0].th1, 'μrad')}\\cdot\\frac{${tq(RES[0].D1, 'm')}}{${tq(p.D2, 'm')}} = ${res(tq(v.th, 'μrad'))}$$`)]; }
+      if (p.k === 'colour') { return [step(L('By the ratio', 'Über das Verhältnis'), p$(L(`The same mirror; $\\theta_{\\min} = 1.22\\,\\lambda/D$ changes in proportion to $\\lambda$: ${p.l2 < RES[1].l1 ? 'shorter waves resolve finer detail' : 'longer waves blur more'}.`, `Derselbe Spiegel; $\\theta_{\\min} = 1.22\\,\\lambda/D$ ändert sich proportional zu $\\lambda$: ${p.l2 < RES[1].l1 ? 'Kürzere Wellen trennen feinere Einzelheiten' : 'längere Wellen verwischen stärker'}.`)) + `$$\\theta_{\\min} = ${tq(RES[1].th1, 'μrad')}\\cdot\\frac{${tq(p.l2, 'nm')}}{${tq(RES[1].l1, 'nm')}} = ${res(tq(v.th, 'μrad'))}$$`)]; }
+      return [step(L('The same ratio λ/D', 'Dasselbe Verhältnis λ/D'), p$(L('The same smallest angle needs the same ratio $\\lambda/D$: the dish must be as many times larger as the wave is longer.', 'Derselbe kleinste Winkel braucht dasselbe Verhältnis $\\lambda/D$: Die Schüssel muss so viel mal grösser sein, wie die Welle länger ist.')) +
+        `$$D = ${tq(p.D1, 'm')}\\cdot\\frac{${tq(p.l2, 'm')}}{${tq(RES[2].l1, 'm')}} = ${res(tq(v.D, v.D >= 1e3 ? 'km' : 'm'))}$$` + p$(L('No single dish is that large; radio astronomers link telescopes far apart instead.', 'Keine einzelne Schüssel ist so gross; Radioastronomen verbinden stattdessen weit voneinander entfernte Teleskope.')))];
+    },
+    figure: () => '',
+  };
+
+  // ================================================================ 7 concepts
+  // [group, question, right, [wrong, why, flag] × 3], each text as [en, de]; the groups: huy (Huygens
+  // and diffraction), ds (double slit and grating), pat (how the pattern changes), res (resolving)
+  const CONCEPTS = [
+    ['huy', ['What does Huygens’ principle say?', 'Was besagt das Prinzip von Huygens?'],
+      ['Every point of a wave front is the source of a wavelet; the front a moment later is the envelope of all the wavelets.', 'Jeder Punkt einer Wellenfront ist Quelle einer Elementarwelle; die Front einen Augenblick später ist die Einhüllende aller Elementarwellen.'],
+      [[['Every point of a wave front sends wavelets, but only straight ahead, so nothing reaches the shadow.', 'Jeder Punkt einer Wellenfront sendet Elementarwellen, aber nur geradeaus, also gelangt nichts in den Schatten.'], ['The wavelets spread in all directions forward: at an edge, they reach into the shadow. That is diffraction.', 'Die Elementarwellen breiten sich nach vorn in alle Richtungen aus: An einer Kante reichen sie in den Schatten. Das ist Beugung.'], 'ray'],
+        [['Only the edges of an obstacle send out wavelets; the rest of the wave travels in straight rays.', 'Nur die Kanten eines Hindernisses senden Elementarwellen aus; der Rest der Welle läuft in geraden Strahlen.'], ['Every point of the front is a source, not only those at edges; in free space their wavelets add up to the straight front.', 'Jeder Punkt der Front ist eine Quelle, nicht nur die an Kanten; im freien Raum setzen sich ihre Elementarwellen zur geraden Front zusammen.'], 'ray'],
+        [['The wavelets are slower than the wave, so behind an obstacle the wavelength gets shorter.', 'Die Elementarwellen sind langsamer als die Welle, also wird die Wellenlänge hinter einem Hindernis kürzer.'], ['The wavelets travel at the speed of the wave: the wavelength stays the same.', 'Die Elementarwellen laufen mit der Geschwindigkeit der Welle: Die Wellenlänge bleibt gleich.'], 'lambda']]],
+    ['huy', ['Why can you hear someone talking round a corner, but not see them?', 'Warum hört man jemanden um eine Ecke herum sprechen, sieht ihn aber nicht?'],
+      ['Sound waves are about as long as a door is wide and are diffracted strongly; light waves are a million times shorter.', 'Schallwellen sind etwa so lang, wie eine Tür breit ist, und werden stark gebeugt; Lichtwellen sind eine Million Mal kürzer.'],
+      [[['Light is not a wave, so it cannot bend round corners.', 'Licht ist keine Welle, also kann es nicht um Ecken biegen.'], ['Light is diffracted too: behind a narrow slit it spreads. Its waves are just far shorter than a door.', 'Licht wird auch gebeugt: Hinter einem schmalen Spalt breitet es sich aus. Seine Wellen sind nur viel kürzer als eine Tür.'], 'ray'],
+        [['Sound travels more slowly, so it has more time to bend round the corner.', 'Schall ist langsamer, also hat er mehr Zeit, um die Ecke zu biegen.'], ['How much a wave spreads depends on the opening compared with its wavelength, not on its speed.', 'Wie stark sich eine Welle ausbreitet, hängt von der Öffnung im Vergleich mit ihrer Wellenlänge ab, nicht von ihrer Geschwindigkeit.'], 'size'],
+        [['Light is diffracted more than sound, but too weakly to see.', 'Licht wird stärker gebeugt als Schall, aber zu schwach, um es zu sehen.'], ['The other way round: the shorter the wave compared with the opening, the less it is diffracted.', 'Umgekehrt: Je kürzer die Welle im Vergleich mit der Öffnung, desto weniger wird sie gebeugt.'], 'size']]],
+    ['huy', ['Water waves pass through a gap. The gap is made narrower. What happens behind it?', 'Wasserwellen laufen durch eine Öffnung. Die Öffnung wird schmaler gemacht. Was geschieht dahinter?'],
+      ['The waves spread more into the shadow.', 'Die Wellen breiten sich stärker in den Schatten aus.'],
+      [[['The waves spread less: a narrower gap lets through a narrower beam.', 'Die Wellen breiten sich weniger aus: Eine schmalere Öffnung lässt ein schmaleres Bündel durch.'], ['The narrower the gap compared with λ, the more it acts like a single point source of circular waves.', 'Je schmaler die Öffnung im Vergleich mit λ, desto mehr wirkt sie wie eine einzige punktförmige Quelle von Kreiswellen.'], 'size'],
+        [['Nothing: how much the waves spread depends only on their wavelength.', 'Nichts: Wie stark sich die Wellen ausbreiten, hängt nur von ihrer Wellenlänge ab.'], ['It depends on the ratio of the gap to the wavelength.', 'Es hängt vom Verhältnis der Öffnung zur Wellenlänge ab.'], 'size'],
+        [['The wavelength behind the gap gets shorter.', 'Die Wellenlänge hinter der Öffnung wird kürzer.'], ['Same medium, same speed, same frequency: the same wavelength.', 'Dasselbe Medium, dieselbe Geschwindigkeit, dieselbe Frequenz: dieselbe Wellenlänge.'], 'lambda']]],
+    ['ds', ['Where are the bright fringes behind a double slit?', 'Wo sind die hellen Streifen hinter einem Doppelspalt?'],
+      ['Where the path difference from the two slits is a whole number of wavelengths.', 'Wo der Gangunterschied der beiden Spalte eine ganze Zahl von Wellenlängen ist.'],
+      [[['Where the path difference is an odd number of half wavelengths.', 'Wo der Gangunterschied eine ungerade Zahl halber Wellenlängen ist.'], ['There crest meets trough: those are the dark fringes.', 'Dort trifft Berg auf Tal: Das sind die dunklen Streifen.'], 'half'],
+        [['Only straight behind each slit, where the light goes straight through.', 'Nur gerade hinter jedem Spalt, wo das Licht gerade durchgeht.'], ['Each narrow slit spreads the light out; the bright fringes are where the two waves arrive in step.', 'Jeder schmale Spalt verbreitet das Licht; die hellen Streifen liegen dort, wo die beiden Wellen im Gleichtakt ankommen.'], 'ray'],
+        [['Only in the middle, where the path difference is zero.', 'Nur in der Mitte, wo der Gangunterschied null ist.'], ['A path difference of one, two, … wavelengths brings the waves in step again: the maxima of order 1, 2, …', 'Ein Gangunterschied von einer, zwei, … Wellenlängen bringt die Wellen wieder in Gleichtakt: die Maxima der Ordnung 1, 2, …'], 'order']]],
+    ['ds', ['A double slit is replaced by a grating with the same slit spacing. What changes on the screen?', 'Ein Doppelspalt wird durch ein Gitter mit demselben Spaltabstand ersetzt. Was ändert sich auf dem Schirm?'],
+      ['The maxima stay in the same places but become much sharper and brighter.', 'Die Maxima bleiben an denselben Orten, werden aber viel schärfer und heller.'],
+      [[['The maxima move closer together: more slits, more fringes.', 'Die Maxima rücken näher zusammen: mehr Spalte, mehr Streifen.'], ['Their positions follow from d·sin α = k·λ, the same for any number of slits.', 'Ihre Lage folgt aus d·sin α = k·λ, gleich für jede Anzahl Spalte.'], 'grating'],
+        [['The maxima move further apart.', 'Die Maxima rücken weiter auseinander.'], ['Their positions follow from d·sin α = k·λ, the same for any number of slits.', 'Ihre Lage folgt aus d·sin α = k·λ, gleich für jede Anzahl Spalte.'], 'grating'],
+        [['Nothing at all.', 'Gar nichts.'], ['Between the maxima, the light of many slits cancels almost everywhere: the maxima become narrow and bright.', 'Zwischen den Maxima löscht sich das Licht vieler Spalte fast überall aus: Die Maxima werden schmal und hell.'], 'grating']]],
+    ['ds', ['White light falls on a grating. Which colour of the first-order spectrum is furthest from the centre?', 'Weisses Licht fällt auf ein Gitter. Welche Farbe des Spektrums erster Ordnung liegt am weitesten von der Mitte entfernt?'],
+      ['Red: it has the longest wavelength, and sin α = λ/d.', 'Rot: Es hat die grösste Wellenlänge, und sin α = λ/d.'],
+      [[['Violet, as in a prism.', 'Violett, wie bei einem Prisma.'], ['A prism bends violet most; a grating sends the longest waves furthest, sin α = λ/d.', 'Ein Prisma lenkt Violett am stärksten ab; ein Gitter lenkt die längsten Wellen am weitesten ab, sin α = λ/d.'], 'colour'],
+        [['All colours land in the same place, as d is the same.', 'Alle Farben landen am selben Ort, da d gleich ist.'], ['sin α = λ/d depends on the wavelength: the grating spreads white light into a spectrum.', 'sin α = λ/d hängt von der Wellenlänge ab: Das Gitter zerlegt weisses Licht in ein Spektrum.'], 'colour'],
+        [['Green, the middle of the spectrum.', 'Grün, die Mitte des Spektrums.'], ['The angle grows with the wavelength: the end with the longest waves is furthest out.', 'Der Winkel wächst mit der Wellenlänge: Das Ende mit den längsten Wellen liegt am weitesten aussen.'], 'colour']]],
+    ['ds', ['White light falls on a grating. What colour is the central maximum (order 0)?', 'Weisses Licht fällt auf ein Gitter. Welche Farbe hat das mittlere Maximum (Ordnung 0)?'],
+      ['White: there the path difference is zero for every wavelength.', 'Weiss: Dort ist der Gangunterschied für jede Wellenlänge null.'],
+      [[['Red, the longest waves.', 'Rot, die längsten Wellen.'], ['At the centre Δs = 0: all colours are bright there, together white.', 'In der Mitte ist Δs = 0: Alle Farben sind dort hell, zusammen weiss.'], 'colour'],
+        [['Violet, the shortest waves.', 'Violett, die kürzesten Wellen.'], ['At the centre Δs = 0: all colours are bright there, together white.', 'In der Mitte ist Δs = 0: Alle Farben sind dort hell, zusammen weiss.'], 'colour'],
+        [['Dark: the waves from neighbouring slits cancel there.', 'Dunkel: Die Wellen benachbarter Spalte löschen sich dort aus.'], ['At the centre all paths are equally long: crest meets crest.', 'In der Mitte sind alle Wege gleich lang: Berg trifft Berg.'], 'half']]],
+    ['pat', ['A single slit is made narrower. What happens to the central bright fringe on the screen?', 'Ein Einzelspalt wird schmaler gemacht. Was passiert mit dem mittleren hellen Streifen auf dem Schirm?'],
+      ['It gets wider.', 'Er wird breiter.'],
+      [[['It gets narrower, like the slit.', 'Er wird schmaler, wie der Spalt.'], ['A narrower slit diffracts more: w = 2λL/b grows as b shrinks.', 'Ein schmalerer Spalt beugt stärker: w = 2λL/b wächst, wenn b kleiner wird.'], 'inv'],
+        [['It stays the same; only the brightness changes.', 'Er bleibt gleich; nur die Helligkeit ändert sich.'], ['w = 2λL/b depends on the slit width.', 'w = 2λL/b hängt von der Spaltbreite ab.'], 'same'],
+        [['It splits into two fringes.', 'Er teilt sich in zwei Streifen.'], ['A single slit always has one central bright fringe; it just gets wider.', 'Ein Einzelspalt hat immer einen mittleren hellen Streifen; er wird nur breiter.'], null]]],
+    ['pat', ['In a double-slit experiment, red laser light is replaced by blue. What happens to the bright fringes?', 'In einem Doppelspaltversuch wird rotes Laserlicht durch blaues ersetzt. Was passiert mit den hellen Streifen?'],
+      ['They move closer together.', 'Sie rücken näher zusammen.'],
+      [[['They move further apart.', 'Sie rücken weiter auseinander.'], ['Blue light has the shorter wavelength, and Δy = λL/d.', 'Blaues Licht hat die kleinere Wellenlänge, und Δy = λL/d.'], 'inv'],
+        [['They stay where they are; only the colour changes.', 'Sie bleiben, wo sie sind; nur die Farbe ändert sich.'], ['Their spacing Δy = λL/d depends on the wavelength.', 'Ihr Abstand Δy = λL/d hängt von der Wellenlänge ab.'], 'same'],
+        [['They disappear: blue light does not interfere.', 'Sie verschwinden: Blaues Licht interferiert nicht.'], ['Light of every colour interferes, if it is coherent.', 'Licht jeder Farbe interferiert, wenn es kohärent ist.'], null]]],
+    ['pat', ['The slits of a double slit are made narrower; their spacing stays. What happens?', 'Die Spalte eines Doppelspalts werden schmaler gemacht; ihr Abstand bleibt. Was passiert?'],
+      ['The fringes stay where they are; more of them are bright, as each slit spreads the light more.', 'Die Streifen bleiben, wo sie sind; mehr von ihnen sind hell, da jeder Spalt das Licht stärker verbreitet.'],
+      [[['The fringes move further apart.', 'Die Streifen rücken weiter auseinander.'], ['Their spacing is set by the slit spacing d, Δy = λL/d; the slit width only sets the envelope.', 'Ihr Abstand ist durch den Spaltabstand d festgelegt, Δy = λL/d; die Spaltbreite bestimmt nur die Einhüllende.'], 'bd'],
+        [['The fringes move closer together.', 'Die Streifen rücken näher zusammen.'], ['Their spacing is set by the slit spacing d, Δy = λL/d; the slit width only sets the envelope.', 'Ihr Abstand ist durch den Spaltabstand d festgelegt, Δy = λL/d; die Spaltbreite bestimmt nur die Einhüllende.'], 'bd'],
+        [['The whole pattern gets narrower.', 'Das ganze Muster wird schmaler.'], ['Narrower slits diffract more: the envelope gets wider, not narrower.', 'Schmalere Spalte beugen stärker: Die Einhüllende wird breiter, nicht schmaler.'], 'inv']]],
+    ['pat', ['A double-slit experiment is repeated under water (n = 1.33). What happens to the fringes?', 'Ein Doppelspaltversuch wird unter Wasser wiederholt (n = 1.33). Was passiert mit den Streifen?'],
+      ['They move closer together: in water the wavelength is λ₀/n.', 'Sie rücken näher zusammen: Im Wasser ist die Wellenlänge λ₀/n.'],
+      [[['They move further apart: light is slower in water.', 'Sie rücken weiter auseinander: Licht ist im Wasser langsamer.'], ['Slower at the same frequency means a shorter wavelength, and Δy = λL/d shrinks.', 'Langsamer bei gleicher Frequenz heisst kürzere Wellenlänge, und Δy = λL/d wird kleiner.'], 'inv'],
+        [['Nothing: the frequency of the light stays the same.', 'Nichts: Die Frequenz des Lichts bleibt gleich.'], ['The pattern depends on the wavelength, and that is shorter in water.', 'Das Muster hängt von der Wellenlänge ab, und die ist im Wasser kürzer.'], 'same'],
+        [['The fringes disappear: water absorbs the light.', 'Die Streifen verschwinden: Wasser absorbiert das Licht.'], ['Clear water lets light through; the waves still interfere.', 'Klares Wasser lässt Licht durch; die Wellen interferieren weiterhin.'], null]]],
+    ['res', ['Why does a telescope with a larger mirror show finer detail (apart from collecting more light)?', 'Warum zeigt ein Teleskop mit grösserem Spiegel feinere Einzelheiten (abgesehen davon, dass es mehr Licht sammelt)?'],
+      ['A larger opening diffracts less: θₘᵢₙ = 1.22·λ/D is smaller.', 'Eine grössere Öffnung beugt weniger: θₘᵢₙ = 1.22·λ/D ist kleiner.'],
+      [[['It does not: a larger opening diffracts more, as it has a longer edge.', 'Tut es nicht: Eine grössere Öffnung beugt stärker, weil sie einen längeren Rand hat.'], ['The wider the opening compared with λ, the less the light spreads: θₘᵢₙ ∝ 1/D.', 'Je breiter die Öffnung im Vergleich mit λ, desto weniger verbreitet sich das Licht: θₘᵢₙ ∝ 1/D.'], 'rinv'],
+        [['Resolution depends only on the wavelength, not on the size of the mirror.', 'Die Auflösung hängt nur von der Wellenlänge ab, nicht von der Grösse des Spiegels.'], ['θₘᵢₙ = 1.22·λ/D depends on both.', 'θₘᵢₙ = 1.22·λ/D hängt von beidem ab.'], 'rsame'],
+        [['A larger mirror magnifies more, and magnifying alone shows any detail.', 'Ein grösserer Spiegel vergrössert stärker, und Vergrössern allein zeigt jede Einzelheit.'], ['Magnifying a blurred image only gives a larger blurred image: diffraction sets the limit.', 'Ein verwaschenes Bild zu vergrössern gibt nur ein grösseres verwaschenes Bild: Die Beugung setzt die Grenze.'], 'rsame']]],
+    ['res', ['Why can a microscope with ultraviolet light show finer detail than one with visible light?', 'Warum zeigt ein Mikroskop mit ultraviolettem Licht feinere Einzelheiten als eines mit sichtbarem Licht?'],
+      ['UV has a shorter wavelength, and θₘᵢₙ ∝ λ.', 'UV hat eine kürzere Wellenlänge, und θₘᵢₙ ∝ λ.'],
+      [[['Longer waves are diffracted less, so UV must be longer.', 'Längere Wellen werden weniger gebeugt, also muss UV länger sein.'], ['Shorter waves are diffracted less; UV is shorter than visible light.', 'Kürzere Wellen werden weniger gebeugt; UV ist kürzer als sichtbares Licht.'], 'rinv'],
+        [['UV light is brighter, and brighter light resolves better.', 'UV-Licht ist heller, und helleres Licht trennt besser.'], ['Brightness does not change the size of the diffraction blur, θₘᵢₙ = 1.22·λ/D.', 'Die Helligkeit ändert die Grösse des Beugungsscheibchens nicht, θₘᵢₙ = 1.22·λ/D.'], 'rsame'],
+        [['UV is not diffracted at all.', 'UV wird gar nicht gebeugt.'], ['Every wave is diffracted; shorter waves less.', 'Jede Welle wird gebeugt; kürzere Wellen weniger.'], 'rsame']]],
+    ['res', ['When are two point sources just resolved (Rayleigh criterion)?', 'Wann sind zwei punktförmige Quellen gerade noch getrennt (Rayleigh-Kriterium)?'],
+      ['When the centre of one image lies on the first dark ring of the other.', 'Wenn die Mitte des einen Bildes auf dem ersten dunklen Ring des anderen liegt.'],
+      [[['Only when their images do not overlap at all.', 'Erst wenn sich ihre Bilder gar nicht überlappen.'], ['They are seen as two already when one centre lies on the first dark ring of the other: there is a dip between them.', 'Man sieht sie schon als zwei, wenn die eine Mitte auf dem ersten dunklen Ring der anderen liegt: Dazwischen gibt es eine Senke.'], 'rayleigh'],
+        [['Whenever they are two separate sources: a sharp enough lens shows them apart.', 'Immer, wenn es zwei getrennte Quellen sind: Eine genügend scharfe Linse zeigt sie getrennt.'], ['No lens beats diffraction at its own opening: every point becomes a small disc.', 'Keine Linse schlägt die Beugung an ihrer eigenen Öffnung: Jeder Punkt wird zu einem Scheibchen.'], 'rsame'],
+        [['When their centres are one wavelength apart on the image.', 'Wenn ihre Mitten auf dem Bild eine Wellenlänge voneinander entfernt sind.'], ['The criterion is an angle, θₘᵢₙ = 1.22·λ/D: the first dark ring of one at the centre of the other.', 'Das Kriterium ist ein Winkel, θₘᵢₙ = 1.22·λ/D: der erste dunkle Ring des einen in der Mitte des anderen.'], 'rayleigh']]],
+    ['res', ['In bright light your pupil narrows from 6 mm to 3 mm. By diffraction alone, the smallest angle your eye resolves…', 'In hellem Licht verengt sich deine Pupille von 6 mm auf 3 mm. Allein wegen der Beugung wird der kleinste Winkel, den dein Auge trennt, …'],
+      ['doubles: the eye resolves less.', 'doppelt so gross: Das Auge trennt weniger.'],
+      [[['halves: the eye resolves more.', 'halb so gross: Das Auge trennt mehr.'], ['A narrower opening diffracts more: θₘᵢₙ = 1.22·λ/D grows.', 'Eine engere Öffnung beugt stärker: θₘᵢₙ = 1.22·λ/D wächst.'], 'rinv'],
+        [['stays the same.', 'bleibt gleich.'], ['θₘᵢₙ = 1.22·λ/D depends on the diameter of the pupil.', 'θₘᵢₙ = 1.22·λ/D hängt vom Durchmesser der Pupille ab.'], 'rsame'],
+        [['becomes four times as large.', 'viermal so gross.'], ['θₘᵢₙ ∝ 1/D: half the diameter, twice the angle, not four times (that would be the area).', 'θₘᵢₙ ∝ 1/D: halber Durchmesser, doppelter Winkel, nicht vierfacher (das wäre die Fläche).'], null]]],
+  ];
+  const CONCEPT_HINTS = {
+    huy: () => HUYGENS(),
+    ds: () => L('Bright where Δs = k·λ: d·sin α = k·λ, for a double slit and a grating alike.', 'Hell, wo Δs = k·λ: d·sin α = k·λ, für Doppelspalt und Gitter gleich.'),
+    pat: () => L('Δy = λL/d for the fringes, w = 2λL/b for the central fringe of a single slit.', 'Δy = λL/d für die Streifen, w = 2λL/b für den mittleren Streifen eines Einzelspalts.'),
+    res: () => L('The Rayleigh criterion: θₘᵢₙ = 1.22·λ/D.', 'Das Rayleigh-Kriterium: θₘᵢₙ = 1.22·λ/D.'),
+  };
+  // a statement on one group of ideas
+  const conceptOf = (group) => {
+    const ks = CONCEPTS.map((c, k) => k).filter((k) => CONCEPTS[k][0] === group);
+    return {
+      id: `concept-${group}`, difficulty: 2, quizChoice: true,
+      title: () => L('Understood?', 'Verstanden?'),
+      make: (r) => ({ k: pick(r, ks), o: Math.floor(r() * 4) }),
+      solve: () => ({ ans: 'right' }),
+      traps: [],
+      fields: (p) => {
+        const [, qu, right, wrong] = CONCEPTS[p.k], tr = (x) => L(x[0], x[1]);
+        const opts = wrong.map((w, i) => [`w${i}`, tr(w[0]), tr(w[1]), w[2]]);
+        opts.splice(p.o, 0, ['right', tr(right), '', null]);
+        return [choice('ans', L('Your answer:', 'Deine Antwort:'), opts, { stack: true, ask: tr(qu) })];
+      },
+      text: (p) => L(CONCEPTS[p.k][1][0], CONCEPTS[p.k][1][1]),
+      hints: () => [CONCEPT_HINTS[group]()],
+      steps: (p) => [step(L('The answer', 'Die Antwort'), p$(`<span class="result">${L(CONCEPTS[p.k][2][0], CONCEPTS[p.k][2][1])}</span>`))],
+      figure: () => '',
+    };
+  };
+
+  const SCENARIOS = [gap, path, dsPos, dsLam, grating, gratingMax, change, single, resChange, resScale, conceptOf('huy'), conceptOf('ds'), conceptOf('pat'), conceptOf('res')];
+
+  root.Scenarios = { SCENARIOS, SETUPS, CONCEPTS, RES, GAP_MEDIA };
+  if (typeof module !== 'undefined') module.exports = root.Scenarios;
+})(typeof window !== 'undefined' ? window : globalThis);

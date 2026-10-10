@@ -10,7 +10,7 @@
 # server, and the browser caches it once for all apps.
 set -e
 cd "$(dirname "$0")/.."
-APPS="energy-conservation charged-particles rl-switch force-systems bulb-brightness circuit-trainer impedance induction-match motion-graphs force-concepts torque motion-data motion-areas interaction centre-of-mass coulomb oscillations cyclic-processes wave-propagation magnetic-forces electric-field electric-potential em-waves photons matter-waves"
+APPS="energy-conservation charged-particles potential-circuit capacitors interference rl-switch force-systems bulb-brightness circuit-trainer impedance induction-match motion-graphs force-concepts torque motion-data motion-areas interaction centre-of-mass coulomb oscillations cyclic-processes wave-propagation magnetic-forces electric-field electric-potential em-waves photons matter-waves"
 FILES="ui.css lang.js fit.js sign.js tutor.js arcade.js check.js practice.js topics.js identify.js problems.js artkit.js figkit.js sets.js"
 PAGES="privacy hub"
 status=0

@@ -385,6 +385,49 @@
       </div>
     </a>
 
+    <a class="app" href="/potential-circuit/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A circuit with a battery and a lamp, and the potential around it: up across the battery, flat along the wire, down across the lamp">
+        <path class="wire" d="M30 68 V30 H100 V65 M100 85 V120 H30 V82"/>
+        <line class="plate" x1="16" y1="68" x2="44" y2="68" stroke-width="2.5"/>
+        <line class="plate" x1="23" y1="82" x2="37" y2="82" stroke-width="5"/>
+        <circle class="bulb" cx="100" cy="75" r="10"/>
+        <path class="wire" d="M93 68 L107 82 M93 82 L107 68"/>
+        <circle class="node" cx="30" cy="120" r="3.5"/>
+        <circle class="node" cx="30" cy="30" r="3.5"/>
+        <text class="label" x="12" y="134">A</text>
+        <text class="label" x="12" y="26">B</text>
+        <path class="axis" d="M130 120 H228 M130 120 V22"/>
+        <path class="guide" d="M142 40 H130"/>
+        <path class="curve" d="M130 120 H136 L148 40 H182 L196 118 H226"/>
+        <text class="label" x="136" y="18">φ</text>
+      </svg>
+      <div class="text">
+        <h2>Potential in a Circuit</h2>
+        <p>Follow the potential around a circuit: up across a battery, down across each lamp, flat along wires; the loop and junction rules, voltages between points, and the wrong step in a sketch.</p>
+      </div>
+    </a>
+
+    <a class="app" href="/capacitors/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="A capacitor charging through a resistor: its voltage rises steeply, then levels off at U₀">
+        <path class="wire" d="M20 36 V20 H45 M65 20 H90 V36 M90 44 V60 H20 V44"/>
+        <line class="plate" x1="10" y1="36" x2="30" y2="36" stroke-width="2.5"/>
+        <line class="plate" x1="15" y1="44" x2="25" y2="44" stroke-width="5"/>
+        <rect class="res" x="45" y="14" width="20" height="12" rx="1"/>
+        <line class="plate" x1="80" y1="36" x2="100" y2="36" stroke-width="3"/>
+        <line class="plate" x1="80" y1="44" x2="100" y2="44" stroke-width="3"/>
+        <path class="axis" d="M110 132 H228 M116 138 V22"/>
+        <path class="guide" d="M116 40 H222"/>
+        <path class="curve" d="M116 132 C126 80, 140 58, 160 48 S200 41, 222 40"/>
+        <text class="label" x="200" y="32">U<tspan dy="3">0</tspan></text>
+        <text class="label" x="218" y="146">t</text>
+        <text class="label" x="122" y="22">U<tspan dy="3">C</tspan></text>
+      </svg>
+      <div class="text">
+        <h2>Capacitors and RC Circuits</h2>
+        <p>Capacitors in series and in parallel (the rules of resistors, swapped), voltage and current while a capacitor charges and discharges, and the time constant and half-life read from a graph.</p>
+      </div>
+    </a>
+
     <a class="app" href="/impedance/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="Impedance curve of a series RLC circuit with its minimum R at the resonance frequency">
         <path class="guide" d="M30 105 H222 M110 105 V125"/>
@@ -679,6 +722,19 @@
       </div>
     </a>
 
+    <a class="app" href="/interference/" data-modes="tutor practice check">
+      <svg viewBox="0 0 240 150" role="img" aria-label="Straight waves pass a narrow gap in a wall and spread behind it as circular waves">
+        <path class="vel" d="M24 22 V128 M42 22 V128 M60 22 V128"/>
+        <path class="axis" d="M80 14 V69 M80 81 V136"/>
+        <path class="curve" fill="none" d="M80 57 A18 18 0 0 1 80 93 M80 39 A36 36 0 0 1 80 111 M80 21 A54 54 0 0 1 80 129 M124 18 A72 72 0 0 1 124 132 M149.7 18 A90 90 0 0 1 149.7 132 M171.7 18 A108 108 0 0 1 171.7 132"/>
+        <text class="label" x="200" y="80">λ</text>
+      </svg>
+      <div class="text">
+        <h2>Interference and Diffraction</h2>
+        <p>Huygens’ wavelets behind a gap, bright fringes from the path difference at a double slit and a grating, how the pattern changes with slit width, spacing and wavelength, and the resolving power.</p>
+      </div>
+    </a>
+
     <a class="app" href="/electric-field/" data-modes="tutor practice check">
       <svg viewBox="0 0 240 150" role="img" aria-label="Field lines running from a positive to a negative charge">
         <path class="curve" d="M80 75 H160 M80 75 C100 40 140 40 160 75 M80 75 C100 110 140 110 160 75 M80 75 C95 15 145 15 160 75 M80 75 C95 135 145 135 160 75 M80 75 H30 M160 75 H210" fill="none"/>
@@ -822,6 +878,8 @@
       const DE = {
         'bulb-brightness': ['Helligkeit von Lampen', 'Sage voraus, welche Lampen in Serien- und Parallelschaltungen heller leuchten.', 'Stromkreis mit einer Batterie, einer Lampe in Serie und zwei Lampen parallel'],
         'circuit-trainer': ['Widerstandsschaltungen', 'Bestimme Ersatzwiderstände, Ströme und Spannungen Schritt für Schritt.', 'Stromkreis mit einer Batterie, einem Widerstand in Serie und zwei Widerständen parallel'],
+        'potential-circuit': ['Potential im Stromkreis', 'Das Potential im Stromkreis verfolgen: hinauf über die Batterie, hinunter über jede Lampe, flach entlang der Drähte; Maschen- und Knotenregel, Spannungen zwischen Punkten und der falsche Schritt in einer Skizze.', 'Ein Stromkreis mit Batterie und Lampe und das Potential darin: hinauf über die Batterie, flach entlang des Drahts, hinunter über die Lampe'],
+        capacitors: ['Kondensatoren und RC-Kreise', 'Kondensatoren in Serie und parallel (die Regeln der Widerstände, vertauscht), Spannung und Strom beim Laden und Entladen, und Zeitkonstante und Halbwertszeit aus einem Graphen ablesen.', 'Ein Kondensator wird über einen Widerstand geladen: Seine Spannung steigt zuerst steil an und flacht dann bei U₀ ab'],
         impedance: ['Impedanzkurven', 'Die Impedanz von R, L und C gegen die Frequenz skizzieren, mit ωL und 1/(ωC) vorhersagen, was eine Schaltung bei tiefen und hohen Frequenzen tut, und die Resonanz als Minimum (Serie) bzw. Maximum (parallel) von Z erkennen.', 'Impedanzkurve einer RLC-Serienschaltung mit ihrem Minimum R bei der Resonanzfrequenz'],
         coulomb: ['Punktladungen', 'Die Coulombkraft: wohin sie zeigt, um welchen Faktor sie sich mit den Ladungen und dem Abstand ändert, Kräfte und Felder mehrerer Ladungen als Pfeile addiert, und das Feld als Kraft pro Ladung, E = F/q.', 'Drei Punktladungen: die Kräfte zweier negativer Ladungen auf eine positive, im rechten Winkel, und ihre Summe'],
         coe: ['Energieerhaltung', 'Energie-Buchhaltung: die Energieformen in jedem Zustand als Balkendiagramme, die Energiebilanz mit Symbolen gelöst, Federn, Reibung, und warum der Umkehrpunkt eines Bungee-Sprungs nicht die Gleichgewichtslage ist.', 'Ein Ball, aus einer Höhe fallen gelassen und auf halbem Weg, mit Balken seiner Lage- und kinetischen Energie'],
@@ -834,6 +892,7 @@
         'centre-of-mass': ['Schwerpunkt und Kippen', 'Schwerpunkte von Drahtfiguren, stabiles, labiles und indifferentes Gleichgewicht, und wann ein geneigter Körper umkippt.', 'Ein auf die Kante gekippter Block: Die Senkrechte durch seinen Schwerpunkt trifft den Boden noch innerhalb der Kante'],
         oscillations: ['Schwingungen', 'Die harmonische Schwingung als Schatten eines drehenden Zeigers: harmonisch oder nicht, Gleichungen und Graphen, wo v und a am grössten sind, und der Schwingkreis als dieselbe Gleichung.', 'Eine harmonische Schwingung: die Auslenkung gegen die Zeit, eine Sinuskurve, mit ihrer Periode markiert'],
         'wave-propagation': ['Wellenausbreitung', 'Wellenbuckel auf einem Seil: wie sie laufen, wie sich ein Ort bewegt, wie sie sich überlagern, wie sie an einem festen oder losen Ende reflektiert werden und welche stehenden Wellen sie bilden.', 'Ein Wellenbuckel auf einem Seil läuft auf ein festes Ende an einer Wand zu'],
+        interference: ['Interferenz und Beugung', 'Elementarwellen nach Huygens hinter einer Öffnung, helle Streifen aus dem Gangunterschied an Doppelspalt und Gitter, wie sich das Muster mit Spaltbreite, Spaltabstand und Wellenlänge ändert, und das Auflösungsvermögen.', 'Gerade Wellen laufen durch eine schmale Öffnung in einer Wand und breiten sich dahinter als Kreiswellen aus'],
         'electric-field': ['Feldlinien und Äquipotentiallinien', 'Feldlinien von Punktladungen, eines Drahts und eines Kondensators skizzieren und lesen, Dipole im homogenen Feld, Äquipotentiallinien und den Fehler in einer Skizze finden.', 'Feldlinien, die von einer positiven zu einer negativen Ladung laufen'],
         'electric-potential': ['Elektrisches Potential', 'Potential, potentielle Energie und Spannung unterscheiden, ΔV = E·d im homogenen Feld, das Potential von Punktladungen nach Vorzeichen und Abstand, und ob eine Ladung potentielle Energie gewinnt oder verliert.', 'Äquipotentialkreise um eine Ladung, nach aussen weiter auseinander'],
         'matter-waves': ['Materiewellen und das Teilchen im Kasten', 'De-Broglie-Wellenlängen über Verhältnisse, die Elektronenbeugung als Beweis für Materiewellen, die stehenden Wellen und gequantelten Energien eines Teilchens im Kasten, und |ψ|² mit Erwartungswert und Unschärfe.', 'Elektronen durchqueren einzeln einen Doppelspalt und bauen auf einem Schirm Interferenzstreifen auf'],
