@@ -18,9 +18,11 @@
       ok: 'All correct.', okWell: 'All correct, well done! Compare your approach with the worked solution, or start a new exercise.',
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the worked solution.',
       number: 'Enter a number', correct: 'Correct', sign: 'Give the size (a positive number)', close: 'Close: check your rounding', wrong: 'Not correct',
-      compsHead: '1 · First identify', compsNote: 'Choose the right expression; its value is then given, so that no calculator is needed.', calcHead: '2 · Then calculate', idFirst: 'First choose the right expression above.',
+      compsHead: '1 · First identify', compsNote: 'Choose the lever arm in the drawing; its length is then given, so that no calculator is needed.', calcHead: '2 · Then calculate', idFirst: 'First choose the lever arm above.',
       sense: 'Sense of rotation', ccw: 'counterclockwise', cw: 'clockwise', none: 'no rotation', badSense: 'The size is right, but not the sense of rotation',
       tutorBtns: { example: (i, n) => `Example ${i} of ${n}`, back: '← Back', prevEx: '← Previous example', next: 'Next →', nextEx: 'Next example →', done: 'Practise on your own →' },
+      measure: 'Measure', clear: 'Clear', length: 'Length', measureHelp: 'Drag from one grid point to another, or click (tap) both ends, to measure the distance between them.', measureFrom: 'Now click or tap the other end.',
+      squares: (n) => `${n} ${n === 1 ? 'square' : 'squares'}`,
     },
     de: {
       title: 'Drehmoment und Gleichgewicht', mode: 'Modus', difficulty: 'Schwierigkeit', calc: 'Taschenrechner', stars: (d) => `Schwierigkeit: ${d} von 5`, example: 'Beispiel', tutor: 'Tutor', practice: 'Üben', checkMode: 'Check', new: 'Neue Aufgabe',
@@ -33,9 +35,11 @@
       ok: 'Alles richtig.', okWell: 'Alles richtig, gut gemacht! Vergleiche deinen Lösungsweg mit der ausführlichen Lösung oder starte eine neue Aufgabe.',
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die ausführliche Lösung anschauen.',
       number: 'Gib eine Zahl ein', correct: 'Richtig', sign: 'Gib den Betrag an (eine positive Zahl)', close: 'Knapp daneben: Prüfe deine Rundung', wrong: 'Nicht richtig',
-      compsHead: '1 · Zuerst bestimmen', compsNote: 'Wähle den richtigen Ausdruck; sein Wert wird dann angegeben, sodass kein Taschenrechner nötig ist.', calcHead: '2 · Dann berechnen', idFirst: 'Wähle zuerst oben den richtigen Ausdruck.',
+      compsHead: '1 · Zuerst bestimmen', compsNote: 'Wähle den Hebelarm in der Zeichnung; seine Länge wird dann angegeben, sodass kein Taschenrechner nötig ist.', calcHead: '2 · Dann berechnen', idFirst: 'Wähle zuerst oben den Hebelarm.',
       sense: 'Drehsinn', ccw: 'im Gegenuhrzeigersinn', cw: 'im Uhrzeigersinn', none: 'keine Drehung', badSense: 'Der Betrag stimmt, aber nicht der Drehsinn',
       tutorBtns: { example: (i, n) => `Beispiel ${i} von ${n}`, back: '← Zurück', prevEx: '← Vorheriges Beispiel', next: 'Weiter →', nextEx: 'Nächstes Beispiel →', done: 'Selbst üben →' },
+      measure: 'Messen', clear: 'Löschen', length: 'Länge', measureHelp: 'Ziehe von einem Gitterpunkt zu einem anderen, oder klicke (tippe) beide Enden an, um ihren Abstand zu messen.', measureFrom: 'Klicke oder tippe jetzt das andere Ende an.',
+      squares: (n) => `${n} Kästchen`,
     },
   };
   const ui = () => UI[TQ.getLang()];
@@ -129,7 +133,7 @@
     .map(([v, sym, name]) => `<label><input type="radio" name="${prefix}-${f.key}-s" value="${v}"><span title="${name}" aria-label="${name}">${sym}</span></label>`).join('')}</span>`;
   const fieldsHtml = (exercise, prefix) => exercise.fields.map((f) => `
       <div class="field${f.sense ? ' torque' : ''}" data-key="${f.key}">
-        <label for="${prefix}-${f.key}" class="sym"><span class="what">${f.what}</span> $${TQ.tex(...f.sym)}$&nbsp;=</label>
+        <label for="${prefix}-${f.key}" class="sym"><span class="what">${f.what}:</span> $${TQ.tex(...f.sym)}$&nbsp;=</label>
         <input id="${prefix}-${f.key}" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" spellcheck="false">
         <span class="unit">${TQ.UNITS[f.unit]}</span>
         <span class="after">${f.sense ? senseHtml(f, prefix) : ''}<span class="fb" aria-live="polite"></span></span>
@@ -148,6 +152,7 @@
     $('#title').append(' ', stars);
     $('#prompt').innerHTML = ex.text;
     $('#figure').innerHTML = ex.figure({ task: true });
+    if (ruler.id !== ex.id) rulerReset(); else rulerDraw(); // kept when only the language changes
     $('#fields').innerHTML = fieldsHtml(ex, 'in');
     showComps();
     $('#hint-list').innerHTML = '';
@@ -167,6 +172,7 @@
   function drawTask() {
     const items = identItems(), shown = (ex.comps || []).filter((c, i) => c.fig && (st.revealed || Identify.right(items[i], st.ident))).map((c) => c.fig);
     $('#figure').innerHTML = ex.figure({ task: true, show: new Set(shown) });
+    rulerDraw();
     markScrollable();
   }
   function showComps() {
@@ -174,6 +180,97 @@
     $('#comps-part').classList.toggle('only', !ex.fields.length);
     $('#comps').innerHTML = Identify.html(identItems(), st ? st.ident || {} : {}, st && st.revealed);
     math($('#comps'));
+  }
+
+  // ---------------------------------------------------------------- the ruler
+  // Forces along the grid: the student may draw one segment between two grid points of the drawing
+  // (drag from one to the other, or tap both ends) and reads its length, in squares and in cm. It
+  // only measures: it draws no line of action and knows nothing of the forces. A new segment
+  // replaces the old one; Clear removes it. Measuring is switched on with its button, so that on a
+  // touch screen the drawing still scrolls otherwise.
+  const RULER = new Set(['plate-axis']);
+  const GRID = () => window.Scenarios.GRID;
+  let ruler = { on: false, a: null, b: null, pending: false, drag: false };
+  const hasRuler = () => !!(ex && RULER.has(ex.scenario));
+  const fmt = (x, dec) => TQ.num(x, dec);
+  function rulerLength() {
+    const { a, b } = ruler, dx = Math.abs(b[0] - a[0]), dy = Math.abs(b[1] - a[1]), n = Math.hypot(dx, dy), g = GRID();
+    if (!dx || !dy) return `${ui().squares(n)} = ${TQ.q(n * g.unit, 'cm', 0)}`;
+    // oblique: the whole number when there is one (3, 4 → 5), else rounded
+    const whole = Math.abs(n - Math.round(n)) < 1e-9;
+    return `${whole ? '' : '≈ '}${ui().squares(fmt(n, 2))} ${whole ? '=' : '≈'} ${TQ.q(n * g.unit, 'cm', 1)}`;
+  }
+  // the segment drawn into the task's drawing (again after every redraw), and the readout
+  function rulerDraw() {
+    const bar = $('#ruler');
+    bar.hidden = !hasRuler();
+    if (!hasRuler()) return;
+    const svg = $('#figure svg');
+    $('#ruler-btn').setAttribute('aria-pressed', String(ruler.on));
+    $('#ruler-btn').textContent = ui().measure;
+    $('#ruler-clear').textContent = ui().clear;
+    $('#ruler-clear').disabled = !ruler.a;
+    if (!svg) return;
+    svg.classList.toggle('measuring', ruler.on);
+    const old = svg.querySelector('.ruler');
+    if (old) old.remove();
+    const out = $('#ruler-out');
+    if (!ruler.a) { out.textContent = ruler.on ? ui().measureHelp : ''; return; }
+    const g = GRID(), px = (p) => [p[0] * g.px, -p[1] * g.px], A = px(ruler.a), B = px(ruler.b || ruler.a);
+    let html = `<g class="ruler" aria-hidden="true"><line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}"/>` +
+      `<circle cx="${A[0]}" cy="${A[1]}" r="4"/>${ruler.b ? `<circle cx="${B[0]}" cy="${B[1]}" r="4"/>` : ''}`;
+    const long = ruler.b && (ruler.a[0] !== ruler.b[0] || ruler.a[1] !== ruler.b[1]);
+    if (long) {
+      // the length beside the middle of the segment, on the side away from D (and its label), unless
+      // that leaves the grid
+      const n = Math.hypot(B[0] - A[0], B[1] - A[1]), nx = -(B[1] - A[1]) / n, ny = (B[0] - A[0]) / n;
+      const cx = (A[0] + B[0]) / 2, cy = (A[1] + B[1]) / 2, away = cx * nx + cy * ny;
+      let s = Math.abs(away) > 1e-6 ? Math.sign(away) : nx < 0 ? 1 : -1;
+      const at = (k) => [cx + k * nx * 10, cy + k * ny * 14];
+      if (Math.abs(at(s)[0]) > g.x * g.px - 24 || Math.abs(at(s)[1]) > g.y * g.px - 10) s = -s;
+      const [mx, my0] = at(s), my = my0 + 5, anchor = s * nx > 0.5 ? 'start' : s * nx < -0.5 ? 'end' : 'middle';
+      html += `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" text-anchor="${anchor}">${TQ.q(Math.hypot(ruler.b[0] - ruler.a[0], ruler.b[1] - ruler.a[1]) * g.unit, 'cm', 1)}</text>`;
+    }
+    svg.insertAdjacentHTML('beforeend', html + '</g>');
+    out.textContent = long ? `${ui().length}: ${rulerLength()}` : ruler.pending ? ui().measureFrom : '';
+  }
+  function rulerReset() { ruler = { on: ruler.on, id: ex && ex.id, a: null, b: null, pending: false, drag: false }; rulerDraw(); }
+  // the grid point nearest to the pointer, within the grid
+  function gridPoint(evt) {
+    const svg = $('#figure svg'), g = GRID(), pt = svg.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const clamp = (x, m) => Math.max(-m, Math.min(m, x));
+    return [clamp(Math.round(p.x / g.px), g.x), clamp(Math.round(-p.y / g.px), g.y)];
+  }
+  function rulerWire() {
+    const fig = $('#figure');
+    fig.addEventListener('pointerdown', (evt) => {
+      if (!hasRuler() || !ruler.on || !evt.target.closest('svg') || (evt.pointerType === 'mouse' && evt.button !== 0)) return;
+      evt.preventDefault();
+      const p = gridPoint(evt);
+      if (ruler.pending) { ruler.b = p; ruler.pending = false; } else { ruler.a = p; ruler.b = p; }
+      ruler.drag = true;
+      try { evt.target.setPointerCapture(evt.pointerId); } catch (e) { /* not capturable */ }
+      rulerDraw();
+    });
+    fig.addEventListener('pointermove', (evt) => {
+      if (!ruler.drag) return;
+      evt.preventDefault();
+      const p = gridPoint(evt);
+      if (p[0] !== ruler.b[0] || p[1] !== ruler.b[1]) { ruler.b = p; rulerDraw(); }
+    });
+    const up = () => {
+      if (!ruler.drag) return;
+      ruler.drag = false;
+      // a tap without dragging: the first end, waiting for the other
+      ruler.pending = ruler.a[0] === ruler.b[0] && ruler.a[1] === ruler.b[1];
+      rulerDraw();
+    };
+    fig.addEventListener('pointerup', up);
+    fig.addEventListener('pointercancel', up);
+    $('#ruler-btn').addEventListener('click', () => { ruler.on = !ruler.on; if (!ruler.on && ruler.pending) ruler.a = ruler.b = null, ruler.pending = false; rulerDraw(); });
+    $('#ruler-clear').addEventListener('click', () => rulerReset());
   }
 
   // solved now, or solved before (its solution can be looked at again)
@@ -380,6 +477,7 @@
       if (right && !ex.fields.length && !st.solved && Identify.ok(identItems(), st.ident)) check({ preventDefault() {} }); // a choice only: solved
     });
     Lang.wire(switchLang);
+    rulerWire();
     $('#new').addEventListener('click', fresh);
     $('#answers').addEventListener('submit', check);
     $('#hint').addEventListener('click', hint);

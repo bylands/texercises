@@ -74,11 +74,16 @@
       <h2 id="title"></h2>
       <div id="prompt"></div>
       <div id="figure" class="figs"></div>
+      <div id="ruler" class="ruler-bar" hidden>
+        <button type="button" id="ruler-btn" aria-pressed="false">Measure</button>
+        <button type="button" id="ruler-clear">Clear</button>
+        <span id="ruler-out" class="note" aria-live="polite"></span>
+      </div>
 
       <form id="answers" novalidate>
         <div id="comps-part" hidden>
           <h3 data-i18n="compsHead">1 · First identify</h3>
-          <p class="note" data-i18n="compsNote">Choose the right expression; its value is then given.</p>
+          <p class="note" data-i18n="compsNote">Choose the lever arm in the drawing; its length is then given, so that no calculator is needed.</p>
           <div id="comps"></div>
           <h3 data-i18n="calcHead">2 · Then calculate</h3>
         </div>

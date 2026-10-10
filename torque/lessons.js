@@ -32,7 +32,7 @@
     },
     {
       scenario: 'beam-weight', p: { len: 100, s: 20, find: 'm', mb: 2 },
-      practice: [{ types: ['beam-weight'] }],
+      practice: [{ types: ['beam-weight'] }, { en: 'where to hang the load', de: 'wo die Last hängt', types: ['beam-arm'] }],
       name: { en: 'Heavy beam', de: 'Schwerer Balken' },
       idea: { en: 'A beam’s own weight acts at its centre of mass, its middle, and has a torque too.', de: 'Die Gewichtskraft eines Balkens greift in seinem Schwerpunkt an, in seiner Mitte, und hat auch ein Drehmoment.' },
     },

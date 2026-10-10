@@ -9,7 +9,8 @@
 //                      so that wrong answers can be recognised
 //   traps, why         the wrong ideas worth checking, and what each answer suggests
 //   fields(p)          the wanted quantities, in order: { key, sym: [symbol, index], unit, dec,
-//                      what, sense (a torque: its size and its sense of rotation) }
+//                      what, sense (a torque: its size and its sense of rotation), wanted (optional:
+//                      the quantity in words with its symbol, for the tutor's “Wanted:”) }
 //   title(p), text(p)  the situation in words
 //   figure(p, v, view) the drawing: view.task (the situation only) or view.show (a Set of the
 //                      parts of the solution to draw in) and view.hl (those to highlight)
@@ -41,6 +42,8 @@
   // with d the lever arm: the distance from D to the line of action. Positive: counterclockwise.
   const UNIT = 10; // cm per square
   const PX = 30; // px per square
+  // the grid: its lines through the grid points from −x to x and −y to y (squares), D at 0, 0
+  const GRID = { x: 6, y: 5, px: PX, unit: UNIT };
   const AXIS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const OBLIQUE = [[3, 4], [4, 3], [-3, 4], [-4, 3], [3, -4], [4, -3], [-3, -4], [-4, -3]].map(([a, b]) => [a / 5, b / 5]);
   const arrowLen = (F) => 16 + 9 * F; // px
@@ -96,7 +99,7 @@
     const P = new Pic(PX, L('A plate that can turn about D, with the forces acting on it', 'Eine um D drehbare Platte mit den Kräften, die auf sie wirken'));
     const show = view.show || new Set(), hl = view.hl || new Set();
     const xs = p.forces.flatMap((f) => [f.P[0], f.tip ? f.tip[0] : f.P[0]]);
-    P.grid(-6.5, -5, 6.5, 5, 1);
+    P.grid(-GRID.x, -GRID.y, GRID.x, GRID.y, 1); // lines through the grid points, where D and the forces are
     // the plate: a rounded rectangle around D and the points of application
     const px = [0, ...p.forces.map((f) => f.P[0])], py = [0, ...p.forces.map((f) => f.P[1])];
     P.rect([Math.min(...px) - 0.9, Math.min(...py) - 0.9], [Math.max(...px) + 0.9, Math.max(...py) + 0.9], 'plate', 16);
@@ -120,8 +123,8 @@
       if (student || show.has(`arm${k}`)) {
         const { foot } = armOf(f);
         // the line of action, as far as the grid goes
-        const ts = [[-6.5, 6.5, 0], [-5, 5, 1]].flatMap(([lo, hi, k]) => (Math.abs(f.u[k]) < 1e-9 ? [] : [(lo - f.P[k]) / f.u[k], (hi - f.P[k]) / f.u[k]]));
-        const inside = (t) => Math.abs(f.P[0] + t * f.u[0]) <= 6.5 + 1e-9 && Math.abs(f.P[1] + t * f.u[1]) <= 5 + 1e-9;
+        const ts = [[-GRID.x, GRID.x, 0], [-GRID.y, GRID.y, 1]].flatMap(([lo, hi, k]) => (Math.abs(f.u[k]) < 1e-9 ? [] : [(lo - f.P[k]) / f.u[k], (hi - f.P[k]) / f.u[k]]));
+        const inside = (t) => Math.abs(f.P[0] + t * f.u[0]) <= GRID.x + 1e-9 && Math.abs(f.P[1] + t * f.u[1]) <= GRID.y + 1e-9;
         const tt = ts.filter(inside), t0 = Math.min(...tt), t1 = Math.max(...tt);
         P.line([f.P[0] + t0 * f.u[0], f.P[1] + t0 * f.u[1]], [f.P[0] + t1 * f.u[0], f.P[1] + t1 * f.u[1]], 'action', true);
         const cls = `arm${hl.has(`arm${k}`) ? ' hl' : ''}`;
@@ -137,7 +140,7 @@
     });
     P.pivot([0, 0]);
     P.text([0, 0], 'D', 'lbl', 'start', [7, -10]);
-    P.text([-6.5, -5], L('squares: 10 cm', 'Kästchen: 10 cm'), 'lbl note', 'start', [0, 16]);
+    P.text([-GRID.x, -GRID.y], L('squares: 10 cm', 'Kästchen: 10 cm'), 'lbl note', 'start', [0, 16]);
     return P.svg();
   }
 
@@ -153,7 +156,8 @@
       },
       traps: ['arm'],
       why: { arm: () => L('That is the force times the distance from D to where the force acts. The lever arm is the distance from D to the line of action.', 'Das ist die Kraft mal den Abstand von D zum Angriffspunkt. Der Hebelarm ist der Abstand von D zur Wirkungslinie.') },
-      fields: (p) => p.forces.map((f, i) => ({ key: `M${i + 1}`, sym: ['M', i + 1], unit: 'Nm', dec: 2, what: plateWhat(i + 1), sense: true })),
+      fields: (p) => p.forces.map((f, i) => ({ key: `M${i + 1}`, sym: ['M', i + 1], unit: 'Nm', dec: 2, what: plateWhat(i + 1), sense: true,
+        wanted: L(`the torque $M_${i + 1}$ of $F_${i + 1}$`, `das Drehmoment $M_${i + 1}$ von $F_${i + 1}$`) })),
       title: () => (oblique ? L('Torques on a plate', 'Drehmomente auf eine Platte') : L('Forces along the grid', 'Kräfte entlang des Gitters')),
       text: () => L(`A flat plate can turn about a fixed axis through D, perpendicular to the plate. ${n} forces act on it, drawn on a grid of 10 cm squares. Find the torque of each force about D and the sense in which it would turn the plate. Then rank the torques by size.`,
         `Eine flache Platte ist um eine feste Achse durch D drehbar, die senkrecht zur Platte steht. ${n === 3 ? 'Drei' : n === 4 ? 'Vier' : 'Fünf'} Kräfte wirken auf sie, gezeichnet auf einem Gitter aus Kästchen von 10 cm. Bestimme das Drehmoment jeder Kraft bezüglich D und den Drehsinn, in dem sie die Platte drehen würde. Ordne die Drehmomente dann nach ihrem Betrag.`),
@@ -475,6 +479,127 @@
     },
   };
 
+  // Where must the load hang? A heavy beam (mass mb, length len) on a support at s from its left end
+  // (left of the middle); a load m is to hang on the left of the support, at the distance x from it
+  // (from: 'support') or e = s − x from the left end (from: 'end'). The support is given: one balance
+  // of torques about it gives the load's lever arm. (Unlike hanging a beam, where the point of
+  // suspension is wanted, and with it the holding force.)
+  const beamArm = {
+    id: 'beam-arm', family: 'lever', difficulty: 3, topicOnly: true,
+    make(r) {
+      const len = pick(r, [60, 80, 100, 120]), s = pick(r, [20, 25, 30, 40].filter((x) => x < len / 2 - 5));
+      const mb = pick(r, [1, 1.5, 2, 3, 4, 5, 6]), m = pick(r, [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8]), from = pick(r, ['support', 'end']);
+      const x = (mb * (len / 2 - s)) / m;
+      if (m === mb || x < 5 || x > s - 5 || (from === 'end' && x === s / 2)) return null;
+      return { len, s, mb, m, from };
+    },
+    solve(p, o = {}) {
+      const x = exact((p.mb * (o.end ? p.len / 2 : p.len / 2 - p.s)) / p.m);
+      return { x: p.from === 'end' && !o.fromSupport ? exact(p.s - x) : x };
+    },
+    traps: ['end', 'fromSupport'],
+    why: {
+      end: () => L('The lever arm of the beam’s weight is measured from the support to the middle of the beam, not from the end.', 'Der Hebelarm der Gewichtskraft des Balkens wird von der Stütze bis zur Balkenmitte gemessen, nicht vom Ende.'),
+      fromSupport: () => L('That is the load’s distance from the support, its lever arm. The question asks for its distance from the left end.', 'Das ist der Abstand der Last von der Stütze, ihr Hebelarm. Gefragt ist ihr Abstand vom linken Ende.'),
+    },
+    fields: (p) => [{ key: 'x', sym: p.from === 'end' ? ['x', 'L'] : ['x'], unit: 'cm', dec: 1,
+      what: p.from === 'end' ? L('distance of the load from the left end', 'Abstand der Last vom linken Ende') : L('distance of the load from the support', 'Abstand der Last von der Stütze') }],
+    title: () => L('Where must the load hang?', 'Wo muss die Last hängen?'),
+    text: (p) => L(`A uniform beam ${cm(p.len)} long with a mass of ${kg(p.mb)} rests on a support ${cm(p.s)} from its left end. A load of ${kg(p.m)} is to hang to the left of the support so that the beam is balanced. ${p.from === 'end' ? 'How far from the left end of the beam must it hang?' : 'How far from the support must it hang?'}`,
+      `Ein gleichmässiger Balken von ${cm(p.len)} Länge und ${kg(p.mb)} Masse liegt ${cm(p.s)} von seinem linken Ende entfernt auf einer Stütze. Links der Stütze soll eine Last von ${kg(p.m)} hängen, sodass der Balken im Gleichgewicht ist. ${p.from === 'end' ? 'Wie weit vom linken Ende des Balkens entfernt muss sie hängen?' : 'Wie weit von der Stütze entfernt muss sie hängen?'}`),
+    figure(p, v, view = {}) {
+      const B = beamPic(p.len, L('A heavy beam on a support near its left end, with a load to be hung on the left of the support', 'Ein schwerer Balken auf einer Stütze nahe seinem linken Ende, mit einer Last, die links der Stütze hängen soll')), P = B.P;
+      const show = view.show || new Set(), x = (p.mb * (p.len / 2 - p.s)) / p.m, pos = view.task ? p.s * 0.45 : p.s - x;
+      const sym = p.from === 'end' ? svgSym('x', 'L') : svgSym('x');
+      P.support(B.bottom(p.s));
+      P.mass(B.bottom(pos), 40, kg(p.m), view.task ? 'load ghost' : 'load');
+      P.text(B.bottom(p.len * 0.78), `${svgSym('m', 'B')} = ${kg(p.mb)}`, 'lbl mass', 'middle', [0, 16]);
+      // above the beam: the wanted distance (nearest), the support's distance from the end, the length
+      const lbl = view.task ? `${sym} = ?` : cm(p.from === 'end' ? pos : x);
+      if (p.from === 'end') P.dim(B.top(0), B.top(pos), lbl, 14, 'dimline hl');
+      else P.dim(B.top(pos), B.top(p.s), lbl, 14, 'dimline hl');
+      P.dim(B.top(0), B.top(p.s), cm(p.s), 38);
+      P.dim(B.top(0), B.top(p.len), cm(p.len), 62);
+      if (show.has('G')) {
+        P.dot(B.mid(p.len / 2), 'dot', 2.4);
+        P.arrow(B.mid(p.len / 2), [0, -1], 50, 'force k-g hl', svgSym('G', 'B'), [8, 0]);
+        P.dim(B.top(p.s), B.top(p.len / 2), L('arm', 'Arm'), 14, 'dimline');
+      }
+      if (show.has('x') && p.from === 'end') P.dim(B.top(pos), B.top(p.s), cm(x), 14, 'dimline');
+      return P.svg();
+    },
+    hints: (p) => [
+      L('The beam’s own weight acts at its middle, to the right of the support: it turns the beam clockwise. The load on the left turns it counterclockwise.', 'Die Gewichtskraft des Balkens greift in seiner Mitte an, rechts der Stütze: Sie dreht den Balken im Uhrzeigersinn. Die Last links dreht ihn im Gegenuhrzeigersinn.'),
+      L('Lever arms are measured from the support: the beam’s is ℓ/2 − s, the load’s is the unknown distance x from the support.', 'Hebelarme werden von der Stütze aus gemessen: Der des Balkens ist ℓ/2 − s, der der Last der unbekannte Abstand x von der Stütze.'),
+      L(`Balance: m g x = m_B g (ℓ/2 − s), so x = m_B (ℓ/2 − s) / m.${p.from === 'end' ? ' Then the distance from the left end is s − x.' : ''}`, `Gleichgewicht: m g x = m_B g (ℓ/2 − s), also x = m_B (ℓ/2 − s) / m.${p.from === 'end' ? ' Der Abstand vom linken Ende ist dann s − x.' : ''}`),
+    ],
+    steps(p, v) {
+      const arm = p.len / 2 - p.s, x = exact((p.mb * arm) / p.m), end = p.from === 'end';
+      return [
+        step(L('The beam’s weight', 'Die Gewichtskraft des Balkens'),
+          `<p>${L(`The beam’s weight acts at its middle, ${cm(p.len / 2)} from the left end, so ${cm(arm)} to the right of the support: it turns the beam clockwise. The load on the left turns it counterclockwise, with its distance x from the support as the lever arm.`, `Die Gewichtskraft des Balkens greift in seiner Mitte an, ${cm(p.len / 2)} vom linken Ende entfernt, also ${cm(arm)} rechts der Stütze: Sie dreht den Balken im Uhrzeigersinn. Die Last links dreht ihn im Gegenuhrzeigersinn, mit ihrem Abstand x von der Stütze als Hebelarm.`)}</p>`, ['G']),
+        step(L('Balance of torques', 'Gleichgewicht der Drehmomente'), `$$m\\,g\\cdot x = m_\\mathrm{B}\\,g\\cdot\\left(\\tfrac{\\ell}{2} - s\\right)$$ ` +
+          `$$x = \\frac{m_\\mathrm{B}\\,(\\ell/2 - s)}{m} = \\frac{${tq(p.mb, 'kg')}\\cdot ${tq(arm, 'cm')}}{${tq(p.m, 'kg')}} = ${end ? tq(x, 'cm', 1) : res(x, 'cm', 1)}$$` +
+          `<p>${L(`The ${p.m > p.mb ? 'heavier' : 'lighter'} load needs ${p.m > p.mb ? 'a shorter' : 'a longer'} lever arm than the beam’s weight.`, `Die ${p.m > p.mb ? 'schwerere' : 'leichtere'} Last braucht einen ${p.m > p.mb ? 'kürzeren' : 'längeren'} Hebelarm als die Gewichtskraft des Balkens.`)}</p>`, ['G', 'x']),
+        ...(end ? [step(L('From the left end', 'Vom linken Ende'), `<p>${L('The load hangs x to the left of the support, the support is s from the left end:', 'Die Last hängt x links der Stütze, die Stütze ist s vom linken Ende entfernt:')}</p>` +
+          `$$${T('x', 'L')} = s - x = ${tq(p.s, 'cm')} - ${tq(x, 'cm', 1)} = ${res(v.x, 'cm', 1)}$$`, ['G', 'x'], ['x'])] : []),
+      ];
+    },
+  };
+
+  // Practice of the beam held at an angle: which of four segments drawn in is the lever arm of F?
+  // The right one (from D perpendicular to the line of action, b sin α) and three wrong ideas: the
+  // distance b from D to where F acts, a segment along the line of action (b cos α), and the
+  // perpendicular from the beam's middle instead of from D. In world units (cm) of the drawing;
+  // numbered 1 to 4 in an order that depends on the exercise.
+  const ORDERS = perms(4);
+  function angleCands(p) {
+    const s = BEAM_PX / p.len, h = 10 / s, D = p.len / 2 + p.a, at = (x) => [x, h / 2];
+    const Dp = at(D), A = at(D - p.b), S = at(p.len / 2), dir = [Math.cos(rad(180 - p.alpha)), Math.sin(rad(180 - p.alpha))];
+    const foot = (Q) => { const t = (Q[0] - A[0]) * dir[0] + (Q[1] - A[1]) * dir[1]; return [A[0] + t * dir[0], A[1] + t * dir[1]]; };
+    const F = foot(Dp), t = (F[0] - A[0]) * dir[0] + (F[1] - A[1]) * dir[1];
+    // along the line of action: from A to the foot; where that would run along the arrow (the force
+    // pulls toward D), the same length from D, parallel to the force, on the other side of the beam
+    const along = t > 0 ? [Dp, [Dp[0] - t * dir[0], Dp[1] - t * dir[1]]] : [A, F];
+    const list = [
+      { kind: 'arm', ends: [Dp, F], right: true },
+      { kind: 'dist', ends: [Dp, A], flag: 'noAngle', why: L('That is the distance b from D to where F acts. The lever arm is the distance from D to the line of action, measured at a right angle to it.', 'Das ist der Abstand b von D zum Angriffspunkt von F. Der Hebelarm ist der Abstand von D zur Wirkungslinie, rechtwinklig zu ihr gemessen.') },
+      { kind: 'along', ends: along, flag: 'cos', why: L('That segment runs along the line of action (or parallel to it), so it is b cos α. The lever arm meets the line of action at a right angle.', 'Diese Strecke verläuft entlang der Wirkungslinie (oder parallel zu ihr), sie ist also b cos α. Der Hebelarm trifft die Wirkungslinie rechtwinklig.') },
+      { kind: 'centre', ends: [S, foot(S)], flag: 'end', why: L('That segment is perpendicular to the line of action, but it starts at the beam’s middle, not at the axis D. Lever arms are measured from the axis.', 'Diese Strecke steht senkrecht auf der Wirkungslinie, aber sie beginnt in der Mitte des Balkens, nicht in der Drehachse D. Hebelarme werden von der Drehachse aus gemessen.') },
+    ];
+    const order = ORDERS[(Math.round(p.alpha * 10) + 7 * p.b + 3 * p.a + p.len) % ORDERS.length];
+    return order.map((k, i) => ({ ...list[k], n: i + 1 }));
+  }
+  const segName = (n) => L(`segment ${n}`, `Strecke ${n}`);
+  function angleItem(p) {
+    const cands = angleCands(p), right = cands.find((c) => c.right), d = p.b * Math.sin(rad(p.alpha));
+    return {
+      key: 'd', fig: 'arm', baseVal: p.b, fn: 'sin',
+      what: L('Which of the segments drawn in dashed is the lever arm $d$ of F about D?', 'Welche der gestrichelt eingezeichneten Strecken ist der Hebelarm $d$ von F bezüglich D?'),
+      options: cands.map((c) => ({ html: segName(c.n), right: !!c.right, flag: c.flag, why: c.why })),
+      value: L(`Right: ${segName(right.n)} runs from D to the line of action and meets it at a right angle. `, `Richtig: ${segName(right.n)} führt von D zur Wirkungslinie und trifft sie rechtwinklig. `) +
+        `$d = b\\sin\\alpha = ${tq(p.b, 'cm')}\\cdot\\sin${Math.round(p.alpha * 10) / 10}^\\circ = ${tq(d, 'cm')}$`,
+    };
+  }
+  // The candidates: dashed segments, each with its number in a small disc along it, placed away
+  // from the numbers before it and from D, the point of application and the middle of the beam.
+  function drawCands(P, p) {
+    const s = P.s, h = 10 / s, D = p.len / 2 + p.a, placed = [];
+    // the arrow of F (70 px) and its label at the tip
+    const dir = [Math.cos(rad(180 - p.alpha)), Math.sin(rad(180 - p.alpha))], tip = [D - p.b + (dir[0] * 80) / s, h / 2 + (dir[1] * 80) / s];
+    const fixed = [...[D, D - p.b, p.len / 2].map((x) => [[x, h / 2], 14]), [tip, 30]];
+    angleCands(p).forEach((c) => {
+      const [a, b] = c.ends, at = (t) => [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
+      const room = (q) => Math.min(...[...fixed, ...placed.map((o) => [o, 24])].map(([o, r]) => Math.hypot(q[0] - o[0], q[1] - o[1]) * s - r));
+      const spots = [0.5, 0.4, 0.6, 0.3, 0.7, 0.22, 0.78].map(at);
+      const spot = spots.find((q) => room(q) >= 0) || spots.reduce((x, y) => (room(y) > room(x) ? y : x));
+      placed.push(spot);
+      P.line(a, b, 'cand', true);
+      P.circle(spot, 9 / s, 'cand-disc', true);
+      P.text(spot, String(c.n), 'lbl cand-n', 'middle', [0, 0]);
+    });
+  }
+
   // The worksheet's beam b: a uniform beam (mass m) on an axis D, held level by a force F that
   // pulls at the angle α to the beam, at the distance b from D; the beam's middle is a from D.
   const angled = {
@@ -484,6 +609,11 @@
       const a = pick(r, [5, 10, 15, 20, 25, 30].filter((x) => x <= len / 2 - 5)), b = pick(r, (o.pyth ? [10, 13, 15, 17, 20, 25, 26, 29, 30, 34, 39, 40, 50, 51, 52] : [10, 20, 30, 40, 50, 60]).filter((x) => x <= len / 2 + a && x > a));
       if (!a || !b) return null;
       const alpha = o.nice ? pick(r, [30, 90, 150]) : o.pyth ? pick(r, [...PYTH, ...PYTH.map((x) => 180 - x)]) : pick(r, [30, 40, 45, 50, 60, 70, 110, 120, 135, 150]);
+      // practice: the student picks the lever arm among segments drawn in (cands); they need room
+      if (o.pyth) {
+        const px = BEAM_PX / len, sn = Math.sin(rad(alpha)), cs = Math.abs(Math.cos(rad(alpha)));
+        return b * px >= 150 && b * sn * px >= 40 && (b - a) * sn * px >= 26 && b * cs * px >= 26 ? { m, len, a, b, alpha, cands: true } : null;
+      }
       return { m, len, a, b, alpha };
     },
     solve(p, o = {}) {
@@ -496,11 +626,8 @@
       noAngle: () => L('F pulls at an angle: its lever arm is b · sin α, not b.', 'F zieht schräg: Ihr Hebelarm ist b · sin α, nicht b.'),
     },
     fields: () => [{ key: 'F', sym: ['F'], unit: 'N', dec: 1, what: L('force', 'Kraft') }],
-    comps: (p) => [{ key: 'd', what: L('The lever arm of F about D:', 'Der Hebelarm von F bezüglich D:'), sym: 'd', base: 'b', baseVal: p.b, fn: 'sin', unit: '\\mathrm{cm}', fig: 'arm',
-      why: {
-        sc: L('The lever arm is the distance from D to the line of action of F; in the right triangle with the hypotenuse b, it lies opposite the angle α.', 'Der Hebelarm ist der Abstand von D zur Wirkungslinie von F; im rechtwinkligen Dreieck mit der Hypotenuse b liegt er dem Winkel α gegenüber.'),
-        whole: L('b is the distance to the point where F acts, not to its line of action.', 'b ist der Abstand zum Angriffspunkt von F, nicht zu seiner Wirkungslinie.'),
-      } }],
+    // the lever arm, chosen among four segments drawn in (see angleCands); its value is then given
+    comps: (p) => [angleItem(p)],
     title: () => L('Held at an angle', 'Schräg gehalten'),
     text: (p) => L(`A uniform beam with a mass of ${kg(p.m)} can turn about an axis through D. Its middle is ${cm(p.a)} to the left of D. A rope pulls on the beam ${cm(p.b)} to the left of D, at an angle of ${q(p.alpha, 'deg', 1)} to the beam, and holds it level. How large is the force F of the rope? Take g = 10 m/s².`,
       `Ein gleichmässiger Balken mit der Masse ${kg(p.m)} ist um eine Achse durch D drehbar. Seine Mitte liegt ${cm(p.a)} links von D. Ein Seil zieht ${cm(p.b)} links von D unter einem Winkel von ${q(p.alpha, 'deg', 1)} zum Balken am Balken und hält ihn waagrecht. Wie gross ist die Kraft F des Seils? Rechne mit g = 10 m/s².`),
@@ -510,14 +637,20 @@
       const show = view.show || new Set(), xF = D - p.b, c = p.len / 2;
       P.pivot(B.mid(D)); P.text(B.mid(D), 'D', 'lbl', 'start', [8, 12]);
       P.dot(B.mid(c), 'dot', 2.4);
-      if (!show.has('G')) P.text(B.bottom(c), `m = ${kg(p.m)}`, 'lbl mass', 'middle', [0, 16]);
+      // while the student picks the lever arm among the segments drawn in, no dimensions (the text
+      // gives them) and the mass at the left end, out of their way
+      const cands = p.cands && view.task && !show.has('arm');
+      if (cands) P.text(B.bottom(0), `m = ${kg(p.m)}`, 'lbl mass', 'start', [0, 16]);
+      else if (!show.has('G')) P.text(B.bottom(c), `m = ${kg(p.m)}`, 'lbl mass', 'middle', [0, 16]);
       // the force: from the point of application, at α to the beam, measured from the beam's
       // direction toward D (to the right) — the rope pulls up
       const dir = [Math.cos(rad(180 - p.alpha)), Math.sin(rad(180 - p.alpha))];
       P.arrow(B.mid(xF), dir, 70, `force k-s${show.has('perp') ? ' dim' : ''}`, view.task ? `${svgSym('F')} = ?` : svgSym('F'), [dir[0] * 10 - 4, -dir[1] * 10 - 4]);
       P.arc(B.mid(xF), 24, 180 - p.alpha, 180, q(p.alpha, 'deg', 1), 12);
-      P.dim(B.top(xF), B.top(D), cm(p.b), 40);
-      P.dim(B.top(c), B.top(D), cm(p.a), 16);
+      if (!cands) {
+        P.dim(B.top(xF), B.top(D), cm(p.b), 40);
+        P.dim(B.top(c), B.top(D), cm(p.a), 16);
+      }
       if (show.has('G')) P.arrow(B.mid(c), [0, -1], 50, 'force k-g hl', svgSym('G'), [8, 0]);
       // the lever arm of F: from D perpendicular to the line of action (once identified)
       if (show.has('arm')) {
@@ -528,6 +661,7 @@
         P.dot(foot, 'dot small', 2);
         P.text([(Dp[0] + foot[0]) / 2, (Dp[1] + foot[1]) / 2], '<tspan font-style="italic">d</tspan>', 'lbl arm-lbl', 'start', [8, 4]);
       }
+      if (cands) drawCands(P, p);
       if (show.has('perp')) {
         const s = Math.sin(rad(p.alpha));
         P.arrow(B.mid(xF), [0, 1], 70 * s, 'force k-s hl', `${svgSym('F')}<tspan class="sub" dy="4">⊥</tspan><tspan dy="-4">​</tspan>`, [-10, 0]);
@@ -633,10 +767,11 @@
     rank('rank-axis', 2, 3, false),
     rank('rank', 4, 4, true),
     armError,
+    beamArm,
   ];
 
   // helpers for the situations of statics.js, which adds its own to SCENARIOS
   const H = { step, res, exact, beamPic, kg, cm, N, senseWord };
-  root.Scenarios = { SCENARIOS, armOf, torqueOf, UNIT, H };
+  root.Scenarios = { SCENARIOS, armOf, torqueOf, angleCands, UNIT, GRID, H };
   if (typeof module !== 'undefined') module.exports = root.Scenarios;
 })(typeof window !== 'undefined' ? window : globalThis);
