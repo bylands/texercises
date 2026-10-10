@@ -121,7 +121,8 @@
   // ---------------------------------------------------------------- reading off the given graph
   // In the drawings and in reading off the voltage, pointing at the given graph (or tapping it, or
   // the arrow keys once it has the focus) shows the value there: a guide line, a dot and a readout;
-  // reading off the voltage also shows the tangent there (its slope is left to the student). The
+  // reading off the voltage from a smooth graph also shows the tangent there (its slope is left to
+  // the student; on straight pieces the values are enough). The
   // guide line goes on into the drawing below, which has the same time axis.
   let hoverT = null;
   const hoverable = () => !!ex && !!ex.g && (ex.kind === 'draw' || ex.type === 'value-v-lin' || ex.type === 'value-v-smooth');
@@ -132,7 +133,7 @@
     const svg = givenSvg(), draw = ex.draw ? document.querySelector('#draw-area svg.drawing') : null;
     for (const el of [svg, draw]) if (el) el.querySelectorAll('g.hover').forEach((x) => x.remove());
     if (hoverT === null) return;
-    if (svg) svg.insertAdjacentHTML('beforeend', P.cursor(givenKind(), ex.g, hoverT, { tangent: ex.kind === 'value' }));
+    if (svg) svg.insertAdjacentHTML('beforeend', P.cursor(givenKind(), ex.g, hoverT, { tangent: ex.type === 'value-v-smooth' }));
     if (draw) draw.insertAdjacentHTML('beforeend', `<g class="hover" pointer-events="none">${P.guide(ex.draw.kind, hoverT)}</g>`);
   }
   function svgX(svg, evt) {
@@ -171,7 +172,7 @@
     svg.classList.add('pointable');
     svg.setAttribute('tabindex', '0');
     svg.setAttribute('aria-label', `${svg.getAttribute('aria-label')}. ${ui().pointKeys}`);
-    svg.closest('.given').insertAdjacentHTML('beforeend', `<p class="note point-note">${ex.kind === 'value' ? ui().pointTangent : ui().pointValue}</p>`);
+    svg.closest('.given').insertAdjacentHTML('beforeend', `<p class="note point-note">${ex.type === 'value-v-smooth' ? ui().pointTangent : ui().pointValue}</p>`);
   }
 
   // ---------------------------------------------------------------- drawing
