@@ -6,7 +6,10 @@
 // - for every type, in both languages and many seeds: each question has a right option (exactly one
 //   unless several may fit), a reason for each wrong one, distinct options; statements are mixed,
 //   and no text or drawing contains undefined, NaN and the like,
-// - the check: every kind of every objective gives questions with four options, exactly one right.
+// - the check: every kind of every objective gives questions with four options, exactly one right,
+// - the notation: no question asks for a difference of two potentials (V_A − V_B gives the way
+//   away: it asks for V_AB); the German texts write the potential Φ and the voltage U, the English
+//   ones the potential V and no U; every index is a subscript (no "V_A" left in the text).
 'use strict';
 
 const Lang = require('../lang.js');
@@ -42,6 +45,31 @@ function checkQuestions(tag, e) {
     if (new Set(labels).size !== labels.length) fail(`${tag} ${q.key}: two options alike`);
   }
 }
+// the notation of a text (HTML) in a language; ask: the text asks a question
+const strip = (h) => String(h).replace(/<[^>]*>/g, '');
+const unsub = (h) => String(h).replace(/<sub>([^<]*)<\/sub>/g, '_$1');
+const DIFF = /[VΦ]_[A-Za-z0-9]+\s*[−-]\s*[VΦ]_[A-Za-z0-9]/, DIFF0 = /\b[VΦ][A-Z]{1,2}\s*[−-]\s*[VΦ][A-Z]\b/;
+function notation(tag, lang, html, ask) {
+  const t = strip(html);
+  if (ask && (DIFF.test(html) || DIFF.test(unsub(html)) || DIFF0.test(t))) fail(`${tag}: the question asks for a difference of potentials: ${t}`);
+  if (/[A-Za-zΦ]_[A-Za-z0-9]/.test(t)) fail(`${tag}: an index not set as a subscript: ${t}`);
+  if (lang === 'de') {
+    if (/V(_|<sub>|₀)|ΔV|dV\//.test(html)) fail(`${tag}: V for a potential in German: ${t}`);
+    // V only as the unit: after a number, a bracket or "in"
+    const m = t.match(/(^|.{0,3})\bV\b(?!\/)/g);
+    if (m && m.some((x) => !/(\d|\)|\bin) ?V$/.test(x.replace(/\s+V$/, ' V')))) fail(`${tag}: V for a potential in German: ${t}`);
+  } else if (/\bU\s*=|\bU(<sub>|_)|ΔU|Φ/.test(html)) fail(`${tag}: U or Φ in English: ${t}`);
+}
+function texts(e) {
+  const out = [[e.text, true], [e.figs || '', false], [e.solFig || '', false], ...e.hints.map((h) => [h, false]), ...e.solution.map((h) => [h, false])];
+  for (const q of e.questions) {
+    out.push([q.label, true]);
+    for (const o of q.options || []) out.push([o.label || o.html, false], [o.why || '', false]);
+    for (const s of q.statements || []) out.push([s.html, true], [s.why, false]);
+  }
+  return out;
+}
+
 for (const lang of ['en', 'de']) {
   Lang.set(lang, true);
   for (const type of X.TYPES) {
@@ -50,10 +78,11 @@ for (const lang of ['en', 'de']) {
       if (bad(json(e))) fail(`${tag}: undefined or NaN`);
       if (!e.hints.length || !e.solution.length) fail(`${tag}: no hints or solution`);
       checkQuestions(tag, e);
+      texts(e).forEach(([h, ask], i) => notation(`${tag} text ${i}`, lang, h, ask));
       if (lang === 'de') continue;
       if (type === 'uniform-d') {
         const { Ef, ax, bx } = e.p, want = -Ef * (bx - ax) / 100;
-        if (!rel(num(right(e, 'U').label), want, 1e-3)) fail(`${tag}: V_B − V_A is not −E·Δx`);
+        if (!rel(num(right(e, 'U').label), want, 1e-3)) fail(`${tag}: V_BA is not −E·Δx`);
       }
       if (type === 'scalar') {
         const S = X.SC.find((s) => s.id === e.p.S), ch = S.c.map(([q, x, y]) => ({ q, x: e.p.flip ? y : x, y: e.p.flip ? -x : y })), c = { kind: 'points', charges: ch };
@@ -90,6 +119,8 @@ for (const lang of ['en', 'de']) {
   // the check: each kind of each objective, many seeds
   for (const o of X.OBJECTIVES) {
     if (!o.name() || !o.kinds.length) fail(`objective ${o.id}: no name or kinds`);
+    if (/[<_]/.test(o.name())) fail(`objective ${o.id}: markup or an index in its name (shown as plain text)`);
+    notation(`objective ${o.id}`, lang, o.name(), false);
     for (const kind of o.kinds) {
       for (let seed = 1; seed <= SEEDS; seed++) {
         const q = X.question(kind, seed), tag = `check ${kind} ${seed} ${lang}`;
@@ -97,6 +128,10 @@ for (const lang of ['en', 'de']) {
         if (new Set(q.options.map((x) => x.html)).size !== 4) fail(`${tag}: two options alike`);
         if (q.options.some((x) => !x.correct && !x.why)) fail(`${tag}: a wrong option without a reason`);
         if (bad(json(q)) || bad(q.explain()) || !q.ask) fail(`${tag}: undefined or NaN`);
+        notation(`${tag} ask`, lang, `${q.text} ${q.ask}`, true);
+        notation(`${tag} figure`, lang, q.figure, false);
+        notation(`${tag} explanation`, lang, q.explain(), false);
+        q.options.forEach((o, i) => { notation(`${tag} option ${i}`, lang, o.html, false); notation(`${tag} why ${i}`, lang, o.why || '', false); });
       }
     }
   }
