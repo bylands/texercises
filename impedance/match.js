@@ -29,7 +29,8 @@
 //   fits(ex, k, state)     whether candidate k agrees with the answers given so far
 //   mismatch(ex, k)        why candidate k is not the curve (its first feature that differs)
 //   reason(id, phase)      the reasoning for phase lo, hi or res (HTML)
-//   hints(ex), solution(ex)  for practice; dual(id), swapLC(id): the circuit with series and
+//   hints(ex), solution(ex)  for practice (ex.direct: picked without the questions, so the hints ask
+//                          them); dual(id), swapLC(id): the circuit with series and
 //                          parallel or coil and capacitor swapped (the check's misconceptions)
 (function (root) {
   'use strict';
@@ -341,9 +342,24 @@
   function hints(ex) {
     const id = ex.net, f = features(id);
     if (single(id)) {
+      const rules = L('Resistor: <i>Z</i> = <i>R</i> at every <i>ω</i>. Coil: <i>Z</i> = <i>ωL</i>, small for small <i>ω</i> (a wire) and large for large <i>ω</i> (a gap). Capacitor: <i>Z</i> = 1/(<i>ωC</i>), large for small <i>ω</i> (a gap) and small for large <i>ω</i> (a wire).',
+        'Widerstand: <i>Z</i> = <i>R</i> bei jedem <i>ω</i>. Spule: <i>Z</i> = <i>ωL</i>, klein für kleines <i>ω</i> (ein Draht) und gross für grosses <i>ω</i> (ein Unterbruch). Kondensator: <i>Z</i> = 1/(<i>ωC</i>), gross für kleines <i>ω</i> (ein Unterbruch) und klein für grosses <i>ω</i> (ein Draht).');
+      const ends = `<ul><li>${L('For <i>ω</i> → 0', 'Für <i>ω</i> → 0')}: ${Zis[f.lo]}</li><li>${L('For <i>ω</i> → ∞', 'Für <i>ω</i> → ∞')}: ${Zis[f.hi]}</li></ul>`;
+      // directly, without the questions: the hints ask them instead (both ends of the ω axis)
+      if (ex.direct && ex.inverse) {
+        return [rules,
+          L('Read the curve at both ends: what does <i>Z</i> do for <i>ω</i> → 0, and for <i>ω</i> → ∞? Only a capacitor blocks for small <i>ω</i>, only a coil for large <i>ω</i>; a resistor alone gives a horizontal line.',
+            'Lies die Kurve an beiden Enden ab: Was macht <i>Z</i> für <i>ω</i> → 0 und für <i>ω</i> → ∞? Nur ein Kondensator sperrt für kleines <i>ω</i>, nur eine Spule für grosses <i>ω</i>; ein Widerstand allein ergibt eine waagrechte Linie.'),
+          `${L('This curve:', 'Diese Kurve:')}${ends}${L('Look for the circuit whose impedance does this.', 'Suche die Schaltung, deren Impedanz das tut.')}`];
+      }
+      if (ex.direct) {
+        return [rules,
+          L('Ask what <i>Z</i> does at both ends of the <i>ω</i> axis: for <i>ω</i> → 0, and for <i>ω</i> → ∞. Where <i>Z</i> → 0 the element acts like a wire, where <i>Z</i> → ∞ like a gap.',
+            'Frage, was <i>Z</i> an beiden Enden der <i>ω</i>-Achse tut: für <i>ω</i> → 0 und für <i>ω</i> → ∞. Wo <i>Z</i> → 0, wirkt das Bauteil wie ein Draht, wo <i>Z</i> → ∞, wie ein Unterbruch.'),
+          `${L('For this element:', 'Für dieses Bauteil:')}<ul>${[...new Set(phases(id).map((k) => alone(id, k)))].map((x) => `<li>${x}</li>`).join('')}</ul>${L('Look for the curve that does this.', 'Suche die Kurve, die das tut.')}`];
+      }
       return [
-        L('Resistor: <i>Z</i> = <i>R</i> at every <i>ω</i>. Coil: <i>Z</i> = <i>ωL</i>, small for small <i>ω</i> (a wire) and large for large <i>ω</i> (a gap). Capacitor: <i>Z</i> = 1/(<i>ωC</i>), large for small <i>ω</i> (a gap) and small for large <i>ω</i> (a wire).',
-          'Widerstand: <i>Z</i> = <i>R</i> bei jedem <i>ω</i>. Spule: <i>Z</i> = <i>ωL</i>, klein für kleines <i>ω</i> (ein Draht) und gross für grosses <i>ω</i> (ein Unterbruch). Kondensator: <i>Z</i> = 1/(<i>ωC</i>), gross für kleines <i>ω</i> (ein Unterbruch) und klein für grosses <i>ω</i> (ein Draht).'),
+        rules,
         L('The shift: <i>u</i> = <i>R</i>·<i>i</i> in a resistor, <i>u</i> = <i>L</i>·d<i>i</i>/d<i>t</i> in a coil, <i>i</i> = <i>C</i>·d<i>u</i>/d<i>t</i> in a capacitor. Where the one changes fastest, the other one peaks.',
           'Die Verschiebung: <i>u</i> = <i>R</i>·<i>i</i> beim Widerstand, <i>u</i> = <i>L</i>·d<i>i</i>/d<i>t</i> bei der Spule, <i>i</i> = <i>C</i>·d<i>u</i>/d<i>t</i> beim Kondensator. Wo sich das eine am schnellsten ändert, ist das andere am grössten.'),
         `${L('For this element:', 'Für dieses Bauteil:')}<ul><li>${L('For <i>ω</i> → 0', 'Für <i>ω</i> → 0')}: ${Zis[f.lo]}</li><li>${L('For <i>ω</i> → ∞', 'Für <i>ω</i> → ∞')}: ${Zis[f.hi]}</li><li>${SHIFT[SHIFT_OF[id]]()}</li></ul>`,
@@ -382,8 +398,10 @@
   function solution(ex) {
     const id = ex.net;
     const title = { lo: L('Small ω', 'Kleines ω'), hi: L('Large ω', 'Grosses ω'), res: L('At the resonance frequency', 'Bei der Resonanzfrequenz') };
-    const steps = phases(id).map((k) => ({ title: title[k], text: ex.inverse ? inverseText(k, features(id)[k]).value : reason(id, k) }));
-    if (single(id)) steps.push({ title: L('The shift', 'Die Verschiebung'), text: shiftWhy(id) });
+    // one element backwards: what the curve does, and which element does that
+    const back = (k) => (single(id) ? `${L(`The curve ${DOES[k][features(id)[k]]()}.`, `Die Kurve ${DOES[k][features(id)[k]]()}.`)} ${reason(id, k)}` : inverseText(k, features(id)[k]).value);
+    const steps = phases(id).map((k) => ({ title: title[k], text: ex.inverse ? back(k) : reason(id, k) }));
+    if (single(id) && !ex.direct) steps.push({ title: L('The shift', 'Die Verschiebung'), text: shiftWhy(id) }); // asked only with the questions
     return {
       steps,
       verdict: ex.inverse ? L(`Only circuit ${letter(ex.right)} fits all of this.`, `Nur Schaltung ${letter(ex.right)} passt zu all dem.`) : L(`Only curve ${letter(ex.right)} does all of this.`, `Nur Kurve ${letter(ex.right)} tut all das.`),

@@ -8,7 +8,9 @@
 // - the estimates of the worked solution are within the tolerance,
 // - every unknown has one right option and wrong ones that are far apart and explained, and the
 //   student's reading is nearest the right one,
-// - graph and schematic render in both axis modes; the tutor lessons are usable.
+// - graph and schematic render in both axis modes; the tutor lessons are usable, and the series RL
+//   and RC examples agree with Z = √(R² + X²),
+// - the probe's readout of ω⁻² is 1/ω², shown with a power of ten that reads back to it.
 'use strict';
 
 const I = require('../generator.js');
@@ -118,6 +120,57 @@ for (const e of EXAMPLES) {
   checkRender(`lesson ${e.name}`, c, ax, an);
 }
 console.log(`lessons: ${EXAMPLES.length}`);
+
+// the series RL and RC examples (pairAnalysis): the right triangle, the point read off the curve
+// and the value from it agree with the circuit, in both languages; drawings and texts complete
+const Lang = require('../lang.js');
+const { TOPICS } = require('../lessons.js');
+const pairs = EXAMPLES.filter((e) => e.pair);
+if (!['RL', 'RC'].every((k) => pairs.some((e) => e.circuit.kind === k && e.circuit.conn === 'series'))) fail('no worked example of a series RL and a series RC circuit');
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  for (const e of pairs) {
+    const c = e.circuit, ax = I.axesFor(c), pa = I.pairAnalysis(c, ax, e.read), tag = `${lang} pair lesson ${e.name.en}`;
+    const X = c.kind === 'RL' ? e.read * c.L : 1 / (e.read * c.C);
+    if (!near(pa.read.X, X, 1e-12) || !near(pa.read.z, Math.hypot(c.R, X), 1e-12) || !near(pa.read.z, I.Z(c, e.read), 1e-12)) fail(`${tag}: Z ≠ √(R² + X²) at the point read`);
+    if (!near(pa.read.value, c.kind === 'RL' ? c.L : c.C, 1e-9)) fail(`${tag}: the point read gives ${pa.read.value}`);
+    if (e.read >= ax.lin.wmax || pa.read.z >= ax.lin.ztop) fail(`${tag}: the point read is off the graph`);
+    if (pa.steps.length < 6) fail(`${tag}: ${pa.steps.length} frames`);
+    const all = pa.steps.map((x) => x.title + x.text).join(' ');
+    if (/NaN|undefined|Infinity|\[object/.test(all)) fail(`${tag}: text`); // (no null: German for zero)
+    for (const v of [I.T(pa.read.z, 'ohm'), I.T(X, 'ohm'), I.T(c.R, 'ohm')]) if (!all.includes(v)) fail(`${tag}: ${v} not in the text`);
+    if (!/\\sqrt\{R\^2 \+ X\^2\}/.test(all)) fail(`${tag}: no Z = √(R² + X²)`);
+    if (!all.includes(I.T(c.R + X, 'ohm'))) fail(`${tag}: the mistake R + X not worked out`);
+    for (const st of pa.steps) {
+      const svg = P.graph(c, ax, 'lin', { ann: st.ann }) + (st.tri ? P.triangle(st.tri) : '');
+      if (/NaN|undefined|Infinity/.test(svg)) fail(`${tag}: drawing of ${st.title}`);
+      if (st.tri && !near(Math.hypot(st.tri.R, st.tri.X), pa.read.z, 1e-12)) fail(`${tag}: triangle of ${st.title}`);
+    }
+  }
+}
+Lang.set('en', true);
+// linked from practice while an exercise of its type is shown
+for (const t of TOPICS) for (const [type, i] of Object.entries(t.byType || {})) {
+  const e = EXAMPLES[i];
+  if (!e || !e.pair || `${e.circuit.kind}-${e.circuit.conn}` !== type || !t.stages.some((s) => s.types.includes(type))) fail(`byType ${type}: example ${i}`);
+}
+console.log(`pair lessons: ${pairs.length}`);
+
+// the probe's readout of ω⁻² (s²): 1/ω² at several points of every kind of circuit, formatted with
+// three digits and a power of ten that reads back to it
+const back = (h) => { const m = /^(−?[\d.]+)(?:·10([⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+))? s²$/.exec(h); if (!m) return NaN; const e = m[2] ? Number([...m[2]].map((ch) => '⁻⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(ch)).map((k) => (k === 0 ? '-' : k - 1)).join('')) : 0; return Number(m[1]) * 10 ** e; };
+let reads = 0;
+for (let seed = 1; seed <= 60; seed++) {
+  const { c, ax } = I.generate('mixed', seed);
+  for (const f of [0, 0.003, 0.1, 0.37, 0.5, 0.99, 1]) {
+    const w = Math.max(ax.lin.wmax * f, 1e-9), r = P.readout(c, ax, 'lin', w), h = I.H(r.inv2, 's2');
+    reads++;
+    if (!near(r.inv2, 1 / (r.w * r.w), 1e-12)) fail(`readout ${seed} at ${f}: ω⁻² = ${r.inv2} for ω = ${r.w}`);
+    if (!near(back(h), r.inv2, 0.005)) fail(`readout ${seed} at ${f}: ω⁻² shown as ${h} for ${r.inv2}`);
+  }
+}
+for (const [x, h] of [[2.5e-7, '2.50·10⁻⁷ s²'], [1e-6, '1.00·10⁻⁶ s²'], [9.9996e-5, '1.00·10⁻⁴ s²'], [0.25, '0.250 s²'], [2500, '2.50·10³ s²'], [1 / 400 ** 2, '6.25·10⁻⁶ s²']]) if (I.H(x, 's2') !== h) fail(`ω⁻² ${x} shown as ${I.H(x, 's2')}, not ${h}`);
+console.log(`readouts of ω⁻²: ${reads}`);
 
 if (failures) { console.error(`\n${failures} failures`); process.exit(1); }
 console.log('Generator OK');

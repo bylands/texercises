@@ -31,6 +31,11 @@ svg .it { font-style: italic; }
 /* impedance graph */
 .gwrap { flex: 1 1 100%; touch-action: none; }
 .zgraph { display: block; width: 100%; height: auto; }
+.zgraph[tabindex]:focus { outline: none; }
+.zgraph[tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+/* the right triangle Z = √(R² + X²) of a series circuit (tutor) */
+.triangle { display: block; max-width: 100%; height: auto; }
+svg .w.thin { stroke-width: 1.2; }
 .schematic { display: block; max-width: 100%; height: auto; }
 svg .grid { stroke: var(--grid); stroke-width: 1; }
 svg .grid.major { stroke: var(--grid-major); }

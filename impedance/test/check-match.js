@@ -102,5 +102,41 @@ for (const ex of EXAMPLES.filter((x) => x.match)) {
   if (m.cands.filter((x, j) => M.fits(e, j, ks)).length !== 1) fail(`worked example ${ex.name.en}: not one option left`);
 }
 
+// The step "Directly" of the topic of one element (lessons.js): appended (the saved progress keeps
+// its steps), the curve or the circuit picked without the questions (pick… types, which app.js makes
+// direct and gives no questions), one right option, hints that ask what the questions asked (both
+// ends of the ω axis), at least ten different exercises in both directions.
+{
+  const { TOPICS } = require('../lessons.js');
+  const t = TOPICS[0], st = t.stages[t.stages.length - 1];
+  if (t.stages.length < 2 || t.stages[0].types.join() !== 'match-R,match-L,match-C') fail('one element: the first step changed');
+  if (st.name.en !== 'Directly' || st.name.de !== 'Direkt') fail('one element: no step Directly');
+  const keys = new Set(), dirs = new Set();
+  for (const lang of ['en', 'de']) {
+    Lang.set(lang, true);
+    for (const type of st.types) {
+      const m = /^pick(match|inv)-([RLC])$/.exec(type);
+      if (!m) { fail(`Directly: type ${type} has questions`); continue; }
+      for (let seed = 1; seed <= 200; seed++) {
+        const e = M.generate(m[2], seed, m[1] === 'inv'), tag = `${lang} ${type}-${seed}`;
+        e.direct = true; e.p.direct = true; // as app.js does for pick… types
+        keys.add(JSON.stringify(e.p)); dirs.add(m[1]);
+        const right = e.cands.filter((x, k) => M.fits(e, k, M.phases(e.net)));
+        if (right.length !== 1 || e.cands[e.right] !== m[2]) fail(`${tag}: not one right option`);
+        const hs = M.hints(e), sol = M.solution(e), all = hs.join(' ');
+        if (hs.length < 3 || bad(all) || bad(JSON.stringify(sol))) fail(`${tag}: hints or solution`);
+        // the hints carry the questions: what Z does at both ends of the ω axis, and for this one
+        if (!/ω<\/i> → 0/.test(all) || !/ω<\/i> → ∞/.test(all)) fail(`${tag}: hints without both ends`);
+        if (/ · /.test(all)) fail(`${tag}: hints number questions`);
+        if (sol.steps.length !== 2 || sol.others.length !== 3) fail(`${tag}: solution steps`);
+        if (/Verschiebung|shift/i.test(all + sol.steps.map((x) => x.title).join(''))) fail(`${tag}: the shift, which is not asked`);
+      }
+    }
+  }
+  Lang.set('en', true);
+  if (keys.size < 10 || dirs.size !== 2) fail(`Directly: only ${keys.size} different exercises`);
+  console.log(`one element directly: ${keys.size} different exercises`);
+}
+
 if (failures) { console.error(`\n${failures} failures`); process.exit(1); }
 console.log('Matching OK');

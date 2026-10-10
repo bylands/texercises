@@ -25,8 +25,9 @@
       whichCurve: 'Which curve?', theCurves: 'The curves:', curve: (k) => `Curve ${k}`,
       whichCircuit: 'Which circuit?', theCircuits: 'The circuits:', circuit: (k) => `Circuit ${k}`,
       chooseCurve: 'Choose a curve, then check.', chooseCircuit: 'Choose a circuit, then check.',
-      directPrompt: 'Which of the four curves shows the impedance <i>Z</i> of this circuit against the angular frequency <i>ω</i>? Think of what <i>Z</i> does for small and for large <i>ω</i>, and at the resonance frequency.',
-      directInversePrompt: 'The curve shows the impedance <i>Z</i> of a circuit against the angular frequency <i>ω</i>. Which of the four circuits is it? Think of what the curve tells you for small and for large <i>ω</i>, and at its minimum or maximum.',
+      // directly: res, with the resonance (circuits of RLC or LC); one, of one element
+      directPrompt: (res, one) => `Which of the four curves shows the impedance <i>Z</i> of this ${one ? 'element' : 'circuit'} against the angular frequency <i>ω</i>? Think of what <i>Z</i> does for small and for large <i>ω</i>${res ? ', and at the resonance frequency' : ''}.`,
+      directInversePrompt: (res) => `The curve shows the impedance <i>Z</i> of a circuit against the angular frequency <i>ω</i>. Which of the four circuits is it? Think of what the curve tells you for small and for large <i>ω</i>${res ? ', and at its minimum or maximum' : ''}.`,
       inversePrompt: 'The curve shows the impedance <i>Z</i> of a circuit against the angular frequency <i>ω</i>. Which of the four circuits is it? Answer the questions: each right answer rules out the circuits that do not fit, until one is left.',
       matchPrompt: 'Which of the four curves shows the impedance <i>Z</i> of this circuit against the angular frequency <i>ω</i>? Answer the questions: each right answer rules out the curves that do not fit, until one is left.',
     },
@@ -47,8 +48,8 @@
       whichCurve: 'Welche Kurve?', theCurves: 'Die Kurven:', curve: (k) => `Kurve ${k}`,
       whichCircuit: 'Welche Schaltung?', theCircuits: 'Die Schaltungen:', circuit: (k) => `Schaltung ${k}`,
       chooseCurve: 'Wähle eine Kurve und prüfe dann.', chooseCircuit: 'Wähle eine Schaltung und prüfe dann.',
-      directPrompt: 'Welche der vier Kurven zeigt die Impedanz <i>Z</i> dieser Schaltung gegen die Kreisfrequenz <i>ω</i>? Überlege, was <i>Z</i> für kleines und für grosses <i>ω</i> tut, und bei der Resonanzfrequenz.',
-      directInversePrompt: 'Die Kurve zeigt die Impedanz <i>Z</i> einer Schaltung gegen die Kreisfrequenz <i>ω</i>. Welche der vier Schaltungen ist es? Überlege, was die Kurve für kleines und für grosses <i>ω</i> verrät, und bei ihrem Minimum oder Maximum.',
+      directPrompt: (res, one) => `Welche der vier Kurven zeigt die Impedanz <i>Z</i> ${one ? 'dieses Bauteils' : 'dieser Schaltung'} gegen die Kreisfrequenz <i>ω</i>? Überlege, was <i>Z</i> für kleines und für grosses <i>ω</i> tut${res ? ', und bei der Resonanzfrequenz' : ''}.`,
+      directInversePrompt: (res) => `Die Kurve zeigt die Impedanz <i>Z</i> einer Schaltung gegen die Kreisfrequenz <i>ω</i>. Welche der vier Schaltungen ist es? Überlege, was die Kurve für kleines und für grosses <i>ω</i> verrät${res ? ', und bei ihrem Minimum oder Maximum' : ''}.`,
       inversePrompt: 'Die Kurve zeigt die Impedanz <i>Z</i> einer Schaltung gegen die Kreisfrequenz <i>ω</i>. Welche der vier Schaltungen ist es? Beantworte die Fragen: Jede richtige Antwort schliesst die Schaltungen aus, die nicht passen, bis eine übrig bleibt.',
       matchPrompt: 'Welche der vier Kurven zeigt die Impedanz <i>Z</i> dieser Schaltung gegen die Kreisfrequenz <i>ω</i>? Beantworte die Fragen: Jede richtige Antwort schliesst die Kurven aus, die nicht passen, bis eine übrig bleibt.',
     },
@@ -114,7 +115,8 @@
 
   function renderMatch() {
     $('#title').innerHTML = `${ex.inverse ? ui().whichCircuit : ui().whichCurve} ${starsOf(ex.difficulty)}`;
-    $('#prompt').innerHTML = ex.direct ? (ex.inverse ? ui().directInversePrompt : ui().directPrompt) : ex.inverse ? ui().inversePrompt : ui().matchPrompt;
+    const res = M.NETS[ex.net].level >= 2; // what the options can have, not only the right one
+    $('#prompt').innerHTML = ex.direct ? (ex.inverse ? ui().directInversePrompt(res) : ui().directPrompt(res, M.single(ex.net))) : ex.inverse ? ui().inversePrompt : ui().matchPrompt;
     $('#fields').innerHTML = `<div id="ident"></div><p class="match-head">${ex.inverse ? ui().theCircuits : ui().theCurves}</p><div id="cands"></div><p id="cand-fb" class="ident-fb bad" aria-live="polite"></p>`;
   }
   // the questions and the options
@@ -149,7 +151,9 @@
       L('Which feature of the graph gives which value:', 'Welches Merkmal des Graphen liefert welchen Wert:') +
         list(ks.map((k) => L(`<i>${k}</i>: ${an.plan[k]}`, `<i>${k}</i> folgt aus ${an.plan[k]}`))),
       L('Formulas:', 'Formeln:') + list(ks.map((k) => `$${an.formulas[k]}$`)) +
-        L('The probe shows the slope of the tangent in Ω·s; since ω is in rad/s, 1 Ω·s = 1 H.', 'Die Sonde zeigt die Steigung der Tangente in Ω·s; da ω in rad/s gemessen wird, ist 1 Ω·s = 1 H.'),
+        L('The probe shows the slope of the tangent in Ω·s; since ω is in rad/s, 1 Ω·s = 1 H.', 'Die Sonde zeigt die Steigung der Tangente in Ω·s; da ω in rad/s gemessen wird, ist 1 Ω·s = 1 H.') +
+        // series RC: Z² is a straight line in ω⁻², which the probe shows too
+        (ex.c.kind === 'RC' && ex.c.conn === 'series' ? ` ${L('To check: $Z^2 = R^2 + \\frac{1}{C^2}\\,\\omega^{-2}$, so one point ($\\omega^{-2}$, $Z$) of the probe gives $C = \\sqrt{\\omega^{-2}/(Z^2 - R^2)}$.', 'Zur Kontrolle: $Z^2 = R^2 + \\frac{1}{C^2}\\,\\omega^{-2}$, also liefert ein Punkt ($\\omega^{-2}$, $Z$) der Sonde $C = \\sqrt{\\omega^{-2}/(Z^2 - R^2)}$.')}` : ''),
       L('Readings to check yours against:', 'Ablesungen zum Vergleich mit deinen:') + list(ks.map((k) => `<i>${k}</i>: ${an.readings[k]}`)),
     ];
   }
@@ -179,6 +183,7 @@
     if (location.hash !== hash) history.replaceState(null, '', hash);
     render();
     topics.shown(ex);
+    topics.relabel(); // the worked example linked may depend on the exercise (byType in lessons.js)
   }
 
   // the hints, and for a matching exercise its questions, in the current language
@@ -441,7 +446,19 @@
       ],
     };
   }
-  const lessons = () => window.Lessons.EXAMPLES.map((d) => ({ ...(d.elements ? elementsLesson(d) : d.match ? matchLesson(d) : lesson(d)), also: topics.also(d.topic) }));
+  // Series RL or RC (pairAnalysis in generator.js): the triangle Z = √(R² + X²), both ends, a point
+  // read off the curve, the corner and the usual mistakes; the triangle beside the schematic.
+  function pairLesson(d) {
+    const c = d.circuit, ax = I.axesFor(c);
+    return {
+      name: d.name[Lang.get()], idea: d.idea[Lang.get()],
+      frames: () => I.pairAnalysis(c, ax, d.read).steps.map((s) => ({
+        text: `<div class="step-rule">${s.title}</div><p>${s.text}</p>`,
+        get figure() { return `<div class="fig">${P.schematic(c)}</div>${s.tri ? `<div class="fig">${P.triangle(s.tri)}</div>` : ''}<div class="fig gwrap">${P.graph(c, ax, axesMode(), { ann: s.ann })}</div>`; },
+      })),
+    };
+  }
+  const lessons = () => window.Lessons.EXAMPLES.map((d) => ({ ...(d.elements ? elementsLesson(d) : d.match ? matchLesson(d) : d.pair ? pairLesson(d) : lesson(d)), also: topics.also(d.topic) }));
 
   // ---------------------------------------------------------------- check
   // The learning objectives (check.js), each with its kinds of question, its worked example and its
@@ -679,7 +696,12 @@
         name: () => t.name[Lang.get()],
         stages: t.stages.map((st) => ({ name: () => st.name[Lang.get()], types: st.types })),
         // the worked example of the step (or of the topic, for all steps)
-        example: (k) => { const i = t.stages[k] && t.stages[k].example != null ? t.stages[k].example : t.example; return { i, name: () => window.Lessons.EXAMPLES[i].name[Lang.get()] }; },
+        // (or, for the exercise shown, the example of its type: byType)
+        example: (k) => {
+          const byType = ex && t.byType && t.byType[typeOf(ex)];
+          const i = t.stages[k] && t.stages[k].example != null ? t.stages[k].example : byType != null ? byType : t.example;
+          return { i, name: () => window.Lessons.EXAMPLES[i].name[Lang.get()] };
+        },
       })),
       make: ofType, typeOf,
       onChange: fresh,
