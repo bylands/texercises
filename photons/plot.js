@@ -25,6 +25,9 @@
   const dec = (x) => String(Math.round(x * 1000) / 1000).replace('-', '−');
   const it = (s) => `<tspan font-style="italic">${s}</tspan>`;
   const sub = (s) => `<tspan font-size="72%" dy="4">${s}</tspan><tspan dy="-4">​</tspan>`;
+  // the symbols that differ between the languages (as in exercises.js): English as in British
+  // textbooks (V_s, φ, E_k, a voltage V), German as before (U₀, W, E_kin, U)
+  const Us = () => L(`${it('V')}${sub('s')}`, `${it('U')}${sub('0')}`), Wf = () => it(L('φ', 'W')), Ek = () => `${it('E')}${sub(L('k', 'kin'))}`, Uv = () => it(L('V', 'U'));
 
   // ---------------------------------------------------------------- axes
   function graph(o) {
@@ -58,7 +61,7 @@
     const Umax = Math.max(...o.pts.map((p) => p[1]));
     const xHi = Math.ceil(fmax + 1), yHi = Math.max(1, Math.ceil(Umax * 2 + 0.6) / 2);
     const yLo = o.line ? -Math.ceil(-o.line.icept * 2 + 0.6) / 2 : 0;
-    const g = graph({ x: [0, xHi, 1], y: [yLo, yHi, 0.5], xl: `${it('f')} in 10<tspan font-size="72%" dy="-6">14</tspan><tspan dy="6"> Hz</tspan>`, yl: `${it('U')}${sub('0')} in V`, w: 360, h: o.line ? 300 : 240, minor: 2, read: { x: ['f', '· 10¹⁴ Hz', 0.01], y: ['U₀', 'V', 0.01] } });
+    const g = graph({ x: [0, xHi, 1], y: [yLo, yHi, 0.5], xl: `${it('f')} in 10<tspan font-size="72%" dy="-6">14</tspan><tspan dy="6"> Hz</tspan>`, yl: `${Us()} in V`, w: 360, h: o.line ? 300 : 240, minor: 2, read: { x: ['f', '· 10¹⁴ Hz', 0.01], y: [L('V_s', 'U₀'), 'V', 0.01] } });
     let body = '';
     if (o.draw || o.solve) {
       const { slope, icept } = o.line, fG = -icept / slope;
@@ -68,11 +71,11 @@
     if (o.solve) {
       const { slope, icept } = o.line, fG = -icept / slope;
       body += `<circle class="mark" cx="${g.X(fG)}" cy="${g.Y(0)}" r="4"/><text class="lbl small" x="${g.X(fG) + 6}" y="${g.Y(0) - 8}">${it('f')}${sub(L('0', 'G'))}</text>`;
-      body += `<circle class="mark" cx="${g.X(0)}" cy="${g.Y(icept)}" r="4"/><text class="lbl small" x="${g.X(0) + 8}" y="${g.Y(icept) + 16}">−${it('W')}/${it('e')}</text>`;
+      body += `<circle class="mark" cx="${g.X(0)}" cy="${g.Y(icept)}" r="4"/><text class="lbl small" x="${g.X(0) + 8}" y="${g.Y(icept) + 16}">−${Wf()}/${it('e')}</text>`;
       // the slope triangle between the outer points
       const [a, b] = [o.pts[0], o.pts[o.pts.length - 1]].map(([f]) => [f, icept + slope * f]);
       body += `<path class="tri" d="M${g.X(a[0])} ${g.Y(a[1])} H${g.X(b[0])} V${g.Y(b[1])}"/>`;
-      body += `<text class="lbl small" x="${(g.X(a[0]) + g.X(b[0])) / 2}" y="${g.Y(a[1]) + 16}" text-anchor="middle">Δ${it('f')}</text><text class="lbl small" x="${g.X(b[0]) + 6}" y="${(g.Y(a[1]) + g.Y(b[1])) / 2 + 4}">Δ${it('U')}${sub('0')}</text>`;
+      body += `<text class="lbl small" x="${(g.X(a[0]) + g.X(b[0])) / 2}" y="${g.Y(a[1]) + 16}" text-anchor="middle">Δ${it('f')}</text><text class="lbl small" x="${g.X(b[0]) + 6}" y="${(g.Y(a[1]) + g.Y(b[1])) / 2 + 4}">Δ${Us()}</text>`;
     }
     body += o.pts.map(([f, U]) => `<circle class="pt" cx="${g.X(f)}" cy="${g.Y(U)}" r="3.6"/>`).join('');
     return g.svg(body, L('Measured stopping voltages against the frequency of the light', 'Gemessene Gegenspannungen gegen die Frequenz des Lichts'));
@@ -83,7 +86,7 @@
   function ivGraph(curves, o = {}) {
     const Imax = o.Imax || Math.max(...curves.map((k) => k.I)) * 1.15;
     const step = Imax > 40 ? 20 : Imax > 16 ? 5 : 2;
-    const g = graph({ x: [-3, 3, 1], y: [0, Math.ceil(Imax / step) * step, step], xl: `${it('U')} in V`, yl: `${it('I')} in nA`, w: o.w || 320, h: o.h || 210, noYTicks: o.noYTicks, small: o.small, read: { x: ['U', 'V', 0.01], y: ['I', 'nA', 0.1] } });
+    const g = graph({ x: [-3, 3, 1], y: [0, Math.ceil(Imax / step) * step, step], xl: `${Uv()} in V`, yl: `${it('I')} in nA`, w: o.w || 320, h: o.h || 210, noYTicks: o.noYTicks, small: o.small, read: { x: [L('V', 'U'), 'V', 0.01], y: ['I', 'nA', 0.1] } });
     const body = curves.map((k) => {
       const pts = [];
       for (let U = -3; U <= 3.0001; U += 0.05) pts.push([g.X(U), g.Y(current(U, k.U0, k.I))]);
@@ -154,8 +157,8 @@
     let s = `<line class="ax" x1="40" y1="${base}" x2="260" y2="${base}"/>`;
     s += `<rect class="photon" x="${x}" y="${y(E)}" width="${bw}" height="${f1(E * k)}"/><text class="lbl small" x="${x + bw / 2}" y="${y(E) - 6}" text-anchor="middle">${it('h')}·${it('f')}</text>`;
     const x2 = 170;
-    s += `<rect class="work" x="${x2}" y="${y(Math.min(W, E))}" width="${bw}" height="${f1(Math.min(W, E) * k)}"/><text class="lbl small inside" x="${x2 + bw / 2}" y="${(y(Math.min(W, E)) + base) / 2 + 5}" text-anchor="middle">${it('W')}</text>`;
-    if (E > W) s += `<rect class="kin" x="${x2}" y="${y(E)}" width="${bw}" height="${f1((E - W) * k)}"/><text class="lbl small" x="${x2 + bw + 6}" y="${(y(E) + y(W)) / 2 + 5}">${it('E')}${sub('kin')}</text>`;
+    s += `<rect class="work" x="${x2}" y="${y(Math.min(W, E))}" width="${bw}" height="${f1(Math.min(W, E) * k)}"/><text class="lbl small inside" x="${x2 + bw / 2}" y="${(y(Math.min(W, E)) + base) / 2 + 5}" text-anchor="middle">${Wf()}</text>`;
+    if (E > W) s += `<rect class="kin" x="${x2}" y="${y(E)}" width="${bw}" height="${f1((E - W) * k)}"/><text class="lbl small" x="${x2 + bw + 6}" y="${(y(E) + y(W)) / 2 + 5}">${Ek()}</text>`;
     else s += `<rect class="missing" x="${x2}" y="${y(W)}" width="${bw}" height="${f1((W - E) * k)}"/><text class="lbl small" x="${x2 + bw + 6}" y="${(y(E) + y(W)) / 2 + 5}">${L('missing', 'fehlt')}</text>`;
     s += `<line class="guide" x1="${x + bw}" y1="${y(E)}" x2="${x2}" y2="${y(E)}"/>`;
     s += `<text class="lbl small" x="${x + bw / 2}" y="${base + 18}" text-anchor="middle">${L('photon', 'Photon')}</text><text class="lbl small" x="${x2 + bw / 2}" y="${base + 18}" text-anchor="middle">${L('electron', 'Elektron')}</text>`;
@@ -179,7 +182,7 @@
     s += '<path class="wire" d="M106 120 V170 H150 M190 170 H240 V115 M226 115 H240"/>';
     s += `<circle class="meter" cx="170" cy="170" r="13"/><text class="lbl small" x="170" y="175" text-anchor="middle">A</text>`;
     s += `<line class="wire" x1="150" y1="170" x2="157" y2="170"/><line class="wire" x1="183" y1="170" x2="190" y2="170"/>`;
-    if (o.counter) s += '<line class="batt" x1="216" y1="160" x2="216" y2="180"/><line class="batt thick" x1="224" y1="164" x2="224" y2="176"/><rect class="gap" x="217" y="166" width="6" height="8"/>' + `<text class="lbl small" x="220" y="198" text-anchor="middle">${it('U')}</text>`;
+    if (o.counter) s += '<line class="batt" x1="216" y1="160" x2="216" y2="180"/><line class="batt thick" x1="224" y1="164" x2="224" y2="176"/><rect class="gap" x="217" y="166" width="6" height="8"/>' + `<text class="lbl small" x="220" y="198" text-anchor="middle">${Uv()}</text>`;
     s += `<text class="lbl small" x="48" y="128" text-anchor="middle">${L('cathode', 'Kathode')}</text><text class="lbl small" x="226" y="38" text-anchor="middle">${L('anode', 'Anode')}</text>`;
     return `<svg class="ph cell" viewBox="0 0 300 206" width="300" role="img" aria-label="${L('A photocell: light falls on the cathode and releases electrons, which fly to the anode', 'Eine Fotozelle: Licht fällt auf die Kathode und löst Elektronen aus, die zur Anode fliegen')}">${s}</svg>`;
   }
