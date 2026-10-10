@@ -3,10 +3,10 @@
 //                            xl, yl (axis labels, SVG text), w, h, minor (grid lines between ticks),
 //                            read (the coordinate readout: { x: [name, unit, step], y: [...] }) };
 //                            returns { X(x), Y(y), s (the SVG of the axes), svg(body, label, cls) }
-//   ufGraph(o)               stopping voltage U₀ against frequency f (10¹⁴ Hz): o = { pts: [[f, U]],
+//   ufGraph(o)               stopping voltage V_s (German U₀) against frequency f (10¹⁴ Hz): o = { pts: [[f, U]],
 //                            line: { slope, icept } (V per 10¹⁴ Hz, V; the axes then reach down to
 //                            −W/e), draw (the line drawn, extended to both axes), solve (the same,
-//                            with f₀ (German f_G), −W/e and a slope triangle marked) }
+//                            with f₀ (German f_G), −φ/e (German −W/e) and a slope triangle marked) }
 //   ivGraph(curves, o)       the current of a photocell against the voltage: curves [{ U0, I, cls,
 //                            dash }], I in nA; o = { Imax, label }
 //   current(U, U0, I)        the model of that current (nA)
@@ -70,7 +70,7 @@
     }
     if (o.solve) {
       const { slope, icept } = o.line, fG = -icept / slope;
-      body += `<circle class="mark" cx="${g.X(fG)}" cy="${g.Y(0)}" r="4"/><text class="lbl small" x="${g.X(fG) + 6}" y="${g.Y(0) - 8}">${it('f')}${sub(L('0', 'G'))}</text>`;
+      body += `<circle class="mark" cx="${g.X(fG)}" cy="${g.Y(0)}" r="4"/><text class="lbl small" x="${g.X(fG) + 6}" y="${g.Y(0) + 15}">${it('f')}${sub(L('0', 'G'))}</text>`;
       body += `<circle class="mark" cx="${g.X(0)}" cy="${g.Y(icept)}" r="4"/><text class="lbl small" x="${g.X(0) + 8}" y="${g.Y(icept) + 16}">−${Wf()}/${it('e')}</text>`;
       // the slope triangle between the outer points
       const [a, b] = [o.pts[0], o.pts[o.pts.length - 1]].map(([f]) => [f, icept + slope * f]);
