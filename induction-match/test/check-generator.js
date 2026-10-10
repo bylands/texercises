@@ -8,12 +8,15 @@
 //   visibly different from it and from each other, each with a known mistake,
 // - the mistakes are what their tags say (sign: mirrored; average: constant in each piece; straight:
 //   straight between the right values at the breakpoints),
-// - all options and the graphs of the solution render in both languages.
+// - all options and the graphs of the solution render in both languages,
+// - reading off a given graph (plot.js cursor): the readout gives t and the value there, and never
+//   the slope; the tangent touches the flux graph at t with the slope dΦ/dt (= −V_ind), stays in
+//   the plot and spans a good part of it (at least 2 s, or edge to edge); at a kink there is none.
 'use strict';
 
 const Lang = require('../lang.js');
 const I = require('../generator.js');
-const { fluxGraph, voltGraph, optionGraph } = require('../plot.js');
+const { fluxGraph, voltGraph, optionGraph, cursor, guide, timeAt } = require('../plot.js');
 
 const { T, PHI_MAX, V_MAX, BEND, TYPES, generate, flux, volt, curved } = I;
 const SAMPLES = 1500;
@@ -90,6 +93,55 @@ for (const type of TYPES) {
 for (const family of ['lin', 'smooth']) for (let s = 1; s < 40; s++) {
   const g = I.graphOf(family, s), vs = grid(200).map((t) => flux(g, t));
   if (Math.min(...vs) < -1e-9 || Math.max(...vs) > PHI_MAX + 1e-9) fail(`graphOf ${family} ${s} leaves the axis`);
+}
+
+// reading off: the readout and the tangent
+{
+  const W = 280, Lm = 34, R = 44, TOP = 44, Bm = 26, H = 196;
+  const X = (t) => Lm + (t / T) * (W - Lm - R), Y = (v) => TOP + ((PHI_MAX - v) / PHI_MAX) * (H - TOP - Bm), Yv = (v) => TOP + ((V_MAX - v) / (2 * V_MAX)) * (H - TOP - Bm);
+  const fix = (x) => { const v = Math.round(x * 10) / 10; return (v < 0 ? '−' : '') + Math.abs(v).toFixed(1); };
+  let tangents = 0, kinks = 0;
+  for (const lang of ['en', 'de']) {
+    Lang.set(lang);
+    for (const type of ['phi2v-lin', 'phi2v-smooth', 'v2phi-lin']) {
+      for (let seed = 1; seed <= 40; seed++) {
+        const g = generate(type, seed).g, tag = `cursor ${type} ${seed} ${lang}`;
+        for (let k = 0; k <= 80; k++) {
+          const t = k / 10, tt = Math.min(t, T - 1e-9), Phi = flux(g, tt);
+          const html = cursor('flux', g, t, { tangent: true }), read = html.match(/<text class="hv-read"[^>]*>(.*?)<\/text>/)[1].replace(/<[^>]+>/g, '');
+          if (bad(html)) fail(`${tag}: undefined or NaN`);
+          if (read !== `t = ${fix(t)} s, Φ = ${fix(Phi)} mWb`) fail(`${tag} t=${t}: the readout ${read}`);
+          if (!html.includes(`cx="${Math.round(X(t) * 10) / 10}" cy="${Math.round(Y(Phi) * 10) / 10}"`)) fail(`${tag} t=${t}: the dot is not on the graph`);
+          const kl = t > 0 ? -volt(g, t - 1e-7) : null, kr = t < T ? -volt(g, Math.min(t + 1e-7, T - 1e-9)) : null, kink = kl !== null && kr !== null && Math.abs(kl - kr) > 1e-6;
+          const m = html.match(/class="hv-tan" d="M([\d.-]+),([\d.-]+) L([\d.-]+),([\d.-]+)"/);
+          if (kink) { kinks++; if (m) fail(`${tag} t=${t}: a tangent at a kink`); continue; }
+          if (!m) { fail(`${tag} t=${t}: no tangent`); continue; }
+          tangents++;
+          const [x1, y1, x2, y2] = m.slice(1).map(Number), slope = kr === null ? kl : kr;
+          // in graph units: the slope, and the touching point on the line
+          const sl = ((Y(0) - y2) - (Y(0) - y1)) / (Y(0) - Y(1)) / ((x2 - x1) / (X(1) - X(0)));
+          if (Math.abs(x2 - x1) < 1e-6 || Math.abs(sl - slope) > 0.06) fail(`${tag} t=${t}: the tangent's slope ${sl} is not ${slope}`);
+          const yAt = y1 + ((y2 - y1) * (X(t) - x1)) / (x2 - x1);
+          if (Math.abs(yAt - Y(Phi)) > 0.3) fail(`${tag} t=${t}: the tangent does not touch the graph`);
+          if (Math.min(x1, x2) < X(0) - 0.1 || Math.max(x1, x2) > X(T) + 0.1 || Math.min(y1, y2) < Y(PHI_MAX) - 0.1 || Math.max(y1, y2) > Y(0) + 0.1) fail(`${tag} t=${t}: the tangent leaves the plot`);
+          const span = Math.abs(x2 - x1) / (X(1) - X(0)), edge = (y) => Math.abs(y - Y(0)) < 0.2 || Math.abs(y - Y(PHI_MAX)) < 0.2;
+          if (span < 2 - 1e-6 && !(edge(y1) || edge(y2) || Math.min(x1, x2) < X(0) + 0.2 || Math.max(x1, x2) > X(T) - 0.2)) fail(`${tag} t=${t}: the tangent is short (${span} s)`);
+          if (/mWb\/s|mV/.test(read)) fail(`${tag}: the slope in the readout`);
+        }
+        // the voltage graph: its value, no tangent; the guide line for the drawing below
+        for (const t of [0, 1.5, 3.2, 8]) {
+          const v = volt(g, Math.min(t, T - 1e-9)), html = cursor('volt', g, t, { tangent: true }), read = html.match(/<text class="hv-read"[^>]*>(.*?)<\/text>/)[1].replace(/<[^>]+>/g, '');
+          if (read !== `t = ${fix(t)} s, ${lang === 'de' ? 'U' : 'V'}ind = ${fix(v)} mV` || html.includes('hv-tan')) fail(`${tag} t=${t}: the voltage readout ${read}`);
+          if (!html.includes(`cy="${Math.round(Yv(v) * 10) / 10}"`)) fail(`${tag} t=${t}: the dot is not on the voltage graph`);
+          for (const kind of ['flux', 'volt']) if (!guide(kind, t).includes(`x1="${Math.round(X(t) * 10) / 10}"`)) fail(`${tag}: the guide line of the ${kind} drawing is not at t`);
+        }
+      }
+    }
+  }
+  for (const [px, want] of [[X(0), 0], [X(2.04), 2], [X(8), 8], [X(0) - 30, null], [X(8) + 30, null], [X(0) - 8, 0]]) if (timeAt(px) !== want) fail(`timeAt(${px}) = ${timeAt(px)}, not ${want}`);
+  if (tangents < 1000 || kinks < 100) fail(`cursor: few tangents (${tangents}) or kinks (${kinks})`);
+  console.log(`cursor: ${tangents} tangents, ${kinks} kinks`);
+  Lang.set('en');
 }
 
 if (failures) { console.error(`${failures} failures`); process.exit(1); }

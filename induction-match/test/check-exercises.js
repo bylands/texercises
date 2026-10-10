@@ -7,7 +7,10 @@
 // - the physics holds, worked out independently: a voltage read off is −dΦ/dt (numerically); a
 //   change of the flux is Φ(b) − Φ(a); the flux through the moving loop is B times the overlap of
 //   loop and field, and its voltage −dΦ/dt; Lenz's rule (an approaching pole is repeated on the
-//   ring, a retreating one reversed; the induced field opposes an increase, supports a decrease),
+//   ring, a retreating one reversed; the induced field opposes an increase, supports a decrease;
+//   a loop moved in a field stronger on one side: the sign of dΦ/dt from the field, the right-hand
+//   rule and the force against the motion), with the check's four answers for it,
+// - the Lenz tutor figures show the induced poles and the current, consistent with the scenario,
 // - no text or drawing contains undefined, NaN or the like, and every picture renders.
 'use strict';
 
@@ -100,9 +103,106 @@ for (const lang of ['en', 'de']) {
     }
   }
 }
+// A loop moved in a field stronger on one side, worked out independently: a field B(x, y) that
+// grows towards the strong side (y downwards, as in the figure), the flux through the moved loop
+// and its sign of change; the induced field against an increase, along a decrease; anticlockwise
+// (as seen) goes with an induced field out of the page; the force opposes the motion. Every
+// question has exactly one right option, and the wrong ones carry their own reason.
+Lang.set('en', true);
+{
+  const GRAD = { left: [-1, 0], right: [1, 0], top: [0, -1], bottom: [0, 1] }, STEP = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+  const counts = {};
+  for (let seed = 1; seed <= 400; seed++) {
+    const e = X.make('lenz-gradient', seed), tag = `lenz-gradient ${seed}`, { into, strong, move } = e.p;
+    const B = (x, y) => 1 + 0.1 * (GRAD[strong][0] * x + GRAD[strong][1] * y); // size of the field
+    const fluxAt = (cx, cy) => { let s = 0; for (let i = 0; i < 10; i++) for (let j = 0; j < 10; j++) s += B(cx - 0.45 + 0.1 * i, cy - 0.45 + 0.1 * j); return s / 100; };
+    const dPhi = fluxAt(0.01 * STEP[move][0], 0.01 * STEP[move][1]) - fluxAt(0, 0);
+    const change = Math.abs(dPhi) < 1e-9 ? 0 : Math.sign(dPhi);
+    const indInto = change > 0 ? !into : into;
+    const want = change === 0 ? 'not at all' : indInto ? 'clockwise' : 'anticlockwise';
+    // the force opposes the motion: back towards where the field is as strong as before
+    const wantF = change === 0 ? 'nowhere: there is no force' : change > 0 ? 'towards the weaker field' : 'towards the stronger field';
+    const right = (k) => e.questions.find((q) => q.key === k).options.filter((o) => o.ok).map((o) => o.label);
+    if (right('dir').length !== 1 || right('dir')[0] !== want) fail(`${tag}: the current ${right('dir')} (want ${want})`);
+    if (right('force').length !== 1 || right('force')[0] !== wantF) fail(`${tag}: the force ${right('force')} (want ${wantF})`);
+    for (const q of e.questions) if (q.options.some((o) => !o.ok && !o.why)) fail(`${tag}: a wrong option without its reason`);
+    counts[change] = (counts[change] || 0) + 1;
+    const pic = F.gradient(e.p);
+    if (bad(pic)) fail(`${tag}: the picture does not render`);
+    // the marks are bigger on the strong side: compare the first and the last along the gradient
+    const sizes = [...pic.matchAll(into ? /stroke-width:([\d.]+)/g : /<circle class="tb-line-fill" cx="[\d.]+" cy="[\d.]+" r="([\d.]+)"/g)].map((m) => Number(m[1]));
+    const first = sizes[0], last = sizes[sizes.length - 1], growsAlong = strong === 'right' || strong === 'bottom';
+    if (!(growsAlong ? last > first : first > last)) fail(`${tag}: the marks do not grow towards the strong side`);
+  }
+  if (!(counts[1] > 20 && counts[-1] > 20 && counts[0] > 10)) fail(`lenz-gradient: not every case comes up (${JSON.stringify(counts)})`);
+}
+
+// The figures of the Lenz tutor: the ring's induced poles (the side facing the magnet repeats an
+// approaching pole, reverses a retreating one, the far side the other pole) and the current (seen
+// from the magnet anticlockwise for a north pole facing it: up the near half, which is drawn on the
+// right); the loop in a growing field: the induced field against it, anticlockwise for out of the page.
+for (const lang of ['en', 'de']) {
+  Lang.set(lang, true);
+  for (const pole of ['N', 'S']) {
+    for (const move of ['toward', 'away']) {
+      const face = move === 'toward' ? pole : pole === 'N' ? 'S' : 'N', other = face === 'N' ? 'S' : 'N', tag = `magnet ${pole} ${move} ${lang}`;
+      for (const show of ['poles', 'current']) {
+        const pic = F.magnet({ pole, move, show });
+        if (bad(pic)) fail(`${tag}: the picture does not render`);
+        if (!pic.includes(`data-side="magnet" data-pole="${face}"`) || !pic.includes(`data-side="far" data-pole="${other}"`)) fail(`${tag} ${show}: the induced poles`);
+        if ((show === 'current') !== pic.includes('ind-sense')) fail(`${tag} ${show}: the current shown when it should not, or not shown`);
+      }
+      const pic = F.magnet({ pole, move, show: 'current' }), sense = face === 'N' ? 'acw' : 'cw';
+      if (!pic.includes(`data-sense="${sense}" data-face="${face}"`)) fail(`${tag}: the sense of the current`);
+      // the first arrowhead (on the near half of the ring, x = 312): its tip above its base for anticlockwise
+      const pts = pic.match(/<polygon class="ind-current" points="([^"]+)"/)[1].split(' ').map((p) => p.split(',').map(Number));
+      const up = pts[0][1] < pts[1][1];
+      if (Math.abs(pts[0][0] - 312) > 1e-6 || up !== (sense === 'acw')) fail(`${tag}: the arrow on the ring`);
+    }
+  }
+  if (F.magnet({ pole: 'N', move: 'toward' }).includes('ind-pole')) fail('the practice figure gives the poles away');
+  for (const into of [true, false]) {
+    for (const how of ['up', 'down', 'in', 'out']) {
+      const pic = F.field({ into, how, show: 'current' }), indInto = how === 'up' || how === 'in' ? !into : into;
+      if (!pic.includes(`data-sense="${indInto ? 'cw' : 'acw'}"`) || !pic.includes(indInto ? 'ind-bx' : 'ind-bdot')) fail(`field ${into} ${how} ${lang}: the induced current or field`);
+      if (F.field({ into, how }).includes('ind-sense')) fail(`field ${into} ${how}: the practice figure gives the current away`);
+    }
+  }
+}
+Lang.set('en', true);
+// The tutor (app.js) shows the poles where they are explained and the current where it is.
+{
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8');
+  const lesson = src.slice(src.indexOf('function lenzLesson'), src.indexOf('// ---', src.indexOf('function lenzLesson')));
+  const shows = [...lesson.matchAll(/figure: .*/g)].map((m) => [...m[0].matchAll(/show: '(\w+)'/g)].map((x) => x[1]).join('+'));
+  if (shows.join(' | ') !== 'poles | poles | current+current | current') fail(`the Lenz tutor figures: ${shows.join(' | ')}`);
+}
+
+// The check's Lenz questions for the field stronger on one side (app.js, lenzQuestion): four
+// answers, exactly one right, and the right one the pair of the practice exercise.
+{
+  const vm = require('vm'), src = require('fs').readFileSync(require('path').join(__dirname, '..', 'app.js'), 'utf8');
+  const start = src.indexOf('function lenzQuestion'), open = src.indexOf('{', start);
+  let depth = 0, end = open;
+  for (; end < src.length; end++) { if (src[end] === '{') depth++; else if (src[end] === '}' && --depth === 0) break; }
+  const lenzQuestion = vm.runInNewContext(`(${src.slice(start, end + 1)})`, { I, X, L: (en, de) => Lang.L(en, de) });
+  for (const lang of ['en', 'de']) {
+    Lang.set(lang, true);
+    for (let seed = 1; seed <= 200; seed++) {
+      const e = X.make('lenz-gradient', seed), q = lenzQuestion(e, seed), tag = `check lenz-gradient ${seed} ${lang}`;
+      if (q.list.length !== 4 || q.list.filter((o) => o.correct).length !== 1) fail(`${tag}: not four answers with one right`);
+      if (new Set(q.list.map((o) => o.html)).size !== 4) fail(`${tag}: two answers alike`);
+      if (q.list.some((o) => !o.correct && !o.flag) || bad(q.ask + q.list.map((o) => o.html + o.why).join(" "))) fail(`${tag}: an answer without its idea, or undefined`);
+      const right = q.list.find((o) => o.correct).html, ans = (k) => e.questions.find((x) => x.key === k).options.find((o) => o.ok).label;
+      if (ans('dir') === Lang.L('not at all', 'gar nicht') ? !/no current|kein Strom/i.test(right) : !(right.includes(ans('dir')) && right.includes(ans('force')))) fail(`${tag}: the right answer is not the exercise's`);
+    }
+  }
+  Lang.set('en', true);
+}
+
 // Lenz's rule: each practice stage has at least 10 distinct exercises (by their text), and every
 // variant (who moves, how the flux changes) comes up, in both languages, with clean text.
-for (const [type, key, want] of [['lenz-magnet', (p) => `${p.move}/${p.who}`, 6], ['lenz-field', (p) => p.how, 6]]) {
+for (const [type, key, want] of [['lenz-magnet', (p) => `${p.move}/${p.who}`, 6], ['lenz-field', (p) => p.how, 6], ['lenz-gradient', (p) => `${p.into}/${p.strong}/${p.move}`, 24]]) {
   for (const lang of ['en', 'de']) {
     Lang.set(lang, true);
     const texts = new Set(), seen = new Set();

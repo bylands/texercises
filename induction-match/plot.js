@@ -175,7 +175,48 @@
     },
   };
 
-  const api = { fluxGraph, voltGraph, optionGraph, drawGraph, pointAt, SIZE: { W, H }, num, dec, range, Tut, V_MAX, PHI_MAX };
+  // ---------------------------------------------------------------- reading off a graph
+  // timeAt(px): the time at a horizontal position of a graph (SVG units), to 0.1 s, or null well
+  // outside the plot. cursor(kind, fg, t, o): the marks for the value of graph fg (kind 'flux' or
+  // 'volt') at time t: a dashed guide line, a dot and a readout "t = 2.0 s, Φ = 3.0 mWb" above the
+  // plot; with o.tangent (a flux graph), the tangent there across a good part of the plot (none at
+  // a kink, where the slope jumps). guide(kind, t): only the guide line, for a graph below that
+  // shares the time axis (the drawing).
+  function timeAt(px) {
+    if (px < L - 14 || px > W - R + 14) return null;
+    return Math.round(Math.max(0, Math.min(T, ((px - L) / (W - L - R)) * T)) * 10) / 10;
+  }
+  const fix = (x) => { const v = Math.round(x * 10) / 10; return (v < 0 ? '−' : '') + Math.abs(v).toFixed(1); };
+  function guide(kind, t) {
+    const g = kind === 'flux' ? fluxFrame() : voltFrame(), [lo, hi] = lims(kind);
+    return `<line class="hv-line" x1="${g.x(t)}" y1="${g.y(hi) - 4}" x2="${g.x(t)}" y2="${g.y(lo)}"/>`;
+  }
+  function cursor(kind, fg, t, o = {}) {
+    const g = kind === 'flux' ? fluxFrame() : voltFrame(), [lo, hi] = lims(kind), tt = Math.min(t, T - 1e-9);
+    const y = kind === 'flux' ? flux(fg, tt) : volt(fg, tt);
+    let s = guide(kind, t);
+    if (o.tangent && kind === 'flux') {
+      // the slope on both sides: a kink has none
+      const kl = t > 0 ? -volt(fg, t - 1e-7) : null, kr = t < T ? -volt(fg, Math.min(t + 1e-7, T - 1e-9)) : null;
+      const k = kl === null ? kr : kr === null ? kl : Math.abs(kl - kr) < 1e-6 ? kr : null;
+      if (k !== null) {
+        // ±2.5 s around t, cut to the plot
+        let a = Math.max(0, t - 2.5), b = Math.min(T, t + 2.5);
+        if (Math.abs(k) > 1e-9) {
+          const ta = t + (lo - y) / k, tb = t + (hi - y) / k;
+          a = Math.max(a, Math.min(ta, tb)); b = Math.min(b, Math.max(ta, tb));
+        }
+        const at = (u) => `${g.x(u)},${g.y(y + k * (u - t))}`;
+        s += `<path class="hv-tan" d="M${at(a)} L${at(b)}"/>`;
+      }
+    }
+    s += `<circle class="hv-dot" cx="${g.x(t)}" cy="${g.y(y)}" r="4"/>`;
+    const q = kind === 'flux' ? '<tspan class="it">Φ</tspan>' : `<tspan class="it">${say('V', 'U')}</tspan><tspan class="sub" dy="3">ind</tspan><tspan dy="-3">`;
+    s += `<text class="hv-read" x="${W - 4}" y="15" text-anchor="end"><tspan class="it">t</tspan> = ${fix(t)} s, ${q} = ${fix(y)} ${kind === 'flux' ? 'mWb' : 'mV</tspan>'}</text>`;
+    return `<g class="hover" pointer-events="none">${s}</g>`;
+  }
+
+  const api = { fluxGraph, voltGraph, optionGraph, drawGraph, pointAt, timeAt, cursor, guide, SIZE: { W, H }, num, dec, range, Tut, V_MAX, PHI_MAX };
   root.Plot = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

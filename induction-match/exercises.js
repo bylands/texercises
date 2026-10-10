@@ -18,6 +18,8 @@
 //   loop-wide, loop-narrow, loop-num   a square loop pulled through a field region: its flux and
 //                                      voltage graphs, or the numbers
 //   lenz-magnet, lenz-field            the direction of the induced current (Lenz's rule)
+//   lenz-gradient                      a loop moved in a field stronger on one side: the current and
+//                                      the force on the loop
 (function (root) {
   'use strict';
 
@@ -623,7 +625,7 @@
       shrink: () => L('The area of the loop gets smaller, so', 'Die Fläche der Schleife wird kleiner, also'), off: () => L('The field drops to zero, so', 'Das Feld sinkt auf null, also'),
     }[how]();
     const why = L(`${cause} the flux through the loop ${grows ? 'increases' : 'decreases'}. ${LENZ()} The induced current's own field inside the loop points ${grows ? 'against' : 'along'} the outer field: ${fieldName(indInto)}.`,
-      `${cause} nimmt der Fluss durch die Schleife ${grows ? 'zu' : 'ab'}. ${LENZ()} Das eigene Feld des induzierten Stroms zeigt innerhalb der Schleife ${grows ? 'gegen' : 'in Richtung'} das äussere Feld: ${fieldName(indInto)}.`);
+      `${cause} nimmt der Fluss durch die Schleife ${grows ? 'zu' : 'ab'}. ${LENZ()} Das eigene Feld des induzierten Stroms zeigt innerhalb der Schleife ${grows ? 'gegen das äussere Feld' : 'in Richtung des äusseren Feldes'}: ${fieldName(indInto)}.`);
     const turn = L(` A current flowing ${dir === 'acw' ? 'anticlockwise' : 'clockwise'} (as seen in the figure) makes a field ${fieldName(indInto)} inside the loop (right-hand rule).`, ` Ein Strom im ${dir === 'acw' ? 'Gegenuhrzeigersinn' : 'Uhrzeigersinn'} (wie in der Abbildung gesehen) erzeugt innerhalb der Schleife ein Feld ${fieldName(indInto)} (Rechte-Hand-Regel).`);
     return {
       kind: 'lenz', title: L('The direction of the current', 'Die Richtung des Stroms'), text, figs: '', pic: ['field', { into, how }],
@@ -633,6 +635,60 @@
       ],
       hints: [L('Does the flux through the loop increase or decrease?', 'Nimmt der Fluss durch die Schleife zu oder ab?'), LENZ() + ' ' + L("If the flux increases, the induced field points against the outer field; if it decreases, along it.", 'Nimmt der Fluss zu, zeigt das induzierte Feld gegen das äussere Feld; nimmt er ab, in seine Richtung.'), L('Curl the fingers of your right hand in the direction of the current: your thumb shows the field inside the loop.', 'Krümme die Finger der rechten Hand in Stromrichtung: Der Daumen zeigt das Feld innerhalb der Schleife.')],
       solution: [why + turn], p: { into, how },
+    };
+  }
+
+  // A loop moved sideways in a field that is stronger on one side (strong: left, right, top,
+  // bottom): towards the stronger field the flux increases, towards the weaker one it decreases,
+  // and along the side (the field strength the same along the path) it stays the same. The force on
+  // the induced current opposes the motion: towards the weaker field when it moves to the stronger.
+  const OPP = { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
+  const TOWARDS = { left: 'left', right: 'right', top: 'up', bottom: 'down' };
+  function lenzGradient(seed) {
+    const r = rng(seed * 61 + 31), into = r.next() < 0.5, strong = r.pick(['left', 'right', 'top', 'bottom']);
+    const along = ['left', 'right'].includes(strong) ? ['up', 'down'] : ['left', 'right'];
+    const way = r.next() < 0.2 ? 'side' : r.pick(['stronger', 'weaker']);
+    const move = way === 'stronger' ? TOWARDS[strong] : way === 'weaker' ? TOWARDS[OPP[strong]] : r.pick(along);
+    const grows = way === 'stronger', flows = way !== 'side', indInto = grows ? !into : into, dir = !flows ? null : indInto ? 'cw' : 'acw';
+    const force = !flows ? null : grows ? 'weaker' : 'stronger';
+    const fieldName = (inn) => (inn ? L('into the page', 'in die Seite hinein') : L('out of the page', 'aus der Seite heraus'));
+    const where = { left: L('on the left', 'links'), right: L('on the right', 'rechts'), top: L('at the top', 'oben'), bottom: L('at the bottom', 'unten') }[strong];
+    const moveName = { left: L('to the left', 'nach links'), right: L('to the right', 'nach rechts'), up: L('upwards', 'nach oben'), down: L('downwards', 'nach unten') }[move];
+    const marks = into ? L('crosses', 'Kreuze') : L('dots', 'Punkte');
+    const text = L(`<p>A conducting loop lies in a magnetic field that points ${fieldName(into)}. The field is not uniform: it is stronger ${where} (there the ${marks} are bigger and closer together). The loop is moved ${moveName}, without turning.</p>`,
+      `<p>Eine Leiterschleife liegt in einem Magnetfeld, das ${fieldName(into)} zeigt. Das Feld ist nicht homogen: Es ist ${where} stärker (dort sind die ${marks} grösser und dichter). Die Schleife wird ${moveName} bewegt, ohne gedreht zu werden.</p>`);
+    const cause = way === 'stronger' ? L('The loop moves to where the field is stronger, so', 'Die Schleife bewegt sich dorthin, wo das Feld stärker ist, also')
+      : way === 'weaker' ? L('The loop moves to where the field is weaker, so', 'Die Schleife bewegt sich dorthin, wo das Feld schwächer ist, also')
+        : L('The loop moves along the side, where the field is equally strong all the way, so', 'Die Schleife bewegt sich entlang der Seite, wo das Feld überall gleich stark ist, also');
+    const why = flows
+      ? L(`${cause} the flux through the loop ${grows ? 'increases' : 'decreases'}, although the field keeps its direction. ${LENZ()} The induced current's own field inside the loop points ${grows ? 'against' : 'along'} the outer field: ${fieldName(indInto)}.`,
+        `${cause} nimmt der Fluss durch die Schleife ${grows ? 'zu' : 'ab'}, obwohl das Feld seine Richtung behält. ${LENZ()} Das eigene Feld des induzierten Stroms zeigt innerhalb der Schleife ${grows ? 'gegen das äussere Feld' : 'in Richtung des äusseren Feldes'}: ${fieldName(indInto)}.`)
+      : L(`${cause} the flux through the loop does not change. No current is induced, although the loop moves, and so there is no force.`,
+        `${cause} ändert sich der Fluss durch die Schleife nicht. Es wird kein Strom induziert, obwohl sich die Schleife bewegt, und so wirkt auch keine Kraft.`);
+    const turn = flows ? L(` A current flowing ${dir === 'acw' ? 'anticlockwise' : 'clockwise'} (as seen in the figure) makes a field ${fieldName(indInto)} inside the loop (right-hand rule).`, ` Ein Strom im ${dir === 'acw' ? 'Gegenuhrzeigersinn' : 'Uhrzeigersinn'} (wie in der Abbildung gesehen) erzeugt innerhalb der Schleife ein Feld ${fieldName(indInto)} (Rechte-Hand-Regel).`) : '';
+    const brake = flows ? L(` The force of the field on the induced current opposes the motion (Lenz's rule): it points towards the ${force} field, back to where the loop came from.`, ` Die Kraft des Feldes auf den induzierten Strom wirkt der Bewegung entgegen (Lenzsche Regel): Sie zeigt zum ${force === 'weaker' ? 'schwächeren' : 'stärkeren'} Feld hin, dorthin zurück, woher die Schleife kam.`) : '';
+    // the wrong options, by the wrong idea behind them
+    const whyNone = L('The field keeps its direction, but its strength inside the loop changes: so the flux changes, and a current is induced.', 'Das Feld behält seine Richtung, aber seine Stärke in der Schleife ändert sich: Also ändert sich der Fluss, und es wird ein Strom induziert.');
+    const whyMotion = L('Motion alone induces nothing: along this path the field is equally strong, so the flux through the loop does not change.', 'Bewegung allein induziert nichts: Entlang dieses Weges ist das Feld gleich stark, also ändert sich der Fluss durch die Schleife nicht.');
+    const whySense = L(`The induced current opposes the change of the flux: its field inside the loop points ${grows ? 'against' : 'along'} the outer field.`, `Der induzierte Strom wirkt der Änderung des Flusses entgegen: Sein Feld zeigt innerhalb der Schleife ${grows ? 'gegen das äussere Feld' : 'in Richtung des äusseren Feldes'}.`);
+    const whyForce = L("By Lenz's rule, the force opposes the motion that causes the current: it does not pull the loop on in the direction it moves.", 'Nach der Lenzschen Regel wirkt die Kraft der Bewegung entgegen, die den Strom verursacht: Sie zieht die Schleife nicht weiter in ihre Bewegungsrichtung.');
+    const wrongDir = (d) => (!flows ? whyMotion : d === null ? whyNone : whySense);
+    const wrongForce = (f) => (!flows ? whyMotion : f === null ? whyNone : whyForce);
+    const o3 = (label, ok, w) => ({ label, ok, why: ok ? '' : w });
+    return {
+      kind: 'lenz', title: L('A field stronger on one side', 'Ein Feld, auf einer Seite stärker'), text, figs: '', pic: ['gradient', { into, strong, move }],
+      questions: [
+        choice('dir', L('(a) As seen in the figure, the induced current flows', '(a) Wie in der Abbildung gesehen fliesst der induzierte Strom'), r.shuffle([
+          o3(L('clockwise', 'im Uhrzeigersinn'), dir === 'cw', wrongDir('cw')), o3(L('anticlockwise', 'im Gegenuhrzeigersinn'), dir === 'acw', wrongDir('acw')),
+          o3(L('not at all', 'gar nicht'), dir === null, wrongDir(null))])),
+        choice('force', L('(b) The magnetic force on the loop points', '(b) Die magnetische Kraft auf die Schleife zeigt'), r.shuffle([
+          o3(L('towards the stronger field', 'zum stärkeren Feld hin'), force === 'stronger', wrongForce('stronger')), o3(L('towards the weaker field', 'zum schwächeren Feld hin'), force === 'weaker', wrongForce('weaker')),
+          o3(L('nowhere: there is no force', 'nirgends hin: Es wirkt keine Kraft'), force === null, wrongForce(null))])),
+      ],
+      hints: [L('Where is the field stronger? Does the loop move to a stronger field, to a weaker one, or does the field stay equally strong along its path? So does the flux through the loop increase, decrease or stay the same?', 'Wo ist das Feld stärker? Bewegt sich die Schleife zu einem stärkeren Feld, zu einem schwächeren, oder bleibt das Feld entlang ihres Weges gleich stark? Nimmt also der Fluss durch die Schleife zu, ab, oder bleibt er gleich?'),
+        LENZ() + ' ' + L('If the flux increases, the induced field points against the outer field; if it decreases, along it.', 'Nimmt der Fluss zu, zeigt das induzierte Feld gegen das äussere Feld; nimmt er ab, in seine Richtung.'),
+        L('Curl the fingers of your right hand in the direction of the current: your thumb shows the field inside the loop. The force on the induced current opposes the motion of the loop.', 'Krümme die Finger der rechten Hand in Stromrichtung: Der Daumen zeigt das Feld innerhalb der Schleife. Die Kraft auf den induzierten Strom wirkt der Bewegung der Schleife entgegen.')],
+      solution: [why + turn + brake], p: { into, strong, move },
     };
   }
 
@@ -646,14 +702,14 @@
     'stmts-v-lin': [3, (s) => statements('v2phi', 'lin', s)], 'stmts-v-smooth': [4, (s) => statements('v2phi', 'smooth', s)],
     'draw-v-lin': [2, (s) => drawing('v', 'lin', s)], 'draw-v-smooth': [3, (s) => drawing('v', 'smooth', s)], 'draw-phi-lin': [3, (s) => drawing('phi', 'lin', s)],
     'loop-wide': [2, (s) => loopExercise('wide', s)], 'loop-narrow': [3, (s) => loopExercise('narrow', s)], 'loop-num': [3, (s) => loopExercise('num', s)],
-    'lenz-magnet': [2, lenzMagnet], 'lenz-field': [2, lenzField],
+    'lenz-magnet': [2, lenzMagnet], 'lenz-field': [2, lenzField], 'lenz-gradient': [3, lenzGradient],
   };
   function make(type, seed) {
     const [difficulty, f] = TYPES[type];
     return { ...f(seed), type, difficulty, id: `${type}-${seed}`, seed };
   }
 
-  const api = { TYPES: Object.keys(TYPES), make, describe, describeBack, lines, RULE, LAW, WHY, prompt, askGraph, given, pairFigure, one, placed, loopSetup, loopGraph, loopExplain, fmt, sgn, neg, Vi, PHI, DPHI, zeroOf, cap, when, endOf, LENZ, RIGHTHAND, lenzGrows };
+  const api = { TYPES: Object.keys(TYPES), make, describe, describeBack, lines, RULE, LAW, WHY, prompt, askGraph, given, pairFigure, one, placed, loopSetup, loopGraph, loopExplain, fmt, sgn, neg, Vi, PHI, DPHI, zeroOf, cap, when, endOf, LENZ, RIGHTHAND, lenzGrows, OPP, TOWARDS };
   root.IndEx = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

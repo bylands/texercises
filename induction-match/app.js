@@ -25,6 +25,12 @@
       notYet: (n) => `Not quite yet (attempt ${n}).`, tryAgain: ' Try again, or take a hint.', canReveal: ' You can take a hint or look at the solution.',
       correct: 'Correct', notThis: 'Not this one: check your reasoning, or take a hint.', stmtsWrong: (n) => (n === 1 ? 'One statement is judged wrong.' : `${n} statements are judged wrong.`), missed: 'This one is correct too:', shown: 'The right answers are marked.',
       drawWrong: (n) => `${n} ${n === 1 ? 'handle is' : 'handles are'} not right yet (marked).`,
+      pointValue: 'Point at the graph, or tap it, to read off the value at that time.',
+      pointTangent: 'Point at the graph, or tap it, to see the tangent at that time; read off two points on it for its slope.',
+      pointKeys: 'With the arrow keys, move along the graph',
+      worked: (i, n) => `Worked example ${i} · ${n}`,
+      smoothPhi: 'New: smooth curves. Where the flux graph is curved, its slope changes all the time: the voltage at a moment is minus the slope of the tangent there. The tutor shows how:',
+      smoothV: 'New: smooth curves. Where the voltage changes steadily, the flux graph is curved: its tangent has the slope −<i>V</i><sub>ind</sub>, and the change of the flux is minus the area of a trapezoid. The tutor shows how:',
     },
     de: {
       title: 'Elektromagnetische Induktion', mode: 'Modus', difficulty: 'Schwierigkeit', example: 'Beispiel',
@@ -40,6 +46,12 @@
       notYet: (n) => `Noch nicht ganz (Versuch ${n}).`, tryAgain: ' Versuche es nochmals, oder nimm einen Tipp.', canReveal: ' Du kannst einen Tipp nehmen oder die Lösung anschauen.',
       correct: 'Richtig', notThis: 'Das stimmt nicht: Überprüfe deine Überlegung, oder nimm einen Hinweis.', stmtsWrong: (n) => (n === 1 ? 'Eine Aussage ist falsch beurteilt.' : `${n} Aussagen sind falsch beurteilt.`), missed: 'Auch diese ist richtig:', shown: 'Die richtigen Antworten sind markiert.',
       drawWrong: (n) => `${n} ${n === 1 ? 'Griff stimmt' : 'Griffe stimmen'} noch nicht (markiert).`,
+      pointValue: 'Zeige auf den Graphen oder tippe darauf, um den Wert zu dieser Zeit abzulesen.',
+      pointTangent: 'Zeige auf den Graphen oder tippe darauf, um die Tangente zu dieser Zeit zu sehen; lies für ihre Steigung zwei Punkte auf ihr ab.',
+      pointKeys: 'Mit den Pfeiltasten entlang des Graphen fahren',
+      worked: (i, n) => `Beispiel ${i} · ${n}`,
+      smoothPhi: 'Neu: glatte Kurven. Wo der Flussgraph gekrümmt ist, ändert sich seine Steigung laufend: Die Spannung in einem Moment ist minus die Steigung der Tangente dort. Der Tutor zeigt, wie:',
+      smoothV: 'Neu: glatte Kurven. Wo sich die Spannung gleichmässig ändert, ist der Flussgraph gekrümmt: Seine Tangente hat die Steigung −<i>U</i><sub>ind</sub>, und die Änderung des Flusses ist minus die Fläche eines Trapezes. Der Tutor zeigt, wie:',
     },
   };
   const ui = () => UI[Lang.get()];
@@ -106,11 +118,68 @@
     return all ? true : missing && !document.querySelector('.field.bad, .cand.bad, .stmts li.bad, .stmts-fb:not(:empty)') ? null : false;
   }
 
+  // ---------------------------------------------------------------- reading off the given graph
+  // In the drawings and in reading off the voltage, pointing at the given graph (or tapping it, or
+  // the arrow keys once it has the focus) shows the value there: a guide line, a dot and a readout;
+  // reading off the voltage also shows the tangent there (its slope is left to the student). The
+  // guide line goes on into the drawing below, which has the same time axis.
+  let hoverT = null;
+  const hoverable = () => !!ex && !!ex.g && (ex.kind === 'draw' || ex.type === 'value-v-lin' || ex.type === 'value-v-smooth');
+  const givenSvg = () => document.querySelector('#figure .given svg');
+  const givenKind = () => (ex.dir === 'phi2v' ? 'flux' : 'volt');
+  function paintCursor() {
+    if (!hoverable()) return;
+    const svg = givenSvg(), draw = ex.draw ? document.querySelector('#draw-area svg.drawing') : null;
+    for (const el of [svg, draw]) if (el) el.querySelectorAll('g.hover').forEach((x) => x.remove());
+    if (hoverT === null) return;
+    if (svg) svg.insertAdjacentHTML('beforeend', P.cursor(givenKind(), ex.g, hoverT, { tangent: ex.kind === 'value' }));
+    if (draw) draw.insertAdjacentHTML('beforeend', `<g class="hover" pointer-events="none">${P.guide(ex.draw.kind, hoverT)}</g>`);
+  }
+  function svgX(svg, evt) {
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse()).x;
+  }
+  function onPoint(evt) {
+    if (!hoverable()) return;
+    const svg = evt.target.closest('svg');
+    if (!svg || !(svg === givenSvg() || (ex.draw && svg.matches('svg.drawing') && evt.pointerType === 'mouse'))) return;
+    const t = P.timeAt(svgX(svg, evt));
+    if (t === null && evt.pointerType !== 'mouse') return;
+    if (t !== hoverT) { hoverT = t; paintCursor(); }
+  }
+  function onLeave(evt) {
+    if (!hoverable() || evt.pointerType !== 'mouse' || hoverT === null) return;
+    hoverT = null;
+    paintCursor();
+  }
+  function onKey(evt) {
+    if (!hoverable() || evt.target !== givenSvg()) return;
+    const step = evt.shiftKey ? 1 : 0.1, t = hoverT === null ? 0 : hoverT;
+    const to = { ArrowRight: t + step, ArrowLeft: t - step, Home: 0, End: 8 }[evt.key];
+    if (evt.key === 'Escape') { hoverT = null; paintCursor(); return; }
+    if (to === undefined) return;
+    evt.preventDefault();
+    hoverT = Math.round(Math.max(0, Math.min(8, to)) * 10) / 10;
+    paintCursor();
+  }
+  // the given graph made pointable, with a line on how to use it
+  function hoverSetup() {
+    hoverT = null;
+    const svg = givenSvg();
+    if (!hoverable() || !svg) return;
+    svg.classList.add('pointable');
+    svg.setAttribute('tabindex', '0');
+    svg.setAttribute('aria-label', `${svg.getAttribute('aria-label')}. ${ui().pointKeys}`);
+    svg.closest('.given').insertAdjacentHTML('beforeend', `<p class="note point-note">${ex.kind === 'value' ? ui().pointTangent : ui().pointValue}</p>`);
+  }
+
   // ---------------------------------------------------------------- drawing
   const drawSpec = () => ({ ...ex.draw, values: st.values, wrong: st.wrong, label: ui().yours });
   function drawEditor() {
     const h = ex.draw.kind === 'flux' ? `<h3 class="qc-flux">${ui().fluxH} ${PHI}</h3>` : `<h3 class="qc-volt">${ui().voltH} ${Vi()}</h3>`;
     $('#draw-area').innerHTML = `<div class="given">${h}${P.drawGraph(drawSpec())}</div><button type="button" id="draw-clear" class="linklike">${ui().clear}</button>`;
+    paintCursor();
   }
   function onDrawClick(evt) {
     if (!ex || ex.kind !== 'draw' || st.solved || st.revealed) return;
@@ -148,10 +217,22 @@
   const fresh = () => open(topics.next(ex));
   const again = (e) => topics.parse(e.id) || X.make(e.type, e.seed);
 
+  // The first step of a topic with smooth graphs: a note that they are new, with a link to their
+  // worked example (if the teacher's set has it).
+  const SMOOTH = { 0: { stage: 3, example: 1, text: 'smoothPhi' }, 1: { stage: 3, example: 3, text: 'smoothV' } };
+  const tutorHas = (i) => { const S = window.LPSets; return !S || (S.mode('tutor') && (!S.tutor() || S.tutor().includes(i))); };
+  function smoothNote() {
+    const n = SMOOTH[ex.ptopic];
+    if (!n || ex.pstage !== n.stage || ex.family !== 'smooth') return '';
+    const link = tutorHas(n.example) ? ` <button type="button" class="linklike worked-ex" data-example="${n.example}">📖 ${ui().worked(n.example + 1, LESSONS[n.example].name())}</button>` : '';
+    return `<p class="topic-note tip smooth-note">${ui()[n.text]}${link}</p>`;
+  }
+
   function render() {
     $('#title').innerHTML = `${ex.title} ${starsOf(ex.difficulty)}`;
-    $('#prompt').innerHTML = ex.text;
+    $('#prompt').innerHTML = smoothNote() + ex.text;
     $('#figure').innerHTML = pic(ex) + (ex.figs || '');
+    hoverSetup();
     $('#draw-area').hidden = ex.kind !== 'draw';
     $('#draw-fb').textContent = '';
     if (ex.kind === 'draw') drawEditor();
@@ -337,13 +418,13 @@
     const north = L('north pole', 'Nordpol'), south = L('south pole', 'Südpol');
     return [
       { text: `<p class="step-rule">${L("Lenz's rule", 'Lenzsche Regel')}</p><p>${X.LENZ()}</p><p>${L(`A magnet approaches a ring, north pole first: the flux through the ring increases. The induced current makes the ring a magnet that pushes the approaching magnet back: the side facing it becomes a ${north}.`, `Ein Magnet nähert sich einem Ring, mit dem Nordpol voran: Der Fluss durch den Ring nimmt zu. Der induzierte Strom macht den Ring zu einem Magneten, der den nahenden Magneten abstösst: Die Seite zum Magneten wird ein ${north}.`)}</p>`,
-        figure: Figs.magnet({ pole: 'N', move: 'toward' }) },
+        figure: Figs.magnet({ pole: 'N', move: 'toward', show: 'poles' }) },
       { text: `<p class="step-rule">${L('The magnet moves away', 'Der Magnet entfernt sich')}</p><p>${L(`Pulled away, the magnet's flux through the ring decreases. Now the ring holds the magnet back: the side facing the north pole becomes a ${south}, and the ring is pulled after the magnet. Held still, the magnet induces nothing: the flux does not change.`, `Wird der Magnet weggezogen, nimmt sein Fluss durch den Ring ab. Jetzt hält der Ring den Magneten zurück: Die Seite zum Nordpol wird ein ${south}, und der Ring wird dem Magneten nachgezogen. Ruhig gehalten induziert der Magnet nichts: Der Fluss ändert sich nicht.`)}</p>`,
-        figure: Figs.magnet({ pole: 'N', move: 'away' }) },
-      { text: `<p class="step-rule">${L('The direction of the current', 'Die Richtung des Stroms')}</p><p>${X.RIGHTHAND()}</p><p>${L('So when the side facing the magnet becomes a north pole, the current flows anticlockwise, seen from the magnet; a south pole: clockwise.', 'Wird also die Seite zum Magneten ein Nordpol, fliesst der Strom vom Magneten aus gesehen im Gegenuhrzeigersinn; bei einem Südpol im Uhrzeigersinn.')}</p>`,
-        figure: Figs.magnet({ pole: 'N', move: 'toward' }) },
-      { text: `<p class="step-rule">${L('A changing field', 'Ein sich änderndes Feld')}</p><p>${L('A loop lies in a field into the page that gets stronger: the flux increases. The induced current makes its own field against the outer one, out of the page inside the loop: it flows anticlockwise. If the field got weaker, or the loop were pulled out of it, the current would support the field: clockwise.', 'Eine Schleife liegt in einem Feld in die Seite hinein, das stärker wird: Der Fluss nimmt zu. Der induzierte Strom erzeugt sein eigenes Feld gegen das äussere, innerhalb der Schleife aus der Seite heraus: Er fliesst im Gegenuhrzeigersinn. Würde das Feld schwächer oder die Schleife hinausgezogen, würde der Strom das Feld unterstützen: im Uhrzeigersinn.')}</p>`,
-        figure: Figs.field({ into: true, how: 'up' }) },
+        figure: Figs.magnet({ pole: 'N', move: 'away', show: 'poles' }) },
+      { text: `<p class="step-rule">${L('The direction of the current', 'Die Richtung des Stroms')}</p><p>${X.RIGHTHAND()}</p><p>${L('So when the side facing the magnet becomes a north pole, the current flows anticlockwise, seen from the magnet; a south pole: clockwise.', 'Wird also die Seite zum Magneten ein Nordpol, fliesst der Strom vom Magneten aus gesehen im Gegenuhrzeigersinn; bei einem Südpol im Uhrzeigersinn.')}</p><p>${L('In the pictures, the near half of the ring is drawn solid and the far half dashed; the arrow on it shows the current <i>I</i>, and the small circle on the right shows the ring as seen from the magnet. In the first picture the magnet approaches, in the second it moves away.', 'In den Bildern ist die vordere Hälfte des Rings ausgezogen und die hintere gestrichelt; der Pfeil darauf zeigt den Strom <i>I</i>, und der kleine Kreis rechts zeigt den Ring vom Magneten aus gesehen. Im ersten Bild nähert sich der Magnet, im zweiten entfernt er sich.')}</p>`,
+        figure: `<div class="figs">${Figs.magnet({ pole: 'N', move: 'toward', show: 'current' })}${Figs.magnet({ pole: 'N', move: 'away', show: 'current' })}</div>` },
+      { text: `<p class="step-rule">${L('A changing field', 'Ein sich änderndes Feld')}</p><p>${L('A loop lies in a field into the page that gets stronger: the flux increases. The induced current makes its own field against the outer one, out of the page inside the loop: it flows anticlockwise. If the field got weaker, or the loop were pulled out of it, the current would support the field: clockwise.', 'Eine Schleife liegt in einem Feld in die Seite hinein, das stärker wird: Der Fluss nimmt zu. Der induzierte Strom erzeugt sein eigenes Feld gegen das äussere, innerhalb der Schleife aus der Seite heraus: Er fliesst im Gegenuhrzeigersinn. Würde das Feld schwächer oder die Schleife hinausgezogen, würde der Strom das Feld unterstützen: im Uhrzeigersinn.')}</p><p>${L('In the picture: the arrows show the induced current, the large dot ⊙ its field inside the loop.', 'Im Bild: Die Pfeile zeigen den induzierten Strom, der grosse Punkt ⊙ sein Feld innerhalb der Schleife.')}</p>`,
+        figure: Figs.field({ into: true, how: 'up', show: 'current' }) },
     ];
   }
 
@@ -374,7 +455,8 @@
     { name: () => L('A loop through a field', 'Eine Schleife durch ein Feld'), example: () => 4, stages: [
       stage(() => L('wide field', 'breites Feld'), ['loop-wide']), stage(() => L('narrow field', 'schmales Feld'), ['loop-narrow']), stage(() => L('the numbers', 'die Zahlen'), ['loop-num'])] },
     { name: () => L("Lenz's rule", 'Lenzsche Regel'), example: () => 5, stages: [
-      stage(() => L('magnet and ring', 'Magnet und Ring'), ['lenz-magnet']), stage(() => L('a changing field', 'ein sich änderndes Feld'), ['lenz-field'])] },
+      stage(() => L('magnet and ring', 'Magnet und Ring'), ['lenz-magnet']), stage(() => L('a changing field', 'ein sich änderndes Feld'), ['lenz-field']),
+      stage(() => L('a field stronger on one side', 'ein Feld, auf einer Seite stärker'), ['lenz-gradient'])] },
   ];
   const lessons = () => LESSONS.map((l) => ({ name: l.name(), idea: l.idea(), frames: l.frames, also: topics.also(l.topic) }));
 
@@ -394,12 +476,13 @@
     { id: 'change', kinds: ['loop-wide:u', 'loop-num:c', 'loop-narrow:u'], tutor: 4, topic: 2,
       name: () => L('Decide when a voltage is induced in a loop moving through a field: only while the flux through it changes.',
         'Entscheiden, wann in einer Schleife, die sich durch ein Feld bewegt, eine Spannung induziert wird: nur solange sich der Fluss durch sie ändert.') },
-    { id: 'lenz', kinds: ['lenz-field', 'lenz-magnet'], tutor: 5, topic: 3,
+    { id: 'lenz', kinds: ['lenz-field', 'lenz-magnet', 'lenz-gradient'], tutor: 5, topic: 3,
       name: () => L("Find the direction of an induced current with Lenz's rule.", 'Die Richtung eines induzierten Stroms mit der Lenzschen Regel bestimmen.') },
   ];
   const CONCEPT = { sign: 'lenz', copy: 'copy', copyF: 'copy', copyV: 'copy', steep: 'rate', delta: 'rate', zero: 'rate', average: 'curve', straight: 'curve',
     height: 'area', notime: 'area', nostart: 'area', start: 'area', inside: 'loop', once: 'loop', stay: 'loop', width: 'loop', side: 'loop', triangle: 'loop',
-    square: 'overlap', sw: 'overlap', ww: 'overlap', along: 'support', against: 'oppose', still: 'still', poles: 'poles', hand: 'hand' };
+    square: 'overlap', sw: 'overlap', ww: 'overlap', along: 'support', against: 'oppose', still: 'still', poles: 'poles', hand: 'hand',
+    nochange: 'gradient', motion: 'gradient', brake: 'brake' };
   const options = (q) => q.options.map((o) => ({ html: q.type === 'pick' ? o.html : o.label, correct: o.ok, flag: o.ok ? null : o.tag || 'other', why: o.why }));
   // Lenz's rule, four answers: for a changing field, the direction of the current together with
   // its field inside the loop (two of them turn the right-hand rule round); for a magnet and a ring,
@@ -417,6 +500,26 @@
         return { html: L(`${turn}, its field inside the loop pointing ${field(inn)}`, `${turn}, sein Feld innerhalb der Schleife zeigt ${field(inn)}`), correct: ok, flag, why };
       });
       return { ask: L('As seen in the figure, the induced current flows', 'Wie in der Abbildung gesehen fliesst der induzierte Strom'), list: r.shuffle(list) };
+    }
+    if (e.type === 'lenz-gradient') {
+      // the current with the force on the loop: the right pair; the current turned round with the
+      // force helping the motion; the right current with the force helping the motion; and no current
+      // at all (or, when the flux does not change, three pairs with a current)
+      const right = (k) => e.questions.find((q) => q.key === k).options.find((o) => o.ok).label;
+      const dirs = [L('clockwise', 'im Uhrzeigersinn'), L('anticlockwise', 'im Gegenuhrzeigersinn')];
+      const forces = [L('towards the stronger field', 'zum stärkeren Feld hin'), L('towards the weaker field', 'zum schwächeren Feld hin')];
+      const pair = (d, f, correct, flag) => ({ html: L(`The current flows ${d}; the force on the loop points ${f}`, `Der Strom fliesst ${d}; die Kraft auf die Schleife zeigt ${f}`), correct, flag: correct ? null : flag, why });
+      const none = (correct) => ({ html: L('No current flows, and there is no force', 'Es fliesst kein Strom, und es wirkt keine Kraft'), correct, flag: correct ? null : 'nochange', why });
+      const d = right('dir'), f = right('force');
+      let list;
+      if (dirs.includes(d)) {
+        const d2 = dirs.find((x) => x !== d), f2 = forces.find((x) => x !== f);
+        list = [pair(d, f, true), pair(d2, f2, false, 'along'), pair(d, f2, false, 'brake'), none(false)];
+      } else {
+        const all = [[0, 0], [0, 1], [1, 0], [1, 1]].map(([i, j]) => pair(dirs[i], forces[j], false, 'motion'));
+        list = [none(true), ...r.shuffle(all).slice(0, 3)];
+      }
+      return { ask: L('Which is right (the current as seen in the figure)?', 'Was stimmt (der Strom wie in der Abbildung gesehen)?'), list: r.shuffle(list) };
     }
     const { pole, move } = e.p, other = pole === 'N' ? 'S' : 'N';
     const poleName = (p) => (p === 'N' ? L('a north pole', 'ein Nordpol') : L('a south pole', 'ein Südpol'));
@@ -456,6 +559,8 @@
       still: L('a current induced by a magnet at rest', 'ein Strom, den ein ruhender Magnet induziert'),
       poles: L('like poles attracting, unlike poles repelling', 'gleichnamige Pole ziehen sich an, ungleichnamige stossen sich ab'),
       hand: L('the right-hand rule turned round', 'die Rechte-Hand-Regel umgekehrt'),
+      gradient: L('a current only from motion, or only when the field changes its direction, not from a change of the flux', 'ein Strom nur durch Bewegung oder nur, wenn das Feld seine Richtung ändert, nicht durch eine Änderung des Flusses'),
+      brake: L('the force on the induced current helping the motion instead of opposing it', 'die Kraft auf den induzierten Strom unterstützt die Bewegung, statt ihr entgegenzuwirken'),
     }),
   };
 
@@ -548,6 +653,15 @@
       if (evt.target.id === 'draw-clear') { if (st.solved || st.revealed) return; st.values = [...ex.draw.init]; st.wrong = null; $('#draw-fb').textContent = ''; drawEditor(); return; }
       onDrawClick(evt);
     });
+    $('#prompt').addEventListener('click', (evt) => {
+      const b = evt.target.closest('.worked-ex');
+      if (b) { setMode('tutor'); tutor.open(Number(b.dataset.example)); }
+    });
+    const fig = $('#task');
+    fig.addEventListener('pointermove', onPoint);
+    fig.addEventListener('pointerdown', onPoint);
+    fig.addEventListener('pointerout', (evt) => { if (!evt.relatedTarget || !evt.target.closest('svg') || !evt.target.closest('svg').contains(evt.relatedTarget)) onLeave(evt); });
+    fig.addEventListener('keydown', onKey);
     $('#hint').addEventListener('click', hint);
     $('#reveal').addEventListener('click', reveal);
     window.addEventListener('hashchange', fromHash);

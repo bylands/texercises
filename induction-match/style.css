@@ -75,6 +75,15 @@ div.cand:hover { border-color: var(--line); }
 /* drawing */
 #draw-area .linklike { display: block; margin: 4px 0 0; }
 svg.drawing { cursor: crosshair; touch-action: manipulation; }
+/* reading off the given graph: a guide line, a dot, the tangent and a readout */
+.given svg.pointable { cursor: crosshair; touch-action: pan-y; border-radius: 6px; }
+.given svg.pointable:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.point-note { font-size: 0.85rem; margin: 2px 0 0; }
+svg .hv-line { stroke: var(--accent); stroke-width: 1.2; stroke-dasharray: 3 3; }
+svg .hv-dot { fill: var(--accent); stroke: var(--card); stroke-width: 1.5; }
+svg .hv-tan { stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; opacity: 0.85; }
+svg .hv-read { fill: var(--accent); font: 600 12px system-ui, sans-serif; paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }
+svg .hv-read .it { font-family: var(--serif); }
 svg .col { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0.5; }
 svg .handle { fill: var(--accent); stroke: var(--card); stroke-width: 1.5; }
 svg .wrongcol { fill: var(--bad); opacity: 0.18; }
@@ -87,6 +96,17 @@ svg.tb .ind-arrow line { stroke: var(--motion); stroke-width: 2; }
 svg.tb .ind-arrow polygon { fill: var(--motion); }
 svg.tb .ind-lbl { fill: var(--ink); font: 14px var(--serif); paint-order: stroke; stroke: var(--card); stroke-width: 3px; }
 @media (prefers-color-scheme: dark) { svg.tb :is(.ind-loop, .ind-ring) { stroke: #e0a060; } }
+/* the induced current, its field and the ring's poles (tutor) */
+:root { --induced: #8e24aa; }
+@media (prefers-color-scheme: dark) { :root { --induced: #d59be0; } }
+svg.tb .ind-ring.back { stroke-width: 2; stroke-dasharray: 4 3; }
+svg.tb .ind-ring.thin { stroke-width: 3; }
+svg.tb .ind-current { fill: var(--induced); stroke: var(--card); stroke-width: 0.8; }
+svg.tb .ind-bind { fill: var(--card); stroke: var(--induced); stroke-width: 2; }
+svg.tb .ind-bdot { fill: var(--induced); }
+svg.tb .ind-bx { fill: none; stroke: var(--induced); stroke-width: 2; }
+svg.tb .ind-sense .ind-lbl { fill: var(--induced); }
+svg.tb .ind-side { fill: var(--muted); font: italic 12px system-ui, sans-serif; paint-order: stroke; stroke: var(--card); stroke-width: 3px; }
 
 /* diagrams */
 svg text { font-family: var(--serif); }
